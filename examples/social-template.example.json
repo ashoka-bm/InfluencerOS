@@ -1,0 +1,38 @@
+{
+  "social_template_id": "template_hook_problem_solution",
+  "name": "Hook Problem Solution",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_carousel",
+    "format_story_sequence"
+  ],
+  "best_for": [
+    "clear audience pain points",
+    "fast demonstrations",
+    "creator advice that needs immediate clarity"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "hook",
+      "beat_job": "Name the situation so the viewer recognizes themselves immediately."
+    },
+    {
+      "beat_label": "problem",
+      "beat_job": "Make the friction specific enough that the solution feels necessary."
+    },
+    {
+      "beat_label": "solution",
+      "beat_job": "Show the simple action that resolves the pressure."
+    },
+    {
+      "beat_label": "payoff",
+      "beat_job": "Land the felt result so the viewer remembers why it matters."
+    }
+  ],
+  "retention_or_clarity_job": "Keeps the viewer watching by making the gap between discomfort and relief obvious.",
+  "avoid_when": [
+    "The idea is mostly atmospheric rather than problem-driven.",
+    "The solution needs too much explanation for a short post."
+  ]
+}
+

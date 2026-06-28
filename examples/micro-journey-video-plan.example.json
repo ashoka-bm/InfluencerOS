@@ -1,0 +1,47 @@
+{
+  "micro_journey_video_plan_id": "mjvp_luna_001",
+  "creator_profile_id": "creator_luna_fit",
+  "selected_content_idea_id": "selected_luna_001",
+  "applied_social_template_id": "applied_template_luna_001",
+  "default_video_envelope": "universal_short_form_vertical",
+  "opening_hook": "Luna steps into frame beside an open laptop: 'Two minutes before your next meeting? Do this with me.'",
+  "setup": "She shows the timer and frames the routine as a reset, not a full workout.",
+  "escalation": "Three quick standing moves build from breath to shoulders to legs.",
+  "payoff": "Luna returns to the laptop calmer and more upright.",
+  "loop_or_ending": "Final pose lands beside the same laptop framing so the video can loop back to the starting stress moment.",
+  "intended_viewer_feeling": "relief",
+  "shots": [
+    {
+      "shot_id": "shot_luna_001",
+      "time_range": "0-2s",
+      "visual_action": "Luna enters quickly, points at the laptop clock, and makes direct eye contact.",
+      "camera_or_motion": "tight vertical medium shot with a slight push-in",
+      "emotional_job": "make the viewer feel seen immediately"
+    },
+    {
+      "shot_id": "shot_luna_002",
+      "time_range": "2-8s",
+      "visual_action": "She starts slow breathing with shoulder rolls beside the desk.",
+      "camera_or_motion": "stable medium shot with gentle subject motion",
+      "emotional_job": "lower the pressure"
+    },
+    {
+      "shot_id": "shot_luna_003",
+      "time_range": "8-18s",
+      "visual_action": "She moves through standing side reaches and quiet squats.",
+      "camera_or_motion": "alternates medium and full-body framing",
+      "emotional_job": "show that the reset is doable"
+    },
+    {
+      "shot_id": "shot_luna_004",
+      "time_range": "18-24s",
+      "visual_action": "She sits back down, shoulders relaxed, and smiles at the screen.",
+      "camera_or_motion": "returns to the original desk angle",
+      "emotional_job": "land the payoff as calm readiness"
+    }
+  ],
+  "continuity_requirements": [
+    "Luna's outfit, hair, and apartment lighting stay consistent across shots.",
+    "The laptop remains the visual anchor for the meeting constraint."
+  ]
+}

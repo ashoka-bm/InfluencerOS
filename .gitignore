@@ -1,0 +1,8 @@
+.DS_Store
+.tmp/
+__pycache__/
+.pytest_cache/
+*.pyc
+workspace-library/
+.env
+

@@ -1,0 +1,29 @@
+{
+  "base_video_generation_plan_id": "bvgp_luna_001",
+  "micro_journey_video_plan_id": "mjvp_luna_001",
+  "provider_boundary": "requires_explicit_user_approval",
+  "generation_status": "planned_not_generated",
+  "avatar_consistency": [
+    "Use the approved Luna Fit creator profile for face, wardrobe, posture, and warm direct-to-camera energy.",
+    "Keep visual identity clean, soft, and apartment-based."
+  ],
+  "scene_requirements": [
+    "Vertical short-form framing.",
+    "Apartment desk with laptop visible.",
+    "No platform-specific UI, stickers, or motion graphics."
+  ],
+  "prompt_sequence": [
+    {
+      "prompt_id": "prompt_luna_001",
+      "shot_refs": [
+        "shot_luna_001",
+        "shot_luna_002",
+        "shot_luna_003",
+        "shot_luna_004"
+      ],
+      "prompt": "Create a universal vertical short-form base video of Luna Fit, a warm approachable wellness avatar, doing a two-minute pre-meeting reset beside a laptop in a softly lit apartment. Preserve consistent face, outfit, lighting, and room layout across the sequence. Show a clear hook, simple standing movements, and a calm return to the laptop. No platform-specific UI, stickers, captions, or overlays."
+    }
+  ],
+  "approval_required_before_generation": true
+}
+

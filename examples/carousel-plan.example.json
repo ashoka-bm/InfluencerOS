@@ -1,0 +1,47 @@
+{
+  "carousel_plan_id": "carousel_luna_001",
+  "creator_profile_id": "creator_luna_fit",
+  "selected_content_idea_id": "selected_luna_001",
+  "applied_social_template_id": "applied_template_luna_001",
+  "target_format_id": "format_carousel",
+  "first_slide_hook": "Two minutes before your next meeting? Reset here.",
+  "slides": [
+    {
+      "slide_id": "slide_luna_001",
+      "slide_role": "hook",
+      "visual_beat": "Luna beside an open laptop with a visible calendar alert.",
+      "text_overlay": "2-minute pre-meeting reset",
+      "viewer_job": "Recognize the situation immediately."
+    },
+    {
+      "slide_id": "slide_luna_002",
+      "slide_role": "problem",
+      "visual_beat": "Tense shoulders and shallow desk posture.",
+      "text_overlay": "When you have no time for a full workout",
+      "viewer_job": "Feel the specific friction."
+    },
+    {
+      "slide_id": "slide_luna_003",
+      "slide_role": "solution",
+      "visual_beat": "Three simple standing moves shown as visual steps.",
+      "text_overlay": "Breathe. Reach. Quiet squat.",
+      "viewer_job": "Understand the action without extra explanation."
+    },
+    {
+      "slide_id": "slide_luna_004",
+      "slide_role": "payoff",
+      "visual_beat": "Luna returns to the laptop calmer and more upright.",
+      "text_overlay": "Back to the meeting, less braced.",
+      "viewer_job": "See the emotional result."
+    }
+  ],
+  "creator_continuity": [
+    "Keep Luna's warm, practical tone across all slides.",
+    "Use the same apartment desk setting and outfit."
+  ],
+  "generation_notes": [
+    "Each slide should work as a vertical still.",
+    "Avoid dense text; let body position and laptop context carry the story."
+  ]
+}
+

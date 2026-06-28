@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InfluencerOS V1 Map</title>
+  <style>
+    :root {
+      --bg: #f7f5ef;
+      --ink: #1f2933;
+      --muted: #5f6b76;
+      --line: #c8c2b5;
+      --panel: #fffdf8;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --accent-3: #6d5bd0;
+      --soft: #e7f3f1;
+      --soft-2: #f8ead8;
+      --soft-3: #ebe8fb;
+      --danger: #9f1239;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 24px;
+      align-items: end;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 44px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      margin-top: 12px;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      justify-self: end;
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .status strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+    }
+
+    .status ul,
+    .card ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(120px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .node {
+      min-height: 118px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -10px;
+      width: 10px;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .node:last-child::after {
+      display: none;
+    }
+
+    .node .kicker,
+    .branch .kicker,
+    .card .kicker {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .node h3,
+    .branch h3,
+    .card h3 {
+      margin-top: 7px;
+      font-size: 17px;
+      line-height: 1.15;
+    }
+
+    .node p,
+    .branch p,
+    .card p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .gate {
+      border-color: var(--accent-2);
+      background: var(--soft-2);
+    }
+
+    .shared {
+      border-color: var(--accent);
+      background: var(--soft);
+    }
+
+    .branch-map {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .hub {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 420px;
+      padding: 20px;
+      background: var(--ink);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .hub .kicker,
+    .hub p {
+      color: #d7dce1;
+    }
+
+    .hub h3 {
+      margin-top: 8px;
+      font-size: 25px;
+      line-height: 1.1;
+    }
+
+    .branches {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .branch {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .branch.video {
+      border-color: var(--accent);
+      background: var(--soft);
+    }
+
+    .branch.carousel {
+      border-color: var(--accent-2);
+      background: var(--soft-2);
+    }
+
+    .branch.image,
+    .branch.story {
+      border-color: var(--accent-3);
+      background: var(--soft-3);
+    }
+
+    .branch code,
+    .node code,
+    .card code {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 3px 6px;
+      border-radius: 5px;
+      background: rgba(31, 41, 51, .08);
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .link {
+      display: block;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, .66);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .link strong {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .boundary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .boundary .card:first-child {
+      border-color: var(--accent);
+      background: var(--soft);
+    }
+
+    .boundary .card:last-child {
+      border-color: var(--danger);
+      background: #fff1f2;
+    }
+
+    @media (max-width: 980px) {
+      header,
+      .branch-map,
+      .boundary {
+        grid-template-columns: 1fr;
+      }
+
+      .status {
+        justify-self: stretch;
+        max-width: none;
+      }
+
+      .pipeline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .node::after {
+        display: none;
+      }
+
+      .cards,
+      .branches,
+      .links {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        padding: 22px 14px 36px;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .pipeline {
+        grid-template-columns: 1fr;
+      }
+
+      .hub {
+        min-height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>InfluencerOS V1 Map</h1>
+        <p class="lede">A dry-run-first pipeline for turning an existing creator profile into researched visual social ideas, applying a format-compatible structure, and producing a generation-ready plan.</p>
+      </div>
+      <aside class="status">
+        <strong>Current Scope</strong>
+        <ul>
+          <li>Visual social content only</li>
+          <li>Four starter formats</li>
+          <li>Templates are format-generic</li>
+          <li>No provider generation without approval</li>
+        </ul>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Pipeline</h2>
+        <span class="note">Schema-backed records move left to right.</span>
+      </div>
+      <div class="pipeline">
+        <a class="node" href="../schemas/creator-profile.schema.json">
+          <span class="kicker">Input</span>
+          <h3>Creator Profile</h3>
+          <p>Avatar identity, niche, audience, persona, visual identity, boundaries, and goals.</p>
+          <code>creator.profile</code>
+        </a>
+        <a class="node" href="../schemas/social-research-pack.schema.json">
+          <span class="kicker">Research</span>
+          <h3>Social Research Pack</h3>
+          <p>Dated, sourced research on current social patterns relevant to the creator.</p>
+          <code>social.research_pack</code>
+        </a>
+        <a class="node shared" href="../schemas/social-post-format.schema.json">
+          <span class="kicker">Format</span>
+          <h3>Social Post Format</h3>
+          <p>Short-form video, carousel, single image post, or story sequence.</p>
+          <code>social.post_format</code>
+        </a>
+        <a class="node" href="../schemas/content-idea-set.schema.json">
+          <span class="kicker">Ideas</span>
+          <h3>Content Idea Set</h3>
+          <p>Exactly five creator-fit ideas with recommended formats and templates.</p>
+          <code>content.idea_set</code>
+        </a>
+        <a class="node gate" href="../schemas/selected-content-idea.schema.json">
+          <span class="kicker">Gate</span>
+          <h3>Selected Idea</h3>
+          <p>The user chooses one idea. The agent may recommend but must not self-select.</p>
+          <code>content.selected_idea</code>
+        </a>
+        <a class="node shared" href="../schemas/applied-social-template.schema.json">
+          <span class="kicker">Structure</span>
+          <h3>Applied Social Template</h3>
+          <p>A compatible template is mapped onto the chosen idea.</p>
+          <code>template.application</code>
+        </a>
+        <a class="node gate" href="./provider-boundary.md">
+          <span class="kicker">Boundary</span>
+          <h3>Generation Approval</h3>
+          <p>Provider-backed generation requires explicit approval for the exact call or batch.</p>
+          <code>provider.boundary</code>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Format Branches</h2>
+        <span class="note">After template application, the selected format determines the production record.</span>
+      </div>
+      <div class="branch-map">
+        <div class="hub">
+          <span class="kicker">Shared spine</span>
+          <h3>Selected Idea + Applied Social Template</h3>
+          <p>The idea defines the subject. The template defines the viewer journey. The format defines the artifact.</p>
+        </div>
+        <div class="branches">
+          <a class="branch video" href="../schemas/micro-journey-video-plan.schema.json">
+            <span class="kicker">format_short_form_video</span>
+            <h3>Micro-Journey Video Plan</h3>
+            <p>Hook, setup, escalation, payoff, loop behavior, shots, continuity requirements.</p>
+            <code>then BaseVideoGenerationPlan</code>
+          </a>
+          <a class="branch carousel" href="../schemas/carousel-plan.schema.json">
+            <span class="kicker">format_carousel</span>
+            <h3>Carousel Plan</h3>
+            <p>First-slide hook, slide-level visual beats, overlay copy, creator continuity, generation notes.</p>
+            <code>slide-by-slide</code>
+          </a>
+          <a class="branch image" href="../schemas/single-image-post-plan.schema.json">
+            <span class="kicker">format_single_image_post</span>
+            <h3>Single Image Post Plan</h3>
+            <p>Central visual idea, composition, avatar or scene requirements, overlay policy, prompt.</p>
+            <code>one strong still</code>
+          </a>
+          <a class="branch story" href="../schemas/story-sequence-plan.schema.json">
+            <span class="kicker">format_story_sequence</span>
+            <h3>Story Sequence Plan</h3>
+            <p>Frame-level moments, sequence arc, lightweight text notes, continuity, generation notes.</p>
+            <code>frame-by-frame</code>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Template Layer</h2>
+        <a class="note" href="./social-template-library.md">Open template library</a>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <span class="kicker">Why it exists</span>
+          <h3>Ideas and structure stay separate</h3>
+          <p>The same idea can become a video, carousel, single image, or story sequence. Templates shape the viewer journey after the idea is chosen.</p>
+        </div>
+        <a class="card" href="../schemas/social-template.schema.json">
+          <span class="kicker">Reusable</span>
+          <h3>Social Template</h3>
+          <p>Defines compatible formats, beat sequence, retention or clarity job, and avoid conditions.</p>
+        </a>
+        <a class="card" href="../schemas/applied-social-template.schema.json">
+          <span class="kicker">Per idea</span>
+          <h3>Applied Social Template</h3>
+          <p>Maps the chosen template beats onto the selected idea and target format.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Provider Boundary</h2>
+        <a class="note" href="./provider-boundary.md">Open boundary doc</a>
+      </div>
+      <div class="boundary">
+        <div class="card">
+          <span class="kicker">Allowed without approval</span>
+          <h3>Dry-run planning</h3>
+          <ul>
+            <li>Research packs</li>
+            <li>Idea sets</li>
+            <li>Template applications</li>
+            <li>Production plans</li>
+            <li>Provider-neutral prompts</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="kicker">Requires explicit approval</span>
+          <h3>External generation</h3>
+          <ul>
+            <li>Image generation</li>
+            <li>Video generation</li>
+            <li>Render jobs</li>
+            <li>Audio generation</li>
+            <li>Uploads or paid calls</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Record Index</h2>
+        <span class="note">Schemas and examples currently in the repo.</span>
+      </div>
+      <div class="links">
+        <a class="link" href="../schemas/creator-profile.schema.json"><strong>Creator Profile</strong>schemas/creator-profile.schema.json</a>
+        <a class="link" href="../examples/creator-profile.example.json"><strong>Creator Profile Example</strong>examples/creator-profile.example.json</a>
+        <a class="link" href="../schemas/social-research-pack.schema.json"><strong>Social Research Pack</strong>schemas/social-research-pack.schema.json</a>
+        <a class="link" href="../examples/social-research-pack.example.json"><strong>Research Pack Example</strong>examples/social-research-pack.example.json</a>
+        <a class="link" href="../schemas/content-idea-set.schema.json"><strong>Content Idea Set</strong>schemas/content-idea-set.schema.json</a>
+        <a class="link" href="../examples/content-idea-set.example.json"><strong>Idea Set Example</strong>examples/content-idea-set.example.json</a>
+        <a class="link" href="../schemas/social-template.schema.json"><strong>Social Template</strong>schemas/social-template.schema.json</a>
+        <a class="link" href="../examples/social-template.example.json"><strong>Template Example</strong>examples/social-template.example.json</a>
+        <a class="link" href="../schemas/carousel-plan.schema.json"><strong>Carousel Plan</strong>schemas/carousel-plan.schema.json</a>
+        <a class="link" href="../examples/carousel-plan.example.json"><strong>Carousel Example</strong>examples/carousel-plan.example.json</a>
+        <a class="link" href="../schemas/single-image-post-plan.schema.json"><strong>Single Image Plan</strong>schemas/single-image-post-plan.schema.json</a>
+        <a class="link" href="../examples/single-image-post-plan.example.json"><strong>Single Image Example</strong>examples/single-image-post-plan.example.json</a>
+        <a class="link" href="../schemas/story-sequence-plan.schema.json"><strong>Story Sequence Plan</strong>schemas/story-sequence-plan.schema.json</a>
+        <a class="link" href="../examples/story-sequence-plan.example.json"><strong>Story Sequence Example</strong>examples/story-sequence-plan.example.json</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+

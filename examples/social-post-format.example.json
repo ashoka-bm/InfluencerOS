@@ -1,0 +1,18 @@
+{
+  "social_post_format_id": "format_carousel",
+  "name": "Carousel",
+  "artifact_kind": "image_sequence",
+  "best_for": [
+    "step-by-step visual ideas",
+    "before-and-after comparisons",
+    "mini stories that need more than one still",
+    "saveable educational content"
+  ],
+  "planning_notes": [
+    "Plan each slide as a visual beat, not as a paragraph.",
+    "The first slide must carry the hook by itself.",
+    "The final slide should resolve, summarize, or invite the next action."
+  ],
+  "v1_status": "shortlisted"
+}
+

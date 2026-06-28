@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/story-sequence-plan.schema.json",
+  "title": "StorySequencePlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["story_sequence_plan_id", "creator_profile_id", "selected_content_idea_id", "applied_social_template_id", "target_format_id", "sequence_arc", "frames", "creator_continuity", "generation_notes"],
+  "properties": {
+    "story_sequence_plan_id": { "type": "string", "pattern": "^story_sequence_[a-zA-Z0-9_-]+$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "selected_content_idea_id": { "type": "string", "pattern": "^selected_[a-zA-Z0-9_-]+$" },
+    "applied_social_template_id": { "type": "string", "pattern": "^applied_template_[a-zA-Z0-9_-]+$" },
+    "target_format_id": { "type": "string", "const": "format_story_sequence" },
+    "sequence_arc": { "type": "string", "minLength": 1 },
+    "frames": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["frame_id", "frame_role", "visual_moment", "text_or_sticker_note", "viewer_job"],
+        "properties": {
+          "frame_id": { "type": "string", "pattern": "^frame_[a-zA-Z0-9_-]+$" },
+          "frame_role": { "type": "string", "minLength": 1 },
+          "visual_moment": { "type": "string", "minLength": 1 },
+          "text_or_sticker_note": { "type": "string", "minLength": 1 },
+          "viewer_job": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "creator_continuity": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "generation_notes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  }
+}
+

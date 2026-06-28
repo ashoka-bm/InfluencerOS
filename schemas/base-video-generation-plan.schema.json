@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/base-video-generation-plan.schema.json",
+  "title": "BaseVideoGenerationPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["base_video_generation_plan_id", "micro_journey_video_plan_id", "provider_boundary", "generation_status", "avatar_consistency", "scene_requirements", "prompt_sequence", "approval_required_before_generation"],
+  "properties": {
+    "base_video_generation_plan_id": { "type": "string", "pattern": "^bvgp_[a-zA-Z0-9_-]+$" },
+    "micro_journey_video_plan_id": { "type": "string", "pattern": "^mjvp_[a-zA-Z0-9_-]+$" },
+    "provider_boundary": { "type": "string", "const": "requires_explicit_user_approval" },
+    "generation_status": { "type": "string", "enum": ["planned_not_generated", "generated", "imported"] },
+    "avatar_consistency": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "scene_requirements": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "prompt_sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["prompt_id", "shot_refs", "prompt"],
+        "properties": {
+          "prompt_id": { "type": "string", "pattern": "^prompt_[a-zA-Z0-9_-]+$" },
+          "shot_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^shot_[a-zA-Z0-9_-]+$" } },
+          "prompt": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "approval_required_before_generation": { "type": "boolean", "const": true }
+  }
+}
+

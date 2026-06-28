@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/applied-social-template.schema.json",
+  "title": "AppliedSocialTemplate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["applied_social_template_id", "selected_content_idea_id", "social_template_id", "target_format_id", "application_rationale", "applied_beats"],
+  "properties": {
+    "applied_social_template_id": { "type": "string", "pattern": "^applied_template_[a-zA-Z0-9_-]+$" },
+    "selected_content_idea_id": { "type": "string", "pattern": "^selected_[a-zA-Z0-9_-]+$" },
+    "social_template_id": { "type": "string", "pattern": "^template_[a-zA-Z0-9_-]+$" },
+    "target_format_id": { "type": "string", "pattern": "^format_[a-zA-Z0-9_-]+$" },
+    "application_rationale": { "type": "string", "minLength": 1 },
+    "applied_beats": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["beat_label", "idea_application", "viewer_question_answered"],
+        "properties": {
+          "beat_label": { "type": "string", "minLength": 1 },
+          "idea_application": { "type": "string", "minLength": 1 },
+          "viewer_question_answered": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
+

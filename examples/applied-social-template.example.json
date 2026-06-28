@@ -1,0 +1,30 @@
+{
+  "applied_social_template_id": "applied_template_luna_001",
+  "selected_content_idea_id": "selected_luna_001",
+  "social_template_id": "template_hook_problem_solution",
+  "target_format_id": "format_short_form_video",
+  "application_rationale": "The chosen idea works because the audience has a specific immediate problem: they are stressed and short on time before a meeting. Hook Problem Solution turns that pressure into a fast relief arc.",
+  "applied_beats": [
+    {
+      "beat_label": "hook",
+      "idea_application": "Luna names the two-minute pre-meeting constraint beside the laptop.",
+      "viewer_question_answered": "Is this for my situation right now?"
+    },
+    {
+      "beat_label": "problem",
+      "idea_application": "The laptop clock and tense shoulders show the viewer has no time for a full workout.",
+      "viewer_question_answered": "Why should I care?"
+    },
+    {
+      "beat_label": "solution",
+      "idea_application": "Luna demonstrates three standing movements that fit beside the desk.",
+      "viewer_question_answered": "What exactly do I do?"
+    },
+    {
+      "beat_label": "payoff",
+      "idea_application": "Luna returns to the laptop visibly calmer and more upright.",
+      "viewer_question_answered": "What do I get from trying this?"
+    }
+  ]
+}
+

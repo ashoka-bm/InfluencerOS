@@ -1,0 +1,40 @@
+{
+  "story_sequence_plan_id": "story_sequence_luna_001",
+  "creator_profile_id": "creator_luna_fit",
+  "selected_content_idea_id": "selected_luna_001",
+  "applied_social_template_id": "applied_template_luna_001",
+  "target_format_id": "format_story_sequence",
+  "sequence_arc": "A quick real-time desk reset from tense pre-meeting energy to calm readiness.",
+  "frames": [
+    {
+      "frame_id": "frame_luna_001",
+      "frame_role": "tease",
+      "visual_moment": "Laptop calendar alert with Luna entering frame.",
+      "text_or_sticker_note": "2 minutes?",
+      "viewer_job": "Create immediate situational recognition."
+    },
+    {
+      "frame_id": "frame_luna_002",
+      "frame_role": "action",
+      "visual_moment": "Luna shoulder rolls beside the desk.",
+      "text_or_sticker_note": "Reset with me",
+      "viewer_job": "Invite participation."
+    },
+    {
+      "frame_id": "frame_luna_003",
+      "frame_role": "reveal",
+      "visual_moment": "Luna sits back down visibly calmer.",
+      "text_or_sticker_note": "Less braced. More ready.",
+      "viewer_job": "Land the small emotional payoff."
+    }
+  ],
+  "creator_continuity": [
+    "Keep Luna's face, outfit, apartment lighting, and desk setup consistent.",
+    "Keep the tone intimate and low-pressure."
+  ],
+  "generation_notes": [
+    "Frames should feel like quick vertical story cards, not a polished carousel.",
+    "Leave safe room for future stickers or captions without relying on them."
+  ]
+}
+
