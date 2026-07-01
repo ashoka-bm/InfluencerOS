@@ -1,0 +1,136 @@
+{
+  "output_package_id": "output_package_luna_tiny_reset_001",
+  "project_id": "project_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "created_on": "2026-06-29",
+  "status": "upload_ready",
+  "universal_core": {
+    "format_id": "format_short_form_video",
+    "title_base": "The tiny reset after a laptop day",
+    "caption_base": "A small-space routine for the moment your shoulders start living near your ears.",
+    "description_base": "Luna Fit demonstrates a gentle three-move reset designed for busy apartment days.",
+    "primary_asset_refs": [
+      "upload_asset_luna_tiny_reset_video"
+    ]
+  },
+  "source_refs": {
+    "selected_content_idea_id": "selected_luna_001",
+    "production_plan_ids": [
+      "mjvp_luna_001",
+      "bvgp_luna_001"
+    ],
+    "reference_asset_ids": [
+      "asset_luna_identity_plate",
+      "asset_luna_living_room",
+      "asset_luna_default_video_style"
+    ]
+  },
+  "upload_ready": [
+    {
+      "upload_asset_id": "upload_asset_luna_tiny_reset_video",
+      "asset_role": "video",
+      "path": "output-package/upload-ready/luna-tiny-reset.mp4",
+      "media_type": "video/mp4",
+      "notes": "Final universal vertical video file for manual upload."
+    },
+    {
+      "upload_asset_id": "upload_asset_luna_tiny_reset_thumbnail",
+      "asset_role": "thumbnail",
+      "path": "output-package/upload-ready/luna-tiny-reset-thumbnail.png",
+      "media_type": "image/png",
+      "notes": "Thumbnail or first-frame candidate showing the laptop-day constraint."
+    },
+    {
+      "upload_asset_id": "upload_asset_luna_tiny_reset_caption",
+      "asset_role": "caption",
+      "path": "output-package/upload-ready/instagram-caption.md",
+      "media_type": "text/markdown",
+      "notes": "Caption text for Instagram adaptation."
+    }
+  ],
+  "platform_adaptations": [
+    {
+      "platform": "youtube_shorts",
+      "format_id": "format_short_form_video",
+      "title": "The tiny reset after a laptop day",
+      "caption_or_description_path": "output-package/upload-ready/youtube-description.md",
+      "thumbnail_or_first_frame_asset_id": "upload_asset_luna_tiny_reset_thumbnail",
+      "cta": "Save this for the next heavy laptop day.",
+      "posting_time_recommendation": "Use creator learning defaults until analytics exist.",
+      "creative_performance_variant_notes": "YouTube packaging emphasizes title and thumbnail clarity."
+    },
+    {
+      "platform": "instagram_reels",
+      "format_id": "format_short_form_video",
+      "title": "Tiny laptop-day reset",
+      "caption_or_description_path": "output-package/upload-ready/instagram-caption.md",
+      "thumbnail_or_first_frame_asset_id": "upload_asset_luna_tiny_reset_thumbnail",
+      "cta": "Save this for later.",
+      "posting_time_recommendation": "Use creator learning defaults until analytics exist.",
+      "creative_performance_variant_notes": "Instagram adaptation leans on first-frame constraint and save behavior."
+    }
+  ],
+  "creative_performance_map": [
+    {
+      "stage": "packaging",
+      "creative_decision_ref": "output-package/upload-ready/luna-tiny-reset-thumbnail.png",
+      "intended_effect": "Increase click-through or stop rate by making the laptop-day constraint visible.",
+      "primary_metrics": [
+        "impressions",
+        "click_through_rate",
+        "first_frame_hold"
+      ],
+      "variant_id": null,
+      "notes": "Packaging shows the practical constraint before the routine."
+    },
+    {
+      "stage": "hook",
+      "creative_decision_ref": "plan/production-plan.json#opening_hook",
+      "intended_effect": "Reduce first-three-second drop-off by naming a familiar workday tension.",
+      "primary_metrics": [
+        "retention_3s_pct",
+        "early_drop_off_pct"
+      ],
+      "variant_id": null,
+      "notes": "Hook starts with the shoulders-near-your-ears problem."
+    },
+    {
+      "stage": "body_retention",
+      "creative_decision_ref": "plan/production-plan.json#shot_outline",
+      "intended_effect": "Keep viewers through the demonstration by using three clear moves.",
+      "primary_metrics": [
+        "avg_view_duration_sec",
+        "midpoint_retention_pct"
+      ],
+      "variant_id": null,
+      "notes": "Body uses quick visual proof instead of motivation."
+    },
+    {
+      "stage": "payoff",
+      "creative_decision_ref": "plan/production-plan.json#payoff",
+      "intended_effect": "Drive saves and completion by ending with visible relief in the same location.",
+      "primary_metrics": [
+        "completion_rate_pct",
+        "saves"
+      ],
+      "variant_id": null,
+      "notes": "Payoff stays visually connected to the opening constraint."
+    },
+    {
+      "stage": "cta",
+      "creative_decision_ref": "output-package/upload-ready/instagram-caption.md#cta",
+      "intended_effect": "Encourage saves without making the post feel promotional.",
+      "primary_metrics": [
+        "saves",
+        "profile_visits"
+      ],
+      "variant_id": null,
+      "notes": "CTA asks for a save rather than a hard conversion."
+    }
+  ],
+  "provider_boundary": {
+    "generation_status": "imported",
+    "provider_calls_made": false,
+    "approval_required_before_generation": true
+  }
+}

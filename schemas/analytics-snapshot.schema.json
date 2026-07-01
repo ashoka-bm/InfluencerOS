@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/analytics-snapshot.schema.json",
+  "title": "AnalyticsSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analytics_snapshot_id", "published_post_record_id", "output_package_id", "project_id", "creator_profile_id", "snapshot_at", "source", "platform", "hours_since_publish", "metrics", "attribution_metrics", "raw_source_ref", "notes"],
+  "properties": {
+    "analytics_snapshot_id": { "type": "string", "pattern": "^analytics_snapshot_[a-zA-Z0-9_-]+$" },
+    "published_post_record_id": { "type": "string", "pattern": "^ppr_[a-zA-Z0-9_-]+$" },
+    "output_package_id": { "type": "string", "pattern": "^output_package_[a-zA-Z0-9_-]+$" },
+    "project_id": { "type": "string", "pattern": "^project_[a-zA-Z0-9_-]+$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "snapshot_at": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "collected_by", "confidence"],
+      "properties": {
+        "source_type": { "type": "string", "enum": ["api", "manual", "csv", "derived"] },
+        "collected_by": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+      }
+    },
+    "platform": { "type": "string", "minLength": 1 },
+    "hours_since_publish": { "type": ["number", "null"], "minimum": 0 },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["views", "impressions", "likes", "comments", "shares", "saves", "clicks", "follows_or_subscribers"],
+      "properties": {
+        "views": { "type": ["number", "null"], "minimum": 0 },
+        "impressions": { "type": ["number", "null"], "minimum": 0 },
+        "likes": { "type": ["number", "null"], "minimum": 0 },
+        "comments": { "type": ["number", "null"], "minimum": 0 },
+        "shares": { "type": ["number", "null"], "minimum": 0 },
+        "saves": { "type": ["number", "null"], "minimum": 0 },
+        "clicks": { "type": ["number", "null"], "minimum": 0 },
+        "follows_or_subscribers": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "attribution_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packaging", "hook", "body_retention", "payoff", "cta"],
+      "properties": {
+        "packaging": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["click_through_rate", "first_frame_hold", "notes"],
+          "properties": {
+            "click_through_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "first_frame_hold": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "notes": { "type": "string", "minLength": 1 }
+          }
+        },
+        "hook": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["retention_3s_pct", "early_drop_off_pct", "notes"],
+          "properties": {
+            "retention_3s_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "early_drop_off_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "notes": { "type": "string", "minLength": 1 }
+          }
+        },
+        "body_retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["avg_view_duration_sec", "midpoint_retention_pct", "retention_curve_ref", "notes"],
+          "properties": {
+            "avg_view_duration_sec": { "type": ["number", "null"], "minimum": 0 },
+            "midpoint_retention_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "retention_curve_ref": { "type": ["string", "null"] },
+            "notes": { "type": "string", "minLength": 1 }
+          }
+        },
+        "payoff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["completion_rate_pct", "rewatch_rate_pct", "notes"],
+          "properties": {
+            "completion_rate_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "rewatch_rate_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "notes": { "type": "string", "minLength": 1 }
+          }
+        },
+        "cta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["profile_visits", "link_clicks", "conversion_events", "notes"],
+          "properties": {
+            "profile_visits": { "type": ["number", "null"], "minimum": 0 },
+            "link_clicks": { "type": ["number", "null"], "minimum": 0 },
+            "conversion_events": { "type": ["number", "null"], "minimum": 0 },
+            "notes": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "raw_source_ref": { "type": ["string", "null"] },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

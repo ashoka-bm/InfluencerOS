@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/creator-workspace.schema.json",
+  "title": "CreatorWorkspace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["creator_workspace_id", "creator_slug", "creator_profile_id", "workspace_version", "created_on", "status", "root_path", "canonical_files", "directories", "source_intakes", "schema_versions", "index_settings", "privacy"],
+  "properties": {
+    "creator_workspace_id": { "type": "string", "pattern": "^creator_workspace_[a-zA-Z0-9_-]+$" },
+    "creator_slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "workspace_version": { "type": "string", "minLength": 1 },
+    "created_on": { "type": "string", "format": "date" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "foundation_review", "content_ready", "generation_ready", "active", "archived"]
+    },
+    "root_path": { "type": "string", "pattern": "^workspace-library/creators/[a-z0-9][a-z0-9-]*/$" },
+    "canonical_files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context_soul", "context_user", "context_memory", "creator_profile", "identity", "soul", "personal_brand", "voice_samples", "reference_library"],
+      "properties": {
+        "context_soul": { "type": "string", "const": "context/SOUL.md" },
+        "context_user": { "type": "string", "const": "context/USER.md" },
+        "context_memory": { "type": "string", "const": "context/MEMORY.md" },
+        "creator_profile": { "type": "string", "const": "creator-profile.json" },
+        "identity": { "type": "string", "const": "brand_context/identity.md" },
+        "soul": { "type": "string", "const": "brand_context/soul.md" },
+        "personal_brand": { "type": "string", "const": "brand_context/personal-brand.md" },
+        "voice_samples": { "type": "string", "const": "brand_context/voice-samples.md" },
+        "reference_library": { "type": "string", "const": "references/reference-library.json" }
+      }
+    },
+    "directories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context", "brand_context", "sources", "references", "research", "projects", "memory", "progress"],
+      "properties": {
+        "context": { "type": "string", "const": "context/" },
+        "brand_context": { "type": "string", "const": "brand_context/" },
+        "sources": { "type": "string", "const": "sources/" },
+        "references": { "type": "string", "const": "references/" },
+        "research": { "type": "string", "const": "research/" },
+        "projects": { "type": "string", "const": "projects/" },
+        "memory": { "type": "string", "const": "memory/" },
+        "progress": { "type": "string", "const": "progress/" }
+      }
+    },
+    "source_intakes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "source_type", "path", "imported_on", "extraction_status", "notes"],
+        "properties": {
+          "source_id": { "type": "string", "pattern": "^source_[a-zA-Z0-9_-]+$" },
+          "source_type": { "type": "string", "enum": ["breakdown", "interview", "handoff", "import", "notes"] },
+          "path": { "type": "string", "minLength": 1 },
+          "imported_on": { "type": "string", "format": "date" },
+          "extraction_status": { "type": "string", "enum": ["pending", "drafted", "reviewed"] },
+          "notes": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "schema_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["creator_workspace", "creator_profile", "reference_library", "output_package", "published_post_record", "analytics_snapshot", "performance_summary"],
+      "properties": {
+        "creator_workspace": { "type": "string", "minLength": 1 },
+        "creator_profile": { "type": "string", "minLength": 1 },
+        "reference_library": { "type": "string", "minLength": 1 },
+        "output_package": { "type": "string", "minLength": 1 },
+        "published_post_record": { "type": "string", "minLength": 1 },
+        "analytics_snapshot": { "type": "string", "minLength": 1 },
+        "performance_summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "index_settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sql_index_path", "semantic_index_path", "semantic_lookup_enabled", "semantic_index_policy"],
+      "properties": {
+        "sql_index_path": { "type": "string", "const": "workspace-library/index/influencer-os.sqlite" },
+        "semantic_index_path": { "type": "string", "const": "workspace-library/index/semantic/" },
+        "semantic_lookup_enabled": { "type": "boolean" },
+        "semantic_index_policy": { "type": "string", "minLength": 1 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_gitignored", "visibility", "provider_calls_require_approval", "secrets_policy"],
+      "properties": {
+        "workspace_gitignored": { "type": "boolean", "const": true },
+        "visibility": { "type": "string", "enum": ["private_local"] },
+        "provider_calls_require_approval": { "type": "boolean", "const": true },
+        "secrets_policy": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

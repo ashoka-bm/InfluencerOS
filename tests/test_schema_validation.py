@@ -1,96 +1,105 @@
 import json
-import re
+import shutil
+import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def validate_schema_subset(schema, value, path="$"):
-    expected_type = schema.get("type")
-    if expected_type:
-        allowed = expected_type if isinstance(expected_type, list) else [expected_type]
-        if not any(_matches_type(value, type_name) for type_name in allowed):
-            raise AssertionError(f"{path}: expected {allowed}, got {type(value).__name__}")
-
-    if "const" in schema and value != schema["const"]:
-        raise AssertionError(f"{path}: expected const {schema['const']!r}")
-
-    if "enum" in schema and value not in schema["enum"]:
-        raise AssertionError(f"{path}: {value!r} not in enum")
-
-    if isinstance(value, str):
-        if len(value) < schema.get("minLength", 0):
-            raise AssertionError(f"{path}: string shorter than minLength")
-        if "pattern" in schema and not re.search(schema["pattern"], value):
-            raise AssertionError(f"{path}: {value!r} does not match {schema['pattern']!r}")
-        if schema.get("format") == "date" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-            raise AssertionError(f"{path}: {value!r} is not YYYY-MM-DD")
-
-    if isinstance(value, list):
-        if len(value) < schema.get("minItems", 0):
-            raise AssertionError(f"{path}: array shorter than minItems")
-        if "maxItems" in schema and len(value) > schema["maxItems"]:
-            raise AssertionError(f"{path}: array longer than maxItems")
-        item_schema = schema.get("items")
-        if item_schema:
-            for index, item in enumerate(value):
-                validate_schema_subset(item_schema, item, f"{path}[{index}]")
-
-    if isinstance(value, dict):
-        required = schema.get("required", [])
-        for key in required:
-            if key not in value:
-                raise AssertionError(f"{path}: missing required key {key!r}")
-
-        properties = schema.get("properties", {})
-        if schema.get("additionalProperties") is False:
-            extra = set(value) - set(properties)
-            if extra:
-                raise AssertionError(f"{path}: unexpected keys {sorted(extra)!r}")
-
-        for key, child_schema in properties.items():
-            if key in value:
-                validate_schema_subset(child_schema, value[key], f"{path}.{key}")
-
-
-def _matches_type(value, type_name):
-    if type_name == "object":
-        return isinstance(value, dict)
-    if type_name == "array":
-        return isinstance(value, list)
-    if type_name == "string":
-        return isinstance(value, str)
-    if type_name == "boolean":
-        return isinstance(value, bool)
-    if type_name == "null":
-        return value is None
-    return False
+from influencer_os.validation import (
+    EXAMPLE_SCHEMA_PAIRS,
+    ValidationError,
+    load_json,
+    load_schema,
+    validate_examples,
+    validate_record,
+    validate_schema_subset,
+)
 
 
 class SchemaValidationTests(unittest.TestCase):
     def test_examples_validate_against_schemas(self):
-        pairs = [
-            ("creator-profile", "creator-profile"),
-            ("social-research-pack", "social-research-pack"),
-            ("social-post-format", "social-post-format"),
-            ("content-idea-set", "content-idea-set"),
-            ("selected-content-idea", "selected-content-idea"),
-            ("social-template", "social-template"),
-            ("applied-social-template", "applied-social-template"),
-            ("micro-journey-video-plan", "micro-journey-video-plan"),
-            ("carousel-plan", "carousel-plan"),
-            ("single-image-post-plan", "single-image-post-plan"),
-            ("story-sequence-plan", "story-sequence-plan"),
-            ("base-video-generation-plan", "base-video-generation-plan"),
+        results = validate_examples()
+        self.assertEqual(len(results), len(EXAMPLE_SCHEMA_PAIRS))
+        for schema_name, example_path in results:
+            with self.subTest(schema=schema_name):
+                self.assertTrue(example_path.exists())
+
+    def test_analytics_rejects_negative_counts(self):
+        schema = load_schema("analytics-snapshot")
+        example = load_json("examples/analytics-snapshot.example.json")
+        invalid = deepcopy(example)
+        invalid["metrics"]["views"] = -1
+
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, invalid)
+
+    def test_analytics_rejects_rate_above_one(self):
+        schema = load_schema("analytics-snapshot")
+        example = load_json("examples/analytics-snapshot.example.json")
+        invalid = deepcopy(example)
+        invalid["attribution_metrics"]["hook"]["retention_3s_pct"] = 1.5
+
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, invalid)
+
+    def test_content_ideas_require_evidence_refs(self):
+        example = load_json("examples/content-idea-set.example.json")
+        invalid = deepcopy(example)
+        invalid["ideas"][0].pop("evidence_ref_ids", None)
+
+        with self.assertRaises(ValidationError):
+            validate_record("content-idea-set", invalid)
+
+    def test_output_package_requires_all_creative_performance_stages(self):
+        example = load_json("examples/output-package.example.json")
+        invalid = deepcopy(example)
+        invalid["creative_performance_map"] = [
+            deepcopy(example["creative_performance_map"][0])
+            for _ in range(5)
         ]
 
-        for schema_name, example_name in pairs:
-            with self.subTest(schema=schema_name):
-                schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
-                example = json.loads((ROOT / "examples" / f"{example_name}.example.json").read_text())
-                validate_schema_subset(schema, example)
+        with self.assertRaises(ValidationError):
+            validate_record("output-package", invalid)
+
+    def test_performance_summary_requires_all_stage_findings(self):
+        example = load_json("examples/performance-summary.example.json")
+        invalid = deepcopy(example)
+        invalid["stage_findings"] = [
+            deepcopy(example["stage_findings"][0])
+            for _ in range(5)
+        ]
+
+        with self.assertRaises(ValidationError):
+            validate_record("performance-summary", invalid)
+
+    def test_output_package_example_refs_existing_plan_examples(self):
+        output_package = load_json("examples/output-package.example.json")
+        micro_journey = load_json("examples/micro-journey-video-plan.example.json")
+        generation_plan = load_json("examples/base-video-generation-plan.example.json")
+        known_plan_ids = {
+            micro_journey["micro_journey_video_plan_id"],
+            generation_plan["base_video_generation_plan_id"],
+        }
+
+        self.assertTrue(
+            set(output_package["source_refs"]["production_plan_ids"]).issubset(known_plan_ids)
+        )
+
+    def test_validate_examples_runs_semantic_checks(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            shutil.copytree("schemas", temp_root / "schemas")
+            shutil.copytree("examples", temp_root / "examples")
+            output_package_path = temp_root / "examples" / "output-package.example.json"
+            output_package = load_json(output_package_path)
+            output_package["creative_performance_map"] = [
+                deepcopy(output_package["creative_performance_map"][0])
+                for _ in range(5)
+            ]
+            output_package_path.write_text(json.dumps(output_package, indent=2) + "\n")
+
+            with self.assertRaises(ValidationError):
+                validate_examples(root=temp_root)
 
 
 if __name__ == "__main__":

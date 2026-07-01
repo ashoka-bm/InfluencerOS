@@ -1,0 +1,56 @@
+{
+  "analytics_snapshot_id": "analytics_snapshot_luna_tiny_reset_youtube_24h",
+  "published_post_record_id": "ppr_luna_tiny_reset_youtube_001",
+  "output_package_id": "output_package_luna_tiny_reset_001",
+  "project_id": "project_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "snapshot_at": "2026-06-30T18:30:00Z",
+  "source": {
+    "source_type": "manual",
+    "collected_by": "operator",
+    "confidence": "medium"
+  },
+  "platform": "youtube_shorts",
+  "hours_since_publish": 24,
+  "metrics": {
+    "views": 1250,
+    "impressions": 5100,
+    "likes": 92,
+    "comments": 11,
+    "shares": 18,
+    "saves": null,
+    "clicks": 24,
+    "follows_or_subscribers": 7
+  },
+  "attribution_metrics": {
+    "packaging": {
+      "click_through_rate": 0.245,
+      "first_frame_hold": null,
+      "notes": "YouTube snapshot suggests the title and thumbnail earned a healthy initial click-through."
+    },
+    "hook": {
+      "retention_3s_pct": 0.74,
+      "early_drop_off_pct": 0.26,
+      "notes": "The laptop-day hook appears to hold most viewers through the opening."
+    },
+    "body_retention": {
+      "avg_view_duration_sec": 18.2,
+      "midpoint_retention_pct": 0.53,
+      "retention_curve_ref": "analytics/raw/youtube-retention-24h.csv",
+      "notes": "Midpoint retention is acceptable but the second move may need tighter pacing."
+    },
+    "payoff": {
+      "completion_rate_pct": 0.38,
+      "rewatch_rate_pct": null,
+      "notes": "Completion is moderate; payoff may need a clearer emotional finish."
+    },
+    "cta": {
+      "profile_visits": 14,
+      "link_clicks": null,
+      "conversion_events": null,
+      "notes": "CTA produced some profile visits but no tracked off-platform conversion."
+    }
+  },
+  "raw_source_ref": "analytics/raw/youtube-24h-manual-entry.json",
+  "notes": "Manual 24-hour snapshot. Missing saves because this platform snapshot did not expose them."
+}

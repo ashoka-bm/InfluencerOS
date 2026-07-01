@@ -1,0 +1,39 @@
+{
+  "project_id": "project_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "project_slug": "tiny-reset-after-laptop-day",
+  "created_on": "2026-06-29",
+  "status": "planned",
+  "content_unit_type": "short_form_video",
+  "source_refs": {
+    "selected_content_idea_id": "selected_luna_001",
+    "research_pack_ids": [
+      "research_luna_fit_2026_06_28",
+      "video_research_luna_fit_001"
+    ],
+    "reference_asset_ids": [
+      "asset_luna_identity_plate",
+      "asset_luna_living_room",
+      "asset_luna_default_video_style"
+    ]
+  },
+  "project_paths": {
+    "root": "projects/tiny-reset-after-laptop-day/",
+    "idea": "idea/",
+    "plan": "plan/",
+    "output_package": "output-package/",
+    "published": "published/",
+    "analytics": "analytics/",
+    "performance_summary": "performance-summary.md"
+  },
+  "target_formats": [
+    "format_short_form_video"
+  ],
+  "platform_targets": [
+    "youtube_shorts",
+    "instagram_reels",
+    "tiktok"
+  ],
+  "learning_goal": "Test whether a visible workday constraint plus a tiny relief routine improves early retention for Luna's apartment wellness audience.",
+  "notes": "Project begins once the user selects the tiny reset content idea for production."
+}

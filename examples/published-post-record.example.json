@@ -1,0 +1,26 @@
+{
+  "published_post_record_id": "ppr_luna_tiny_reset_youtube_001",
+  "output_package_id": "output_package_luna_tiny_reset_001",
+  "project_id": "project_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "platform": "youtube_shorts",
+  "platform_account": "@lunafit",
+  "published_at": "2026-06-29T18:30:00Z",
+  "publication_status": "published",
+  "public_url": "https://youtube.com/shorts/example-luna-tiny-reset",
+  "platform_post_id": "yt_short_luna_tiny_reset_001",
+  "assets_used": {
+    "title_used": "The tiny reset after a laptop day",
+    "caption_or_description_path": "output-package/upload-ready/youtube-description.md",
+    "thumbnail_or_first_frame_asset_id": "upload_asset_luna_tiny_reset_thumbnail",
+    "primary_media_asset_ids": [
+      "upload_asset_luna_tiny_reset_video"
+    ]
+  },
+  "publication_method": {
+    "method": "manual_upload",
+    "actor": "operator",
+    "scheduler_ref": null
+  },
+  "notes": "Uploaded manually from the output package. Analytics should attach to this platform-specific record."
+}

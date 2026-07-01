@@ -1,0 +1,61 @@
+{
+  "creator_workspace_id": "creator_workspace_luna_fit",
+  "creator_slug": "luna-fit",
+  "creator_profile_id": "creator_luna_fit",
+  "workspace_version": "0.1.0",
+  "created_on": "2026-06-29",
+  "status": "draft",
+  "root_path": "workspace-library/creators/luna-fit/",
+  "canonical_files": {
+    "context_soul": "context/SOUL.md",
+    "context_user": "context/USER.md",
+    "context_memory": "context/MEMORY.md",
+    "creator_profile": "creator-profile.json",
+    "identity": "brand_context/identity.md",
+    "soul": "brand_context/soul.md",
+    "personal_brand": "brand_context/personal-brand.md",
+    "voice_samples": "brand_context/voice-samples.md",
+    "reference_library": "references/reference-library.json"
+  },
+  "directories": {
+    "context": "context/",
+    "brand_context": "brand_context/",
+    "sources": "sources/",
+    "references": "references/",
+    "research": "research/",
+    "projects": "projects/",
+    "memory": "memory/",
+    "progress": "progress/"
+  },
+  "source_intakes": [
+    {
+      "source_id": "source_luna_fit_breakdown_001",
+      "source_type": "breakdown",
+      "path": "sources/intakes/luna-fit-breakdown.md",
+      "imported_on": "2026-06-29",
+      "extraction_status": "drafted",
+      "notes": "Initial creator breakdown used to draft the operational profile and workspace files."
+    }
+  ],
+  "schema_versions": {
+    "creator_workspace": "0.1.0",
+    "creator_profile": "0.1.0",
+    "reference_library": "planned",
+    "output_package": "planned",
+    "published_post_record": "planned",
+    "analytics_snapshot": "planned",
+    "performance_summary": "planned"
+  },
+  "index_settings": {
+    "sql_index_path": "workspace-library/index/influencer-os.sqlite",
+    "semantic_index_path": "workspace-library/index/semantic/",
+    "semantic_lookup_enabled": true,
+    "semantic_index_policy": "Index curated identity, research summaries, distilled learnings, and performance summaries; do not index raw analytics by default."
+  },
+  "privacy": {
+    "workspace_gitignored": true,
+    "visibility": "private_local",
+    "provider_calls_require_approval": true,
+    "secrets_policy": "Keep secrets in .env or tool-managed auth only; never store API keys in workspace records."
+  }
+}

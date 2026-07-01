@@ -4,16 +4,125 @@
   "title": "CreatorProfile",
   "type": "object",
   "additionalProperties": false,
-  "required": ["creator_profile_id", "display_name", "niche", "target_audience", "persona", "visual_identity", "content_boundaries", "goals"],
+  "required": ["creator_profile_id", "creator_slug", "display_name", "workspace_ref", "niche", "target_audience", "positioning", "persona_summary", "voice", "visual_identity_summary", "content_pillars", "content_boundaries", "content_strategy", "goals", "file_refs", "reference_refs"],
   "properties": {
     "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "creator_slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "display_name": { "type": "string", "minLength": 1 },
+    "workspace_ref": { "type": "string", "pattern": "^creator_workspace_[a-zA-Z0-9_-]+$" },
     "niche": { "type": "string", "minLength": 1 },
-    "target_audience": { "type": "string", "minLength": 1 },
-    "persona": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-    "visual_identity": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "target_audience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "primary_audience", "secondary_audiences", "audience_inputs_policy"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "primary_audience": { "type": "string", "minLength": 1 },
+        "secondary_audiences": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "audience_inputs_policy": { "type": "string", "minLength": 1 }
+      }
+    },
+    "positioning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positioning_line", "creator_role", "trust_moat"],
+      "properties": {
+        "positioning_line": { "type": "string", "minLength": 1 },
+        "creator_role": { "type": "string", "minLength": 1 },
+        "trust_moat": { "type": "string", "minLength": 1 }
+      }
+    },
+    "persona_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["archetype", "traits", "relationship_to_audience", "behavioral_tells"],
+      "properties": {
+        "archetype": { "type": "string", "minLength": 1 },
+        "traits": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "relationship_to_audience": { "type": "string", "minLength": 1 },
+        "behavioral_tells": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["voice_register", "discourse_pattern", "signature_phrases", "forbidden_phrases"],
+      "properties": {
+        "voice_register": { "type": "string", "minLength": 1 },
+        "discourse_pattern": { "type": "string", "minLength": 1 },
+        "signature_phrases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "forbidden_phrases": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "visual_identity_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["style_summary", "recurring_locations", "wardrobe_constants", "camera_style", "hard_visual_rules"],
+      "properties": {
+        "style_summary": { "type": "string", "minLength": 1 },
+        "recurring_locations": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "wardrobe_constants": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "camera_style": { "type": "string", "minLength": 1 },
+        "hard_visual_rules": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "content_pillars": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pillar_id", "name", "description"],
+        "properties": {
+          "pillar_id": { "type": "string", "pattern": "^pillar_[a-zA-Z0-9_-]+$" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "content_boundaries": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "goals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+    "disclosure_rules": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "platform_posture": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "content_strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy_summary", "primary_surfaces", "content_mediums", "in_scope_formats", "out_of_scope_formats", "research_implications", "readiness_blocker_policy"],
+      "properties": {
+        "strategy_summary": { "type": "string", "minLength": 1 },
+        "primary_surfaces": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "content_mediums": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["text", "image", "video", "audio", "carousel", "story_sequence"] }
+        },
+        "in_scope_formats": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "out_of_scope_formats": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "research_implications": { "type": "string", "minLength": 1 },
+        "readiness_blocker_policy": { "type": "string", "minLength": 1 }
+      }
+    },
+    "goals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "file_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "soul", "personal_brand", "voice_samples"],
+      "properties": {
+        "identity": { "type": "string", "const": "brand_context/identity.md" },
+        "soul": { "type": "string", "const": "brand_context/soul.md" },
+        "personal_brand": { "type": "string", "const": "brand_context/personal-brand.md" },
+        "voice_samples": { "type": "string", "const": "brand_context/voice-samples.md" }
+      }
+    },
+    "reference_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_library", "primary_character_asset_ids", "primary_location_asset_ids", "primary_video_style_asset_id"],
+      "properties": {
+        "reference_library": { "type": "string", "const": "references/reference-library.json" },
+        "primary_character_asset_ids": { "type": "array", "items": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" } },
+        "primary_location_asset_ids": { "type": "array", "items": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" } },
+        "primary_video_style_asset_id": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" }
+      }
+    }
   }
 }
-

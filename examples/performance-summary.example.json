@@ -1,0 +1,73 @@
+{
+  "performance_summary_id": "performance_summary_luna_tiny_reset_001",
+  "project_id": "project_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "created_on": "2026-07-01",
+  "evidence_refs": {
+    "output_package_id": "output_package_luna_tiny_reset_001",
+    "published_post_record_ids": [
+      "ppr_luna_tiny_reset_youtube_001"
+    ],
+    "analytics_snapshot_ids": [
+      "analytics_snapshot_luna_tiny_reset_youtube_24h"
+    ],
+    "source_material_refs": [
+      "output-package/output-package.json",
+      "plan/production-plan.json",
+      "analytics/raw/youtube-retention-24h.csv"
+    ]
+  },
+  "stage_findings": [
+    {
+      "stage": "packaging",
+      "result": "Strong click-through relative to the early baseline.",
+      "interpretation": "The visible laptop-day constraint likely made the thumbnail and title feel specific.",
+      "confidence": "medium"
+    },
+    {
+      "stage": "hook",
+      "result": "Strong three-second retention.",
+      "interpretation": "Naming the familiar workday tension helped viewers understand the post immediately.",
+      "confidence": "medium"
+    },
+    {
+      "stage": "body_retention",
+      "result": "Midpoint retention was acceptable but not exceptional.",
+      "interpretation": "The demonstration may need tighter pacing after the first move.",
+      "confidence": "low"
+    },
+    {
+      "stage": "payoff",
+      "result": "Completion was moderate.",
+      "interpretation": "The final relief moment may need to be more visible or loop-friendly.",
+      "confidence": "low"
+    },
+    {
+      "stage": "cta",
+      "result": "Profile visits appeared but conversion tracking was incomplete.",
+      "interpretation": "The save-oriented CTA fits Luna's tone, but off-platform CTA performance cannot be judged yet.",
+      "confidence": "low"
+    }
+  ],
+  "distilled_lessons": [
+    {
+      "lesson_id": "lesson_luna_visible_constraint_hook",
+      "lesson": "For Luna Fit, making the everyday constraint visible in the thumbnail and opening hook is a promising packaging and hook pattern.",
+      "applies_to": [
+        "short_form_video",
+        "tiny home workouts",
+        "workday reset topics"
+      ],
+      "evidence_strength": "single_post_signal"
+    }
+  ],
+  "semantic_lookup": {
+    "index_allowed": true,
+    "summary_text": "Luna Fit's tiny laptop-day reset suggests that visible everyday constraints can improve packaging and hook performance. Keep using concrete constraints, but tighten the middle demonstration and make the payoff more loop-friendly."
+  },
+  "recommended_next_actions": [
+    "Try another tiny reset video with the constraint visible in the first frame.",
+    "Shorten the second movement demonstration.",
+    "Make the final relief moment more visually distinct."
+  ]
+}

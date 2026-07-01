@@ -1,0 +1,56 @@
+{
+  "reference_library_id": "reference_library_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "created_on": "2026-06-29",
+  "asset_root": "references/",
+  "assets": [
+    {
+      "asset_id": "asset_luna_identity_plate",
+      "asset_type": "character",
+      "asset_status": "generated",
+      "role": "Primary character identity plate",
+      "path": "references/character/luna-identity-plate.png",
+      "source": {
+        "source_type": "generated",
+        "source_ref": "sources/intakes/luna-fit-breakdown.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use to preserve face, age, skin texture, expression baseline, and identity continuity.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_luna_living_room",
+      "asset_type": "location",
+      "asset_status": "generated",
+      "role": "Recurring warm apartment living room",
+      "path": "references/locations/luna-living-room-master-location-sheet.png",
+      "source": {
+        "source_type": "generated",
+        "source_ref": "sources/intakes/luna-fit-breakdown.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use as the reusable creator-space reference for apartment routines and talking-head scenes.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_luna_default_video_style",
+      "asset_type": "video_style",
+      "asset_status": "approved",
+      "role": "Default phone-first vertical creator style",
+      "path": "references/video-style/default-video-photo-style.md",
+      "prompt_path": "references/video-style/default-video-photo-style.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/personal-brand.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use for @video_style_reference: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, shot quality, recurring shot families, and social-native finish.",
+      "semantic_index_allowed": true
+    }
+  ],
+  "usage_policy": {
+    "identity_assets_required_for_generation": true,
+    "provider_calls_require_approval": true,
+    "raw_media_git_policy": "Real creator references and generated media stay under workspace-library and must not be committed."
+  }
+}

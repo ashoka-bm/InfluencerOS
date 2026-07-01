@@ -2,6 +2,9 @@
   "content_idea_set_id": "ideas_luna_fit_001",
   "creator_profile_id": "creator_luna_fit",
   "social_research_pack_id": "research_luna_fit_2026_06_28",
+  "video_understanding_pack_ids": [
+    "video_research_luna_fit_001"
+  ],
   "ideas": [
     {
       "idea_id": "idea_luna_001",
@@ -12,6 +15,10 @@
       "creator_fit": "Practical and warm, with no shame or intensity framing.",
       "target_emotion": "relief",
       "trend_evidence": "Matches observed short-form patterns around fast visible promises and low-friction routines.",
+      "evidence_ref_ids": [
+        "research_luna_fit_2026_06_28",
+        "video_research_luna_fit_001"
+      ],
       "novelty_angle": "Positions a workout as a nervous-system reset rather than a calorie burn.",
       "production_complexity": "low",
       "platform_travel_reason": "The premise is visual, fast, and does not depend on platform UI or audio trends.",
@@ -32,6 +39,10 @@
       "creator_fit": "Playful, practical, and approachable.",
       "target_emotion": "permission",
       "trend_evidence": "Uses a specific constraint and quick demonstration pattern.",
+      "evidence_ref_ids": [
+        "research_luna_fit_2026_06_28",
+        "video_research_luna_fit_001"
+      ],
       "novelty_angle": "Turns noise anxiety into the premise.",
       "production_complexity": "low",
       "platform_travel_reason": "The joke and routine are self-contained in the video.",
@@ -53,6 +64,10 @@
       "creator_fit": "Educational without sounding clinical.",
       "target_emotion": "recognition",
       "trend_evidence": "Fits problem-solution demo patterns.",
+      "evidence_ref_ids": [
+        "research_luna_fit_2026_06_28",
+        "video_research_luna_fit_001"
+      ],
       "novelty_angle": "Blames the chair in a light, memorable way.",
       "production_complexity": "medium",
       "platform_travel_reason": "The visual before/after posture contrast works without platform-specific context.",
@@ -74,6 +89,10 @@
       "creator_fit": "Strong match for never-shaming creator boundaries.",
       "target_emotion": "comfort",
       "trend_evidence": "Matches creator-led vulnerability and tiny-start formats.",
+      "evidence_ref_ids": [
+        "research_luna_fit_2026_06_28",
+        "video_research_luna_fit_001"
+      ],
       "novelty_angle": "Makes low energy part of the routine design.",
       "production_complexity": "low",
       "platform_travel_reason": "The emotional arc is clear on mute and across platforms.",
@@ -95,6 +114,10 @@
       "creator_fit": "Warm, realistic, and habit-based.",
       "target_emotion": "momentum",
       "trend_evidence": "Uses routine stacking and a visible countdown object.",
+      "evidence_ref_ids": [
+        "research_luna_fit_2026_06_28",
+        "video_research_luna_fit_001"
+      ],
       "novelty_angle": "The coffee maker becomes the timer and story engine.",
       "production_complexity": "medium",
       "platform_travel_reason": "A familiar object creates a simple visual story without platform-specific effects.",

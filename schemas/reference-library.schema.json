@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/reference-library.schema.json",
+  "title": "ReferenceLibrary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reference_library_id", "creator_profile_id", "created_on", "asset_root", "assets", "usage_policy"],
+  "properties": {
+    "reference_library_id": { "type": "string", "pattern": "^reference_library_[a-zA-Z0-9_-]+$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "created_on": { "type": "string", "format": "date" },
+    "asset_root": { "type": "string", "const": "references/" },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "asset_type", "asset_status", "role", "path", "source", "created_on", "usage_notes", "semantic_index_allowed"],
+        "properties": {
+          "asset_id": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" },
+          "asset_type": { "type": "string", "enum": ["character", "location", "outfit", "object", "video_style", "voice", "brand"] },
+          "asset_status": { "type": "string", "enum": ["planned", "prompted", "user_provided", "generated", "approved", "retired"] },
+          "role": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "prompt_path": { "type": "string", "minLength": 1 },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source_type", "source_ref"],
+            "properties": {
+              "source_type": { "type": "string", "enum": ["generated", "imported", "user_provided", "derived"] },
+              "source_ref": { "type": "string", "minLength": 1 }
+            }
+          },
+          "created_on": { "type": "string", "format": "date" },
+          "usage_notes": { "type": "string", "minLength": 1 },
+          "semantic_index_allowed": { "type": "boolean" }
+        }
+      }
+    },
+    "usage_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_assets_required_for_generation", "provider_calls_require_approval", "raw_media_git_policy"],
+      "properties": {
+        "identity_assets_required_for_generation": { "type": "boolean" },
+        "provider_calls_require_approval": { "type": "boolean", "const": true },
+        "raw_media_git_policy": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

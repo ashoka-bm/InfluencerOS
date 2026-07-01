@@ -1,28 +1,132 @@
 {
   "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
   "display_name": "Luna Fit",
+  "workspace_ref": "creator_workspace_luna_fit",
   "niche": "approachable wellness and compact home workouts",
-  "target_audience": "busy women in their 20s and 30s who want realistic fitness without gym intimidation",
-  "persona": [
-    "warm",
-    "slightly playful",
-    "practical",
-    "never shaming"
-  ],
-  "visual_identity": [
-    "clean apartment lighting",
-    "soft athletic wardrobe",
-    "warm neutrals with one bright accent color",
-    "friendly direct-to-camera energy"
+  "target_audience": {
+    "summary": "Busy women in their 20s and 30s who want realistic fitness without gym intimidation.",
+    "primary_audience": "Time-constrained women who want low-pressure home movement.",
+    "secondary_audiences": [
+      "Beginners returning to movement after a long break",
+      "Apartment dwellers with limited space"
+    ],
+    "audience_inputs_policy": "Audience and niche are explicit creator inputs; agents must not redefine them during research."
+  },
+  "positioning": {
+    "positioning_line": "The friendly proof that small-space movement can feel emotionally doable.",
+    "creator_role": "Encouraging practical guide, not transformation coach.",
+    "trust_moat": "No-shame routines, visible constraints, and repeatable small wins."
+  },
+  "persona_summary": {
+    "archetype": "Caregiver plus practical coach",
+    "traits": [
+      "warm",
+      "slightly playful",
+      "practical",
+      "never shaming"
+    ],
+    "relationship_to_audience": "A realistic friend who has already set up the mat and removed the intimidation.",
+    "behavioral_tells": [
+      "Names the constraint before giving the routine.",
+      "Uses reassurance before instruction."
+    ]
+  },
+  "voice": {
+    "voice_register": "Warm, direct, practical, and emotionally accessible.",
+    "discourse_pattern": "Constraint, tiny action, visible demonstration, gentle payoff.",
+    "signature_phrases": [
+      "Start smaller than your motivation.",
+      "Make it easy enough to repeat."
+    ],
+    "forbidden_phrases": [
+      "no excuses",
+      "summer body",
+      "burn it off"
+    ]
+  },
+  "visual_identity_summary": {
+    "style_summary": "Soft apartment wellness visuals with warm daylight, tidy lived-in rooms, and gentle athletic styling.",
+    "recurring_locations": [
+      "warm apartment living room",
+      "compact bedroom stretch corner"
+    ],
+    "wardrobe_constants": [
+      "soft athletic wardrobe",
+      "warm neutrals with one bright accent color"
+    ],
+    "camera_style": "Modern phone-first vertical creator content, stable tripod or light handheld movement.",
+    "hard_visual_rules": [
+      "No extreme before-and-after body framing.",
+      "No gym intimidation visual language."
+    ]
+  },
+  "content_pillars": [
+    {
+      "pillar_id": "pillar_tiny_home_workouts",
+      "name": "Tiny Home Workouts",
+      "description": "Small-space movement routines that fit into realistic daily constraints."
+    },
+    {
+      "pillar_id": "pillar_no_shame_fitness",
+      "name": "No-Shame Fitness",
+      "description": "Fitness guidance that removes guilt, intensity pressure, and body-shaming."
+    }
   ],
   "content_boundaries": [
-    "no extreme diet claims",
-    "no body-shaming before-and-after framing",
-    "no medical advice"
+    "No extreme diet claims.",
+    "No body-shaming before-and-after framing.",
+    "No medical advice."
   ],
+  "disclosure_rules": [
+    "Clearly identify sponsored products or paid partnerships in captions and scripts."
+  ],
+  "platform_posture": [
+    "Universal short-form video first.",
+    "Carousel and story sequence formats are acceptable when they fit the idea."
+  ],
+  "content_strategy": {
+    "strategy_summary": "Lead with universal short-form wellness videos and reuse the same creator foundation for carousels and story sequences when a visual sequence communicates the idea better than motion.",
+    "primary_surfaces": [
+      "Instagram",
+      "TikTok",
+      "YouTube Shorts"
+    ],
+    "content_mediums": [
+      "video",
+      "carousel",
+      "story_sequence"
+    ],
+    "in_scope_formats": [
+      "short_form_video",
+      "carousel",
+      "story_sequence"
+    ],
+    "out_of_scope_formats": [
+      "long-form workout programming",
+      "medical advice articles"
+    ],
+    "research_implications": "Research should prioritize current low-pressure home fitness hooks, first-frame patterns, and compact demonstration formats across visual social feeds.",
+    "readiness_blocker_policy": "Video and image planning require character, location, wardrobe, video style, and brand references; voiceover work also requires a voice sample or voice style note."
+  },
   "goals": [
-    "make fitness feel emotionally accessible",
-    "build trust through repeatable short-form formats"
-  ]
+    "Make fitness feel emotionally accessible.",
+    "Build trust through repeatable short-form formats."
+  ],
+  "file_refs": {
+    "identity": "brand_context/identity.md",
+    "soul": "brand_context/soul.md",
+    "personal_brand": "brand_context/personal-brand.md",
+    "voice_samples": "brand_context/voice-samples.md"
+  },
+  "reference_refs": {
+    "reference_library": "references/reference-library.json",
+    "primary_character_asset_ids": [
+      "asset_luna_identity_plate"
+    ],
+    "primary_location_asset_ids": [
+      "asset_luna_living_room"
+    ],
+    "primary_video_style_asset_id": "asset_luna_default_video_style"
+  }
 }
-

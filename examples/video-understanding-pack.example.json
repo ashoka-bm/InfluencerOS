@@ -1,0 +1,47 @@
+{
+  "video_understanding_pack_id": "video_research_luna_fit_001",
+  "creator_profile_id": "creator_luna_fit",
+  "researched_on": "2026-06-28",
+  "research_question": "What short-form wellness video structures make quick home routines feel immediately doable?",
+  "sources": [
+    {
+      "source_id": "video_source_luna_reference_001",
+      "url_or_path": "https://example.com/public-short-video",
+      "title": "Example quick reset video",
+      "source_type": "public_url",
+      "analysis_method": {
+        "frames_sampled": "duration-aware frame sample, first 30 seconds emphasized",
+        "transcript_source": "captions",
+        "focused_range": "0:00-0:30"
+      },
+      "observations": {
+        "opening_hook": "The creator names a common time constraint before demonstrating anything.",
+        "first_frame_pattern": "Creator is already in the environment where the problem happens.",
+        "visual_structure": "Direct-to-camera hook, quick proof of constraint, three demonstrated moves, visible relaxed finish.",
+        "spoken_or_text_framing": "Language frames the routine as relief instead of discipline.",
+        "template_signals": [
+          "template_hook_problem_solution",
+          "template_before_process_payoff"
+        ],
+        "replicable_moves": [
+          "Start in the real-life context instead of a studio setup.",
+          "Make the constraint visible with a clock, laptop, or object.",
+          "Show the emotional result in the same frame family as the opening."
+        ],
+        "avoid_notes": [
+          "Do not copy the exact routine or caption language.",
+          "Avoid intensity claims that clash with Luna's no-shame positioning."
+        ]
+      }
+    }
+  ],
+  "cross_video_patterns": [
+    "The strongest quick-routine videos make the constraint visible before explaining the movement.",
+    "A same-location payoff helps viewers feel the transformation without needing platform-specific edits."
+  ],
+  "creator_fit_findings": [
+    "Luna Fit should borrow the real-life constraint structure, not the specific routine.",
+    "Soft apartment visuals and direct-to-camera reassurance fit the observed high-clarity pattern."
+  ]
+}
+
