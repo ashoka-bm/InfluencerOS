@@ -1,0 +1,242 @@
+# InfluencerOS Architecture Map
+
+Last updated: 2026-07-01
+
+This is the whole-system blueprint at file granularity: where every file lives, what it owns, and which function or skill calls which other function or skill. It records **structure and call flow, not file internals**. Internals (schema fields, skill prose, function bodies) are defined in the files themselves and built in dedicated TDD passes.
+
+It is the source of truth for the creation-flow call graph. `repository-map.md` records file ownership and the record data-flow; this file records the skill and CLI call graphs.
+
+## Status Legend
+
+- **[BUILT]** — exists on disk and works today.
+- **[PLANNED]** — approved and placed here; internals built in a later TDD pass.
+- **[DEFERRED]** — intentionally not built in v1 (roadmap Deferred / PRD Out of Scope).
+- **[GATED]** — a zone that exists structurally but stays inert until its subsystem is un-deferred.
+
+## System Layers
+
+```text
+Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin importers)   [BUILT; restructure per ADR 0019]
+First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
+First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
+Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
+Workflow contracts         schemas/ (20) + docs/pipeline-contract.md                     [BUILT]
+Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
+Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT + PLANNED]
+Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
+Self-improvement loop      skills/wrap-up, skills/memory-write                           [PLANNED — ADR 0016]
+Propagation                CLI: init-creator, sync-creator-runtime, update-creators      [BUILT + PLANNED — ADR 0018]
+Drift checks               tests/ parity checks                                          [PLANNED]
+Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere-access  [DEFERRED / GATED]
+```
+
+## File Map
+
+### Root adapters (always loaded)
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `AGENTS.md` | Canonical operating contract: rules, source-of-truth list, durable read order, product invariant. All runtimes read it. | [BUILT] |
+| `CLAUDE.md` | Thin Claude wrapper: imports `AGENTS.md`; Claude-specific runtime notes only. | [BUILT; restructure per ADR 0019] |
+| `SOUL.md` | Thin OpenClaw/Hermes wrapper: imports `AGENTS.md`; adapter, not identity. | [BUILT; restructure per ADR 0019] |
+| `README.md` | Human entry point. | [BUILT] |
+| `CONTEXT.md` | Product vocabulary source of truth. | [BUILT] |
+| `ARCHITECTURE.md` | Durable architecture direction. | [BUILT] |
+
+### First-party OS persona context
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `context/SOUL.md` | Sole OS identity document (persona). | [BUILT] |
+| `context/USER.md` | OS operator profile. | [BUILT] |
+| `context/MEMORY.md` | OS working memory, byte-capped; written by `memory-write`. | [BUILT] |
+| `context/learnings.md` | Append-only per-skill learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
+| `brand_context/*.md` | OS positioning, voice, icp, samples, assets. | [BUILT; stubs] |
+
+### Durable planning docs (`docs/os-construction/`)
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `prd.md` · `roadmap.md` · `short-term-plan.md` · `progress.md` | Product plan and status. | [BUILT] |
+| `repository-map.md` | File ownership + record data-flow. | [BUILT] |
+| `architecture-map.md` | This file: file map + skill/CLI call graphs. | [BUILT] |
+| `agentic-os-alignment.md` · `agentic-os-copy-plan.md` · `agentic-os-parity-plan.md` | Parity governance. | [BUILT] |
+| `divergence-test.md` · `visual-architecture-maps.md` | Divergence gate + map standard. | [BUILT] |
+| `context-matrix.md` · `skill-registry.md` | Context load rules + skill registry. | [BUILT] |
+| `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
+| `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
+| `maps/` | Excalidraw map records. | [BUILT] |
+| `docs/adr/0001–0019` | Architectural decisions (0016–0019 added this pass). | [BUILT] |
+
+### Workflow contracts
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `schemas/*.schema.json` (20) | JSON Schema contract per durable record. | [BUILT] |
+| `examples/*.example.json` (20) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
+| `docs/provider-boundary.md` | Provider approval boundary. | [BUILT] |
+| `docs/creator-workspace-structure.md` | Workspace layout + local-state policy. | [BUILT] |
+
+### Skills (`skills/<skill-name>/`)
+
+Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. These ADR-0017 conventions (`references/`, `SKILL.local.md`, `## Rules`/`## Self-Update`, `dependencies` frontmatter) are **[PLANNED]** — none exist on disk yet; they land in workstreams 9–10. The [BUILT] skills below currently carry only a plain `SKILL.md`.
+
+| Skill | Category | Role | Status |
+| --- | --- | --- | --- |
+| `influencer-os` | conductor | Content-creation conductor (10 phases). | [BUILT; call graph to formalize] |
+| `create-influencer` | conductor | Creator-setup conductor (13 phases). | [BUILT] |
+| `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
+| `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
+| `create-personal-brand` | setup | `brand_context/personal-brand.md`. | [BUILT] |
+| `create-voice-samples` | setup | `brand_context/voice-samples.md`. | [BUILT] |
+| `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
+| `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
+| `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
+| `create-social-research-pack` | planning | Dated, sourced Social Research Pack. | [PLANNED — Phase 1] |
+| `create-content-idea-set` | planning | Exactly five creator-fit ideas. | [PLANNED — Phase 1] |
+| `apply-social-template` | planning | Applied Social Template for the selected idea. | [PLANNED — Phase 1] |
+| `create-production-plan` | planning | Routes selected idea to a format-specific plan. | [PLANNED — Phase 1] |
+| `create-output-package` | planning | Output Package + provenance. | [PLANNED — Phase 1] |
+| `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2] |
+| `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [PLANNED — ADR 0016] |
+| `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes. | [PLANNED — ADR 0016] |
+
+### Runtime CLI (`influencer_os/`)
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `cli.py` | Command surface; routes to helpers, holds no product rules. | [BUILT] |
+| `validation.py` | Schema + record validation (harden `$ref`/`oneOf`/`anyOf`/`allOf`). | [BUILT; hardening PLANNED] |
+| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime`, `update-creators`. | [BUILT + PLANNED] |
+| `projects.py` | Project scaffolding + validation (+ provenance resolution). | [BUILT; provenance resolve PLANNED] |
+| `runs.py` | Dry-run init + run records. | [BUILT] |
+
+### Tests (`tests/`) — parity + contract
+
+| Path | Role | Status |
+| --- | --- | --- |
+| `test_schema_validation.py` | All examples validate (derive list from disk, not hardcoded). | [BUILT; harden PLANNED] |
+| `test_cli.py` | CLI command behavior. | [BUILT] |
+| adapter read-order drift check | Fail if `CLAUDE.md`/`SOUL.md` stop importing `AGENTS.md` or restate a divergent read order. | [PLANNED — ADR 0019] |
+| skill-registry drift check | Every registered skill exists; every on-disk skill is registered. | [PLANNED] |
+| context-matrix coverage check | Every skill/workflow has a matrix row. | [PLANNED] |
+| workspace-structure check | `init-creator` produces the documented tree incl. `.claude/skills/`. | [PLANNED] |
+| project-output-layout check | Project scaffolding is deterministic. | [PLANNED] |
+| Tier-0 memory policy check | `context/MEMORY.md` byte cap enforced. | [PLANNED] |
+
+### Deferred / gated subsystems
+
+| Subsystem | Agentic OS location | InfluencerOS status | Un-defer trigger |
+| --- | --- | --- | --- |
+| Hooks | `.claude/hooks/` | [DEFERRED] | Explicit approval; memory-capture/skill-auto-commit only automate skills that already run manually. |
+| Cron | `cron/jobs/` | [DEFERRED] | Phase 4 Automation OS. |
+| Command Centre | `command-centre/` | [DEFERRED] | After file-first OS is stable + explicit scope approval. |
+| Subagents | `.claude/agents/` | [DEFERRED — decision pending] | See "Subagent decision" below; needs its own ADR before adoption. |
+| Anywhere-access | hosted APIs | [DEFERRED] | After Phase 4 + provider/security ADR. |
+| Propagation content zones | scripts/settings/hooks/cron in `add-client.sh` | [GATED — ADR 0018] | Each fills when its subsystem is un-deferred. |
+
+## Creation-Flow Call Graph (skill → skill)
+
+The content conductor owns the pipeline. Per ADR 0017 each conductor declares a `## Dependencies` table and a phase→owner map with explicit `Skill(skill: "...")` invocations (mirroring the reference `00-social-content` orchestrator). Producer skills marked [PLANNED] are approved but unbuilt; until built, the conductor must halt at that phase and surface the missing skill (never pretend it ran).
+
+```text
+skills/influencer-os/SKILL.md  (content conductor)
+  Phase 1  load Creator Workspace + Creator Profile        owner: influencer-os (inline)         [BUILT]
+  Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
+  Phase 3  Social Research Pack        -> Skill(create-social-research-pack)                      [PLANNED]
+  Phase 4  Social Post Format Shortlist owner: influencer-os (inline) + format contract          [BUILT; contract PLANNED]
+  Phase 5  Content Idea Set (5)        -> Skill(create-content-idea-set)                          [PLANNED]
+  Phase 6  Idea Selection Gate         owner: user (agent must not self-select)                   [BUILT gate]
+  Phase 7  Applied Social Template     -> Skill(apply-social-template)                            [PLANNED]
+  Phase 8  Format-Specific Prod Plan   -> Skill(create-production-plan) --routes by target_format_id-->
+             format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)
+             format_carousel         -> CarouselPlan
+             format_single_image_post-> SingleImagePostPlan
+             format_story_sequence   -> StorySequencePlan                                         [PLANNED]
+  Phase 9  Base Video Generation Plan  owner: create-production-plan (provider-neutral)           [PLANNED]
+  Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
+  (post)   Output Package             -> Skill(create-output-package)                             [PLANNED]
+  (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2]
+```
+
+```text
+skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exist]
+  Phase 2  Identity          -> Skill(create-identity)
+  Phase 3  Soul              -> Skill(create-soul)
+  Phase 4  Personal brand    -> Skill(create-personal-brand)
+  Phase 5  Voice samples     -> Skill(create-voice-samples)
+  Phase 6  Operational summary -> Skill(create-creator-profile)
+  Phase 7  Runtime context   -> Skill(create-runtime-context)
+  Phase 8  Reference planning -> Skill(create-reference-library)
+  Phases 1,9-13  intake, prompt staging, readiness, acceptance gate, generation gate (inline)
+```
+
+## Self-Improvement Loop Call Graph (ADR 0016)
+
+```text
+trigger: user signals wrap-up / session end (by skill description; NO hook in v1)
+skills/wrap-up/SKILL.md
+  -> review deliverables (git status)
+  -> collect feedback
+  -> append per-skill entry     -> context/learnings.md
+  -> record process lesson      -> docs/os-construction/process-learnings.md
+  -> fix method directly        -> edit target SKILL.md / SKILL.local.md
+  -> reconcile registry+matrix  -> docs/os-construction/skill-registry.md, context-matrix.md
+  -> promote durable fact       -> Skill(memory-write)
+  -> commit only when user asks
+
+skills/memory-write/SKILL.md
+  -> add/replace/remove one fact in context/MEMORY.md, deduped, within byte cap -> confirm
+```
+
+Automation (Stop-hook invocation, skill-auto-commit, memory-distill cron) is [DEFERRED]; it only automates *when* these skills run.
+
+## Propagation Call Graph (ADR 0018 — Python CLI, not bash)
+
+```text
+influencer_os/cli.py
+  init-creator <manifest>            -> creator_workspaces.init_creator()
+       creates workspace-library/creators/<slug>/ ; copies baseline skills -> .claude/skills/ ;
+       writes AGENTS.md + CLAUDE.md wrappers + structure  [propagate NOW]
+  sync-creator-runtime <workspace>   -> creator_workspaces.sync_runtime()
+       refresh copied baseline SKILL.md ; preserve SKILL.local.md, creator-only skills,
+       context/brand/projects/memory/progress/.env  [BUILT]
+  update-creators [--all]            -> creator_workspaces.update_creators()
+       backup-protected, conflict-safe batch refresh (mirrors update-clients.sh)  [PLANNED]
+  gated zones carried but inert: scripts, settings, hooks, cron templates  [GATED]
+```
+
+Freshly-initialized workspaces contain `.claude/skills/` because `init-creator` wires `sync-creator-runtime`; any local workspace created before that wiring may lack it and should be re-initialized. The `[BUILT scaffold]` tag refers to the scaffolding capability, not to any specific committed workspace (workspace state is git-ignored).
+
+## Runtime Helper Call Graph
+
+```text
+influencer_os/cli.py
+  -> creator_workspaces.py   (workspace scaffold/sync/validate)
+  -> projects.py             (project scaffold/validate; PLANNED: resolve provenance IDs to records)
+  -> runs.py                 (dry-run init)
+  -> validation.py           (schema validation; PLANNED: honor $ref/oneOf/anyOf/allOf)
+  -> schemas/                (JSON Schema contracts)
+```
+
+## Determinism Boundary Table
+
+Each creation-flow boundary must have: input record(s) → output record + schema → deterministic acceptance criterion → validation → gate. Gaps from the parity review are marked **[TO ADD]**.
+
+| Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
+| --- | --- | --- | --- | --- | --- |
+| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace` + readiness validator **[TO ADD]** | none |
+| Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record` **[TO ADD]** | none |
+| Social research | profile (+ VUP) | `social-research-pack` | dated, sourced, fit-noted | `validate record` **[TO ADD]** | none |
+| Format shortlist | research | format shortlist set | set-level schema + criterion **[TO ADD]** or ADR fixing 4 constants **[TO ADD]** | **[TO ADD]** | none |
+| Idea set | research + formats | `content-idea-set` (exactly 5) | exactly five; each traces to research | schema + count check | none |
+| Selection | idea set | `selected-content-idea` | selected idea ∈ idea set **[TO ADD]** | membership check **[TO ADD]** | user selects |
+| Applied template | selected idea | `applied-social-template` | beats map to idea | `validate record` **[TO ADD]** | template gate |
+| Production plan | applied template | format plan (4 schemas) | routed by `target_format_id` | schema + routing check | none |
+| Base generation plan | video plan | `base-video-generation-plan` | provider-neutral | schema | none |
+| Output package | plan + artifact | `output-package` | full provenance chain enforced by schema **[TO ADD: research/template/VUP ids]**; IDs resolve to records **[TO ADD]** | schema + provenance resolver **[TO ADD]** | generation approval |
+
+## Subagent Decision (open)
+
+The reference ships a `.claude/agents/` subsystem (e.g. `ssc-designer`, `ssc-image-generator`) invoked via `Agent(tool: "...", inputs: {...})` — orchestrators delegate heavy sub-tasks to typed subagents that return structured objects. The copy plan never evaluated this subsystem. It is a candidate pattern for the [PLANNED] producer skills (e.g. a research subagent, an idea-generation subagent). This is **[DEFERRED — decision pending]**: adopting it is a divergence-test event and needs its own ADR before use. Placed here so the option is visible, not silently omitted.
