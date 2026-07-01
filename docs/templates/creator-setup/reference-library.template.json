@@ -1,0 +1,73 @@
+{
+  "reference_library_id": "reference_library_<slug>",
+  "creator_profile_id": "creator_<slug>",
+  "created_on": "YYYY-MM-DD",
+  "asset_root": "references/",
+  "assets": [
+    {
+      "asset_id": "asset_<slug>_identity_plate",
+      "asset_type": "character",
+      "asset_status": "planned",
+      "role": "Primary character identity plate",
+      "path": "references/character/<slug>-identity-plate.png",
+      "prompt_path": "references/character/<slug>-identity-plate.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/identity.md"
+      },
+      "created_on": "YYYY-MM-DD",
+      "usage_notes": "Use to preserve face, age, hair, skin, expression baseline, and identity continuity.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_<slug>_turnaround_sheet",
+      "asset_type": "character",
+      "asset_status": "planned",
+      "role": "Full-body character turnaround sheet",
+      "path": "references/character/<slug>-turnaround-sheet.png",
+      "prompt_path": "references/character/<slug>-turnaround-sheet.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/identity.md"
+      },
+      "created_on": "YYYY-MM-DD",
+      "usage_notes": "Use to preserve body proportions, silhouette, posture, scale, base outfit, and full-body continuity.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_<slug>_macro_detail_card",
+      "asset_type": "character",
+      "asset_status": "planned",
+      "role": "Macro character detail card",
+      "path": "references/character/<slug>-macro-detail-card.png",
+      "prompt_path": "references/character/<slug>-macro-detail-card.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/identity.md"
+      },
+      "created_on": "YYYY-MM-DD",
+      "usage_notes": "Use to preserve eyes, mouth, skin texture, natural marks, hair texture, hands, fabric, and other close-up continuity details.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_<slug>_default_video_style",
+      "asset_type": "video_style",
+      "asset_status": "planned",
+      "role": "Default video/photo style card",
+      "path": "references/video-style/<slug>-default-video-style.md",
+      "prompt_path": "references/video-style/<slug>-default-video-style.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/personal-brand.md"
+      },
+      "created_on": "YYYY-MM-DD",
+      "usage_notes": "Use for @video_style_reference: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, shot quality, recurring shot families, and social-native finish.",
+      "semantic_index_allowed": true
+    }
+  ],
+  "usage_policy": {
+    "identity_assets_required_for_generation": true,
+    "provider_calls_require_approval": true,
+    "raw_media_git_policy": "Real creator references and generated media stay under workspace-library and must not be committed."
+  }
+}

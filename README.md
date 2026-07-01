@@ -2,11 +2,14 @@
 
 InfluencerOS creates universal short-form video ideas and base generation plans for avatar-led social media creators.
 
+InfluencerOS is also being structured as a local-first Agentic OS adaptation. Root adapter files load the same durable project context for Codex, Claude, OpenClaw/Hermes-style agents, and compatible tools.
+
 The v1 flow:
 
 ```text
 Choose Creator
-  -> research popular short-form social video ideas
+  -> optionally understand real videos from frames and transcripts
+  -> synthesize current social research
   -> use a minimal visual social post format shortlist
   -> produce five creator-fit visual social ideas
   -> choose one idea
@@ -17,10 +20,42 @@ Choose Creator
 
 InfluencerOS v1 is platform-agnostic. It targets short vertical videos that can work across Instagram Reels, TikTok, and YouTube Shorts without a platform adapter.
 
+See [docs/os-construction/progress.md](docs/os-construction/progress.md) for the current phase map and build status.
+
+## Start Here
+
+- [CONTEXT.md](CONTEXT.md): product vocabulary and naming source of truth.
+- [docs/os-construction/prd.md](docs/os-construction/prd.md): purpose, scope, requirements, and deterministic acceptance criteria.
+- [docs/os-construction/roadmap.md](docs/os-construction/roadmap.md): phase order and exit criteria.
+- [docs/os-construction/short-term-plan.md](docs/os-construction/short-term-plan.md): next handoff plan for parity hardening.
+- [docs/os-construction/repository-map.md](docs/os-construction/repository-map.md): where files live and how the creation flow is organized.
+- [docs/os-construction/agentic-os-alignment.md](docs/os-construction/agentic-os-alignment.md): how this repo copies or diverges from the Agentic OS reference.
+- [docs/os-construction/agentic-os-copy-plan.md](docs/os-construction/agentic-os-copy-plan.md): audit of what to copy, adapt, defer, or reject from Agentic OS.
+- [docs/os-construction/agentic-os-parity-plan.md](docs/os-construction/agentic-os-parity-plan.md): plan for adapting toward close Agentic OS parity without restarting.
+- [docs/os-construction/divergence-test.md](docs/os-construction/divergence-test.md): pass/fail check for architecture-impacting divergence.
+- [docs/os-construction/visual-architecture-maps.md](docs/os-construction/visual-architecture-maps.md): Excalidraw mapping standard for system and workflow diagrams.
+- [docs/os-construction/context-matrix.md](docs/os-construction/context-matrix.md): what context each workflow should load.
+- [docs/os-construction/skill-registry.md](docs/os-construction/skill-registry.md): skill triggers, writes, and override policy.
+- [ARCHITECTURE.md](ARCHITECTURE.md): durable architecture direction.
+
+Creator setup can capture broader creator strategy inputs, including written surfaces such as Substack, LinkedIn, X, blogs, and newsletters. The current production pipeline still starts with the platform-agnostic visual social formats documented in the schemas and workflow docs.
+
 ## What V1 Includes
 
+- Creator Workspace schema
 - Creator Profile schema
+- Reference Library schema
+- Creator Setup workflow
+- Create Influencer conductor skill
+- Creator Setup subskills and templates
+- Voice samples template for creator setup
+- Project schema
+- Output Package schema
+- Published Post Record schema
+- Analytics Snapshot schema
+- Performance Summary schema
 - Social Research Pack schema
+- Video Understanding Pack schema
 - Social Post Format schema
 - five-idea Content Idea Set schema
 - Selected Content Idea schema
@@ -41,6 +76,68 @@ InfluencerOS v1 is platform-agnostic. It targets short vertical videos that can 
 - provider-backed generation without explicit approval
 
 ## Validate Examples
+
+```bash
+python3 -m influencer_os validate examples
+```
+
+## Initialize A Creator Workspace
+
+```bash
+python3 -m influencer_os init-creator examples/creator-workspace.example.json
+```
+
+This creates a local ignored creator workspace under:
+
+```text
+workspace-library/creators/
+```
+
+After authoring `creator-profile.json` and `references/reference-library.json`, validate the workspace with:
+
+```bash
+python3 -m influencer_os validate workspace workspace-library/creators/luna-fit
+```
+
+Creator Workspaces run copied baseline skills from `.claude/skills/`. Refresh those copied runtime skills after root skill changes with:
+
+```bash
+python3 -m influencer_os sync-creator-runtime workspace-library/creators/luna-fit
+```
+
+## Initialize A Project
+
+```bash
+python3 -m influencer_os init-project examples/project.example.json --creator-workspace workspace-library/creators/luna-fit
+```
+
+After adding the selected idea and plan records, validate the project with:
+
+```bash
+python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+```
+
+## Initialize A Dry Run
+
+```bash
+python3 -m influencer_os init-run examples/creator-profile.example.json
+```
+
+This creates a local ignored run folder under:
+
+```text
+workspace-library/runs/
+```
+
+The initialized run contains:
+
+```text
+run.json
+events.jsonl
+records/creator-profile.json
+```
+
+## Test
 
 ```bash
 python3 -m unittest discover -s tests

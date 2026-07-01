@@ -1,0 +1,69 @@
+{
+  "creator_profile_id": "creator_<slug>",
+  "creator_slug": "<slug>",
+  "display_name": "<display name>",
+  "workspace_ref": "creator_workspace_<slug>",
+  "niche": "<accepted niche>",
+  "target_audience": {
+    "summary": "<audience summary>",
+    "primary_audience": "<primary audience>",
+    "secondary_audiences": [],
+    "audience_inputs_policy": "Audience and niche are explicit creator inputs; agents must not redefine them during research."
+  },
+  "positioning": {
+    "positioning_line": "<one-line market position>",
+    "creator_role": "<role to audience>",
+    "trust_moat": "<why audience should trust this creator>"
+  },
+  "persona_summary": {
+    "archetype": "<archetype>",
+    "traits": [],
+    "relationship_to_audience": "<relationship>",
+    "behavioral_tells": []
+  },
+  "voice": {
+    "voice_register": "<voice register>",
+    "discourse_pattern": "<typical explanation pattern>",
+    "signature_phrases": [],
+    "forbidden_phrases": []
+  },
+  "visual_identity_summary": {
+    "style_summary": "<visual or non-visual identity policy>",
+    "recurring_locations": [],
+    "wardrobe_constants": [],
+    "camera_style": "<camera or media style>",
+    "hard_visual_rules": []
+  },
+  "content_pillars": [
+    {
+      "pillar_id": "pillar_<slug>_<name>",
+      "name": "<pillar name>",
+      "description": "<pillar job>"
+    }
+  ],
+  "content_boundaries": [],
+  "disclosure_rules": [],
+  "platform_posture": [],
+  "content_strategy": {
+    "strategy_summary": "<operational strategy summary>",
+    "primary_surfaces": [],
+    "content_mediums": [],
+    "in_scope_formats": [],
+    "out_of_scope_formats": [],
+    "research_implications": "<what research should look for>",
+    "readiness_blocker_policy": "<medium-based blocker summary>"
+  },
+  "goals": [],
+  "file_refs": {
+    "identity": "brand_context/identity.md",
+    "soul": "brand_context/soul.md",
+    "personal_brand": "brand_context/personal-brand.md",
+    "voice_samples": "brand_context/voice-samples.md"
+  },
+  "reference_refs": {
+    "reference_library": "references/reference-library.json",
+    "primary_character_asset_ids": [],
+    "primary_location_asset_ids": [],
+    "primary_video_style_asset_id": "asset_<slug>_default_video_style"
+  }
+}

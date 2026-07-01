@@ -13,15 +13,31 @@ InfluencerOS v1 targets visual-first social posts for avatar-led creators. The f
 
 ## Phase Order
 
-1. **Creator Profile**: identify or create the creator profile. Audience and niche are inputs, not agent guesses.
-2. **Social Research Pack**: research current public short-form social video patterns relevant to the creator. Date and cite the research.
-3. **Social Post Format Shortlist**: use the minimal v1 format set: short-form video, carousel, single image, and story sequence.
-4. **Content Idea Set**: produce exactly five platform-agnostic visual social ideas grounded in the research, creator profile, and format shortlist.
-5. **Idea Selection Gate**: ask the user to choose one idea. Recommend one if useful, but do not select it for them.
-6. **Applied Social Template**: choose the format-compatible structure that best pulls the viewer through the selected idea.
-7. **Format-Specific Production Plan**: route the selected idea by target format. Use Micro-Journey Video Plan for short-form video, Carousel Plan for carousel, Single Image Post Plan for single image, or Story Sequence Plan for story sequence.
-8. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
-9. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
+1. **Creator Profile and Content Strategy**: identify or create the creator profile. Audience and niche are inputs, not agent guesses. Use the accepted content strategy to scope research and medium-specific blockers.
+2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
+3. **Social Research Pack**: synthesize current public short-form social video patterns relevant to the creator. Date and cite the research.
+4. **Social Post Format Shortlist**: use the minimal v1 format set: short-form video, carousel, single image, and story sequence.
+5. **Content Idea Set**: produce exactly five platform-agnostic visual social ideas grounded in the research, creator profile, and format shortlist.
+6. **Idea Selection Gate**: ask the user to choose one idea. Recommend one if useful, but do not select it for them.
+7. **Applied Social Template**: choose the format-compatible structure that best pulls the viewer through the selected idea.
+8. **Format-Specific Production Plan**: route the selected idea by target format. Use Micro-Journey Video Plan for short-form video, Carousel Plan for carousel, Single Image Post Plan for single image, or Story Sequence Plan for story sequence.
+9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
+10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
+
+## Video Understanding Requirements
+
+When analyzing videos for research, store:
+
+- source URL or local path,
+- analysis method,
+- transcript source,
+- opening hook,
+- first-frame pattern,
+- visual structure,
+- spoken or text framing,
+- template signals,
+- replicable moves,
+- avoid notes.
 
 ## Content Idea Requirements
 
@@ -33,6 +49,7 @@ Each of the five ideas must include:
 - creator fit,
 - target emotion,
 - trend evidence,
+- evidence reference IDs from the Social Research Pack and Video Understanding Pack when used,
 - novelty angle,
 - production complexity,
 - why it can travel across short-form platforms,
