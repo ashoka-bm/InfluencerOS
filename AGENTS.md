@@ -82,6 +82,7 @@ Every Content Idea, Micro-Journey Video Plan, Base Video Generation Plan, and Ou
 
 ## Git Rules
 
-- Do not commit unless the user asks.
-- Prefer branch prefixes `feature/`, `fix/`, `chore/`, or `refactor/`.
-- Never force-push a shared branch without explicit approval.
+- Trunk-based: commit and push directly to `main` (`origin/main`). Do not create feature branches or open pull requests.
+- Committing and pushing are pre-authorized as part of completing work; no need to ask first.
+- Write imperative commit subjects and keep one logical change per commit.
+- Never commit secrets, `.env`, `workspace-library/`, creator media, or generated works; never force-push without explicit approval.
