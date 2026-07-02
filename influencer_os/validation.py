@@ -1,3 +1,19 @@
+"""Schema and record validation.
+
+The schema validator implements a scoped, fail-closed subset of JSON Schema
+(short-term plan, Execution Decisions 2026-07-02):
+
+- supported constructs: the keywords in ``VALIDATION_KEYWORDS``, including
+  intra-file ``$ref`` to ``#/definitions`` targets, ``oneOf``, ``anyOf``, and
+  ``allOf``;
+- fail-closed: an unrecognized keyword, type name, format, or construct form
+  raises ``SchemaDefinitionError`` instead of being silently ignored, so a
+  schema can never appear to validate through an unimplemented constraint.
+
+Example coverage is derived from disk: every ``schemas/*.schema.json`` must
+have a matching ``examples/*.example.json`` and vice versa.
+"""
+
 import json
 import re
 from pathlib import Path
@@ -5,28 +21,45 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-EXAMPLE_SCHEMA_PAIRS = [
-    ("creator-workspace", "creator-workspace"),
-    ("creator-profile", "creator-profile"),
-    ("reference-library", "reference-library"),
-    ("project", "project"),
-    ("output-package", "output-package"),
-    ("published-post-record", "published-post-record"),
-    ("analytics-snapshot", "analytics-snapshot"),
-    ("performance-summary", "performance-summary"),
-    ("social-research-pack", "social-research-pack"),
-    ("video-understanding-pack", "video-understanding-pack"),
-    ("social-post-format", "social-post-format"),
-    ("content-idea-set", "content-idea-set"),
-    ("selected-content-idea", "selected-content-idea"),
-    ("social-template", "social-template"),
-    ("applied-social-template", "applied-social-template"),
-    ("micro-journey-video-plan", "micro-journey-video-plan"),
-    ("carousel-plan", "carousel-plan"),
-    ("single-image-post-plan", "single-image-post-plan"),
-    ("story-sequence-plan", "story-sequence-plan"),
-    ("base-video-generation-plan", "base-video-generation-plan"),
-]
+ANNOTATION_KEYWORDS = {
+    "$comment",
+    "$id",
+    "$schema",
+    "default",
+    "definitions",
+    "description",
+    "examples",
+    "title",
+}
+
+VALIDATION_KEYWORDS = {
+    "$ref",
+    "additionalProperties",
+    "allOf",
+    "anyOf",
+    "const",
+    "enum",
+    "format",
+    "items",
+    "maxItems",
+    "maximum",
+    "minItems",
+    "minLength",
+    "minimum",
+    "oneOf",
+    "pattern",
+    "properties",
+    "required",
+    "type",
+}
+
+KNOWN_KEYWORDS = ANNOTATION_KEYWORDS | VALIDATION_KEYWORDS
+
+KNOWN_TYPE_NAMES = {"array", "boolean", "integer", "null", "number", "object", "string"}
+
+SUPPORTED_FORMATS = {"date"}
+
+MAX_REF_CHAIN_LENGTH = 25
 
 REQUIRED_CREATIVE_STAGES = {
     "packaging",
@@ -39,6 +72,10 @@ REQUIRED_CREATIVE_STAGES = {
 
 class ValidationError(AssertionError):
     pass
+
+
+class SchemaDefinitionError(ValidationError):
+    """The schema itself is invalid or uses an unsupported construct."""
 
 
 def load_json(path):
@@ -59,19 +96,55 @@ def validate_file(schema_name, record_path, root=ROOT):
     validate_record(schema_name, load_json(record_path), root=root)
 
 
+def discover_example_schema_pairs(root=ROOT):
+    schema_names = {
+        path.name[: -len(".schema.json")]
+        for path in (Path(root) / "schemas").glob("*.schema.json")
+    }
+    example_names = {
+        path.name[: -len(".example.json")]
+        for path in (Path(root) / "examples").glob("*.example.json")
+    }
+
+    missing_examples = sorted(schema_names - example_names)
+    if missing_examples:
+        raise ValidationError(f"schemas without a matching example: {missing_examples!r}")
+
+    orphan_examples = sorted(example_names - schema_names)
+    if orphan_examples:
+        raise ValidationError(f"examples without a matching schema: {orphan_examples!r}")
+
+    return [(name, name) for name in sorted(schema_names)]
+
+
 def validate_examples(root=ROOT):
     results = []
-    for schema_name, example_name in EXAMPLE_SCHEMA_PAIRS:
+    for schema_name, example_name in discover_example_schema_pairs(root=root):
         example_path = Path(root) / "examples" / f"{example_name}.example.json"
         validate_record(schema_name, load_json(example_path), root=root)
         results.append((schema_name, example_path))
     return results
 
 
-def validate_schema_subset(schema, value, path="$"):
+def validate_schema_subset(schema, value, path="$", root_schema=None):
+    if root_schema is None:
+        root_schema = schema
+
+    schema = _resolve_ref_chain(schema, root_schema, path)
+
+    unknown = set(schema) - KNOWN_KEYWORDS
+    if unknown:
+        raise SchemaDefinitionError(
+            f"{path}: unsupported schema keyword(s) {sorted(unknown)!r}; "
+            "the validator is fail-closed, extend it before using new keywords"
+        )
+
     expected_type = schema.get("type")
     if expected_type:
         allowed = expected_type if isinstance(expected_type, list) else [expected_type]
+        unknown_types = [name for name in allowed if name not in KNOWN_TYPE_NAMES]
+        if unknown_types:
+            raise SchemaDefinitionError(f"{path}: unknown type name(s) {unknown_types!r}")
         if not any(_matches_type(value, type_name) for type_name in allowed):
             raise ValidationError(f"{path}: expected {allowed}, got {type(value).__name__}")
 
@@ -81,13 +154,19 @@ def validate_schema_subset(schema, value, path="$"):
     if "enum" in schema and value not in schema["enum"]:
         raise ValidationError(f"{path}: {value!r} not in enum")
 
+    if "format" in schema:
+        format_name = schema["format"]
+        if format_name not in SUPPORTED_FORMATS:
+            raise SchemaDefinitionError(f"{path}: unsupported format {format_name!r}")
+        if format_name == "date" and isinstance(value, str):
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                raise ValidationError(f"{path}: {value!r} is not YYYY-MM-DD")
+
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0):
             raise ValidationError(f"{path}: string shorter than minLength")
         if "pattern" in schema and not re.search(schema["pattern"], value):
             raise ValidationError(f"{path}: {value!r} does not match {schema['pattern']!r}")
-        if schema.get("format") == "date" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-            raise ValidationError(f"{path}: {value!r} is not YYYY-MM-DD")
 
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
@@ -101,9 +180,11 @@ def validate_schema_subset(schema, value, path="$"):
         if "maxItems" in schema and len(value) > schema["maxItems"]:
             raise ValidationError(f"{path}: array longer than maxItems")
         item_schema = schema.get("items")
+        if isinstance(item_schema, list):
+            raise SchemaDefinitionError(f"{path}: tuple-form 'items' is not supported")
         if item_schema:
             for index, item in enumerate(value):
-                validate_schema_subset(item_schema, item, f"{path}[{index}]")
+                validate_schema_subset(item_schema, item, f"{path}[{index}]", root_schema)
 
     if isinstance(value, dict):
         required = schema.get("required", [])
@@ -112,14 +193,87 @@ def validate_schema_subset(schema, value, path="$"):
                 raise ValidationError(f"{path}: missing required key {key!r}")
 
         properties = schema.get("properties", {})
-        if schema.get("additionalProperties") is False:
+        additional = schema.get("additionalProperties", True)
+        if isinstance(additional, dict):
+            raise SchemaDefinitionError(
+                f"{path}: schema-form 'additionalProperties' is not supported; use true or false"
+            )
+        if additional is False:
             extra = set(value) - set(properties)
             if extra:
                 raise ValidationError(f"{path}: unexpected keys {sorted(extra)!r}")
 
         for key, child_schema in properties.items():
             if key in value:
-                validate_schema_subset(child_schema, value[key], f"{path}.{key}")
+                validate_schema_subset(child_schema, value[key], f"{path}.{key}", root_schema)
+
+    if "allOf" in schema:
+        for index, subschema in enumerate(schema["allOf"]):
+            validate_schema_subset(subschema, value, f"{path}(allOf[{index}])", root_schema)
+
+    if "anyOf" in schema:
+        match_count, failures = _run_combinator_branches(
+            schema["anyOf"], value, path, root_schema, "anyOf"
+        )
+        if match_count == 0:
+            raise ValidationError(f"{path}: value matches no anyOf branch: {failures!r}")
+
+    if "oneOf" in schema:
+        match_count, failures = _run_combinator_branches(
+            schema["oneOf"], value, path, root_schema, "oneOf"
+        )
+        if match_count != 1:
+            raise ValidationError(
+                f"{path}: value matches {match_count} oneOf branches, expected exactly 1"
+                + (f": {failures!r}" if match_count == 0 else "")
+            )
+
+
+def _run_combinator_branches(subschemas, value, path, root_schema, keyword):
+    match_count = 0
+    failures = []
+    for index, subschema in enumerate(subschemas):
+        try:
+            validate_schema_subset(subschema, value, f"{path}({keyword}[{index}])", root_schema)
+            match_count += 1
+        except SchemaDefinitionError:
+            # A broken branch schema must never read as "did not match".
+            raise
+        except ValidationError as error:
+            failures.append(str(error))
+    return match_count, failures
+
+
+def _resolve_ref_chain(schema, root_schema, path):
+    seen_refs = []
+    while isinstance(schema, dict) and "$ref" in schema:
+        ref = schema["$ref"]
+        siblings = set(schema) - {"$ref"} - ANNOTATION_KEYWORDS
+        if siblings:
+            raise SchemaDefinitionError(
+                f"{path}: $ref must not carry sibling validation keywords {sorted(siblings)!r}"
+            )
+        if not isinstance(ref, str) or not ref.startswith("#/"):
+            raise SchemaDefinitionError(
+                f"{path}: only intra-file '#/...' $ref targets are supported, got {ref!r}"
+            )
+        if ref in seen_refs or len(seen_refs) >= MAX_REF_CHAIN_LENGTH:
+            raise SchemaDefinitionError(f"{path}: circular or too-deep $ref chain at {ref!r}")
+        seen_refs.append(ref)
+        schema = _resolve_json_pointer(root_schema, ref, path)
+    return schema
+
+
+def _resolve_json_pointer(root_schema, ref, path):
+    target = root_schema
+    for raw_token in ref[2:].split("/"):
+        token = raw_token.replace("~1", "/").replace("~0", "~")
+        if not (isinstance(target, dict) and token in target):
+            raise SchemaDefinitionError(f"{path}: unresolvable $ref {ref!r}")
+        target = target[token]
+    if not isinstance(target, dict):
+        raise SchemaDefinitionError(f"{path}: $ref {ref!r} does not resolve to a schema object")
+    return target
 
 
 def _matches_type(value, type_name):

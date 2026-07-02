@@ -6,8 +6,9 @@ from copy import deepcopy
 from pathlib import Path
 
 from influencer_os.validation import (
-    EXAMPLE_SCHEMA_PAIRS,
+    SchemaDefinitionError,
     ValidationError,
+    discover_example_schema_pairs,
     load_json,
     load_schema,
     validate_examples,
@@ -15,11 +16,14 @@ from influencer_os.validation import (
     validate_schema_subset,
 )
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 class SchemaValidationTests(unittest.TestCase):
     def test_examples_validate_against_schemas(self):
         results = validate_examples()
-        self.assertEqual(len(results), len(EXAMPLE_SCHEMA_PAIRS))
+        schemas_on_disk = list((ROOT / "schemas").glob("*.schema.json"))
+        self.assertEqual(len(results), len(schemas_on_disk))
         for schema_name, example_path in results:
             with self.subTest(schema=schema_name):
                 self.assertTrue(example_path.exists())
@@ -100,6 +104,172 @@ class SchemaValidationTests(unittest.TestCase):
 
             with self.assertRaises(ValidationError):
                 validate_examples(root=temp_root)
+
+
+class ExampleCoverageDiscoveryTests(unittest.TestCase):
+    PROBE_SCHEMA = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": ["probe_id"],
+        "properties": {"probe_id": {"type": "string"}},
+        "additionalProperties": False,
+    }
+
+    def make_temp_root(self):
+        temp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, temp_dir)
+        temp_root = Path(temp_dir)
+        shutil.copytree("schemas", temp_root / "schemas")
+        shutil.copytree("examples", temp_root / "examples")
+        return temp_root
+
+    def test_pairs_are_derived_from_schemas_on_disk(self):
+        pairs = discover_example_schema_pairs()
+        schema_stems = sorted(
+            path.name[: -len(".schema.json")]
+            for path in (ROOT / "schemas").glob("*.schema.json")
+        )
+        self.assertEqual([schema for schema, _ in pairs], schema_stems)
+
+    def test_new_schema_example_pair_is_covered_automatically(self):
+        temp_root = self.make_temp_root()
+        baseline = len(validate_examples(root=temp_root))
+        (temp_root / "schemas" / "zz-probe.schema.json").write_text(
+            json.dumps(self.PROBE_SCHEMA, indent=2) + "\n"
+        )
+        (temp_root / "examples" / "zz-probe.example.json").write_text(
+            json.dumps({"probe_id": "probe_1"}, indent=2) + "\n"
+        )
+
+        results = validate_examples(root=temp_root)
+        self.assertEqual(len(results), baseline + 1)
+
+    def test_schema_without_example_fails_discovery(self):
+        temp_root = self.make_temp_root()
+        (temp_root / "schemas" / "zz-probe.schema.json").write_text(
+            json.dumps(self.PROBE_SCHEMA, indent=2) + "\n"
+        )
+
+        with self.assertRaises(ValidationError):
+            validate_examples(root=temp_root)
+
+    def test_example_without_schema_fails_discovery(self):
+        temp_root = self.make_temp_root()
+        (temp_root / "examples" / "zz-orphan.example.json").write_text("{}\n")
+
+        with self.assertRaises(ValidationError):
+            validate_examples(root=temp_root)
+
+
+class ValidatorSubsetTests(unittest.TestCase):
+    REF_SCHEMA = {
+        "type": "object",
+        "required": ["status"],
+        "properties": {"status": {"$ref": "#/definitions/status"}},
+        "additionalProperties": False,
+        "definitions": {"status": {"type": "string", "enum": ["new", "promoted"]}},
+    }
+
+    def test_ref_enforces_the_referenced_definition(self):
+        validate_schema_subset(self.REF_SCHEMA, {"status": "new"})
+
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(self.REF_SCHEMA, {"status": "bogus"})
+
+    def test_unresolvable_ref_is_a_schema_error(self):
+        schema = {"type": "object", "properties": {"x": {"$ref": "#/definitions/missing"}}}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"x": 1})
+
+    def test_external_ref_is_a_schema_error(self):
+        schema = {"type": "object", "properties": {"x": {"$ref": "other.json#/definitions/x"}}}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"x": 1})
+
+    def test_circular_ref_chain_is_a_schema_error(self):
+        schema = {
+            "type": "object",
+            "properties": {"x": {"$ref": "#/definitions/a"}},
+            "definitions": {
+                "a": {"$ref": "#/definitions/b"},
+                "b": {"$ref": "#/definitions/a"},
+            },
+        }
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"x": 1})
+
+    def test_ref_with_sibling_validation_keywords_is_a_schema_error(self):
+        schema = {
+            "type": "object",
+            "properties": {"x": {"$ref": "#/definitions/status", "minLength": 2}},
+            "definitions": {"status": {"type": "string"}},
+        }
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"x": "ok"})
+
+    def test_one_of_requires_exactly_one_match(self):
+        exclusive = {"oneOf": [{"type": "string"}, {"type": "number"}]}
+        validate_schema_subset(exclusive, "text")
+
+        overlapping = {"oneOf": [{"type": "string"}, {"type": "string", "minLength": 1}]}
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(overlapping, "ab")
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(exclusive, True)
+
+    def test_any_of_requires_at_least_one_match(self):
+        schema = {"anyOf": [{"type": "number"}, {"type": "integer"}]}
+        validate_schema_subset(schema, 3)
+
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "text")
+
+    def test_all_of_requires_every_branch_to_match(self):
+        schema = {"allOf": [{"type": "string"}, {"type": "string", "minLength": 3}]}
+        validate_schema_subset(schema, "abc")
+
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "ab")
+
+    def test_unknown_keyword_fails_closed(self):
+        schema = {"type": "array", "contains": {"type": "string"}}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, [])
+
+    def test_unknown_keyword_inside_a_matching_combinator_still_fails_closed(self):
+        schema = {"anyOf": [{"type": "string"}, {"contains": {"type": "string"}}]}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, "matches-first-branch")
+
+    def test_unknown_format_fails_closed(self):
+        schema = {"type": "string", "format": "uri"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, "https://example.com")
+
+    def test_unknown_type_name_fails_closed(self):
+        schema = {"type": "float"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, 1.5)
+
+    def test_schema_form_additional_properties_fails_closed(self):
+        schema = {"type": "object", "additionalProperties": {"type": "string"}}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"x": "y"})
+
+    def test_tuple_form_items_fails_closed(self):
+        schema = {"type": "array", "items": [{"type": "string"}]}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, ["x"])
 
 
 if __name__ == "__main__":

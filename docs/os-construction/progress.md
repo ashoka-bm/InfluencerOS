@@ -43,6 +43,7 @@ Completed:
 - Added parity-review workstreams 9-15 to `docs/os-construction/short-term-plan.md`.
 - Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
 - Added drift checks (`tests/test_drift_checks.py`, Batch A / workstreams 1, 3, 4, 8): adapter read order and imports per ADR 0019, bidirectional skill-registry coverage including future-table enforcement, and context-matrix coverage against known workflow rows.
+- Hardened the validator (Batch B / workstream 13): fail-closed schema subset with intra-file `$ref` to `#/definitions`, `oneOf`, `anyOf`, and `allOf`; unknown keywords, type names, formats, and unsupported construct forms raise `SchemaDefinitionError` instead of silently passing; example coverage is derived from disk so every schema requires a matching example and vice versa.
 
 Remaining:
 
@@ -182,17 +183,20 @@ python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-r
 Latest validation result:
 
 ```text
-Ran 31 tests in 0.827s
+Ran 49 tests in 0.906s
 OK
 Validated 20 example records.
 Drift checks: 10 tests pass; planting an unregistered skills/ folder makes the
 registry and matrix checks fail, confirming the checks catch real drift.
+Validator hardening: 18 new tests cover $ref/oneOf/anyOf/allOf enforcement,
+fail-closed unknown keywords/formats/types, and disk-derived example coverage
+(a schema without an example now fails validation).
 No stale old creator-skill runtime paths found outside historical adversarial-review notes.
 ```
 
 ## Next Work Queue
 
-1. Continue the Phase 0C batches from the short-term plan Execution Decisions. Batch A (drift-check guardrails) is done; next is Batch B (workstream 13 validator hardening), then C (determinism fixes), D (self-learning skills and memory), E (conductor call graph), F (propagation build-out), G (copy-plan coverage and closeout).
+1. Continue the Phase 0C batches from the short-term plan Execution Decisions. Batches A (drift-check guardrails) and B (validator hardening) are done; next is Batch C (workstream 12 determinism fixes plus the workstream 14 readiness validator), then D (self-learning skills and memory), E (conductor call graph), F (propagation build-out), G (copy-plan coverage and closeout).
 2. Update progress docs with parity verification results after each batch.
 3. After Phase 0C exits, start Phase 1 in the roadmap's slice order: master intake import first.
 
