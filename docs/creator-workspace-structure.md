@@ -10,7 +10,7 @@ Creator Workspaces are ignored local folders for real AI creators. The public re
 - Keep richer creator detail lazy-loaded: `brand_context/` holds identity, psychology, brand strategy, and voice samples.
 - Keep the Creator Profile typed but not bloated: `creator-profile.json` is the operational summary, while `brand_context/` holds richer detail.
 - Preserve provenance: source intakes and raw reference files stay available, but downstream records should point to them by stable IDs or paths instead of duplicating their contents.
-- Keep project work navigable: selected ideas, plans, output packages, published records, and analytics live together under `projects/<project-id>/`.
+- Keep project work navigable: idea promotions, evidence briefs, plans, output packages, published records, and analytics live together under `projects/<project-id>/`.
 - Separate evidence from lessons: raw analytics stay with the project they measure; durable creator lessons live in `memory/`.
 
 ## Repository Root
@@ -59,15 +59,39 @@ workspace-library/creators/<creator-slug>/
     video-style/
     voice/
     brand/
+  content-schedule.json
   research/
-    social-research-packs/
-    video-understanding-packs/
-    sources/
+    findings.md
+    runs/
+      <research-run-id>/
+        research-run.json
+        run-summary.md
+        evidence.jsonl
+        metric-snapshots.jsonl
+        video-understanding-packs/
+    intelligence/
+      sources.json
+      hashtags.json
+      search-terms.json
+      reference-creators.json
+      watchlist.json
+    stable-findings/
+      <stable-finding-id>.md
+    idea-queue/
+      queue.json
+      entries/
+        <idea-queue-entry-id>.json
+    idea-promotions/
+      <idea-promotion-id>.json
+  boards/
+    content-board.json
+  system/
+    project-warnings.jsonl
+    creator-events.jsonl
   projects/
     <project-id>/
       project.json
-      idea/
-        selected-content-idea.json
+      evidence-brief.md
       plan/
         applied-template.json
         production-plan.json
@@ -134,13 +158,19 @@ The semantic index is a low-context retrieval projection over selected narrative
 
 `references/` stores reusable visual and audio continuity assets. `reference-library.json` gives each asset a stable ID, status, role, file path, source, creation date, and allowed usage. Planned or prompted assets may be tracked before the final media file exists so setup can explain generation blockers.
 
-`research/` stores dated Social Research Packs, Video Understanding Packs, and supporting research sources.
+`content-schedule.json` is the Creator Content Schedule: cadence expectations, content goals, calendar slots, and drift checks. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 
-`projects/` stores content work that has moved past selection. A project is one selected content idea moving through planning, packaging, publication, analytics, and learning. It may be a video, carousel, single image post, story sequence, or multi-platform package.
+`research/` stores Research Findings, dated Research Runs, Research Evidence, Metric Snapshots, research intelligence, Idea Queue entries, and Idea Promotions. Other modules read only the module's public records (`findings.md`, `idea-queue/`, `idea-promotions/`); run evidence and intelligence files are research-internal and resolve by ID through the local recall index.
 
-`projects/<project-id>/project.json` is the project manifest. It should record project ID, creator ID, source research refs, selected idea refs, target format, status, key dates, and pointers to project records.
+`boards/content-board.json` is the rebuildable Content Board projection for Kanban views. It is derived from canonical queue, promotion, and project records and is never the source of truth. Card IDs are derived deterministically from source record IDs so rebuilds preserve manual order.
 
-`projects/<project-id>/idea/` stores the Selected Content Idea and any local idea notes for the project. Broader idea sets can remain in research/run records until one idea becomes a project.
+`system/` holds creator-scoped operational projections: `project-warnings.jsonl` and `creator-events.jsonl`. Like the board, they are Kanban-readable projections and event streams, not canonical planning records.
+
+`projects/` stores content work that has moved past Idea Promotion. A project is one approved content unit moving through planning, packaging, publication, analytics, and learning. It may be a video, carousel, single image post, story sequence, article, thread, or multi-platform package.
+
+`projects/<project-id>/project.json` is the project manifest. It should record project ID, creator ID, Idea Promotion refs, Idea Queue refs, research evidence refs, target format, status, key dates, and pointers to project records.
+
+`projects/<project-id>/evidence-brief.md` stores the compact evidence brief carried forward from Idea Promotion. The full source material remains resolvable through research evidence refs and the local recall index.
 
 `projects/<project-id>/plan/` stores Applied Social Templates, format-specific production plans, and provider-neutral generation plans.
 

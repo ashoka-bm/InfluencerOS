@@ -15,8 +15,8 @@ Creator Profile
   -> Research Brief
   -> candidate video search
   -> Video Understanding Pack
-  -> Social Research Pack
-  -> Content Idea Set
+  -> Research Findings
+  -> Idea Queue
 ```
 
 The Video Understanding Pack is evidence. It does not choose the creator's content direction by itself. It helps identify:
@@ -41,7 +41,7 @@ For each selected public or local video:
 5. Optionally use Whisper fallback when captions are missing and the user has approved/configured that provider path.
 6. Analyze frames and transcript together.
 7. Store observations as a Video Understanding Pack.
-8. Synthesize patterns into the Social Research Pack.
+8. Synthesize patterns into Research Findings and Idea Queue updates.
 
 ## Provider Boundary
 
@@ -62,4 +62,3 @@ Do not vendor the `/watch` scripts yet. Start with an adapter contract:
 - example observations,
 - optional CLI command later to import `/watch` output,
 - later adapter to call an installed `/watch` workflow or local equivalent.
-

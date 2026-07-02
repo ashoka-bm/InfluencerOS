@@ -1,6 +1,6 @@
 # PRD: InfluencerOS Agentic Operating System
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Problem Statement
 
@@ -64,9 +64,9 @@ The system will enforce alignment through durable planning docs, ADRs, visual ma
 19. As a creator operator, I want niche and audience treated as inputs, so that the system does not invent creator strategy.
 20. As a creator operator, I want current research dated and sourced, so that trend claims stay tied to evidence.
 21. As a creator operator, I want real video analysis stored separately when used, so that observations can be audited.
-22. As a creator operator, I want exactly five creator-fit ideas, so that idea generation is constrained and comparable.
-23. As a creator operator, I want the user to choose the selected idea, so that the agent does not lock production direction without consent.
-24. As a creator operator, I want selected ideas to route through templates and production plans, so that plans are deterministic at the boundary.
+22. As a creator operator, I want rolling Research Findings backed by dated evidence, so that I can see what is working, weakening, and worth watching without loading every raw source.
+23. As a creator operator, I want a scored Idea Queue, so that researched opportunities can be compared, updated, and held before production.
+24. As a creator operator, I want human-approved Idea Promotions, so that the system can create one or more Projects without silently choosing production direction.
 25. As a creator operator, I want provider-neutral generation plans before media generation, so that we can review before paying or calling external providers.
 26. As a creator operator, I want an exact approval gate before image, video, audio, render, upload, paid, or irreversible calls, so that risky actions cannot happen implicitly.
 27. As a creator operator, I want output packages to preserve provenance, so that every artifact traces back to creator profile, research, idea, template, plan, and generation plan.
@@ -98,14 +98,15 @@ The system will enforce alignment through durable planning docs, ADRs, visual ma
 - Local skill rules are promoted into core skills only after repeated feedback shows the rule applies system-wide.
 - Self-improvement runs as local-first system skills (`wrap-up`, `memory-write`) triggered by description, not hooks (ADR 0016).
 - Skills stay repo-central with plain kebab-case names and no category prefixes; conductors declare machine-actionable `dependencies` and phase-to-owner call graphs (ADR 0017).
-- Creator Workspace propagation is built as CLI subcommands; skills propagate now and scripts/settings/hooks/cron stay gated until un-deferred (ADR 0018).
+- Creator Workspace propagation is built as CLI subcommands; skills propagate now and scripts/settings/hooks/cron templates stay gated until their subsystem is approved (ADR 0018).
 - `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers and `context/SOUL.md` is the sole identity (ADR 0019).
+- Research and idea generation use platform-scoped Research Findings, Idea Queue, and Idea Promotion instead of Content Idea Set and Selected Content Idea records (ADR 0020).
 - Product behavior is schema-backed. Each workflow stage must have explicit inputs, outputs, provenance, validation, and gates.
 - The highest implementation seam is the file-first workspace plus validation CLI. Prefer tests at that seam over low-level helper tests.
 - Provider calls are not part of planning. Provider-backed generation, render, upload, paid, and irreversible actions require exact user approval.
 - InfluencerOS will not use "memory palace" as v1 language. Use SQL index, semantic lookup projection, and Creator Memory.
 - Raw analytics remain evidence. Distilled creator learnings become default future context.
-- Platform-specific adapters, publishing, scheduling, post-production treatments, hosted execution, hooks, cron, and Command Centre are deferred unless explicitly reopened by the user.
+- Platform-specific adapters, publishing, post-production treatments, hosted execution, hooks, and Command Centre are deferred unless explicitly reopened by the user. Scheduled research jobs are allowed as read-only research and notification automation; they cannot promote ideas or call providers in v1.
 
 ## Testing Decisions
 
@@ -165,10 +166,13 @@ Required outcomes:
 
 - Creator setup works from reviewed intake.
 - Creator readiness gates work.
-- Social Research Packs are dated and sourced.
+- Creator Content Schedule records capture loose goals, irregular calendar slots, and drift checks.
+- Research Runs are dated, sourced, platform-scoped, and tied to real evidence.
 - Video Understanding Packs exist when real videos are analyzed.
-- Content Idea Sets contain exactly five ideas.
-- User-selected ideas route to templates and format-specific production plans.
+- Research Findings stay concise, creator-scoped, and backed by dated evidence.
+- Idea Queue entries are scored, evidence-linked, and update as research changes.
+- Human-approved Idea Promotions replace selected-idea records and may create one or more Projects.
+- Projects route promoted ideas to templates or production structures and format-specific production plans.
 - Base Video Generation Plans remain provider-neutral.
 - Output Package records validate and preserve provenance.
 
@@ -209,6 +213,8 @@ Required outcomes:
 - Human approval gates block risky, paid, destructive, or irreversible actions.
 - Any publishing or scheduling integration is explicitly approved.
 
+Research-only scheduled jobs may arrive earlier as part of the Research and Ideas module. Those jobs can update findings, queue scores, warnings, badges, and notifications, but cannot promote ideas or create production work without human approval.
+
 ### Deferred: Command Centre And Anywhere Access
 
 Goal: add dashboard, hosted, or channel-based execution only after local file-first operation is stable.
@@ -238,8 +244,9 @@ This short-term plan is detailed in `docs/os-construction/short-term-plan.md`. T
 - Restarting the repo from scratch.
 - Command Centre implementation.
 - Hosted execution or anywhere-access channels.
-- Platform publishing, scheduling, or uploads.
+- Platform publishing, platform post scheduling, or uploads.
 - Platform-specific post-production adapters.
+- Automated idea promotion or project creation from scheduled jobs.
 - Provider-backed image, video, audio, or render calls without exact approval.
 - Raw analytics as default semantic memory.
 - Memory palace terminology.

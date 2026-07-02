@@ -39,6 +39,7 @@ See:
 - `docs/adr/0011-semantic-lookup-projection.md`
 - `docs/adr/0012-project-scoped-content-work.md`
 - `docs/adr/0013-creator-setup-readiness-and-reference-lifecycle.md`
+- `docs/adr/0020-platform-scoped-research-and-idea-queue.md`
 
 ## Creator Authoring
 
@@ -71,11 +72,12 @@ Baseline skill source files live under repo `skills/<skill-name>/SKILL.md`. Crea
 
 ```text
 Creator Profile
+  -> Creator Content Schedule
   -> Video Understanding Pack, when researching real videos
-  -> Social Research Pack
-  -> Social Post Format Shortlist
-  -> Content Idea Set, exactly five ideas
-  -> Selected Content Idea
+  -> Research Findings
+  -> Idea Queue
+  -> human-approved Idea Promotion
+  -> Project
   -> Applied Social Template
   -> Format-Specific Production Plan
   -> Base Generation Plan, when needed
@@ -91,12 +93,12 @@ InfluencerOS v1 does:
 
 - use existing creator profiles,
 - capture creator content strategy across text, image, video, audio, carousel, and story-sequence mediums,
-- research current short-form social video patterns,
+- research current platform-scoped content patterns across X, Instagram, TikTok, Substack, Medium, Reddit, Facebook, and LinkedIn,
 - analyze real videos through frame and transcript evidence when useful,
-- use a minimal visual social post format shortlist,
-- generate five creator-fit video ideas,
-- wait for explicit idea selection,
-- apply a format-compatible social template to the chosen idea,
+- maintain concise creator-scoped Research Findings backed by dated evidence,
+- maintain a scored creator-scoped Idea Queue,
+- wait for explicit human approval before promoting an idea into production,
+- apply a compatible social template or production structure to the promoted idea,
 - create a format-specific production plan,
 - create a provider-neutral base video generation plan.
 
@@ -109,6 +111,37 @@ InfluencerOS v1 does not:
 - run analytics feedback loops,
 - generate media without explicit approval.
 
+## Module Boundaries
+
+InfluencerOS is built as deep modules with small public surfaces. Each module
+exposes a few interface records; everything else is module-internal. A
+downstream module references the interface record of the module before it and
+resolves deeper provenance transitively (see the Product Invariant in
+`AGENTS.md`).
+
+| Module | Inputs (read-only) | Public interface records | Internal records |
+| --- | --- | --- | --- |
+| Creator Setup | intake sources, references | Creator Profile, Creator Content Schedule, readiness status, `context/` and `brand_context/` files | import scratch, draft notes |
+| Research and Ideas | Creator Profile, Creator Content Schedule, distilled creator memory, public sources | Research Findings (`research/findings.md`), Idea Queue (`research/idea-queue/`), Idea Promotion (`research/idea-promotions/`) | research runs, evidence, metric snapshots, research intelligence, stable findings |
+| Production | Idea Promotion, evidence brief, Reference Library | Project, Applied Social Template, format-specific plans, Base Video Generation Plan, Output Package | draft prompts, working notes |
+| Learning | Output Package, Published Post Record, Analytics Snapshots | Performance Summary, distilled creator memory | raw analytics exports |
+| Operations (execution deferred) | job definitions | AutomationRun, SystemEvent | scheduler state |
+
+Write boundaries:
+
+- Research writes only under `research/`.
+- The human-approved Idea Promotion is the constructor for
+  `projects/<project-id>/`: the promotion step writes the promotion record,
+  `project.json`, and `evidence-brief.md`; production owns everything else
+  under the project folder.
+- Production writes only under `projects/<project-id>/`.
+- `boards/`, `system/`, and the local indexes are derived projections:
+  rebuildable from canonical records and never the source of truth.
+- Cross-module reads go through public interface records. Module-internal
+  records resolve by ID through the local recall index instead of direct file
+  reads, so a module can reorganize its internal storage without breaking its
+  consumers.
+
 ## V1 Format Shortlist
 
 InfluencerOS v1 starts with four visual-first social post formats:
@@ -119,6 +152,11 @@ InfluencerOS v1 starts with four visual-first social post formats:
 - `story_sequence`: a short ephemeral-feeling sequence of vertical visuals.
 
 Live streams, community posts, polls, and platform-specific variants are deferred until the first visual production loop is proven.
+
+Research and the Idea Queue are platform-scoped from day one (ADR 0020) and may
+recommend text formats such as articles and threads. Promotion may only create
+Projects for formats production supports; text content unit types and routing
+join in the production build-out step of Phase 1.
 
 ## Default Video Envelope
 
@@ -166,6 +204,7 @@ workspace-library/creators/<creator-slug>/
   AGENTS.md
   creator-workspace.json
   creator-profile.json
+  content-schedule.json
   context/
     SOUL.md
     USER.md
@@ -183,6 +222,8 @@ workspace-library/creators/<creator-slug>/
   sources/
   references/
   research/
+  boards/
+  system/
   projects/
   memory/
   progress/

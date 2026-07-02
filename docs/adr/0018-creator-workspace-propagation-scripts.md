@@ -43,3 +43,11 @@ Fix required alongside this decision: the workspace scaffold and `creator-worksp
 - The standing hooks/cron deferral is preserved; only the propagation *mechanism* is approved now, not new automation content.
 - The open alignment decision moves from open to accepted; `agentic-os-alignment.md` is updated accordingly.
 - The propagation-as-CLI-subcommands divergence from bash `scripts/` is explicit and approved.
+
+## Later Update
+
+ADR 0020 separately approves read-only scheduled research jobs for the Research
+and Ideas module. Those jobs may update findings, queue scores, warnings, badges,
+and notification events, but they cannot promote ideas or call providers in v1.
+This does not change the propagation decision here: hooks and cron templates
+remain gated propagation zones unless their concrete subsystem files are added.

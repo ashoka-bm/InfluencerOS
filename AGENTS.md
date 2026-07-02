@@ -50,17 +50,23 @@ For architecture, roadmap, workflow, or product-scope work, read:
 
 ## Product Invariant
 
-Every Content Idea, Micro-Journey Video Plan, Base Video Generation Plan, and Output Record must trace back to:
+Every Idea Queue Entry, Project, format-specific production plan, Base Video Generation Plan, and Output Record must trace back to:
 
 - Creator Profile,
-- current Social Research Pack evidence,
+- current Research Evidence, and the Research Findings it supports when material findings exist,
 - Video Understanding Pack evidence when real videos were analyzed,
-- the chosen Content Idea,
+- the Idea Queue Entry that captured the idea,
+- the human-approved Idea Promotion once work enters production,
 - the Applied Social Template when one is used,
-- the intended audience response,
-- the Micro-Journey Video Plan,
+- the intended payoff,
+- the format-specific production plan for the chosen format,
 - the Base Video Generation Plan when generation is planned,
 - and the Output Record when an Output Artifact exists.
+
+Traceability may be transitive: each record must reference its immediate
+upstream record, and deeper provenance resolves through that chain (for
+example, a Project resolves findings and evidence through its locked Idea
+Promotion).
 
 ## Operating Rules
 
@@ -71,7 +77,7 @@ Every Content Idea, Micro-Journey Video Plan, Base Video Generation Plan, and Ou
 - Treat root `context/` and `brand_context/` as InfluencerOS first-party OS persona context. Treat Creator Workspace context as creator-specific and private.
 - Before adding or changing skills, check `docs/os-construction/skill-registry.md` and `docs/os-construction/context-matrix.md`.
 - Root `skills/<skill-name>/SKILL.md` files are the baseline skill source. Creator Workspaces run copied skills from `.claude/skills/<skill-name>/SKILL.md`; refresh them with `python3 -m influencer_os sync-creator-runtime <creator-workspace>` and preserve creator `SKILL.local.md` files.
-- InfluencerOS v1 targets universal short-form vertical video. Do not add platform-specific adapters, post-production treatments, publishing, scheduling, or analytics unless explicitly requested.
+- InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. V1 production targets the visual-first format shortlist (universal short-form vertical video first); text formats join in the production build-out step. Do not add platform-specific adapters, post-production treatments, publishing, scheduling, or analytics unless explicitly requested.
 - Audience and niche are creator-profile inputs. Do not invent or redefine them unless the user asks.
 - Research is time-sensitive. Date the research, cite sources, and keep trend claims tied to evidence.
 - Do not make provider-backed image, video, audio, or render calls without explicit user approval for the exact call or approved batch.

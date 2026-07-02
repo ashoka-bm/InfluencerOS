@@ -93,10 +93,11 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
 | `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
 | `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
-| `create-social-research-pack` | planning | Dated, sourced Social Research Pack. | [PLANNED — Phase 1] |
-| `create-content-idea-set` | planning | Exactly five creator-fit ideas. | [PLANNED — Phase 1] |
-| `apply-social-template` | planning | Applied Social Template for the selected idea. | [PLANNED — Phase 1] |
-| `create-production-plan` | planning | Routes selected idea to a format-specific plan. | [PLANNED — Phase 1] |
+| `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [PLANNED — Phase 1] |
+| `manage-idea-queue` | planning | Scored Idea Queue entries. | [PLANNED — Phase 1] |
+| `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [PLANNED — Phase 1] |
+| `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [PLANNED — Phase 1] |
+| `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [PLANNED — Phase 1] |
 | `create-output-package` | planning | Output Package + provenance. | [PLANNED — Phase 1] |
 | `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [PLANNED — ADR 0016] |
@@ -144,12 +145,11 @@ The content conductor owns the pipeline. Per ADR 0017 each conductor declares a 
 skills/influencer-os/SKILL.md  (content conductor)
   Phase 1  load Creator Workspace + Creator Profile        owner: influencer-os (inline)         [BUILT]
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
-  Phase 3  Social Research Pack        -> Skill(create-social-research-pack)                      [PLANNED]
-  Phase 4  Social Post Format Shortlist owner: influencer-os (inline) + format contract          [BUILT; contract PLANNED]
-  Phase 5  Content Idea Set (5)        -> Skill(create-content-idea-set)                          [PLANNED]
-  Phase 6  Idea Selection Gate         owner: user (agent must not self-select)                   [BUILT gate]
-  Phase 7  Applied Social Template     -> Skill(apply-social-template)                            [PLANNED]
-  Phase 8  Format-Specific Prod Plan   -> Skill(create-production-plan) --routes by target_format_id-->
+  Phase 3  Research Findings           -> Skill(create-research-findings)                         [PLANNED]
+  Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [PLANNED]
+  Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [PLANNED]
+  Phase 6  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]
+  Phase 7  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
              format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)
              format_carousel         -> CarouselPlan
              format_single_image_post-> SingleImagePostPlan
@@ -228,11 +228,11 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 | --- | --- | --- | --- | --- | --- |
 | Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace` + readiness validator **[TO ADD]** | none |
 | Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record` **[TO ADD]** | none |
-| Social research | profile (+ VUP) | `social-research-pack` | dated, sourced, fit-noted | `validate record` **[TO ADD]** | none |
-| Format shortlist | research | format shortlist set | set-level schema + criterion **[TO ADD]** or ADR fixing 4 constants **[TO ADD]** | **[TO ADD]** | none |
-| Idea set | research + formats | `content-idea-set` (exactly 5) | exactly five; each traces to research | schema + count check | none |
-| Selection | idea set | `selected-content-idea` | selected idea ∈ idea set **[TO ADD]** | membership check **[TO ADD]** | user selects |
-| Applied template | selected idea | `applied-social-template` | beats map to idea | `validate record` **[TO ADD]** | template gate |
+| Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` **[TO ADD]** | none |
+| Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit **[TO ADD]** | none |
+| Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | schema + evidence ref check **[TO ADD]** | none |
+| Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | schema + provenance refs **[TO ADD]** | user approves |
+| Applied template | promoted idea | `applied-social-template` | beats map to idea | `validate record` **[TO ADD]** | template gate |
 | Production plan | applied template | format plan (4 schemas) | routed by `target_format_id` | schema + routing check | none |
 | Base generation plan | video plan | `base-video-generation-plan` | provider-neutral | schema | none |
 | Output package | plan + artifact | `output-package` | full provenance chain enforced by schema **[TO ADD: research/template/VUP ids]**; IDs resolve to records **[TO ADD]** | schema + provenance resolver **[TO ADD]** | generation approval |

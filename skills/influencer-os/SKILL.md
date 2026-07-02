@@ -1,6 +1,6 @@
 ---
 name: influencer-os
-description: Use for InfluencerOS work: choosing a creator profile, researching current short-form social video ideas, producing five creator-fit content ideas, turning a selected idea into a micro-journey video plan, and creating a provider-neutral base video generation plan.
+description: Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, and creating provider-neutral generation plans.
 ---
 
 # InfluencerOS Flow
@@ -9,18 +9,18 @@ You are the InfluencerOS workflow conductor. Your job is sequencing and provenan
 
 ## V1 Scope
 
-InfluencerOS v1 targets visual-first social posts for avatar-led creators. The first implemented production path is universal short-form vertical video, but idea research may also identify carousel, single-image, and story-sequence opportunities. It does not create platform-specific adapters, post-production treatments, publishing plans, scheduling, or analytics loops.
+InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substack, Medium, Reddit, Facebook, and LinkedIn. Production workflows may mature platform by platform. It does not create post-production treatments, publish posts, schedule posts, or call provider-backed generation without explicit approval.
 
 ## Phase Order
 
-1. **Creator Profile and Content Strategy**: identify or create the creator profile. Audience and niche are inputs, not agent guesses. Use the accepted content strategy to scope research and medium-specific blockers.
+1. **Creator Profile, Content Strategy, and Schedule**: identify or create the creator profile and creator content schedule. Audience and niche are inputs, not agent guesses. Use accepted content strategy and schedule state to scope research and medium-specific blockers.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
-3. **Social Research Pack**: synthesize current public short-form social video patterns relevant to the creator. Date and cite the research.
-4. **Social Post Format Shortlist**: use the minimal v1 format set: short-form video, carousel, single image, and story sequence.
-5. **Content Idea Set**: produce exactly five platform-agnostic visual social ideas grounded in the research, creator profile, and format shortlist.
-6. **Idea Selection Gate**: ask the user to choose one idea. Recommend one if useful, but do not select it for them.
-7. **Applied Social Template**: choose the format-compatible structure that best pulls the viewer through the selected idea.
-8. **Format-Specific Production Plan**: route the selected idea by target format. Use Micro-Journey Video Plan for short-form video, Carousel Plan for carousel, Single Image Post Plan for single image, or Story Sequence Plan for story sequence.
+3. **Research Findings**: synthesize current public platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding.
+4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
+5. **Idea Promotion Gate**: ask the user to approve the full promotion package before creating production work. Recommend options if useful, but do not silently promote an idea.
+6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported (for example text formats before the production build-out), record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
+7. **Applied Social Template or Production Structure**: choose the format-compatible structure that best pulls the viewer through the promoted idea.
+8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.
 9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
 10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
 
@@ -39,22 +39,26 @@ When analyzing videos for research, store:
 - replicable moves,
 - avoid notes.
 
-## Content Idea Requirements
+## Idea Queue Requirements
 
-Each of the five ideas must include:
+Each queue idea must include:
 
 - hook,
-- visual premise,
+- premise,
+- intended payoff,
+- source platform and platform content type when derived from a source pattern,
+- recommended platform or platform variants,
+- recommended format or format variants,
 - audience reason,
 - creator fit,
 - target emotion,
 - trend evidence,
-- evidence reference IDs from the Social Research Pack and Video Understanding Pack when used,
+- evidence reference IDs from Research Findings, Research Evidence, Metric Snapshots, and Video Understanding Packs when used,
 - novelty angle,
 - production complexity,
-- why it can travel across short-form platforms,
-- recommended format IDs,
-- recommended template IDs.
+- why it can travel or adapt across platforms when applicable,
+- recommended template or structure IDs when relevant,
+- scores for evidence strength, viral potential, audience nurture value, creator fit, schedule fit, production readiness, urgency, and measurement clarity.
 
 ## V1 Social Post Formats
 

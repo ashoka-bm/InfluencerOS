@@ -83,7 +83,7 @@ Exit criteria (each maps to a command or test; nothing exits on "documented"):
 - Project output layout is deterministic: `python3 -m influencer_os validate project <path>` passes for a scaffolded project and `project.schema.json` pins the project paths.
 - The self-improvement skills (`wrap-up`, `memory-write`) exist and a run appends to `context/learnings.md` (ADR 0016).
 - The content conductor declares a machine-actionable call graph (ADR 0017), enforced by a drift check that fails if it names a skill not on disk and not marked `[PLANNED]` with a halt instruction, and that diffs its `dependencies` frontmatter against `architecture-map.md`.
-- The workstream-12 determinism fixes pass their tests (project `acceptance_criteria`, output-package provenance refs, provenance resolution, selection membership).
+- The workstream-12 determinism fixes pass their tests (project `acceptance_criteria`, output-package provenance refs, provenance resolution, generic record validation). The ADR 0020 research schema slice and promotion gate are Phase 1 work, not 0C exit criteria.
 
 See `docs/os-construction/short-term-plan.md`.
 
@@ -102,21 +102,28 @@ Exit criteria:
 
 - Creator Workspace setup works from a reviewed intake.
 - Creator readiness gates work.
-- Social Research Packs are dated and sourced.
+- Creator Content Schedule records capture loose goals, irregular calendar slots, and drift checks.
+- Research Runs are dated, sourced, platform-scoped, and tied to real evidence.
 - Video Understanding Packs exist when real videos are analyzed.
-- Content Idea Sets contain exactly five ideas.
-- User-selected ideas route to format-specific production plans.
+- Research Findings stay concise, creator-scoped, and backed by dated evidence.
+- Idea Queue entries are scored, evidence-linked, and update as research changes.
+- Human-approved Idea Promotions may create one or more Projects.
+- Projects route promoted ideas to format-specific production plans.
 - Base Video Generation Plans are provider-neutral.
 - Output Package records validate and preserve provenance.
 
-Likely implementation slices:
+Likely implementation slices, in the agreed build order (creators first, then
+research, then production):
 
 1. Master intake import workflow.
 2. Creator readiness validation.
-3. Social Research Pack workflow.
-4. Content Idea Set workflow.
-5. Selected idea to Applied Social Template.
-6. Format-specific production planning.
+3. Research and Ideas module schema slice (ADR 0020; includes the promotion
+   gate validation moved out of Phase 0C workstream 12).
+4. Research Findings and Idea Queue workflow.
+5. Idea Promotion to Project workflow.
+6. Format-specific production planning, including extending content unit types
+   and format routing to text formats (article, thread) per ADR 0020. Until
+   this slice lands, promotion may only create Projects for supported formats.
 7. Output Package registration.
 
 ## Phase 2: Learning OS

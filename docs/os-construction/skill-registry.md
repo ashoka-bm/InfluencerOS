@@ -27,7 +27,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 
 | Skill | Triggers on | Reads | Writes | Override support |
 | --- | --- | --- | --- | --- |
-| `influencer-os` | content creation flow, research-to-plan, selected idea to plan | Creator Profile, research, project records, context matrix | planning records, generation plans, output records | yes |
+| `influencer-os` | content creation flow, research-to-queue, idea promotion to project | Creator Profile, research, project records, context matrix | planning records, generation plans, output records | yes |
 | `create-influencer` | create creator, setup creator, new influencer | intake, references, templates | Creator Workspace files | yes |
 
 ## Creator Setup Subskills
@@ -46,10 +46,11 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `create-social-research-pack` | produce dated, sourced research | Planning OS |
-| `create-content-idea-set` | create exactly five creator-fit ideas | Planning OS |
+| `create-research-findings` | produce concise rolling findings backed by dated evidence | Planning OS |
+| `manage-idea-queue` | create and update scored Idea Queue entries | Planning OS |
+| `promote-idea` | record human-approved Idea Promotion and create project records | Planning OS |
 | `apply-social-template` | adapt a selected template to an idea | Planning OS |
-| `create-production-plan` | route selected idea to format-specific plan | Planning OS |
+| `create-production-plan` | route promoted idea to format-specific plan | Planning OS |
 | `create-output-package` | register package and provenance | Planning OS |
 | `distill-creator-learning` | convert performance evidence into creator memory | Learning OS |
 | `wrap-up` | capture learnings, self-correct skills, reconcile this registry, promote memory | System — ADR 0016 (Phase 0C) |

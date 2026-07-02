@@ -6,11 +6,12 @@ InfluencerOS v1 is a typed planning pipeline.
 
 ```text
 creator.profile
+  -> creator.content_schedule
   -> video.understanding_pack, when researching real videos
-  -> social.research_pack
-  -> social.post_format_shortlist
-  -> content.idea_set
-  -> content.selected_idea
+  -> research.findings
+  -> idea.queue
+  -> idea.promotion, when the user approves a promotion package
+  -> project
   -> format-specific template application
   -> format-specific production plan
   -> output.record, when generation or import creates an artifact
@@ -37,6 +38,7 @@ Real creator state lives under `workspace-library/creators/<creator-slug>/`.
 AGENTS.md
 creator-workspace.json
 creator-profile.json
+content-schedule.json
 context/SOUL.md
 context/USER.md
 context/MEMORY.md
@@ -51,6 +53,8 @@ references/
   objects/
   video-style/
 research/
+boards/
+system/
 projects/
 memory/
 progress/
@@ -140,8 +144,8 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Social Research Pack | `schemas/social-research-pack.schema.json` | `examples/social-research-pack.example.json` |
 | Video Understanding Pack | `schemas/video-understanding-pack.schema.json` | `examples/video-understanding-pack.example.json` |
 | Social Post Format | `schemas/social-post-format.schema.json` | `examples/social-post-format.example.json` |
-| Content Idea Set | `schemas/content-idea-set.schema.json` | `examples/content-idea-set.example.json` |
-| Selected Content Idea | `schemas/selected-content-idea.schema.json` | `examples/selected-content-idea.example.json` |
+| Content Idea Set (deprecated) | `schemas/content-idea-set.schema.json` | `examples/content-idea-set.example.json` |
+| Selected Content Idea (deprecated) | `schemas/selected-content-idea.schema.json` | `examples/selected-content-idea.example.json` |
 | Social Template | `schemas/social-template.schema.json` | `examples/social-template.example.json` |
 | Applied Social Template | `schemas/applied-social-template.schema.json` | `examples/applied-social-template.example.json` |
 | Micro-Journey Video Plan | `schemas/micro-journey-video-plan.schema.json` | `examples/micro-journey-video-plan.example.json` |
@@ -151,6 +155,11 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Base Video Generation Plan | `schemas/base-video-generation-plan.schema.json` | `examples/base-video-generation-plan.example.json` |
 
 The implemented record chain now covers creator setup, research, project planning, output packaging, publication records, analytics snapshots, and performance summaries.
+
+The next research-module schema slice should replace the deprecated Content Idea
+Set and Selected Content Idea records with Creator Content Schedule, Research
+Run, Research Evidence, Metric Snapshot, Research Findings, Idea Queue, and idea
+promotion records. See `docs/adr/0020-platform-scoped-research-and-idea-queue.md`.
 
 ## Format-Specific Production Plans
 
@@ -163,7 +172,9 @@ After `AppliedSocialTemplate`, route by `target_format_id`:
 
 ## Gate Rules
 
-The user must explicitly choose the Selected Content Idea. The agent may recommend an idea, but it must not record selection on the user's behalf.
+The user must explicitly approve an idea promotion package before the system
+creates production work. The agent may recommend queue ideas and rank them by
+goal, but it must not silently promote an idea into the creation funnel.
 
 The agent may recommend a social template for the chosen idea. If the user does not care which template is used, the agent may apply its recommended template and record the rationale. If multiple reasonable structures would change the post meaning, format, or production burden, ask before locking the Applied Social Template.
 
@@ -171,13 +182,23 @@ Provider-backed generation requires explicit approval for the exact call or batc
 
 ## V1 Research Rule
 
-Social trends change quickly. Each Social Research Pack must record:
+Social trends change quickly. Research output should preserve dated evidence and
+update a concise rolling Research Findings summary only when there is a material
+finding.
 
-- research date,
-- research scope,
-- sources,
+Each research run should record:
+
+- run date and time,
+- research mode and scope,
+- platform and platform content type,
+- sources and public URLs,
+- visible metrics captured at research time,
 - observed patterns,
-- trend confidence,
-- fit notes for the Creator Profile.
+- evidence strength and limitations,
+- fit notes for the Creator Profile,
+- links to queue ideas affected by the run.
 
-When research includes real videos, create a Video Understanding Pack before synthesizing the final Social Research Pack. It stores timestamp-aware observations about hooks, first frames, visual structure, transcript framing, template signals, and creator-fit findings.
+When research includes real videos, create a Video Understanding Pack before
+synthesizing findings or queue updates. It stores timestamp-aware observations
+about hooks, first frames, visual structure, transcript framing, template
+signals, and creator-fit findings.

@@ -181,7 +181,7 @@ Problem: output consolidation is partially defined, but the exact project folder
 
 Tasks:
 
-- Define the canonical path for each record from Selected Content Idea through Output Package.
+- Define the canonical path for each record from Idea Promotion through Output Package.
 - Define where draft notes, source refs, assets, upload-ready files, published records, analytics, raw exports, performance summaries, and learnings live.
 - Ensure docs match schemas and examples.
 
@@ -288,11 +288,17 @@ Problem: upstream and project boundaries lack schema or resolved provenance.
 Tasks and acceptance criteria (each acceptance item is a test):
 
 - Add required `acceptance_criteria` (plus optional `constraints`, `dependencies`) to `project.schema.json`; a project without it fails validation.
-- Add `research_pack_ids`, `applied_social_template_id`, and `video_understanding_pack_ids` to `output-package.schema.json` `source_refs`; a package missing a required provenance ref fails validation.
+- Add `applied_social_template_id` and `video_understanding_pack_ids` to `output-package.schema.json` `source_refs`; a package missing a required provenance ref fails validation. Research provenance resolves transitively through the Project's Idea Promotion once the ADR 0020 slice lands in Phase 1.
 - Extend project/workspace validation to resolve provenance IDs to real records; a dangling reference fails validation.
-- Give the Social Post Format Shortlist a set-level schema and acceptance criterion, or record an ADR fixing the four formats as constants; the mid-pipeline record validates.
-- The selection gate verifies the selected idea exists in its Content Idea Set; an out-of-set selection fails validation.
 - Add a generic `validate record <schema> <path>` CLI and validate each mid-pipeline record in the run flow.
+
+Moved to Phase 1 (Planning OS): the full ADR 0020 research schema slice and the
+promotion gate validation (an Idea Promotion must point to a real Idea Queue
+Entry and resolvable evidence refs; unresolved human-approved refs warn, while
+future automated promotion paths fail). See
+`docs/workflows/research-and-ideas-implementation-plan.md`. Keeping the research
+module out of 0C keeps parity hardening finishable and keeps the module one
+coherent slice.
 
 ## Workstream 13: Validator And Coverage Hardening
 
@@ -361,4 +367,4 @@ The first implementation slice after parity hardening should be chosen from:
 - master intake import workflow,
 - Tier 0 creator recall,
 - project/output package layout helpers,
-- Social Research Pack and Content Idea Set workflow.
+- Research Findings and Idea Queue workflow.

@@ -5,7 +5,7 @@ InfluencerOS is an agent operating system for creating short-form video concepts
 ## Language
 
 **InfluencerOS**:
-The product and repository that helps a user choose an existing creator profile, research current social video patterns, generate creator-fit video ideas, and turn one chosen idea into a universal short-form base video generation plan.
+The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Idea Queue, and turn one promoted idea into format-specific production plans, starting with the universal short-form base video generation plan.
 
 **Creator**:
 The avatar, influencer, persona, or account identity that content is being created for. In v1, creator means the public-facing avatar/profile, not the human operator behind it.
@@ -52,23 +52,57 @@ A Creator Setup blocker that applies only when a content medium requires it. Tex
 **Social Research Pack**:
 A dated, sourced packet of current social video patterns, hooks, formats, creator references, and trend evidence. It supports idea generation but does not override the Creator Profile.
 
+**Research Findings**:
+The concise rolling creator-scoped summary of what current research shows. It is
+backed by dated evidence records and should stay short enough for practical
+review. It highlights what is working, weakening, emerging, stale, and worth
+watching across the creator's relevant platforms and topics.
+
+**Research Evidence**:
+One compact sourced record from a real post, article, thread, creator account,
+or other public source. It stores the source URL, platform, platform content
+type, captured timestamp, visible metrics when available, topic tags, pattern
+notes, evidence strength, and limitations.
+
+**Metric Snapshot**:
+A timestamped capture of visible metrics for one Research Evidence source. It
+allows the system to observe velocity and trend movement over time without
+duplicating the full source record.
+
+**Creator Content Schedule**:
+A creator-scoped planning record that captures cadence expectations,
+intentionally irregular publishing dates, content goals, platform or format
+targets when useful, open slots, time-sensitive insertions, and drift checks. It
+is separate from the Creator Profile because schedule state changes more often
+than creator identity.
+
 **Video Understanding Pack**:
 A dated evidence record created when InfluencerOS inspects real videos. It stores source URLs or local files, analysis method, hook observations, first-frame patterns, visual structure, transcript framing, template signals, and creator-fit findings.
 
 **Social Post Format**:
 A platform-agnostic content container such as short-form video, carousel, single image post, or story sequence. The format says what kind of artifact is being made before a format-specific template is applied.
 
-**Content Idea Set**:
-Five platform-agnostic visual social ideas that fit the Creator Profile and are grounded in the Social Research Pack.
+**Idea Queue**:
+The creator-scoped Kanban-style backlog of researched content opportunities.
+Queue entries are scored, tied to research findings and evidence, and may be
+updated as trends heat up or go stale.
 
-**Selected Content Idea**:
-The idea explicitly chosen by the user for planning. The agent must not choose it on the user's behalf.
+**Idea Queue Entry**:
+One potential content idea in the Idea Queue. It records the premise, intended
+payoff, platform or format recommendations, source findings, evidence links,
+scores, status, urgency, schedule fit, and promotion readiness.
+
+**Idea Promotion**:
+The human-approved act of moving one Idea Queue Entry into the creation funnel.
+Promotion may immediately create one or more Projects and must preserve links to
+the research findings, evidence, metrics, and reusable creative elements that
+sparked the idea.
 
 **Social Template**:
 A reusable visual post structure such as hook-problem-solution, before-process-payoff, hook-steps-payoff, or identity-signal. It improves retention, clarity, and emotional movement without defining the content idea itself.
 
 **Applied Social Template**:
-The selected template as adapted to one chosen Content Idea. It states the structural beats, why the template fits, and how each beat maps onto the idea.
+The selected template as adapted to one promoted Idea Queue Entry. It states the structural beats, why the template fits, and how each beat maps onto the idea.
 
 **Micro-Journey Video Plan**:
 The hook-to-payoff structure for one universal short-form video. It names the hook, setup, escalation, payoff, visual movement, target emotion, and shot logic.

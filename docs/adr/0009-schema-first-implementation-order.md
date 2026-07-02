@@ -30,3 +30,11 @@ Creator foundation schemas come first. Output and learning-loop schemas follow o
 - Creator workspace import can target known files and record shapes.
 - Output, publishing, analytics, and learning records can preserve provenance from the beginning.
 - The first implementation pass should avoid provider-backed generation and platform API calls; it should define records and validation only.
+
+## Later Update
+
+ADR 0020 supersedes the next Planning OS research schema slice. The research
+module should now land as one coherent slice covering Creator Content Schedule,
+Research Run, Research Evidence, Metric Snapshot, Research Findings, Research
+Intelligence, Idea Queue, Idea Promotion, Project Warning, Content Board,
+Automation Run, and System Event records.
