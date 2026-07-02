@@ -1,6 +1,6 @@
 # Short-Term Plan: Parity Hardening
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Goal
 
@@ -34,6 +34,45 @@ The Agentic OS parity review (`docs/os-construction/adversarial-review.md`) prod
 - The adapter model follows the reference (ADR 0019): `AGENTS.md` canonical, `CLAUDE.md`/`SOUL.md` thin importers, `context/SOUL.md` the sole identity.
 
 Workstreams 9-15 below implement these plus the review's determinism and drift-check fix-batch. Each is issue-ready with a deterministic acceptance check.
+
+## Execution Decisions (2026-07-02)
+
+Phase 0C executes as seven batches, guardrails first so later batches
+self-verify:
+
+- Batch A: WS 1, 3, 4, 8 (drift-check guardrails).
+- Batch B: WS 13 (validator hardening).
+- Batch C: WS 12 plus the WS 6 path-pinning residue and the WS 14 readiness
+  validator (the WS 14 exit-criteria rewrite already landed in the roadmap).
+- Batch D: WS 9 plus WS 7 and the WS 5 override-doc residue.
+- Batch E: WS 10.
+- Batch F: WS 11.
+- Batch G: WS 15 plus doc closeout and the full exit-criteria run.
+
+User-approved decisions for execution; do not reopen without user approval:
+
+- Validator (WS 13): extend the hand-rolled validator with a scoped subset —
+  intra-file `$ref` to `#/definitions`, `oneOf`, `anyOf`, `allOf` — and make it
+  fail-closed: an unrecognized validation keyword is an error, never a silent
+  skip. No third-party dependency. Schema shapes need not mirror the reference;
+  architecture parity is the bar, schema parity is not.
+- Memory cap (WS 9, WS 7): `context/MEMORY.md` is capped at 2,500 characters,
+  matching the reference `meta-memory-write`. The same cap applies at root and
+  creator scope.
+- Producer skills (WS 10): the six Phase 1 producer skills stay unbuilt in
+  Phase 0C. The conductor marks them `[PLANNED]` with a halt instruction —
+  never silently improvise a missing phase. Each marker is an open build
+  obligation that must be reconciled and built in its Phase 1 slice, tracked by
+  the skill-registry Missing Future Skills table and the roadmap Phase 1 slice
+  list.
+- Copy policy (WS 15): purchased Agentic OS files are reference-only; nothing
+  is copied verbatim into this repo. Record the rule in the copy plan.
+- Subagent pattern (WS 15): classify reference `.claude/agents/` and
+  `.claude/commands/` as defer; write the ADR only when a Phase 1 producer
+  skill actually adopts the pattern.
+- PRD-to-issues conversion: skipped. This plan's workstreams are the
+  issue-ready tracker; a parallel issue list would be a second source of truth
+  that can drift.
 
 ## Required Read Order
 

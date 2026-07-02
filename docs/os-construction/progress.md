@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -41,17 +41,16 @@ Completed:
 - Restructured the always-loaded adapters per ADR 0019: `AGENTS.md` canonical, `CLAUDE.md` and `SOUL.md` thin importers, the read order defined once, and the dual-SOUL collision resolved.
 - Reconciled `agentic-os-alignment.md` and `agentic-os-copy-plan.md` with the four new decisions and relabeled the repository-map record data-flow.
 - Added parity-review workstreams 9-15 to `docs/os-construction/short-term-plan.md`.
+- Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
 
 Remaining:
 
 - Finish Phase 0C parity hardening from `docs/os-construction/short-term-plan.md`.
 - Add broader drift checks for adapters, skill registry, context matrix, and creator runtime sync.
 - Implement parity-review workstreams 9-15 (self-learning skills, machine-actionable call graph, propagation build-out, determinism fixes, validator hardening, acceptance-criteria determinism, copy-plan coverage) from `docs/os-construction/short-term-plan.md`. Category prefixes (decided against, ADR 0017) and the propagation mechanism (approved, ADR 0018) are now resolved.
-- Decide which Agentic OS source files, if any, should be copied verbatim versus kept as external references.
 - Update architecture maps after parity hardening changes.
 - Review `docs/os-construction/maps/agentic-os-vs-influencer-os.md` before creating its Excalidraw scene.
 - Use `docs/os-construction/short-term-plan.md` as the next-agent handoff.
-- Convert the PRD into implementation issues after review.
 - Add ADRs for any new divergences from Agentic OS.
 
 ### Phase 1: Planning OS

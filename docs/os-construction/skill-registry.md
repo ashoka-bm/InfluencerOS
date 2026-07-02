@@ -56,4 +56,4 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `wrap-up` | capture learnings, self-correct skills, reconcile this registry, promote memory | System — ADR 0016 (Phase 0C) |
 | `memory-write` | bounded, deduped `context/MEMORY.md` writes | System — ADR 0016 (Phase 0C) |
 
-Coverage for these planned skills is deferred per the Context Coverage Rule until they are built; context-matrix rows land with their build workstream (WS9 for the system skills, WS10 for the producer skills). Per ADR 0017 this registry gains `category` and `dependencies` columns in workstream 10; the columns above are the pre-ADR-0017 set.
+Coverage for these planned skills is deferred per the Context Coverage Rule until they are built; context-matrix rows land with each skill's build step: WS9 builds the system skills, while the producer skills are built in their Phase 1 slices — WS10 only adds `[PLANNED]` halt markers for them to the conductor, and each marker is an open build obligation. Per ADR 0017 this registry gains `category` and `dependencies` columns in workstream 10; the columns above are the pre-ADR-0017 set.
