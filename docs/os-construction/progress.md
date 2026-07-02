@@ -42,11 +42,12 @@ Completed:
 - Reconciled `agentic-os-alignment.md` and `agentic-os-copy-plan.md` with the four new decisions and relabeled the repository-map record data-flow.
 - Added parity-review workstreams 9-15 to `docs/os-construction/short-term-plan.md`.
 - Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
+- Added drift checks (`tests/test_drift_checks.py`, Batch A / workstreams 1, 3, 4, 8): adapter read order and imports per ADR 0019, bidirectional skill-registry coverage including future-table enforcement, and context-matrix coverage against known workflow rows.
 
 Remaining:
 
 - Finish Phase 0C parity hardening from `docs/os-construction/short-term-plan.md`.
-- Add broader drift checks for adapters, skill registry, context matrix, and creator runtime sync.
+- Add the remaining drift checks: conductor call graph (workstream 10) and creator runtime sync (workstream 11).
 - Implement parity-review workstreams 9-15 (self-learning skills, machine-actionable call graph, propagation build-out, determinism fixes, validator hardening, acceptance-criteria determinism, copy-plan coverage) from `docs/os-construction/short-term-plan.md`. Category prefixes (decided against, ADR 0017) and the propagation mechanism (approved, ADR 0018) are now resolved.
 - Update architecture maps after parity hardening changes.
 - Review `docs/os-construction/maps/agentic-os-vs-influencer-os.md` before creating its Excalidraw scene.
@@ -157,6 +158,7 @@ Latest verified commands:
 ```bash
 python3 -m unittest discover -s tests
 python3 -m influencer_os validate examples
+python3 -m unittest tests.test_drift_checks -v
 if rg -n 'workspace-library/creators/<creator-slug>/skills|Skill Runtime And Propagation Decision|Resolve skill runtime layout|Creator Workspace propagation/sync decisions|needs decision|Reject for v1' docs/os-construction docs/creator-workspace-structure.md docs/pipeline-contract.md ARCHITECTURE.md AGENTS.md README.md -g '!docs/os-construction/adversarial-review.md' -g '!docs/os-construction/progress.md'; then exit 1; else exit 0; fi
 ```
 
@@ -180,18 +182,19 @@ python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-r
 Latest validation result:
 
 ```text
-Ran 21 tests in 0.886s
+Ran 31 tests in 0.827s
 OK
 Validated 20 example records.
+Drift checks: 10 tests pass; planting an unregistered skills/ folder makes the
+registry and matrix checks fail, confirming the checks catch real drift.
 No stale old creator-skill runtime paths found outside historical adversarial-review notes.
 ```
 
 ## Next Work Queue
 
-1. Implement parity-review workstreams 9-15 from `docs/os-construction/short-term-plan.md`, starting with the self-learning system skills (ADR 0016).
-2. Complete the remaining Phase 0C workstreams (drift checks, registry/matrix hardening, Tier 0 recall) from the short-term plan.
-3. Update progress docs with parity verification results.
-4. After Phase 0C exits, choose the first Planning OS slice: intake import, Tier 0 creator recall, project/output package layout helpers, or Social Research Pack plus Content Idea Set workflow.
+1. Continue the Phase 0C batches from the short-term plan Execution Decisions. Batch A (drift-check guardrails) is done; next is Batch B (workstream 13 validator hardening), then C (determinism fixes), D (self-learning skills and memory), E (conductor call graph), F (propagation build-out), G (copy-plan coverage and closeout).
+2. Update progress docs with parity verification results after each batch.
+3. After Phase 0C exits, start Phase 1 in the roadmap's slice order: master intake import first.
 
 ## Decision Log
 
