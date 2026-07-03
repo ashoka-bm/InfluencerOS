@@ -264,6 +264,45 @@ class ValidatorSubsetTests(unittest.TestCase):
         with self.assertRaises(SchemaDefinitionError):
             validate_schema_subset(schema, "matches-first-branch")
 
+    def test_enum_must_be_a_list(self):
+        # A string enum would silently degrade to substring matching.
+        schema = {"type": "string", "enum": "abc"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, "a")
+
+    def test_additional_properties_must_be_boolean(self):
+        # The string "false" is truthy and would behave like permissive true.
+        schema = {"type": "object", "additionalProperties": "false"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, {"unexpected": 1})
+
+    def test_pattern_must_be_a_string(self):
+        schema = {"type": "string", "pattern": 123}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, "value")
+
+    def test_combinators_must_be_lists_of_schemas(self):
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"oneOf": "nope"}, "value")
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"anyOf": [{"type": "string"}, "bad"]}, "value")
+
+    def test_numeric_bounds_must_be_numbers(self):
+        schema = {"type": "number", "minimum": "0"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, 5)
+
+    def test_items_must_be_a_schema_object(self):
+        schema = {"type": "array", "items": "nope"}
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset(schema, ["x"])
+
     def test_unknown_format_fails_closed(self):
         schema = {"type": "string", "format": "uri"}
 

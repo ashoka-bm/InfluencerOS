@@ -699,6 +699,43 @@ class ProvenanceResolutionTests(unittest.TestCase):
             result = validate_project(project_dir)
             self.assertEqual(result["project_id"], "project_luna_tiny_reset_001")
 
+    def test_validate_project_rejects_output_package_creator_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = project_dir / "output-package" / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(
+                package_path,
+                lambda package: package.update(creator_profile_id="creator_other"),
+            )
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            with self.assertRaises(ValueError):
+                validate_project(project_dir)
+
+    def test_validate_project_rejects_unknown_production_plan_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = project_dir / "output-package" / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(
+                package_path,
+                lambda package: package["source_refs"].update(
+                    production_plan_ids=["wrong_plan_id"]
+                ),
+            )
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("wrong_plan_id", str(ctx.exception))
+
     def test_validate_project_rejects_output_package_template_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)

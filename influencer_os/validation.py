@@ -139,6 +139,8 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
             "the validator is fail-closed, extend it before using new keywords"
         )
 
+    _require_keyword_shapes(schema, path)
+
     expected_type = schema.get("type")
     if expected_type:
         allowed = expected_type if isinstance(expected_type, list) else [expected_type]
@@ -180,8 +182,6 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
         if "maxItems" in schema and len(value) > schema["maxItems"]:
             raise ValidationError(f"{path}: array longer than maxItems")
         item_schema = schema.get("items")
-        if isinstance(item_schema, list):
-            raise SchemaDefinitionError(f"{path}: tuple-form 'items' is not supported")
         if item_schema:
             for index, item in enumerate(value):
                 validate_schema_subset(item_schema, item, f"{path}[{index}]", root_schema)
@@ -193,12 +193,7 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
                 raise ValidationError(f"{path}: missing required key {key!r}")
 
         properties = schema.get("properties", {})
-        additional = schema.get("additionalProperties", True)
-        if isinstance(additional, dict):
-            raise SchemaDefinitionError(
-                f"{path}: schema-form 'additionalProperties' is not supported; use true or false"
-            )
-        if additional is False:
+        if schema.get("additionalProperties", True) is False:
             extra = set(value) - set(properties)
             if extra:
                 raise ValidationError(f"{path}: unexpected keys {sorted(extra)!r}")
@@ -227,6 +222,54 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
                 f"{path}: value matches {match_count} oneOf branches, expected exactly 1"
                 + (f": {failures!r}" if match_count == 0 else "")
             )
+
+
+def _require_keyword_shapes(schema, path):
+    """Fail closed on malformed keyword VALUES, not just unknown keyword names.
+
+    Without this, a malformed value degrades silently: `"enum": "abc"` becomes
+    substring matching, and `"additionalProperties": "false"` is truthy and
+    behaves like permissive true.
+    """
+    typed_keywords = (
+        ("enum", list),
+        ("required", list),
+        ("properties", dict),
+        ("items", dict),
+        ("definitions", dict),
+        ("allOf", list),
+        ("anyOf", list),
+        ("oneOf", list),
+        ("pattern", str),
+        ("format", str),
+        ("additionalProperties", bool),
+    )
+    for keyword, expected in typed_keywords:
+        if keyword in schema and not isinstance(schema[keyword], expected):
+            raise SchemaDefinitionError(
+                f"{path}: {keyword!r} must be a {expected.__name__}, "
+                f"got {type(schema[keyword]).__name__}"
+            )
+
+    for keyword in ("allOf", "anyOf", "oneOf"):
+        if keyword in schema:
+            for index, member in enumerate(schema[keyword]):
+                if not isinstance(member, dict):
+                    raise SchemaDefinitionError(
+                        f"{path}: {keyword}[{index}] must be a schema object, "
+                        f"got {type(member).__name__}"
+                    )
+
+    for keyword in ("minLength", "minItems", "maxItems"):
+        if keyword in schema:
+            if isinstance(schema[keyword], bool) or not isinstance(schema[keyword], int):
+                raise SchemaDefinitionError(f"{path}: {keyword!r} must be an integer")
+
+    for keyword in ("minimum", "maximum"):
+        if keyword in schema:
+            bound = schema[keyword]
+            if isinstance(bound, bool) or not isinstance(bound, (int, float)):
+                raise SchemaDefinitionError(f"{path}: {keyword!r} must be a number")
 
 
 def _run_combinator_branches(subschemas, value, path, root_schema, keyword):

@@ -36,6 +36,13 @@ PRODUCTION_PLAN_SCHEMAS = {
     "story_sequence": "story-sequence-plan",
 }
 
+PRODUCTION_PLAN_ID_FIELDS = {
+    "micro-journey-video-plan": "micro_journey_video_plan_id",
+    "carousel-plan": "carousel_plan_id",
+    "single-image-post-plan": "single_image_post_plan_id",
+    "story-sequence-plan": "story_sequence_plan_id",
+}
+
 # Research pack ids resolve to <workspace>/<directory>/<pack-id>.json records.
 RESEARCH_PACK_LOCATIONS = (
     ("video_research_", "research/video-understanding-packs", "video-understanding-pack", "video_understanding_pack_id"),
@@ -204,6 +211,7 @@ def _validate_project_records(project_dir, project, workspace_dir):
     selected_idea = None
     applied_template = None
     production_plan = None
+    generation_plan = None
 
     if _status_at_least(project, "idea_selected"):
         selected_idea = _validate_project_record(
@@ -275,6 +283,23 @@ def _validate_project_records(project_dir, project, workspace_dir):
                 "Output package applied_social_template_id does not match applied template: "
                 f"{output_package['source_refs']['applied_social_template_id']!r} != "
                 f"{applied_template['applied_social_template_id']!r}"
+            )
+        if output_package["creator_profile_id"] != project["creator_profile_id"]:
+            raise ValueError(
+                "Output package creator_profile_id does not match project: "
+                f"{output_package['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+            )
+        plan_id_field = PRODUCTION_PLAN_ID_FIELDS[_production_plan_schema(project)]
+        known_plan_ids = {production_plan[plan_id_field]}
+        if generation_plan is not None:
+            known_plan_ids.add(generation_plan["base_video_generation_plan_id"])
+        unknown_plan_ids = sorted(
+            set(output_package["source_refs"]["production_plan_ids"]) - known_plan_ids
+        )
+        if unknown_plan_ids:
+            raise ValueError(
+                "Output package production_plan_ids do not match the project's plan records: "
+                f"{unknown_plan_ids}"
             )
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
