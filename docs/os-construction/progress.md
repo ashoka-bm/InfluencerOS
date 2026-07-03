@@ -44,6 +44,7 @@ Completed:
 - Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
 - Added drift checks (`tests/test_drift_checks.py`, Batch A / workstreams 1, 3, 4, 8): adapter read order and imports per ADR 0019, bidirectional skill-registry coverage including future-table enforcement, and context-matrix coverage against known workflow rows.
 - Hardened the validator (Batch B / workstream 13): fail-closed schema subset with intra-file `$ref` to `#/definitions`, `oneOf`, `anyOf`, and `allOf`; unknown keywords, type names, formats, and unsupported construct forms raise `SchemaDefinitionError` instead of silently passing; example coverage is derived from disk so every schema requires a matching example and vice versa.
+- Addressed the second adversarial re-review round (2026-07-03): packaged output packages must now reference every project plan record — omitting the Base Video Generation Plan when generation is planned fails validation (the provenance chain must be complete, not merely free of dangling IDs); the validator's shape guard now covers the `type` keyword (an empty list is falsy and silently skipped type validation entirely; non-string members and empty strings are also `SchemaDefinitionError`s); and the Phase 0C exit note no longer states a stale suite count.
 - Addressed the post-closeout adversarial re-review (2026-07-03): packaged projects now cross-check `creator_profile_id` and `production_plan_ids` against the project and its plan records (dangling or foreign IDs fail); the validator fail-closes on malformed keyword values, not just unknown keyword names (a string `enum` or a string `additionalProperties` is now a `SchemaDefinitionError`, with negative tests); the adversarial review ledger gained a Resolution Status section mapping every major finding to the batch and commit that closed it; the architecture-map determinism boundary table replaced stale `[TO ADD]` markers with built statuses and explicit `[PHASE 1 — ADR 0020 slice]` markers; and the full CLI (including `update-creators`, `validate record`, `memory-write`, `log-learning`) is now documented in `README.md`, `ARCHITECTURE.md`, and the repository map.
 - Closed out Phase 0C (Batch G / workstream 15): inspected the reference `.claude/agents/` (four typed subagents) and `.claude/commands/` (`/start-here`, `/archive-gsd`) and added copy-plan rows (subagents: defer, ADR only on adoption by a Phase 1 producer; commands: do not copy now); recorded the reference-only copy policy in the copy plan; updated the architecture-map subagent decision to reference the classification; refreshed the parity plan's gap audit (all success criteria met 2026-07-03); reviewed the comparison map framing against the copy plan and decisions; and re-ran every roadmap Phase 0C exit criterion end to end.
 - Built the propagation mechanism (Batch F / workstream 11, ADR 0018): `update-creators` refreshes baseline skill copies across every Creator Workspace with a backup-protected sync (replaced skill folders are copied to `.claude/skills-backup/<skill-name>/` before refresh) while preserving `SKILL.local.md` files, creator-only skills, and all creator state; `init-creator` writes thin workspace `AGENTS.md`/`CLAUDE.md` wrappers; `creator-workspace.schema.json` now requires the `.claude/skills/` directory (closing the missing-directory gap); and gated zones (scripts, settings, hooks, cron) are documented as inert with a test asserting no gated-zone content is scaffolded.
@@ -188,7 +189,7 @@ python3 -m influencer_os update-creators --workspace-root .tmp/creators
 Latest validation result:
 
 ```text
-Ran 94 tests in 1.393s
+Ran 96 tests in 1.385s
 OK
 Validated 20 example records.
 Full workflow verification above re-run end to end after the Batch C changes.
@@ -203,7 +204,8 @@ fail-closed unknown keywords/formats/types, and disk-derived example coverage
 (a schema without an example now fails validation).
 No stale old creator-skill runtime paths found outside historical adversarial-review notes.
 Phase 0C exit (2026-07-03): every roadmap exit criterion re-run end to end and
-passing — 86-test suite, 20 example records, 18 drift checks, full
+passing — the full test suite (86 tests at the exit run; grown by the
+post-closeout re-review fixes since), 20 example records, 18 drift checks, full
 workspace/project/record workflow incl. update-creators (11 skills synced,
 11 backed up), and the stale-path check.
 ```

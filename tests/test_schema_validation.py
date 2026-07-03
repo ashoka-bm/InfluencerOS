@@ -291,6 +291,17 @@ class ValidatorSubsetTests(unittest.TestCase):
         with self.assertRaises(SchemaDefinitionError):
             validate_schema_subset({"anyOf": [{"type": "string"}, "bad"]}, "value")
 
+    def test_type_must_be_a_nonempty_string_or_string_list(self):
+        # An empty list is falsy and would skip type validation entirely.
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"type": []}, "anything")
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"type": ["string", 3]}, "anything")
+
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"type": ""}, "anything")
+
     def test_numeric_bounds_must_be_numbers(self):
         schema = {"type": "number", "minimum": "0"}
 

@@ -231,6 +231,21 @@ def _require_keyword_shapes(schema, path):
     substring matching, and `"additionalProperties": "false"` is truthy and
     behaves like permissive true.
     """
+    if "type" in schema:
+        type_value = schema["type"]
+        if isinstance(type_value, str):
+            well_formed = bool(type_value)
+        elif isinstance(type_value, list):
+            well_formed = bool(type_value) and all(
+                isinstance(name, str) and name for name in type_value
+            )
+        else:
+            well_formed = False
+        if not well_formed:
+            raise SchemaDefinitionError(
+                f"{path}: 'type' must be a non-empty string or a non-empty list of strings"
+            )
+
     typed_keywords = (
         ("enum", list),
         ("required", list),

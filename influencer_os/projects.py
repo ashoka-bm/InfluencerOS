@@ -293,13 +293,18 @@ def _validate_project_records(project_dir, project, workspace_dir):
         known_plan_ids = {production_plan[plan_id_field]}
         if generation_plan is not None:
             known_plan_ids.add(generation_plan["base_video_generation_plan_id"])
-        unknown_plan_ids = sorted(
-            set(output_package["source_refs"]["production_plan_ids"]) - known_plan_ids
-        )
+        referenced_plan_ids = set(output_package["source_refs"]["production_plan_ids"])
+        unknown_plan_ids = sorted(referenced_plan_ids - known_plan_ids)
         if unknown_plan_ids:
             raise ValueError(
                 "Output package production_plan_ids do not match the project's plan records: "
                 f"{unknown_plan_ids}"
+            )
+        missing_plan_ids = sorted(known_plan_ids - referenced_plan_ids)
+        if missing_plan_ids:
+            raise ValueError(
+                "Output package production_plan_ids omit project plan records "
+                f"(the provenance chain must be complete): {missing_plan_ids}"
             )
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
