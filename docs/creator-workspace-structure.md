@@ -179,10 +179,13 @@ the project must match it. A video pack id in project or output-package
 `source_refs` must resolve to `<directory>/<pack-id>.json`, and every
 `reference_asset_id` must exist in `references/reference-library.json`;
 `validate project` fails on a dangling reference. `validate research` and
-`validate queue` cover the research records, and the promotion gate warns on
+`validate queue` cover the research records and pin every record's
+`creator_profile_id`/`creator_slug` to the owning `creator-workspace.json`
+(the research module is creator-scoped), and the promotion gate warns on
 unresolved evidence (evidence ids, metric snapshot ids, and video pack ids
 alike) for human-approved promotions while failing any future automated
-promotion path.
+promotion path and rejecting a promotion whose queue entry belongs to a
+different creator.
 
 Shared local indexes may live outside individual creator folders:
 

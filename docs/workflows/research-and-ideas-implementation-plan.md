@@ -878,4 +878,48 @@ Project's `target_formats`/`platform_targets` to the locked promotion's
 `approved_formats`/`approved_platforms`. If the approval snapshot is meant to
 constrain project targets, that cross-check is a deliberate follow-up; if
 projects may diverge from the approved surface, record that rule here and in
-the workflow doc when decided.
+the workflow doc when decided. (Related, noted in the second review round:
+`approved_formats` is a free-form string in the promotion schema, so the
+"promotion refuses production-unsupported formats" success condition is a
+workflow rule, not yet a mechanical check. Decide both together.)
+
+### Second Review Round (User-Approved 2026-07-03)
+
+A second external review surfaced four findings; one approved batch closed
+them the same day.
+
+Fixed:
+
+1. Creator scoping is now enforced: `validate research` and `validate queue`
+   load the owning `creator-workspace.json` (failing when it is missing) and
+   pin every record's `creator_profile_id` — and `creator_slug` where the
+   schema carries it — to the workspace's creator. Before the fix a workspace
+   validated with schedule, run, evidence, queue, and promotion records all
+   claiming a different creator. Records whose schemas carry no creator field
+   (project warnings) are exempt; system events check their optional fields
+   when present.
+2. The promotion gate rejects a promotion whose queue entry belongs to a
+   different creator (checked entry-vs-promotion inside the gate so the
+   `validate project` call path is protected too, independent of workspace
+   scope loading).
+3. `multi_platform_package` is removed from the project `content_unit_type`
+   enum: it had no production plan schema, so a `created` project using it
+   validated and then dead-ended at `planning`. Same rule as the youtube
+   enum correction — the value joins the enum when the production build-out
+   adds its plan schema. The concept remains valid CONTEXT.md vocabulary.
+4. The README's opening flow and "What V1 Includes" list now teach the ADR
+   0020 pipeline (platform-scoped research → Research Findings → scored Idea
+   Queue → human-approved Idea Promotion → Projects) instead of the
+   deprecated five-ideas/choose-one flow, and describe v1 as
+   platform-scoped research with format-first universal short-form
+   production rather than "platform-agnostic".
+
+Declined with rationale:
+
+- Enforcing that a promotion's snapshot (evidence refs, scores) stays
+  consistent with the source queue entry's current contents. The promotion
+  is deliberately a permanent locked approval snapshot because the records
+  it names mutate afterward (entry scores drift, evidence accrues); equality
+  checks against the live entry would reject exactly the drift the snapshot
+  design anticipates. Entry ownership is checked (fix 2); snapshot content
+  is not re-derived.

@@ -4,21 +4,21 @@ InfluencerOS creates universal short-form video ideas and base generation plans 
 
 InfluencerOS is also being structured as a local-first Agentic OS adaptation. Root adapter files load the same durable project context for Codex, Claude, OpenClaw/Hermes-style agents, and compatible tools.
 
-The v1 flow:
+The v1 flow (ADR 0020):
 
 ```text
 Choose Creator
   -> optionally understand real videos from frames and transcripts
-  -> synthesize current social research
-  -> use a minimal visual social post format shortlist
-  -> produce five creator-fit visual social ideas
-  -> choose one idea
+  -> run platform-scoped research into dated evidence and concise Research Findings
+  -> maintain a scored Idea Queue from findings and evidence
+  -> human-approve an Idea Promotion for one queue idea
+  -> create Projects from the locked promotion
   -> apply a format-compatible social template
   -> create a format-specific production plan
   -> create a base generation plan when needed
 ```
 
-InfluencerOS v1 is platform-agnostic. It targets short vertical videos that can work across Instagram Reels, TikTok, and YouTube Shorts without a platform adapter.
+InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. Production stays format-first: it targets universal short-form vertical video that works across Instagram Reels, TikTok, and YouTube Shorts without a platform adapter.
 
 See [docs/os-construction/progress.md](docs/os-construction/progress.md) for the current phase map and build status.
 
@@ -44,7 +44,7 @@ The durable work is the operating system itself: docs, schemas, tests, CLI behav
 - [docs/os-construction/skill-registry.md](docs/os-construction/skill-registry.md): skill triggers, writes, and override policy.
 - [ARCHITECTURE.md](ARCHITECTURE.md): durable architecture direction.
 
-Creator setup can capture broader creator strategy inputs, including written surfaces such as Substack, LinkedIn, X, blogs, and newsletters. The current production pipeline still starts with the platform-agnostic visual social formats documented in the schemas and workflow docs.
+Creator setup can capture broader creator strategy inputs, including written surfaces such as Substack, LinkedIn, X, blogs, and newsletters. The current production pipeline still starts with the format-first visual social formats documented in the schemas and workflow docs.
 
 ## What V1 Includes
 
@@ -63,8 +63,8 @@ Creator setup can capture broader creator strategy inputs, including written sur
 - Social Research Pack schema
 - Video Understanding Pack schema
 - Social Post Format schema
-- five-idea Content Idea Set schema
-- Selected Content Idea schema
+- the ADR 0020 research module schemas (Creator Content Schedule, Research Run, Research Evidence, Metric Snapshot, Research Findings, Stable Finding, five research intelligence files, Idea Queue Entry and Manifest, Idea Promotion, Project Warning, Content Board, Automation Run, System Event)
+- Content Idea Set and Selected Content Idea schemas (deprecated ADR 0020 compatibility artifacts, out of the intended pipeline)
 - Social Template and Applied Social Template schemas
 - Micro-Journey Video Plan schema
 - Carousel Plan schema

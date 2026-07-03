@@ -69,6 +69,36 @@ def check_project_warning_pairing(record):
         )
 
 
+def load_workspace_scope(workspace_dir):
+    """The research module is creator-scoped: every record in a Creator
+    Workspace must belong to the workspace's creator."""
+    manifest_path = Path(workspace_dir) / "creator-workspace.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Missing creator workspace manifest: {manifest_path}")
+    manifest = load_json(manifest_path)
+    try:
+        validate_record("creator-workspace", manifest)
+    except ValidationError as exc:
+        raise ValidationError(f"{manifest_path}: {exc}") from None
+    return {
+        "creator_profile_id": manifest["creator_profile_id"],
+        "creator_slug": manifest["creator_slug"],
+    }
+
+
+def check_creator_scope(record, scope, context=None):
+    """Pin a record's creator fields to the owning workspace. Fields a
+    record's schema does not carry (project warnings) are skipped."""
+    for field, expected in scope.items():
+        value = record.get(field)
+        if value is not None and value != expected:
+            prefix = f"{context}: " if context else ""
+            raise ValidationError(
+                f"{prefix}{field} {value!r} does not match the owning "
+                f"creator workspace ({expected!r})"
+            )
+
+
 def parse_frontmatter(path):
     path = Path(path)
     text = path.read_text()
@@ -154,22 +184,30 @@ def validate_research(workspace_path):
     if not research_dir.exists():
         raise FileNotFoundError(f"Missing research directory: {research_dir}")
 
+    scope = load_workspace_scope(workspace_dir)
+
+    def scoped(record):
+        check_creator_scope(record, scope)
+
     checked = []
 
     schedule_path = workspace_dir / "content-schedule.json"
     if schedule_path.exists():
         validate_file("creator-content-schedule", schedule_path)
+        check_creator_scope(load_json(schedule_path), scope, schedule_path)
         checked.append("content-schedule.json")
 
     findings_path = research_dir / "findings.md"
     if findings_path.exists():
-        validate_findings_file(findings_path)
+        findings_data = validate_findings_file(findings_path)
+        check_creator_scope(findings_data, scope, findings_path)
         checked.append("research/findings.md")
 
     stable_dir = research_dir / "stable-findings"
     if stable_dir.exists():
         for stable_path in sorted(stable_dir.glob("*.md")):
-            validate_stable_finding_file(stable_path)
+            stable_data = validate_stable_finding_file(stable_path)
+            check_creator_scope(stable_data, scope, stable_path)
             checked.append(str(stable_path.relative_to(workspace_dir)))
 
     runs_dir = research_dir / "runs"
@@ -186,34 +224,40 @@ def validate_research(workspace_path):
                     f"research_run_id {run_record['research_run_id']!r} "
                     "(layout is research/runs/<research-run-id>/)"
                 )
+            check_creator_scope(run_record, scope, run_manifest)
             checked.append(str(run_manifest.relative_to(workspace_dir)))
             for filename, schema_name in RESEARCH_JSONL_FILES:
                 jsonl_path = run_dir / filename
                 if jsonl_path.exists():
-                    validate_jsonl_file(schema_name, jsonl_path)
+                    validate_jsonl_file(schema_name, jsonl_path, record_check=scoped)
                     checked.append(str(jsonl_path.relative_to(workspace_dir)))
 
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():
         intel_path = research_dir / "intelligence" / filename
         if intel_path.exists():
             validate_file(schema_name, intel_path)
+            check_creator_scope(load_json(intel_path), scope, intel_path)
             checked.append(str(intel_path.relative_to(workspace_dir)))
 
     board_path = workspace_dir / "boards" / "content-board.json"
     if board_path.exists():
         validate_file("content-board", board_path)
+        check_creator_scope(load_json(board_path), scope, board_path)
         checked.append("boards/content-board.json")
 
     for filename, schema_name in SYSTEM_JSONL_FILES:
         system_path = workspace_dir / "system" / filename
         if system_path.exists():
-            record_check = (
-                check_project_warning_pairing if schema_name == "project-warning" else None
-            )
+            if schema_name == "project-warning":
+                def record_check(record):
+                    check_project_warning_pairing(record)
+                    check_creator_scope(record, scope)
+            else:
+                record_check = scoped
             validate_jsonl_file(schema_name, system_path, record_check=record_check)
             checked.append(str(system_path.relative_to(workspace_dir)))
 
-    warnings, promotion_paths = validate_promotions(workspace_dir)
+    warnings, promotion_paths = validate_promotions(workspace_dir, scope=scope)
     checked.extend(promotion_paths)
 
     return {"workspace_path": workspace_dir, "checked_paths": checked, "warnings": warnings}
@@ -226,8 +270,11 @@ def validate_queue(workspace_path):
     if not manifest_path.exists():
         raise FileNotFoundError(f"Missing idea queue manifest: {manifest_path}")
 
+    scope = load_workspace_scope(workspace_dir)
+
     manifest = load_json(manifest_path)
     validate_record("idea-queue", manifest)
+    check_creator_scope(manifest, scope, manifest_path)
 
     entries_dir = queue_dir / "entries"
     entries = {}
@@ -243,6 +290,7 @@ def validate_queue(workspace_path):
                     f"{entry_path}: filename does not match idea_queue_entry_id "
                     f"{record['idea_queue_entry_id']!r}"
                 )
+            check_creator_scope(record, scope, entry_path)
             entries[record["idea_queue_entry_id"]] = record
 
     manifest_refs = {ref["idea_queue_entry_id"]: ref["status"] for ref in manifest["entry_refs"]}
@@ -326,6 +374,12 @@ def validate_promotion_gate(workspace_dir, promotion):
         validate_record("idea-queue-entry", entry)
     except ValidationError as exc:
         raise ValidationError(f"{entry_path}: {exc}") from None
+    if entry["creator_profile_id"] != promotion["creator_profile_id"]:
+        raise ValidationError(
+            f"Idea promotion {promotion_id} points to a queue entry owned by a "
+            f"different creator: {entry['creator_profile_id']!r} != "
+            f"{promotion['creator_profile_id']!r}"
+        )
 
     evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
@@ -354,9 +408,11 @@ def validate_promotion_gate(workspace_dir, promotion):
     return []
 
 
-def validate_promotions(workspace_path):
+def validate_promotions(workspace_path, scope=None):
     """Validate every promotion record and its gate; returns warning strings."""
     workspace_dir = Path(workspace_path)
+    if scope is None:
+        scope = load_workspace_scope(workspace_dir)
     promotions_dir = workspace_dir / "research" / "idea-promotions"
     warnings = []
     checked = []
@@ -372,6 +428,7 @@ def validate_promotions(workspace_path):
                     f"{promotion_path}: filename does not match idea_promotion_id "
                     f"{promotion['idea_promotion_id']!r}"
                 )
+            check_creator_scope(promotion, scope, promotion_path)
             warnings.extend(validate_promotion_gate(workspace_dir, promotion))
             checked.append(str(promotion_path.relative_to(workspace_dir)))
     return warnings, checked

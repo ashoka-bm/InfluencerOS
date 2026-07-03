@@ -54,6 +54,9 @@ def scaffold_research_workspace(temp_dir):
     workspace_dir = Path(temp_dir) / "luna-fit"
     research = workspace_dir / "research"
 
+    # Research validation pins every record to the owning workspace creator.
+    write_json(workspace_dir / "creator-workspace.json", load_example("creator-workspace"))
+
     write_json(workspace_dir / "content-schedule.json", load_example("creator-content-schedule"))
 
     run_dir = research / "runs" / RUN_ID
@@ -394,6 +397,85 @@ class PromotionGateTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_promotion_gate(workspace_dir, promotion)
             self.assertIn("unresolved evidence refs", str(ctx.exception))
+
+
+class CreatorScopeTests(unittest.TestCase):
+    def test_missing_workspace_manifest_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "creator-workspace.json").unlink()
+
+            with self.assertRaises(FileNotFoundError):
+                validate_research(workspace_dir)
+            with self.assertRaises(FileNotFoundError):
+                validate_queue(workspace_dir)
+
+    def test_foreign_creator_schedule_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            schedule = load_example("creator-content-schedule")
+            schedule["creator_profile_id"] = "creator_other"
+            write_json(workspace_dir / "content-schedule.json", schedule)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("creator_other", str(ctx.exception))
+            self.assertIn("does not match the owning creator workspace", str(ctx.exception))
+
+    def test_foreign_creator_evidence_line_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            evidence = load_example("research-evidence")
+            evidence["creator_profile_id"] = "creator_other"
+            write_jsonl(
+                workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl", [evidence]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("evidence.jsonl:1:", message)
+            self.assertIn("creator_other", message)
+
+    def test_foreign_creator_promotion_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion = load_example("idea-promotion")
+            promotion["creator_profile_id"] = "creator_other"
+            write_json(
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+                promotion,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("creator_other", str(ctx.exception))
+
+    def test_foreign_creator_queue_entry_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            entry = load_example("idea-queue-entry")
+            entry["creator_profile_id"] = "creator_other"
+            write_json(
+                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json",
+                entry,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("creator_other", str(ctx.exception))
+
+    def test_promotion_pointing_to_foreign_creator_entry_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion = load_example("idea-promotion")
+            # The gate compares entry ownership to the promotion directly, so
+            # the check also protects validate_project's call path.
+            promotion["creator_profile_id"] = "creator_other"
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_promotion_gate(workspace_dir, promotion)
+            self.assertIn("owned by a different creator", str(ctx.exception))
 
 
 class ResearchCliTests(unittest.TestCase):

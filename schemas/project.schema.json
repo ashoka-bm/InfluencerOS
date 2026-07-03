@@ -48,13 +48,13 @@
       ]
     },
     "content_unit_type": {
+      "$comment": "Production-supported unit types only. multi_platform_package and text unit types (article, thread) join with the production build-out that adds their plan schemas.",
       "type": "string",
       "enum": [
         "short_form_video",
         "carousel",
         "single_image_post",
-        "story_sequence",
-        "multi_platform_package"
+        "story_sequence"
       ]
     },
     "source_refs": {

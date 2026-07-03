@@ -46,6 +46,16 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, invalid)
 
+    def test_project_rejects_production_unsupported_unit_type(self):
+        # multi_platform_package has no production plan schema yet; it joins
+        # the enum with the production build-out that adds one.
+        example = load_json("examples/project.example.json")
+        invalid = deepcopy(example)
+        invalid["content_unit_type"] = "multi_platform_package"
+
+        with self.assertRaises(ValidationError):
+            validate_record("project", invalid)
+
     def test_project_requires_acceptance_criteria(self):
         example = load_json("examples/project.example.json")
         invalid = deepcopy(example)
