@@ -102,6 +102,8 @@ Completed:
 
 - Addressed the watch integration review (2026-07-03; verified against the upstream repo): the documented `/watch` invocations and the conductor tool boundary now pass and name `--no-whisper`, because the upstream default falls back to Whisper automatically on caption-less videos and prompts for API-key setup on first run — the two actions the provider boundary gates behind explicit approval; the record-mapping table uses exact schema paths (`sources[].observations.*` per source; `cross_video_patterns` and `creator_fit_findings` at the pack top level); and the alignment doc gained the external-tool Adopted Patterns row the divergence test cites, so future external-tool decisions can pass under an existing listed pattern.
 
+- Slice 4 batch A (2026-07-03, per the user-approved Slice 4 Execution Decisions in `docs/workflows/research-and-ideas-implementation-plan.md`): the three run-scoped consistency checks deferred from the slice 3 review are enforced file-first, with the recall index staying a pure projection. Every evidence and metric-snapshot JSONL record's `research_run_id` must match its containing run folder; a run's `outputs.evidence_ids` and `outputs.metric_snapshot_ids` must reconcile exactly, both directions, with the run's JSONL contents; and structured evidence refs resolve run-scoped — the evidence and metric snapshots must live in the run the ref names (`resolve_evidence_ref`, shared by `validate queue` and the promotion gate), with cross-run duplicate ids failing closed because they make resolution ambiguous. Queue refs hard-fail on mismatch; the promotion gate folds mismatches into the existing unresolved-refs handling (warn for human-approved, fail for automated). The human-approved-warning test was rebuilt on a never-existed ref because deleting a run's evidence file is now a hard outputs-reconciliation error, not a warnable state. The prune-vs-outputs-reconciliation interaction is recorded in the slice plan as an open batch D decision.
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -305,6 +307,12 @@ Watch integration review fixes (2026-07-03): docs-only; 189 tests still
 pass, drift checks pass (21 tests). Upstream flag facts (`--no-whisper`,
 `--out-dir`, `--start`/`--end`, MIT license, auto Whisper fallback and
 first-run setup prompt) verified against the upstream repo.
+Slice 4 batch A (2026-07-03): 199 tests pass (10 added, each check
+reproduced failing before the fix); drift checks pass (21 tests); the
+three live fixture workspaces pass `validate research` under the new
+run-scoped checks (`validate queue` stays not-applicable — no fixture
+workspace has an idea queue yet; queues arrive with this slice's
+workflow).
 ```
 
 ## Next Work Queue

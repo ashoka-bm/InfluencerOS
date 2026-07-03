@@ -20,9 +20,11 @@ RESEARCH_INTELLIGENCE_FILES = {
     "watchlist.json": "research-watchlist",
 }
 
+# (filename, schema, record id field, research-run outputs field). A run's
+# outputs id lists must reconcile exactly with its JSONL contents.
 RESEARCH_JSONL_FILES = (
-    ("evidence.jsonl", "research-evidence"),
-    ("metric-snapshots.jsonl", "metric-snapshot"),
+    ("evidence.jsonl", "research-evidence", "evidence_id", "evidence_ids"),
+    ("metric-snapshots.jsonl", "metric-snapshot", "metric_snapshot_id", "metric_snapshot_ids"),
 )
 
 SYSTEM_JSONL_FILES = (
@@ -236,11 +238,39 @@ def validate_research(workspace_path):
                 )
             check_creator_scope(run_record, scope, run_manifest)
             checked.append(str(run_manifest.relative_to(workspace_dir)))
-            for filename, schema_name in RESEARCH_JSONL_FILES:
+            run_id = run_record["research_run_id"]
+
+            def run_scoped(record, _run_id=run_id):
+                check_creator_scope(record, scope)
+                record_run = record.get("research_run_id")
+                if record_run != _run_id:
+                    raise ValidationError(
+                        f"research_run_id {record_run!r} does not match "
+                        f"the containing run {_run_id!r}"
+                    )
+
+            for filename, schema_name, id_field, outputs_field in RESEARCH_JSONL_FILES:
                 jsonl_path = run_dir / filename
+                jsonl_ids = set()
                 if jsonl_path.exists():
-                    validate_jsonl_file(schema_name, jsonl_path, record_check=scoped)
+                    records = validate_jsonl_file(
+                        schema_name, jsonl_path, record_check=run_scoped
+                    )
+                    jsonl_ids = {record[id_field] for record in records}
                     checked.append(str(jsonl_path.relative_to(workspace_dir)))
+                declared_ids = set(run_record["outputs"][outputs_field])
+                undeclared = sorted(jsonl_ids - declared_ids)
+                if undeclared:
+                    raise ValidationError(
+                        f"{run_manifest}: outputs.{outputs_field} omit ids "
+                        f"present in {filename}: {undeclared}"
+                    )
+                ghost = sorted(declared_ids - jsonl_ids)
+                if ghost:
+                    raise ValidationError(
+                        f"{run_manifest}: outputs.{outputs_field} list ids "
+                        f"not present in {filename}: {ghost}"
+                    )
 
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():
         intel_path = research_dir / "intelligence" / filename
@@ -334,27 +364,15 @@ def validate_queue(workspace_path):
                 f"Queue manifest status_counts omit statuses present in the queue: {uncounted}"
             )
 
-    evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
+    evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
     for entry in entries.values():
         for ref in entry["evidence_refs"]:
-            if ref["evidence_id"] not in evidence_ids:
+            problems = resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids)
+            if problems:
                 raise ValidationError(
-                    f"{entry['idea_queue_entry_id']}: evidence ref {ref['evidence_id']!r} "
-                    "does not resolve to any research run evidence record"
+                    f"{entry['idea_queue_entry_id']}: {problems[0]}"
                 )
-            for metric_id in ref.get("metric_snapshot_ids", []):
-                if metric_id not in metric_ids:
-                    raise ValidationError(
-                        f"{entry['idea_queue_entry_id']}: metric snapshot ref {metric_id!r} "
-                        "does not resolve to any research run metric snapshot"
-                    )
-            for pack_id in ref.get("video_understanding_pack_ids", []):
-                if pack_id not in video_pack_ids:
-                    raise ValidationError(
-                        f"{entry['idea_queue_entry_id']}: video understanding pack ref "
-                        f"{pack_id!r} does not resolve to a video-understanding-pack record"
-                    )
 
     return {
         "workspace_path": workspace_dir,
@@ -397,26 +415,17 @@ def validate_promotion_gate(workspace_dir, promotion):
             "approval intent on the queue entry instead until the format lands"
         )
 
-    evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
+    evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
     unresolved = []
     for ref in promotion["evidence_refs"]:
-        if ref["evidence_id"] not in evidence_ids:
-            unresolved.append(ref["evidence_id"])
         unresolved.extend(
-            metric_id
-            for metric_id in ref.get("metric_snapshot_ids", [])
-            if metric_id not in metric_ids
-        )
-        unresolved.extend(
-            pack_id
-            for pack_id in ref.get("video_understanding_pack_ids", [])
-            if pack_id not in video_pack_ids
+            resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids)
         )
     if unresolved:
         message = (
             f"idea promotion {promotion_id} has unresolved evidence refs: "
-            f"{sorted(set(unresolved))}"
+            + "; ".join(sorted(set(unresolved)))
         )
         if promotion["approved_by"] != "user":
             raise ValidationError(message)
@@ -451,17 +460,21 @@ def validate_promotions(workspace_path, scope=None):
 
 
 def collect_research_record_ids(workspace_dir):
-    """Scan run JSONL files for evidence and metric snapshot ids (no index yet)."""
-    evidence_ids = set()
-    metric_ids = set()
+    """Scan run JSONL files and map evidence and metric snapshot ids to their
+    containing run folder. File-first by design: the recall index is a
+    rebuildable projection, never a validation dependency. Cross-run duplicate
+    ids fail closed because they make run-scoped ref resolution ambiguous."""
+    evidence_runs = {}
+    metric_runs = {}
     runs_dir = Path(workspace_dir) / "research" / "runs"
     if runs_dir.exists():
         scans = (
-            ("evidence.jsonl", "evidence_id", evidence_ids),
-            ("metric-snapshots.jsonl", "metric_snapshot_id", metric_ids),
+            ("evidence.jsonl", "evidence_id", evidence_runs),
+            ("metric-snapshots.jsonl", "metric_snapshot_id", metric_runs),
         )
-        for filename, id_field, ids in scans:
+        for filename, id_field, id_runs in scans:
             for jsonl_path in sorted(runs_dir.glob(f"*/{filename}")):
+                run_id = jsonl_path.parent.name
                 for line_number, line in _iter_jsonl_lines(jsonl_path):
                     try:
                         record = json.loads(line)
@@ -473,8 +486,57 @@ def collect_research_record_ids(workspace_dir):
                         raise ValidationError(
                             f"{jsonl_path}:{line_number}: record has no {id_field}"
                         )
-                    ids.add(record[id_field])
-    return evidence_ids, metric_ids
+                    record_id = record[id_field]
+                    existing_run = id_runs.get(record_id)
+                    if existing_run is not None and existing_run != run_id:
+                        raise ValidationError(
+                            f"{jsonl_path}:{line_number}: {id_field} {record_id!r} "
+                            f"appears in more than one run ({existing_run!r} and "
+                            f"{run_id!r}); ids must resolve to exactly one run"
+                        )
+                    id_runs[record_id] = run_id
+    return evidence_runs, metric_runs
+
+
+def resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids):
+    """Return problem strings for one structured evidence ref (empty when the
+    ref resolves). Evidence and metric snapshots must live in the run the ref
+    names — the ADR 0020 ref shape carries research_run_id precisely so
+    provenance cannot float across runs. Video packs may be workspace-level,
+    so they resolve by id alone."""
+    problems = []
+    ref_run = ref["research_run_id"]
+    evidence_id = ref["evidence_id"]
+    evidence_run = evidence_runs.get(evidence_id)
+    if evidence_run is None:
+        problems.append(
+            f"evidence ref {evidence_id!r} does not resolve to any "
+            "research run evidence record"
+        )
+    elif evidence_run != ref_run:
+        problems.append(
+            f"evidence ref {evidence_id!r} resolves to run {evidence_run!r}, "
+            f"but the ref names run {ref_run!r}"
+        )
+    for metric_id in ref.get("metric_snapshot_ids", []):
+        metric_run = metric_runs.get(metric_id)
+        if metric_run is None:
+            problems.append(
+                f"metric snapshot ref {metric_id!r} does not resolve to any "
+                "research run metric snapshot"
+            )
+        elif metric_run != ref_run:
+            problems.append(
+                f"metric snapshot ref {metric_id!r} resolves to run "
+                f"{metric_run!r}, but the ref names run {ref_run!r}"
+            )
+    for pack_id in ref.get("video_understanding_pack_ids", []):
+        if pack_id not in video_pack_ids:
+            problems.append(
+                f"video understanding pack ref {pack_id!r} does not resolve "
+                "to a video-understanding-pack record"
+            )
+    return problems
 
 
 def collect_video_pack_ids(workspace_dir):

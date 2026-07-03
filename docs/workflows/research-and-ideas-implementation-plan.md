@@ -1039,3 +1039,11 @@ fixtures and pass the live fixture workspaces; `rebuild-index` and
 `rebuild-board` are idempotent and deterministic; `prune --apply` provably
 never removes promotion-referenced evidence; both producer skills flip to
 built everywhere the drift checks look.
+
+Batch A landing note (2026-07-03): outputs reconciliation is exact set
+equality in both directions — a run manifest may neither omit ids present in
+its JSONL files nor declare ids absent from them. This interacts with batch
+D: `prune` deletes evidence lines, so batch D must decide how a pruned run
+stays valid (rewrite the run manifest's outputs lists, record pruned ids, or
+relax the declared-but-pruned direction). Open until batch D; surface it as
+a decision before coding prune.

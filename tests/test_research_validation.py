@@ -19,6 +19,7 @@ from influencer_os.validation import ValidationError
 ROOT = Path(__file__).resolve().parents[1]
 
 RUN_ID = "research_run_luna_fit_2026_07_03_001"
+RUN_ID_2 = "research_run_luna_fit_2026_07_03_002"
 ENTRY_ID = "idea_queue_entry_luna_fit_001"
 
 
@@ -333,6 +334,175 @@ class IdeaQueueValidationTests(unittest.TestCase):
             self.assertIn("invalid JSON", message)
 
 
+def add_second_run(workspace_dir, evidence_id="evidence_luna_fit_002", metric_id=None):
+    """Add a second, self-consistent run so tests can cross run boundaries."""
+    run = load_example("research-run")
+    run["research_run_id"] = RUN_ID_2
+    run["outputs"] = {
+        "finding_ids": [],
+        "idea_queue_entry_ids": [],
+        "evidence_ids": [evidence_id],
+        "metric_snapshot_ids": [metric_id] if metric_id else [],
+        "research_intelligence_updates": [],
+    }
+    evidence = load_example("research-evidence")
+    evidence["evidence_id"] = evidence_id
+    evidence["research_run_id"] = RUN_ID_2
+    run_dir = Path(workspace_dir) / "research" / "runs" / RUN_ID_2
+    write_json(run_dir / "research-run.json", run)
+    write_jsonl(run_dir / "evidence.jsonl", [evidence])
+    if metric_id:
+        metric = load_example("metric-snapshot")
+        metric["metric_snapshot_id"] = metric_id
+        metric["evidence_id"] = evidence_id
+        metric["research_run_id"] = RUN_ID_2
+        write_jsonl(run_dir / "metric-snapshots.jsonl", [metric])
+    return run_dir
+
+
+class RunScopeConsistencyTests(unittest.TestCase):
+    def test_evidence_run_id_must_match_containing_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            evidence_path = workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl"
+            record = load_example("research-evidence")
+            record["research_run_id"] = RUN_ID_2
+            write_jsonl(evidence_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("does not match the containing run", message)
+            self.assertIn("evidence.jsonl:1:", message)
+
+    def test_metric_snapshot_run_id_must_match_containing_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            metric_path = (
+                workspace_dir / "research" / "runs" / RUN_ID / "metric-snapshots.jsonl"
+            )
+            record = load_example("metric-snapshot")
+            record["research_run_id"] = RUN_ID_2
+            write_jsonl(metric_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("does not match the containing run", str(ctx.exception))
+
+    def test_run_outputs_omitting_a_jsonl_id_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_manifest = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            run = json.loads(run_manifest.read_text())
+            run["outputs"]["evidence_ids"] = []
+            write_json(run_manifest, run)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("outputs.evidence_ids", message)
+            self.assertIn("evidence_luna_fit_001", message)
+
+    def test_run_outputs_naming_an_absent_id_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_manifest = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            run = json.loads(run_manifest.read_text())
+            run["outputs"]["evidence_ids"].append("evidence_luna_fit_ghost")
+            write_json(run_manifest, run)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("outputs.evidence_ids", message)
+            self.assertIn("evidence_luna_fit_ghost", message)
+
+    def test_run_outputs_reconcile_metric_snapshots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_manifest = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            run = json.loads(run_manifest.read_text())
+            run["outputs"]["metric_snapshot_ids"] = []
+            write_json(run_manifest, run)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("outputs.metric_snapshot_ids", message)
+            self.assertIn("metric_snapshot_luna_fit_001", message)
+
+    def test_queue_ref_run_mismatch_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir)
+            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry = json.loads(entry_path.read_text())
+            # The evidence lives in RUN_ID; the ref claims RUN_ID_2.
+            entry["evidence_refs"][0]["research_run_id"] = RUN_ID_2
+            write_json(entry_path, entry)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("resolves to run", message)
+            self.assertIn(RUN_ID_2, message)
+
+    def test_queue_metric_ref_run_mismatch_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir, metric_id="metric_snapshot_luna_fit_002")
+            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry = json.loads(entry_path.read_text())
+            # The ref names RUN_ID, but this metric snapshot lives in RUN_ID_2.
+            entry["evidence_refs"][0]["metric_snapshot_ids"].append(
+                "metric_snapshot_luna_fit_002"
+            )
+            write_json(entry_path, entry)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("metric_snapshot_luna_fit_002", message)
+            self.assertIn("resolves to run", message)
+
+    def test_duplicate_evidence_id_across_runs_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir, evidence_id="evidence_luna_fit_001")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("more than one run", str(ctx.exception))
+
+    def test_promotion_ref_run_mismatch_warns_for_human_approved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            promotion = json.loads(promotion_path.read_text())
+            promotion["evidence_refs"][0]["research_run_id"] = RUN_ID_2
+            write_json(promotion_path, promotion)
+
+            result = validate_research(workspace_dir)
+            self.assertEqual(len(result["warnings"]), 1)
+            self.assertIn("resolves to run", result["warnings"][0])
+            self.assertIn("human-approved", result["warnings"][0])
+
+    def test_promotion_ref_run_mismatch_fails_for_automated(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion = load_example("idea-promotion")
+            promotion["approved_by"] = "automation"
+            promotion["evidence_refs"][0]["research_run_id"] = RUN_ID_2
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_promotion_gate(workspace_dir, promotion)
+            self.assertIn("unresolved evidence refs", str(ctx.exception))
+
+
 class PromotionGateTests(unittest.TestCase):
     def test_resolvable_promotion_produces_no_warnings(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -357,7 +527,17 @@ class PromotionGateTests(unittest.TestCase):
     def test_unresolved_evidence_warns_for_human_approved_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            (workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl").unlink()
+            # Deleting evidence.jsonl outright would now hard-fail outputs
+            # reconciliation before the gate runs; the human-approved warning
+            # path is for refs that do not resolve in an otherwise valid
+            # workspace.
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            promotion = json.loads(promotion_path.read_text())
+            promotion["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
+            write_json(promotion_path, promotion)
 
             result = validate_research(workspace_dir)
             self.assertEqual(len(result["warnings"]), 1)
