@@ -232,6 +232,38 @@ Reopen when:
 - automation is designed,
 - user explicitly approves Command Centre scope.
 
+## Deferred: Kanban Board UI
+
+Goal: an operable Kanban interface over the Content Board projection.
+
+Status: deferred (user decision, 2026-07-03).
+
+The data contract ships first: `boards/content-board.json` (deterministic
+card ids, parent idea / child project cards, warning badges, `manual_order`
+projection metadata) and the `rebuild-board` / `validate board` commands land
+in Phase 1 slice 4, so a UI can arrive later without schema changes or data
+migration. Canonical records never store board state, so no rework is
+implied by deferring.
+
+Do not build in the current phase:
+
+- board web/desktop UI,
+- drag-to-status mutation surfaces,
+- a UI-side promotion button (promotion is the human-approval gate and must
+  produce a locked `IdeaPromotion`, never a status drag).
+
+Optional intermediate once real queue data exists (post slice 5): a
+disposable read-only local HTML viewer over `content-board.json` to pressure
+test the board shape before Phase 2 hardens around it.
+
+Reopen when:
+
+- Phase 1 slices are complete and record semantics have stopped moving,
+- real creator queue data exists,
+- the user explicitly approves the UI scope (mutations must flow through
+  canonical records plus `rebuild-board`, keeping the UI a reader, not a
+  second writer).
+
 ## Deferred: Anywhere Access
 
 Goal: access and run InfluencerOS from hosted or remote channels.
