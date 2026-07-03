@@ -231,20 +231,20 @@ influencer_os/cli.py
 
 ## Determinism Boundary Table
 
-Each creation-flow boundary must have: input record(s) → output record + schema → deterministic acceptance criterion → validation → gate. Gaps from the parity review are marked **[TO ADD]**.
+Each creation-flow boundary must have: input record(s) → output record + schema → deterministic acceptance criterion → validation → gate. Phase 0C built everything not marked **[PHASE 1]**; the remaining markers land with the ADR 0020 research slice.
 
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
-| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace` + readiness validator **[TO ADD]** | none |
-| Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record` **[TO ADD]** | none |
-| Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` **[TO ADD]** | none |
-| Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit **[TO ADD]** | none |
-| Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | schema + evidence ref check **[TO ADD]** | none |
-| Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | schema + provenance refs **[TO ADD]** | user approves |
-| Applied template | promoted idea | `applied-social-template` | beats map to idea | `validate record` **[TO ADD]** | template gate |
+| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace` incl. generation-ready visual-asset gate [BUILT — WS14; full medium-based validator lands with the Phase 1 readiness slice] | none |
+| Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record video-understanding-pack` [BUILT — WS12] | none |
+| Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` **[PHASE 1 — ADR 0020 slice]** | none |
+| Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit **[PHASE 1 — ADR 0020 slice]** | none |
+| Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | schema + evidence ref check **[PHASE 1 — ADR 0020 slice]** | none |
+| Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | schema + provenance refs **[PHASE 1 — ADR 0020 slice]** | user approves |
+| Applied template | promoted idea | `applied-social-template` | beats map to idea | `validate record applied-social-template` [BUILT — WS12] | template gate |
 | Production plan | applied template | format plan (4 schemas) | routed by `target_format_id` | schema + routing check | none |
 | Base generation plan | video plan | `base-video-generation-plan` | provider-neutral | schema | none |
-| Output package | plan + artifact | `output-package` | full provenance chain enforced by schema **[TO ADD: research/template/VUP ids]**; IDs resolve to records **[TO ADD]** | schema + provenance resolver **[TO ADD]** | generation approval |
+| Output package | plan + artifact | `output-package` | full provenance chain enforced by schema (template + VUP ids required); IDs resolve to records; packaged projects cross-check project, creator, idea, template, and plan IDs | schema + provenance resolver [BUILT — WS12 + re-review fixes] | generation approval |
 
 ## Subagent Decision (open)
 

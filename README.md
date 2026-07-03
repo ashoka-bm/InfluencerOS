@@ -105,6 +105,12 @@ Creator Workspaces run copied baseline skills from `.claude/skills/`. Refresh th
 python3 -m influencer_os sync-creator-runtime workspace-library/creators/luna-fit
 ```
 
+Refresh every Creator Workspace at once (each replaced skill folder is backed up to `.claude/skills-backup/`, and `SKILL.local.md` files, creator-only skills, and creator state are preserved):
+
+```bash
+python3 -m influencer_os update-creators
+```
+
 ## Initialize A Project
 
 ```bash
@@ -115,6 +121,30 @@ After adding the selected idea and plan records, validate the project with:
 
 ```bash
 python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+```
+
+Project validation resolves provenance against the owning workspace: referenced reference assets must exist in the reference library, research pack IDs must resolve to `research/<kind>/<pack-id>.json` records, and a packaged project's output package must match the project, applied template, and plan records.
+
+## Validate Any Record
+
+Validate one mid-pipeline record against any schema in `schemas/`:
+
+```bash
+python3 -m influencer_os validate record output-package examples/output-package.example.json
+```
+
+## Memory And Learnings
+
+Add one durable fact to a `MEMORY.md` file (deduplicated; refuses writes past the 2,500-byte cap):
+
+```bash
+python3 -m influencer_os memory-write context/MEMORY.md "One durable fact." --section "Active Threads"
+```
+
+Append a dated, deduplicated per-skill learning entry (the `wrap-up` skill's writer):
+
+```bash
+python3 -m influencer_os log-learning context/learnings.md influencer-os "One-line lesson."
 ```
 
 ## Initialize A Dry Run

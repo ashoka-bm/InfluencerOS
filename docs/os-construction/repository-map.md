@@ -47,10 +47,11 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 
 | Path | Role |
 | --- | --- |
-| `influencer_os/cli.py` | CLI command surface. It should call workflow helpers, not hold product rules. |
-| `influencer_os/validation.py` | Schema and record validation. |
-| `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding and validation helpers. |
-| `influencer_os/projects.py` | Project scaffolding and validation helpers. |
+| `influencer_os/cli.py` | CLI command surface (`validate`, `init-creator`, `sync-creator-runtime`, `update-creators`, `init-project`, `init-run`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
+| `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, sync/update propagation, validation, and readiness gates. |
+| `influencer_os/projects.py` | Project scaffolding, validation, and provenance resolution. |
+| `influencer_os/memory.py` | Bounded `memory-write` and `log-learning` writers (ADR 0016). |
 | `influencer_os/runs.py` | Dry-run initialization and run records. |
 
 ## Contracts

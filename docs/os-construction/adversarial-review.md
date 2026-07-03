@@ -21,6 +21,21 @@ Each finding is a candidate architectural decision. For every one, your ruling i
 
 Rulings feed Stage 2 (file-granular architecture map + tightened PRD/roadmap/guardrails).
 
+## Resolution Status (2026-07-03)
+
+This ledger is the historical 2026-07-01 review record; the finding bodies below are kept verbatim and may describe pre-fix state. The findings were adjudicated in the short-term plan (workstreams 9-15 plus the Execution Decisions) and closed by Phase 0C batches A-G:
+
+- Self-improvement loop non-functional → resolved, Batch D (`ab63e6b`): `wrap-up`/`memory-write` skills backed by the `log-learning`/`memory-write` CLI writers and the 2,500-byte cap check.
+- Project `acceptance_criteria` contract dropped (the single HIGH finding) → resolved, Batch C (`046a988`): required in `project.schema.json`.
+- Output Package under-enforcement and unresolved provenance IDs → resolved, Batch C (`046a988`) plus the re-review pass: `applied_social_template_id` and `video_understanding_pack_ids` required in `source_refs`; provenance IDs resolve to real workspace records; packaged projects cross-check project, creator, idea, template, and production-plan IDs.
+- Missing conductor call graph and six unbuilt producers → resolved, Batch E (`36f57c6`): `dependencies` frontmatter, phase-to-owner table, `[PLANNED]` halt markers, call-graph drift check against `architecture-map.md`.
+- Six PRD-promised drift checks unimplemented → resolved, Batches A and D (`e6355b0`, `ab63e6b`): `tests/test_drift_checks.py`.
+- Hand-rolled validator ignores `$ref`/`oneOf`/`anyOf`/`allOf` → resolved, Batch B (`28701aa`) plus the re-review pass: fail-closed subset covering unknown keyword names and malformed keyword values.
+- Propagation mechanism unbuilt → resolved, Batch F (`f285580`): `update-creators` with per-skill backups.
+- Copy plan never inspected `.claude/agents/` / `.claude/commands/` → resolved, Batch G (`5b47b55`).
+
+Deferred by recorded decision, not drift: the six producer skills build in their Phase 1 slices (halt markers until then), and the subagent pattern is classified defer with its ADR written only on adoption.
+
 ## Executive Summary
 
 InfluencerOS is a faithful, unusually well-documented adaptation of agentic-os at the architecture level — the conductor-plus-skills orchestration, creator-vs-OS memory scope split, Creator Workspace boundary, project-folder consolidation, and progressive-disclosure principle are all preserved and, in most cases, explicitly recorded as accepted divergences with ADRs and alignment-doc entries. The repo is genuinely in a pre-implementation Phase 0 (parity hardening), so most gaps are known, tracked, and gated behind open decisions rather than silent drift. That said, three issues rise above the rest. First, the self-improvement loop is non-functional: only the destination files (context/learnings.md, process-learnings.md) were copied, never the wrap-up/learning-write mechanism that writes them, so the OS cannot improve its own skills from feedback — this is the owner's #1 priority and it is dark in v1. Second, determinism erodes precisely where the product's own bar is highest: the Level 2 brief's acceptance-criteria/constraints/dependencies contract was silently dropped from the Project schema (the single HIGH finding), the Output Package under-enforces the prose Product Invariant, provenance IDs are pattern-checked but never resolved, and named pipeline boundaries (Format Shortlist) have no output contract. Third, the file-granular orchestrator→conductor→subskill call graph the owner wants mapped does not exist — the conductors declare their call graph only in prose, the flagship content conductor routes to six skills that do not exist, and the doc labeled "Creation Flow Call Map" is actually a record data-flow map. Underpinning all of this: all six PRD-promised drift checks are unimplemented, so the hand-maintained-docs model InfluencerOS chose over agentic-os's generate-from-catalog model has no automated guard and can silently go stale today.

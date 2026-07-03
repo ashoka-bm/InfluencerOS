@@ -188,12 +188,23 @@ Video understanding research may use public URLs or local files to inspect frame
 
 ## CLI
 
-The initial CLI supports:
+The CLI supports:
 
 ```bash
 python3 -m influencer_os validate examples
-python3 -m influencer_os init-run examples/creator-profile.example.json
+python3 -m influencer_os validate workspace <creator-workspace>
+python3 -m influencer_os validate project <project-path>
+python3 -m influencer_os validate record <schema-name> <record-path>
+python3 -m influencer_os init-creator <workspace-manifest> [--workspace-root <dir>]
+python3 -m influencer_os sync-creator-runtime <creator-workspace>
+python3 -m influencer_os update-creators [--workspace-root <dir>]
+python3 -m influencer_os init-project <project-manifest> --creator-workspace <path>
+python3 -m influencer_os init-run <creator-profile>
+python3 -m influencer_os memory-write <MEMORY.md-path> "<fact>" [--section "<section>"]
+python3 -m influencer_os log-learning <learnings-path> <skill-name> "<entry>" [--date YYYY-MM-DD]
 ```
+
+Validation resolves provenance: `validate project` requires reference assets and research packs to exist in the owning workspace, and packaged projects must cross-match their output package against the project, applied template, and plan records. `memory-write` enforces the 2,500-byte `MEMORY.md` cap before writing; `update-creators` backs up each replaced skill folder to `.claude/skills-backup/`.
 
 Run state is local and ignored under `workspace-library/runs/`.
 
