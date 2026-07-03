@@ -22,8 +22,8 @@
           "asset_type": { "type": "string", "enum": ["character", "location", "outfit", "object", "video_style", "voice", "brand"] },
           "asset_status": { "type": "string", "enum": ["planned", "prompted", "user_provided", "generated", "approved", "retired"] },
           "role": { "type": "string", "minLength": 1 },
-          "path": { "type": "string", "pattern": "^references/[a-z0-9-]+/[^/]+$" },
-          "prompt_path": { "type": "string", "pattern": "^references/[a-z0-9-]+/[^/]+$" },
+          "path": { "type": "string", "pattern": "^references/[a-z0-9-]+/(?!\\.\\.?$)[^/\\n\\r]+$" },
+          "prompt_path": { "type": "string", "pattern": "^references/[a-z0-9-]+/(?!\\.\\.?$)[^/\\n\\r]+$" },
           "source": {
             "type": "object",
             "additionalProperties": false,

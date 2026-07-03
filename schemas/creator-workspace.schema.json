@@ -201,7 +201,7 @@
           },
           "path": {
             "type": "string",
-            "pattern": "^sources/(intakes|imports|notes)/[^/]+$"
+            "pattern": "^sources/(intakes|imports|notes)/(?!\\.\\.?$)[^/\\n\\r]+$"
           },
           "imported_on": {
             "type": "string",

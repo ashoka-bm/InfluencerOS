@@ -181,8 +181,21 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0):
             raise ValidationError(f"{path}: string shorter than minLength")
-        if "pattern" in schema and not re.search(schema["pattern"], value):
-            raise ValidationError(f"{path}: {value!r} does not match {schema['pattern']!r}")
+        if "pattern" in schema:
+            pattern = schema["pattern"]
+            # Python's `$` matches before a trailing newline under search;
+            # treat fully anchored patterns as whole-string matches so a
+            # value like "slot_x\n" cannot slip past the pin. Unanchored
+            # patterns (e.g. the ^https?:// prefix pin) keep search
+            # semantics per JSON Schema.
+            anchored = (
+                pattern.startswith("^")
+                and pattern.endswith("$")
+                and not pattern.endswith("\\$")
+            )
+            matched = re.fullmatch(pattern, value) if anchored else re.search(pattern, value)
+            if not matched:
+                raise ValidationError(f"{path}: {value!r} does not match {pattern!r}")
 
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:

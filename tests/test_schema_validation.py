@@ -101,6 +101,9 @@ class SchemaValidationTests(unittest.TestCase):
             "research/misfiled-intake.md",
             "sources/other/misfiled-intake.md",
             "sources/intakes/nested/too-deep.md",
+            "sources/intakes/..",
+            "sources/intakes/.",
+            "sources/intakes/trailing-newline.md\n",
         ):
             invalid = deepcopy(example)
             invalid["source_intakes"][0]["path"] = bad_path
@@ -126,6 +129,8 @@ class SchemaValidationTests(unittest.TestCase):
             ("path", "/tmp/outside-asset.png"),
             ("path", "sources/notes/misfiled-asset.png"),
             ("path", "references/character/nested/too-deep.png"),
+            ("path", "references/character/.."),
+            ("path", "references/character/plate.png\n"),
             ("prompt_path", "../escape.prompt.md"),
         ):
             invalid = deepcopy(example)
@@ -378,6 +383,23 @@ class ValidatorSubsetTests(unittest.TestCase):
 
         with self.assertRaises(SchemaDefinitionError):
             validate_schema_subset(schema, "value")
+
+    def test_anchored_patterns_match_the_whole_string(self):
+        # Python's `$` tolerates a trailing newline under re.search; anchored
+        # ^...$ patterns must behave as whole-string matches instead.
+        schema = {"type": "string", "pattern": "^slot_[a-zA-Z0-9_-]+$"}
+
+        validate_schema_subset(schema, "slot_weekly_reset")
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "slot_weekly_reset\n")
+
+    def test_unanchored_patterns_keep_search_semantics(self):
+        # Prefix patterns like the URL pin stay unanchored on the right.
+        schema = {"type": "string", "pattern": "^https?://"}
+
+        validate_schema_subset(schema, "https://example.com/post")
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "ftp://example.com/post")
 
     def test_combinators_must_be_lists_of_schemas(self):
         with self.assertRaises(SchemaDefinitionError):
