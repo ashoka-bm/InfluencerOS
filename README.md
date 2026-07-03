@@ -180,6 +180,16 @@ Validate one mid-pipeline record against any schema in `schemas/`:
 python3 -m influencer_os validate record output-package examples/output-package.example.json
 ```
 
+## Rebuild The Recall Index
+
+Rebuild one creator's rows in the shared local recall index (a rebuildable
+SQLite projection per ADR 0010 at `workspace-library/index/influencer-os.sqlite`;
+validation never depends on it):
+
+```bash
+python3 -m influencer_os rebuild-index workspace-library/creators/luna-fit
+```
+
 ## Memory And Learnings
 
 Add one durable fact to a `MEMORY.md` file (deduplicated; refuses writes past the 2,500-byte cap):

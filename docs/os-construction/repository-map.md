@@ -47,11 +47,12 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 
 | Path | Role |
 | --- | --- |
-| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `init-run`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `init-run`, `rebuild-index`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |
 | `influencer_os/research.py` | Research-module validation: JSONL records, findings frontmatter (scoped YAML subset), queue consistency, and the idea-promotion gate. |
+| `influencer_os/recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. |
 | `influencer_os/memory.py` | Bounded `memory-write` and `log-learning` writers (ADR 0016). |
 | `influencer_os/runs.py` | Dry-run initialization and run records. |
 

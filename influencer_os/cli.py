@@ -15,6 +15,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.projects import init_project, validate_project
+from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
 from influencer_os.runs import DEFAULT_WORKSPACE, init_run
 from influencer_os.validation import ValidationError, validate_examples, validate_file
@@ -60,6 +61,10 @@ def main(argv=None):
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
     project_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
+    index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+    index_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
 
     memory_parser = subparsers.add_parser("memory-write", help="Add one durable fact to a MEMORY.md file, deduplicated and capped.")
     memory_parser.add_argument("memory_file", help="Path to the MEMORY.md file.")
@@ -185,6 +190,15 @@ def main(argv=None):
                     f"{result['preserved_overrides']} overrides preserved, "
                     f"{result['backed_up_skills']} skill folders backed up"
                 )
+            return 0
+
+        if args.command == "rebuild-index":
+            result = rebuild_index(args.creator_workspace, db_path=args.db_path)
+            print(
+                f"Rebuilt recall index rows for {result['creator_slug']}: "
+                f"{result['row_count']} records"
+            )
+            print(f"Index database: {result['db_path']}")
             return 0
 
         if args.command == "memory-write":

@@ -104,6 +104,8 @@ Completed:
 
 - Slice 4 batch A (2026-07-03, per the user-approved Slice 4 Execution Decisions in `docs/workflows/research-and-ideas-implementation-plan.md`): the three run-scoped consistency checks deferred from the slice 3 review are enforced file-first, with the recall index staying a pure projection. Every evidence and metric-snapshot JSONL record's `research_run_id` must match its containing run folder; a run's `outputs.evidence_ids` and `outputs.metric_snapshot_ids` must reconcile exactly, both directions, with the run's JSONL contents; and structured evidence refs resolve run-scoped — the evidence and metric snapshots must live in the run the ref names (`resolve_evidence_ref`, shared by `validate queue` and the promotion gate), with cross-run duplicate ids failing closed because they make resolution ambiguous. Queue refs hard-fail on mismatch; the promotion gate folds mismatches into the existing unresolved-refs handling (warn for human-approved, fail for automated). The human-approved-warning test was rebuilt on a never-existed ref because deleting a run's evidence file is now a hard outputs-reconciliation error, not a warnable state. The prune-vs-outputs-reconciliation interaction is recorded in the slice plan as an open batch D decision.
 
+- Slice 4 batch B (2026-07-03): the local recall index landed as `influencer_os/recall_index.py` plus the `rebuild-index <creator-workspace> [--db <path>]` CLI command. One shared SQLite at the ADR 0010 path (`workspace-library/index/influencer-os.sqlite`); a rebuild deletes and reinserts only the named creator's rows, so rebuilds are idempotent and scoped. Rows carry the ADR 0010 provenance minimum (record id/type, creator profile id and slug, project id when applicable, workspace-relative source path, JSONL line number when applicable, sha256 content hash, indexed timestamp). Resolves every draft record kind — evidence and metric snapshots to path+line, finding ids to `findings.md` or stable-finding files (dual residence allowed by design), queue entries, promotions, projects, board cards — plus video understanding packs, added beyond the draft list because the structured evidence-ref shape names them. Bare-id ambiguity fails closed for every type except findings; malformed JSONL fails closed with path:line; a workspace outside the `creators/` layout must pass `--db` explicitly. The index stays a pure projection: no validation path reads it.
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -313,6 +315,11 @@ three live fixture workspaces pass `validate research` under the new
 run-scoped checks (`validate queue` stays not-applicable — no fixture
 workspace has an idea queue yet; queues arrive with this slice's
 workflow).
+Slice 4 batch B (2026-07-03): 208 tests pass (9 added in
+`tests/test_recall_index.py`); drift checks pass (21 tests);
+`rebuild-index` runs cleanly against the three live fixture workspaces
+at the default ADR 0010 path (0 rows each — correct: no fixture has
+research runs, queues, or projects yet).
 ```
 
 ## Next Work Queue
