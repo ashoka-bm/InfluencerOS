@@ -10,6 +10,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 
 - Phase 0C parity hardening is complete: batches A-G all landed 2026-07-03 and every roadmap exit criterion passes.
 - Phase 1 starts after 0C exits, slice order: intake import, readiness validation, ADR 0020 research module, research/queue workflow, promotion, production planning, output packaging.
+- Phase 1 slices 1-3 complete (2026-07-03); slice 3 hardened through three review batches (video-pack refs, creator scoping, approval surface). Slice 4 (Research Findings and Idea Queue workflow) picks up the recall index, board rebuild, prune, run-scoped consistency checks, and the queue.json scaffolding call.
 
 ## Environment Notes
 
