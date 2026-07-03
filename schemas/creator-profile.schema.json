@@ -116,7 +116,7 @@
     "reference_refs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reference_library", "primary_character_asset_ids", "primary_location_asset_ids", "primary_video_style_asset_id"],
+      "required": ["reference_library", "primary_character_asset_ids", "primary_location_asset_ids"],
       "properties": {
         "reference_library": { "type": "string", "const": "references/reference-library.json" },
         "primary_character_asset_ids": { "type": "array", "items": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" } },

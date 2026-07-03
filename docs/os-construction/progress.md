@@ -82,6 +82,8 @@ Completed:
 - Schema-pinned intake containment (2026-07-03 follow-up): `creator-workspace.schema.json` restricts `source_intakes[].path` to `^sources/(intakes|imports|notes)/[^/]+$`, so escapes fail declaratively wherever the record is validated; the behavioral `resolve()` check remains as the second layer and now specifically catches symlinked intakes that resolve outside the workspace (negative test with an in-workspace symlink to an outside file).
 - Creator readiness validation (slice 2, 2026-07-03, per `docs/workflows/creator-readiness-validation-implementation-plan.md`): `validate workspace` is status-keyed — at `content_ready`/`generation_ready`/`active` it enforces the medium-based blockers and collects every failure into one error (foundation files populated beyond their scaffolds with no `TBD` placeholders, context byte caps 3072/1536/2500, at least one source intake, required asset kinds per `content_strategy.content_mediums`, lifecycle-appropriate asset/prompt file existence with symlink-safe containment); `generation_ready` additionally requires required visual kinds at `prompted` or later plus the workstream-14 approved-visual gate; `reference_refs` primary ids resolve at every status; reference-library `path`/`prompt_path` are schema-pinned under `references/`; the example library gained prompted `outfit` and `brand` entries; 16 tests in `tests/test_readiness_validation.py` plus schema-pin tests. Closes the reference-asset file-existence and markdown-completeness gaps in `docs/workflows/creator-setup.md`.
 
+- Addressed the slice 2 adversarial review (2026-07-03; findings recorded in the slice plan): primary `reference_refs` now resolve through an id-to-asset map with kind enforcement at every status (a brand asset can no longer be the video-style primary), mediums make their primary fields mandatory at readiness, retired primaries are blockers and `generation_ready` requires primaries at `prompted` or later, `primary_video_style_asset_id` became schema-optional for text-first creators; non-retired asset `source_ref` values must resolve to a recorded intake id or a workspace-contained existing file; and the text-first test now strips visual assets and primaries, proving the non-visual path. Both findings reproduced before the fix; eight negative tests and one schema test added.
+
 Remaining:
 
 - ADR 0020 research module schema slice (slice 3), then the remaining Phase 1 slices in roadmap order.
@@ -238,6 +240,10 @@ workspace flipped to content_ready without population fails listing all 13
 blockers in one error, and validates after foundation text and
 asset/prompt files are placed; the full workflow verification (draft
 status) passes unchanged.
+Slice 2 adversarial fixes (2026-07-03): 140 tests pass; both review probes
+re-run against the fixes — a video creator with empty/mistyped primary
+reference_refs and a workspace with dangling asset source_ref values are
+rejected with readiness blockers.
 ```
 
 ## Next Work Queue

@@ -273,10 +273,37 @@ class TextFirstCreatorTests(unittest.TestCase):
     def test_active_text_first_creator_validates_without_visual_assets(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "active")
-            rewrite_json(
-                workspace_dir / "creator-profile.json",
-                lambda profile: profile["content_strategy"].update(content_mediums=["text"]),
-            )
+
+            def make_text_first(profile):
+                profile["content_strategy"]["content_mediums"] = ["text"]
+                profile["reference_refs"]["primary_character_asset_ids"] = []
+                profile["reference_refs"]["primary_location_asset_ids"] = []
+                profile["reference_refs"].pop("primary_video_style_asset_id", None)
+
+            rewrite_json(workspace_dir / "creator-profile.json", make_text_first)
+
+            def strip_visual_assets(library):
+                library["assets"] = [
+                    {
+                        "asset_id": "asset_luna_voice_note",
+                        "asset_type": "voice",
+                        "asset_status": "user_provided",
+                        "role": "Author voice and cadence note",
+                        "path": "references/voice/luna-voice-note.md",
+                        "source": {
+                            "source_type": "user_provided",
+                            "source_ref": "sources/intakes/luna-fit-breakdown.md",
+                        },
+                        "created_on": "2026-06-29",
+                        "usage_notes": "Keeps written voice consistent for text-first posts.",
+                        "semantic_index_allowed": True,
+                    }
+                ]
+
+            rewrite_json(workspace_dir / "references" / "reference-library.json", strip_visual_assets)
+            voice_note = workspace_dir / "references" / "voice" / "luna-voice-note.md"
+            voice_note.parent.mkdir(parents=True, exist_ok=True)
+            voice_note.write_text("Calm, encouraging, second person.\n")
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
@@ -296,6 +323,163 @@ class ReferenceRefResolutionTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("asset_luna_missing_prop", str(ctx.exception))
+
+    def test_primary_ref_type_mismatch_fails_even_at_draft(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["reference_refs"].update(
+                    primary_video_style_asset_id="asset_luna_brand_system"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("asset_luna_brand_system", message)
+            self.assertIn("video_style", message)
+
+    def test_empty_primary_refs_for_video_creator_are_blockers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+
+            def empty_primaries(profile):
+                profile["reference_refs"]["primary_character_asset_ids"] = []
+                profile["reference_refs"]["primary_location_asset_ids"] = []
+
+            rewrite_json(workspace_dir / "creator-profile.json", empty_primaries)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("primary_character_asset_ids", message)
+            self.assertIn("primary_location_asset_ids", message)
+
+    def test_missing_video_style_primary_for_video_creator_is_a_blocker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["reference_refs"].pop("primary_video_style_asset_id"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("primary_video_style_asset_id", str(ctx.exception))
+
+    def test_retired_primary_ref_is_a_blocker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+
+            def retire_primary_keep_kind(library):
+                for asset in library["assets"]:
+                    if asset["asset_id"] == "asset_luna_identity_plate":
+                        asset["asset_status"] = "retired"
+                library["assets"].append(
+                    {
+                        "asset_id": "asset_luna_identity_plate_v2",
+                        "asset_type": "character",
+                        "asset_status": "prompted",
+                        "role": "Replacement identity plate",
+                        "path": "references/character/luna-identity-plate-v2.png",
+                        "prompt_path": "references/character/luna-identity-plate-v2.prompt.md",
+                        "source": {
+                            "source_type": "derived",
+                            "source_ref": "sources/intakes/luna-fit-breakdown.md",
+                        },
+                        "created_on": "2026-07-03",
+                        "usage_notes": "Replacement in progress.",
+                        "semantic_index_allowed": False,
+                    }
+                )
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json", retire_primary_keep_kind
+            )
+            prompt = workspace_dir / "references" / "character" / "luna-identity-plate-v2.prompt.md"
+            prompt.write_text("prompt\n")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("retired", str(ctx.exception))
+            self.assertIn("asset_luna_identity_plate", str(ctx.exception))
+
+    def test_generation_ready_requires_prompted_primary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "generation_ready")
+
+            def plan_primary_keep_kind(library):
+                for asset in library["assets"]:
+                    if asset["asset_id"] == "asset_luna_identity_plate":
+                        asset["asset_status"] = "planned"
+                        asset.pop("prompt_path", None)
+                library["assets"].append(
+                    {
+                        "asset_id": "asset_luna_identity_plate_v2",
+                        "asset_type": "character",
+                        "asset_status": "prompted",
+                        "role": "Prompted identity plate",
+                        "path": "references/character/luna-identity-plate-v2.png",
+                        "prompt_path": "references/character/luna-identity-plate-v2.prompt.md",
+                        "source": {
+                            "source_type": "derived",
+                            "source_ref": "sources/intakes/luna-fit-breakdown.md",
+                        },
+                        "created_on": "2026-07-03",
+                        "usage_notes": "Prompted replacement.",
+                        "semantic_index_allowed": False,
+                    }
+                )
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json", plan_primary_keep_kind
+            )
+            prompt = workspace_dir / "references" / "character" / "luna-identity-plate-v2.prompt.md"
+            prompt.write_text("prompt\n")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("asset_luna_identity_plate", message)
+            self.assertIn("prompted or later", message)
+
+
+class AssetSourceRefTests(unittest.TestCase):
+    def test_dangling_or_escaping_source_ref_is_a_blocker(self):
+        for bad_ref in ("sources/intakes/does-not-exist.md", "../../outside.md", "old run"):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+
+                def corrupt_source_ref(library, ref=bad_ref):
+                    for asset in library["assets"]:
+                        if asset["asset_type"] == "outfit":
+                            asset["source"]["source_ref"] = ref
+
+                rewrite_json(
+                    workspace_dir / "references" / "reference-library.json", corrupt_source_ref
+                )
+
+                with self.subTest(source_ref=bad_ref):
+                    with self.assertRaises(ValidationError) as ctx:
+                        validate_creator_workspace(workspace_dir)
+                    self.assertIn("source_ref", str(ctx.exception))
+
+    def test_recorded_intake_id_source_ref_passes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+
+            def intake_id_source_ref(library):
+                for asset in library["assets"]:
+                    if asset["asset_type"] == "outfit":
+                        asset["source"]["source_ref"] = "source_luna_fit_breakdown_001"
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json", intake_id_source_ref
+            )
+
+            result = validate_creator_workspace(workspace_dir)
+            self.assertEqual(result["creator_slug"], "luna-fit")
 
 
 if __name__ == "__main__":

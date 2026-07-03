@@ -67,6 +67,22 @@ ASSET_STATUS_RANK = {
 # Asset lifecycle statuses whose `path` must exist on disk.
 ASSET_STATUSES_REQUIRING_FILE = {"user_provided", "generated", "approved"}
 
+# Primary reference_refs fields must name assets of these kinds.
+PRIMARY_REF_EXPECTED_TYPES = {
+    "primary_character_asset_ids": "character",
+    "primary_location_asset_ids": "location",
+    "primary_video_style_asset_id": "video_style",
+}
+
+# Mediums that make a primary reference_refs field mandatory at readiness.
+PRIMARY_REF_REQUIRED_BY_MEDIUM = {
+    "primary_character_asset_ids": {"image", "video"},
+    "primary_location_asset_ids": {"video"},
+    "primary_video_style_asset_id": {"video", "carousel", "story_sequence"},
+}
+
+INTAKE_ID_PATTERN = re.compile(r"source_[a-zA-Z0-9_-]+")
+
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b")
 
 # Source-type routing from the creator-setup Source Import rules: master-intake
@@ -477,16 +493,32 @@ def _validate_source_intakes(workspace_dir, manifest):
 
 
 def _resolve_reference_refs(creator_profile, reference_library):
-    known_ids = {asset["asset_id"] for asset in reference_library["assets"]}
+    assets_by_id = {asset["asset_id"]: asset for asset in reference_library["assets"]}
     refs = creator_profile["reference_refs"]
-    named = list(refs["primary_character_asset_ids"])
-    named.extend(refs["primary_location_asset_ids"])
-    named.append(refs["primary_video_style_asset_id"])
-    dangling = sorted(set(named) - known_ids)
-    if dangling:
+    problems = []
+    for field, expected_type in PRIMARY_REF_EXPECTED_TYPES.items():
+        for asset_id in _named_primary_ids(refs, field):
+            asset = assets_by_id.get(asset_id)
+            if asset is None:
+                problems.append(f"{field} names {asset_id!r}, which is not in the reference library")
+            elif asset["asset_type"] != expected_type:
+                problems.append(
+                    f"{field} names {asset_id!r}, which is a {asset['asset_type']} asset, "
+                    f"not {expected_type}"
+                )
+    if problems:
         raise ValidationError(
-            f"creator-profile reference_refs do not resolve to reference library assets: {dangling}"
+            "creator-profile reference_refs do not resolve: " + "; ".join(problems)
         )
+
+
+def _named_primary_ids(refs, field):
+    value = refs.get(field)
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return list(value)
 
 
 def _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library):
@@ -520,6 +552,14 @@ def _validate_readiness_gates(workspace_dir, manifest, creator_profile, referenc
             )
 
     blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
+    blockers.extend(_asset_source_ref_blockers(workspace_dir, manifest, active_assets))
+    blockers.extend(
+        _primary_ref_blockers(
+            status,
+            creator_profile,
+            {asset["asset_id"]: asset for asset in reference_library["assets"]},
+        )
+    )
 
     if status == "generation_ready":
         prompted_kinds = {
@@ -571,6 +611,55 @@ def _foundation_blockers(workspace_dir):
         byte_cap = CONTEXT_BYTE_CAPS.get(relative_path)
         if byte_cap is not None and len(content.encode("utf-8")) > byte_cap:
             blockers.append(f"{relative_path} exceeds its {byte_cap}-byte cap")
+    return blockers
+
+
+def _primary_ref_blockers(status, creator_profile, assets_by_id):
+    refs = creator_profile["reference_refs"]
+    mediums = set(creator_profile["content_strategy"]["content_mediums"])
+    blockers = []
+    for field, requiring_mediums in PRIMARY_REF_REQUIRED_BY_MEDIUM.items():
+        applicable = sorted(mediums & requiring_mediums)
+        if applicable and not _named_primary_ids(refs, field):
+            blockers.append(
+                f"reference_refs {field} is empty, but mediums {applicable} require it"
+            )
+    for field in PRIMARY_REF_EXPECTED_TYPES:
+        for asset_id in _named_primary_ids(refs, field):
+            asset = assets_by_id[asset_id]
+            if asset["asset_status"] == "retired":
+                blockers.append(f"primary reference {asset_id} is retired")
+            elif (
+                status == "generation_ready"
+                and ASSET_STATUS_RANK[asset["asset_status"]] < ASSET_STATUS_RANK["prompted"]
+            ):
+                blockers.append(
+                    f"primary reference {asset_id} is still planned; "
+                    "generation_ready requires prompted or later"
+                )
+    return blockers
+
+
+def _asset_source_ref_blockers(workspace_dir, manifest, assets):
+    workspace_root = workspace_dir.resolve()
+    intake_ids = {entry["source_id"] for entry in manifest["source_intakes"]}
+    blockers = []
+    for asset in assets:
+        source_ref = asset["source"]["source_ref"]
+        if INTAKE_ID_PATTERN.fullmatch(source_ref):
+            if source_ref not in intake_ids:
+                blockers.append(
+                    f"{asset['asset_id']} source_ref names unrecorded intake {source_ref!r}"
+                )
+            continue
+        resolved = (workspace_dir / source_ref).resolve()
+        if Path(source_ref).is_absolute() or not resolved.is_relative_to(workspace_root):
+            blockers.append(f"{asset['asset_id']} source_ref escapes the workspace: {source_ref}")
+        elif not resolved.is_file():
+            blockers.append(
+                f"{asset['asset_id']} source_ref does not resolve to a workspace file "
+                f"or recorded intake: {source_ref}"
+            )
     return blockers
 
 

@@ -182,6 +182,33 @@ The slice is done when every check below passes and is recorded in
 This completes the roadmap Phase 1 exit criterion "Creator readiness gates
 work" as a runnable check, together with slice 1's intake criterion.
 
+## Adversarial Review (2026-07-03)
+
+Post-landing review of the slice commit found two confirmed issues and one
+test gap, all reproduced, fixed, and covered by negative tests the same day:
+
+- P1 — primary reference ids resolved without kind or requiredness checks:
+  a `content_ready` video creator validated with empty
+  `primary_character_asset_ids`/`primary_location_asset_ids` and a `brand`
+  asset named as the video-style primary. Fixed: `reference_refs` ids now
+  resolve through an id-to-asset map with type enforcement at every status;
+  at readiness statuses, mediums make their primary fields mandatory
+  (`image`/`video` require character primaries, `video` requires a location
+  primary, `video`/`carousel`/`story_sequence` require a video-style
+  primary), retired primaries are blockers, and `generation_ready` requires
+  primaries at `prompted` or later. `primary_video_style_asset_id` became
+  schema-optional so text-first creators without visual assets can validate.
+- P2 — asset `source.source_ref` provenance could dangle: every asset
+  pointing at `sources/intakes/does-not-exist.md` still validated at
+  `content_ready`. Fixed: non-retired assets' `source_ref` must be either a
+  recorded intake `source_id` or a workspace-contained existing file (same
+  resolve-based containment as intake and asset paths); free-text refs are
+  no longer accepted for non-retired assets.
+- Test gap — the text-first test kept all visual assets in place. Reworked:
+  it now strips the library to a single voice asset, empties the character
+  and location primaries, and drops the video-style primary, proving the
+  non-visual path end to end.
+
 ## Approved Decisions (User-Approved 2026-07-03)
 
 Do not reopen these without user approval:

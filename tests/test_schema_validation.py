@@ -82,6 +82,13 @@ class SchemaValidationTests(unittest.TestCase):
         valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
         validate_record("creator-workspace", valid)
 
+    def test_video_style_primary_is_optional_for_text_first_creators(self):
+        example = load_json("examples/creator-profile.example.json")
+        text_first = deepcopy(example)
+        text_first["reference_refs"].pop("primary_video_style_asset_id")
+
+        validate_record("creator-profile", text_first)
+
     def test_reference_asset_paths_are_pinned_under_references(self):
         example = load_json("examples/reference-library.example.json")
         for field, bad_value in (
