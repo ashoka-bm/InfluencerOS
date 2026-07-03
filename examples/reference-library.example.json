@@ -33,6 +33,36 @@
       "semantic_index_allowed": false
     },
     {
+      "asset_id": "asset_luna_everyday_outfit",
+      "asset_type": "outfit",
+      "asset_status": "prompted",
+      "role": "Primary everyday athleisure outfit reference",
+      "path": "references/outfits/luna-everyday-outfit.png",
+      "prompt_path": "references/outfits/luna-everyday-outfit.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "sources/intakes/luna-fit-breakdown.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use to keep wardrobe continuity across routine and reset videos; generation stays gated until the exact call is approved.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_luna_brand_system",
+      "asset_type": "brand",
+      "asset_status": "prompted",
+      "role": "Brand and visual system reference",
+      "path": "references/brand/luna-brand-system.png",
+      "prompt_path": "references/brand/luna-brand-system.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/personal-brand.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use for palette, type, overlay, and end-card continuity across posts and sequences.",
+      "semantic_index_allowed": true
+    },
+    {
       "asset_id": "asset_luna_default_video_style",
       "asset_type": "video_style",
       "asset_status": "approved",

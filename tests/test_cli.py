@@ -789,6 +789,29 @@ class ReadinessGateTests(unittest.TestCase):
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
         workspace_dir = init_creator(manifest_path, workspace_root=Path(temp_dir) / "creators")
         populate_workspace_records(workspace_dir)
+        # Readiness statuses require populated foundation files and
+        # lifecycle-consistent asset/prompt files on disk.
+        for relative_path in [
+            "context/SOUL.md",
+            "context/USER.md",
+            "context/MEMORY.md",
+            "brand_context/identity.md",
+            "brand_context/soul.md",
+            "brand_context/personal-brand.md",
+            "brand_context/voice-samples.md",
+        ]:
+            target = workspace_dir / relative_path
+            target.write_text(target.read_text() + "Readiness fixture content for tests.\n")
+        library = json.loads((workspace_dir / "references" / "reference-library.json").read_text())
+        for asset in library["assets"]:
+            if asset["asset_status"] in {"user_provided", "generated", "approved"}:
+                asset_path = workspace_dir / asset["path"]
+                asset_path.parent.mkdir(parents=True, exist_ok=True)
+                asset_path.write_text(f"placeholder for {asset['asset_id']}\n")
+            if asset.get("prompt_path"):
+                prompt_path = workspace_dir / asset["prompt_path"]
+                prompt_path.parent.mkdir(parents=True, exist_ok=True)
+                prompt_path.write_text(f"prompt for {asset['asset_id']}\n")
         return workspace_dir
 
     def test_generation_ready_requires_an_approved_visual_asset(self):

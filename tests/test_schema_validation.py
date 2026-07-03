@@ -82,6 +82,21 @@ class SchemaValidationTests(unittest.TestCase):
         valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
         validate_record("creator-workspace", valid)
 
+    def test_reference_asset_paths_are_pinned_under_references(self):
+        example = load_json("examples/reference-library.example.json")
+        for field, bad_value in (
+            ("path", "../../outside-asset.png"),
+            ("path", "/tmp/outside-asset.png"),
+            ("path", "sources/notes/misfiled-asset.png"),
+            ("path", "references/character/nested/too-deep.png"),
+            ("prompt_path", "../escape.prompt.md"),
+        ):
+            invalid = deepcopy(example)
+            invalid["assets"][0][field] = bad_value
+            with self.subTest(field=field, value=bad_value):
+                with self.assertRaises(ValidationError):
+                    validate_record("reference-library", invalid)
+
     def test_content_ideas_require_evidence_refs(self):
         example = load_json("examples/content-idea-set.example.json")
         invalid = deepcopy(example)

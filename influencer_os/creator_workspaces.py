@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -16,6 +17,57 @@ SKILLS_BACKUP_DIR = Path(".claude") / "skills-backup"
 # Medium-based readiness: generation implies visual output, so a
 # generation_ready workspace needs at least one approved asset of these kinds.
 GENERATION_READY_ASSET_TYPES = {"character", "video_style"}
+
+# Statuses that assert readiness; draft and foundation_review stay permissive
+# ("permissive at intake, strict at readiness").
+READINESS_ENFORCED_STATUSES = {"content_ready", "generation_ready", "active"}
+
+# Foundation files that must be populated beyond their scaffold at readiness.
+FOUNDATION_FILES = [
+    "context/SOUL.md",
+    "context/USER.md",
+    "context/MEMORY.md",
+    "brand_context/identity.md",
+    "brand_context/soul.md",
+    "brand_context/personal-brand.md",
+    "brand_context/voice-samples.md",
+]
+
+# Documented hard maxes for the always-loaded context files; the MEMORY cap
+# matches the memory-write pre-write check.
+CONTEXT_BYTE_CAPS = {
+    "context/SOUL.md": 3072,
+    "context/USER.md": 1536,
+    "context/MEMORY.md": 2500,
+}
+
+# Deterministic subset of the creator-setup medium-based blockers, expressed
+# through the reference-library asset_type enum (readiness slice, decision 4).
+MEDIUM_REQUIRED_ASSET_KINDS = {
+    "text": (),
+    "image": ("character", "brand"),
+    "video": ("character", "location", "outfit", "video_style", "brand"),
+    "audio": ("voice",),
+    "carousel": ("brand", "video_style"),
+    "story_sequence": ("brand", "video_style"),
+}
+
+VISUAL_MEDIUMS = {"image", "video", "carousel", "story_sequence"}
+
+# Lifecycle order: generation_ready requires required kinds at prompted or
+# later; retired assets are excluded from readiness entirely.
+ASSET_STATUS_RANK = {
+    "planned": 0,
+    "prompted": 1,
+    "user_provided": 2,
+    "generated": 2,
+    "approved": 3,
+}
+
+# Asset lifecycle statuses whose `path` must exist on disk.
+ASSET_STATUSES_REQUIRING_FILE = {"user_provided", "generated", "approved"}
+
+PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b")
 
 # Source-type routing from the creator-setup Source Import rules: master-intake
 # material (breakdowns, interviews) lands in intakes/, external docs in
@@ -393,8 +445,9 @@ def validate_creator_workspace(workspace_path):
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
 
+    _resolve_reference_refs(creator_profile, reference_library)
     _validate_source_intakes(workspace_dir, manifest)
-    _validate_readiness_gates(manifest, reference_library)
+    _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library)
 
     return {
         "creator_slug": manifest["creator_slug"],
@@ -423,20 +476,130 @@ def _validate_source_intakes(workspace_dir, manifest):
         raise FileNotFoundError(f"Missing source intake files: {', '.join(sorted(missing))}")
 
 
-def _validate_readiness_gates(manifest, reference_library):
-    if manifest["status"] != "generation_ready":
-        return
-    approved_visual_assets = [
-        asset
-        for asset in reference_library["assets"]
-        if asset["asset_type"] in GENERATION_READY_ASSET_TYPES
-        and asset["asset_status"] == "approved"
-    ]
-    if not approved_visual_assets:
+def _resolve_reference_refs(creator_profile, reference_library):
+    known_ids = {asset["asset_id"] for asset in reference_library["assets"]}
+    refs = creator_profile["reference_refs"]
+    named = list(refs["primary_character_asset_ids"])
+    named.extend(refs["primary_location_asset_ids"])
+    named.append(refs["primary_video_style_asset_id"])
+    dangling = sorted(set(named) - known_ids)
+    if dangling:
         raise ValidationError(
-            "generation_ready workspace requires at least one approved visual asset of kind "
-            f"{sorted(GENERATION_READY_ASSET_TYPES)!r} in references/reference-library.json"
+            f"creator-profile reference_refs do not resolve to reference library assets: {dangling}"
         )
+
+
+def _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library):
+    status = manifest["status"]
+    if status not in READINESS_ENFORCED_STATUSES:
+        return
+
+    blockers = []
+    blockers.extend(_foundation_blockers(workspace_dir))
+
+    if not manifest["source_intakes"]:
+        blockers.append(
+            "no source intake recorded; import at least one setup source with import-intake"
+        )
+
+    active_assets = [
+        asset for asset in reference_library["assets"] if asset["asset_status"] != "retired"
+    ]
+    kinds_present = {asset["asset_type"] for asset in active_assets}
+
+    required_kinds = {}
+    for medium in creator_profile["content_strategy"]["content_mediums"]:
+        for kind in MEDIUM_REQUIRED_ASSET_KINDS[medium]:
+            required_kinds.setdefault(kind, set()).add(medium)
+
+    for kind in sorted(required_kinds):
+        if kind not in kinds_present:
+            mediums = ", ".join(sorted(required_kinds[kind]))
+            blockers.append(
+                f"reference library has no {kind} asset (required by mediums: {mediums})"
+            )
+
+    blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
+
+    if status == "generation_ready":
+        prompted_kinds = {
+            asset["asset_type"]
+            for asset in active_assets
+            if ASSET_STATUS_RANK[asset["asset_status"]] >= ASSET_STATUS_RANK["prompted"]
+        }
+        visual_required = sorted(
+            kind for kind, mediums in required_kinds.items() if mediums & VISUAL_MEDIUMS
+        )
+        for kind in visual_required:
+            if kind in kinds_present and kind not in prompted_kinds:
+                blockers.append(
+                    f"{kind} assets are still planned; generation_ready requires prompted or later"
+                )
+        approved_visual_assets = [
+            asset
+            for asset in active_assets
+            if asset["asset_type"] in GENERATION_READY_ASSET_TYPES
+            and asset["asset_status"] == "approved"
+        ]
+        if not approved_visual_assets:
+            blockers.append(
+                "generation_ready requires at least one approved visual asset of kind "
+                f"{sorted(GENERATION_READY_ASSET_TYPES)!r} in references/reference-library.json"
+            )
+
+    if blockers:
+        raise ValidationError(
+            f"Readiness blockers for status {status!r}:\n- " + "\n- ".join(blockers)
+        )
+
+
+def _foundation_blockers(workspace_dir):
+    blockers = []
+    for relative_path in FOUNDATION_FILES:
+        content = (workspace_dir / relative_path).read_text()
+        scaffold_lines = {
+            line.strip() for line in MARKDOWN_SCAFFOLDS.get(relative_path, "").splitlines()
+        }
+        populated = any(
+            line.strip() and not line.lstrip().startswith("#") and line.strip() not in scaffold_lines
+            for line in content.splitlines()
+        )
+        if not populated:
+            blockers.append(f"{relative_path} is not populated beyond its scaffold")
+        if PLACEHOLDER_PATTERN.search(content):
+            blockers.append(f"{relative_path} contains a TBD placeholder")
+        byte_cap = CONTEXT_BYTE_CAPS.get(relative_path)
+        if byte_cap is not None and len(content.encode("utf-8")) > byte_cap:
+            blockers.append(f"{relative_path} exceeds its {byte_cap}-byte cap")
+    return blockers
+
+
+def _asset_file_blockers(workspace_dir, assets):
+    workspace_root = workspace_dir.resolve()
+    blockers = []
+    for asset in assets:
+        status = asset["asset_status"]
+        if status in ASSET_STATUSES_REQUIRING_FILE:
+            blockers.extend(
+                _asset_path_blockers(workspace_dir, workspace_root, asset, "path", asset["path"])
+            )
+        if status == "prompted" and "prompt_path" not in asset:
+            blockers.append(f"{asset['asset_id']} is prompted but declares no prompt_path")
+        prompt_path = asset.get("prompt_path")
+        if prompt_path:
+            blockers.extend(
+                _asset_path_blockers(workspace_dir, workspace_root, asset, "prompt_path", prompt_path)
+            )
+    return blockers
+
+
+def _asset_path_blockers(workspace_dir, workspace_root, asset, field, raw_path):
+    resolved = (workspace_dir / raw_path).resolve()
+    if Path(raw_path).is_absolute() or not resolved.is_relative_to(workspace_root):
+        return [f"{asset['asset_id']} {field} escapes the workspace: {raw_path}"]
+    if not resolved.is_file():
+        return [f"{asset['asset_id']} {field} is missing: {raw_path}"]
+    return []
 
 
 def _write_text_if_missing(path, content):

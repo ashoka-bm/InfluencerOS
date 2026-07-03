@@ -2,9 +2,11 @@
 
 Date: 2026-07-03
 
-Status: Draft. Phase 1 (Planning OS) slice 2 per the roadmap. The Proposed
-Decisions section below is pending user approval; implement only after those
-decisions are approved.
+Status: **Complete (2026-07-03).** Phase 1 (Planning OS) slice 2 per the
+roadmap. The user approved all six decisions below on 2026-07-03 and the
+slice landed the same day; the verification record lives in
+`docs/os-construction/progress.md`. This plan is retained as the slice
+record.
 
 ## Goal
 
@@ -180,7 +182,9 @@ The slice is done when every check below passes and is recorded in
 This completes the roadmap Phase 1 exit criterion "Creator readiness gates
 work" as a runnable check, together with slice 1's intake criterion.
 
-## Proposed Decisions (Pending User Approval)
+## Approved Decisions (User-Approved 2026-07-03)
+
+Do not reopen these without user approval:
 
 1. Enforcement shape: all readiness checks live inside `validate workspace`,
    keyed on status, collecting every failed blocker into one error.

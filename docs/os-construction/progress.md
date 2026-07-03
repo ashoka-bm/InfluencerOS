@@ -60,7 +60,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slice 1 (master intake import) landed 2026-07-03; the next slice is creator readiness validation.
+Status: In progress. Slices 1 (master intake import) and 2 (creator readiness validation) landed 2026-07-03; the next slice is the ADR 0020 research module schema slice.
 
 Completed:
 
@@ -80,10 +80,11 @@ Completed:
 - Master intake import (slice 1, 2026-07-03, per `docs/workflows/master-intake-import-implementation-plan.md`): `import-intake` copies a setup source into the type-mapped `sources/` folder and appends a schema-valid `source_intakes` entry (`pending`, deterministic ids, fail-closed on duplicate destinations/ids); `set-intake-status` moves extraction status forward only (`pending` → `drafted` → `reviewed`); `validate workspace` resolves every intake path to a real file; `skills/create-influencer` phase 1 now invokes the commands; `examples/sources/luna-fit-breakdown.example.md` backs the example manifest's declared intake; 13 tests in `tests/test_intake_import.py`.
 - Addressed the slice 1 adversarial review (2026-07-03; findings recorded in the slice plan): intake provenance is now contained to the workspace — `validate workspace` rejects absolute `source_intakes` paths and `..` escapes after `resolve()` with a dedicated containment error (both reproduced as accepted before the fix); and the validator's `date` format now requires a real calendar date via `datetime.date.fromisoformat` on top of the YYYY-MM-DD shape check, so `2026-99-99` fails everywhere `format: "date"` appears, including `import-intake --imported-on`. Four negative tests added.
 - Schema-pinned intake containment (2026-07-03 follow-up): `creator-workspace.schema.json` restricts `source_intakes[].path` to `^sources/(intakes|imports|notes)/[^/]+$`, so escapes fail declaratively wherever the record is validated; the behavioral `resolve()` check remains as the second layer and now specifically catches symlinked intakes that resolve outside the workspace (negative test with an in-workspace symlink to an outside file).
+- Creator readiness validation (slice 2, 2026-07-03, per `docs/workflows/creator-readiness-validation-implementation-plan.md`): `validate workspace` is status-keyed — at `content_ready`/`generation_ready`/`active` it enforces the medium-based blockers and collects every failure into one error (foundation files populated beyond their scaffolds with no `TBD` placeholders, context byte caps 3072/1536/2500, at least one source intake, required asset kinds per `content_strategy.content_mediums`, lifecycle-appropriate asset/prompt file existence with symlink-safe containment); `generation_ready` additionally requires required visual kinds at `prompted` or later plus the workstream-14 approved-visual gate; `reference_refs` primary ids resolve at every status; reference-library `path`/`prompt_path` are schema-pinned under `references/`; the example library gained prompted `outfit` and `brand` entries; 16 tests in `tests/test_readiness_validation.py` plus schema-pin tests. Closes the reference-asset file-existence and markdown-completeness gaps in `docs/workflows/creator-setup.md`.
 
 Remaining:
 
-- Creator readiness validation (slice 2), then the remaining Phase 1 slices in roadmap order.
+- ADR 0020 research module schema slice (slice 3), then the remaining Phase 1 slices in roadmap order.
 
 ### Phase 2: Learning OS
 
@@ -230,11 +231,18 @@ Schema pinning follow-up (2026-07-03): 114 tests pass; traversal, absolute,
 wrong-directory, and nested intake paths fail record validation at the
 schema seam; a symlinked intake resolving outside the workspace fails the
 behavioral containment check; 20 example records validate.
+Phase 1 slice 2 (2026-07-03): 132 tests pass (16 new in
+tests/test_readiness_validation.py plus reference-library schema-pin
+tests); 20 example records validate; dogfood run — the verification
+workspace flipped to content_ready without population fails listing all 13
+blockers in one error, and validates after foundation text and
+asset/prompt files are placed; the full workflow verification (draft
+status) passes unchanged.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slice 1 (master intake import) is complete (2026-07-03; record in `docs/workflows/master-intake-import-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: creator readiness validation next, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point. The slice 2 plan is drafted at `docs/workflows/creator-readiness-validation-implementation-plan.md` (2026-07-03); its Proposed Decisions section awaits user approval before implementation.
+1. Phase 1 slices 1 (master intake import) and 2 (creator readiness validation) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md` and `docs/workflows/creator-readiness-validation-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the ADR 0020 research module schema slice next — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

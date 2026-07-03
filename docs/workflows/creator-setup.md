@@ -447,6 +447,8 @@ Workspace readiness statuses:
 
 `creator-workspace.json` stores the machine-readable status. `progress/setup-checklist.md` should explain medium-specific blockers and review notes.
 
+The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `content_ready`, `generation_ready`, or `active` fails validation with the full blocker list until the medium-based blockers are met. Judgment-level review (whether the foundation is any good) stays human.
+
 ## Known Schema And CLI Gaps
 
 The current implementation can scaffold the Creator Workspace, but it does not yet perform the full setup workflow.
@@ -455,13 +457,12 @@ Likely gaps:
 
 - no guided interview command
 - no explicit review or acceptance metadata beyond workspace status (source intakes track `pending`/`drafted`/`reviewed` via `set-intake-status`; the whole-foundation acceptance state does not)
-- no file-existence validation for reference asset paths
-- no markdown completeness validation for `context/` or `brand_context/` files
 - no provider-neutral prompt file generation command
 
 Closed gaps:
 
 - master intake import: `import-intake` copies setup sources into `sources/` and records `source_intakes` provenance; `validate workspace` resolves intake paths (Phase 1 slice 1, 2026-07-03).
+- reference-asset file existence and foundation completeness: `validate workspace` enforces the medium-based readiness blockers at `content_ready`, `generation_ready`, and `active` — populated foundation files without `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, and lifecycle-appropriate asset/prompt file existence with workspace containment (Phase 1 slice 2, 2026-07-03; see `docs/workflows/creator-readiness-validation-implementation-plan.md`).
 
 ## Next Grilling Questions
 

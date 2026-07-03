@@ -129,6 +129,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
 | source-intake provenance check | `source_intakes` paths are schema-pinned under `sources/(intakes\|imports\|notes)/`; `validate workspace` additionally fails on missing files and symlink escapes after `resolve()`; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
+| creator readiness check | Status-keyed medium-based blockers collected into one error: foundation population + `TBD` scan + context byte caps, intake provenance, required asset kinds per content medium, lifecycle asset/prompt existence with containment, `reference_refs` resolution; asset paths schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, Phase 1 slice 2] |
 
 ### Deferred / gated subsystems
 
@@ -236,7 +237,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
-| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace` incl. generation-ready visual-asset gate [BUILT — WS14; full medium-based validator lands with the Phase 1 readiness slice] | none |
+| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace`: full medium-based readiness validator at `content_ready`/`generation_ready`/`active` (foundation population, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence) plus the generation-ready visual-asset gate [BUILT — WS14 + Phase 1 slice 2] | status transitions stay human |
 | Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record video-understanding-pack` [BUILT — WS12] | none |
 | Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` **[PHASE 1 — ADR 0020 slice]** | none |
 | Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit **[PHASE 1 — ADR 0020 slice]** | none |

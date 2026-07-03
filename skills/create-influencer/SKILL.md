@@ -65,7 +65,7 @@ Run these internal phases in order:
 8. **Reference planning**: use `create-reference-library` to create `references/reference-library.json` entries for required real or planned assets.
 9. **Reference prompt staging**: if image or video is in scope, stage prompts in this order: user person image -> default video/photo style -> three character assets -> outfits -> locations -> objects. Use the canonical prompt templates under `docs/templates/creator-setup/reference-prompts/` unchanged.
 10. **Prompt drafting**: create separate provider-neutral `.prompt.md` files for missing images, locations, outfits, voice, and brand assets.
-11. **Readiness check**: update `progress/setup-checklist.md` with medium-based blockers.
+11. **Readiness check**: run `python3 -m influencer_os validate workspace <workspace-path>` — at readiness statuses it fails with the full medium-based blocker list; mirror open blockers into `progress/setup-checklist.md`.
 12. **Acceptance gate**: ask for whole-foundation approval before marking the creator `content_ready`.
 13. **Generation gate**: stop before provider-backed generation unless the user approves the exact call or batch.
 

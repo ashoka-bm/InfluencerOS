@@ -99,6 +99,8 @@ After authoring `creator-profile.json` and `references/reference-library.json`, 
 python3 -m influencer_os validate workspace workspace-library/creators/luna-fit
 ```
 
+Validation is status-keyed: a `draft` workspace stays permissive, while a workspace claiming `content_ready`, `generation_ready`, or `active` must pass the medium-based readiness blockers (populated foundation files without `TBD` placeholders, context byte caps, recorded source intake, required reference-asset kinds per declared content medium, and lifecycle-appropriate asset/prompt files on disk). Failures report the full blocker list in one run.
+
 Creator Workspaces run copied baseline skills from `.claude/skills/`. Refresh those copied runtime skills after root skill changes with:
 
 ```bash
