@@ -1,7 +1,10 @@
 # Research And Ideas Implementation Plan
 
-Status: Slice 3 in execution (2026-07-03). The Execution Decisions below were
-user-approved on 2026-07-03; do not reopen without user approval.
+Status: **Slice 3 complete (2026-07-03).** The schema surface of this plan
+(implementation-sequence steps 1-6, 11, 12 plus the promotion gate) landed via
+the user-approved Execution Decisions below; the verification record lives in
+`docs/os-construction/progress.md`. Steps 7-10 (recall index, board rebuild,
+prune) execute with slice 4, the Research Findings and Idea Queue workflow.
 Last updated: 2026-07-03
 
 ## Goal

@@ -110,7 +110,8 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `cli.py` | Command surface; routes to helpers, holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
 | `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
-| `projects.py` | Project scaffolding + validation + provenance resolution. | [BUILT — WS12] |
+| `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
+| `research.py` | JSONL + frontmatter validation, `validate research`/`validate queue`, promotion gate. | [BUILT — Phase 1 slice 3] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
 
@@ -233,16 +234,16 @@ influencer_os/cli.py
 
 ## Determinism Boundary Table
 
-Each creation-flow boundary must have: input record(s) → output record + schema → deterministic acceptance criterion → validation → gate. Phase 0C built everything not marked **[PHASE 1]**; the remaining markers land with the ADR 0020 research slice.
+Each creation-flow boundary must have: input record(s) → output record + schema → deterministic acceptance criterion → validation → gate. Phase 0C built everything not marked with a later slice; the ADR 0020 record shapes and validation landed with Phase 1 slice 3 (workflow skills land in slices 4-5).
 
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
 | Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace`: full medium-based readiness validator at `content_ready`/`generation_ready`/`active` (foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence) plus the generation-ready visual-asset gate [BUILT — WS14 + Phase 1 slice 2] | status transitions stay human |
 | Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record video-understanding-pack` [BUILT — WS12] | none |
-| Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` **[PHASE 1 — ADR 0020 slice]** | none |
-| Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit **[PHASE 1 — ADR 0020 slice]** | none |
-| Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | schema + evidence ref check **[PHASE 1 — ADR 0020 slice]** | none |
-| Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | schema + provenance refs **[PHASE 1 — ADR 0020 slice]** | user approves |
+| Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` incl. JSONL line validation [BUILT — Phase 1 slice 3] | none |
+| Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit via `validate research` [BUILT — Phase 1 slice 3] | none |
+| Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | `validate queue`: manifest/entry consistency + evidence ref resolution [BUILT — Phase 1 slice 3] | none |
+| Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | promotion gate: real queue entry required; unresolved evidence warns (human-approved) / fails (automated) [BUILT — Phase 1 slice 3] | user approves |
 | Applied template | promoted idea | `applied-social-template` | beats map to idea | `validate record applied-social-template` [BUILT — WS12] | template gate |
 | Production plan | applied template | format plan (4 schemas) | routed by `target_format_id` | schema + routing check | none |
 | Base generation plan | video plan | `base-video-generation-plan` | provider-neutral | schema | none |

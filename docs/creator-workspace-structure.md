@@ -141,20 +141,47 @@ validation resolves against it:
 ```text
 research/
   social-research-packs/
-    <social-research-pack-id>.json       # research_* ids
+    <social-research-pack-id>.json       # research_* ids (compatibility records)
   video-understanding-packs/
     <video-understanding-pack-id>.json   # video_research_* ids
   sources/
+  runs/
+    <research-run-id>/
+      research-run.json
+      evidence.jsonl                     # one validated ResearchEvidence per line
+      metric-snapshots.jsonl             # one validated MetricSnapshot per line
+  intelligence/                          # sources/hashtags/search-terms/reference-creators/watchlist
+  stable-findings/
+    <stable-finding-id>.md               # validated YAML-subset frontmatter
+  findings.md                            # rolling summary, validated frontmatter + char limit
+  idea-queue/
+    queue.json
+    entries/
+      <idea-queue-entry-id>.json
+  idea-promotions/
+    <idea-promotion-id>.json             # permanent locked approval snapshots
+boards/
+  content-board.json                     # rebuildable projection, not source of truth
+system/
+  project-warnings.jsonl
+  creator-events.jsonl
 projects/
   <project-id>/
-    idea/
-      selected-content-idea.json         # replaced by the Idea Promotion in Phase 1
+    project.json
+    evidence-brief.md
 ```
 
-A research pack id in project or output-package `source_refs` must resolve to
-`<directory>/<pack-id>.json` in the owning Creator Workspace, and every
+A project's `source_refs.idea_promotion_id` must resolve to
+`research/idea-promotions/<id>.json` in the owning Creator Workspace; deeper
+provenance (queue entry, findings, evidence, metric snapshots, video packs)
+resolves transitively through that locked promotion, and any cached copies on
+the project must match it. A video pack id in project or output-package
+`source_refs` must resolve to `<directory>/<pack-id>.json`, and every
 `reference_asset_id` must exist in `references/reference-library.json`;
-`validate project` fails on a dangling reference.
+`validate project` fails on a dangling reference. `validate research` and
+`validate queue` cover the research records, and the promotion gate warns on
+unresolved evidence for human-approved promotions while failing any future
+automated promotion path.
 
 Shared local indexes may live outside individual creator folders:
 

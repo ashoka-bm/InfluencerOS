@@ -26,7 +26,9 @@
     "projects": "projects/",
     "memory": "memory/",
     "progress": "progress/",
-    "claude_skills": ".claude/skills/"
+    "claude_skills": ".claude/skills/",
+    "boards": "boards/",
+    "system": "system/"
   },
   "source_intakes": [
     {

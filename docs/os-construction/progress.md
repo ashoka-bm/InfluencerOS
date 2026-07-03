@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import) and 2 (creator readiness validation) landed 2026-07-03; the next slice is the ADR 0020 research module schema slice.
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), and 3 (ADR 0020 research module schema slice) landed 2026-07-03; the next slice is the Research Findings and Idea Queue workflow (slice 4).
 
 Completed:
 
@@ -90,9 +90,11 @@ Completed:
 
 - Addressed the slice 2 adversarial review (2026-07-03; findings recorded in the slice plan): primary `reference_refs` now resolve through an id-to-asset map with kind enforcement at every status (a brand asset can no longer be the video-style primary), mediums make their primary fields mandatory at readiness, retired primaries are blockers and `generation_ready` requires primaries at `prompted` or later, `primary_video_style_asset_id` became schema-optional for text-first creators; non-retired asset `source_ref` values must resolve to a recorded intake id or a workspace-contained existing file; and the text-first test now strips visual assets and primaries, proving the non-visual path. Both findings reproduced before the fix; eight negative tests and one schema test added.
 
+- ADR 0020 research module schema slice (slice 3, 2026-07-03, per the user-approved Execution Decisions in `docs/workflows/research-and-ideas-implementation-plan.md`, batches A-D): 18 new schemas and luna-fit examples landed as one coherent set (content schedule, research run, JSONL evidence and metric snapshots, findings and stable-finding frontmatter, five intelligence files, idea queue entry and manifest, idea promotion, project warning, content board, automation-run and system-event record shapes); the validator gained a fail-closed `date-time` format; an enum drift check pins every research schema's platform/content-type enum to the canonical ADR 0020 constants; `influencer_os/research.py` validates JSONL line by line, findings frontmatter (scoped YAML subset, no third-party dependency) with the summary char limit, queue manifest/entry consistency with evidence resolution, and the promotion gate (a promotion must point to a real queue entry; unresolved evidence warns for human-approved promotions and fails for automated paths) via `validate research` and `validate queue`; the project schema migrated to the new status ladder (`created` → `planning` → `ready_for_generation` → `generated` → `packaged` → ...) with `source_refs` anchored on `idea_promotion_id` (cached deeper refs must match the locked promotion), the `idea/` folder replaced by `evidence-brief.md`, and the applied template, four production plans, and output package swapped `selected_content_idea_id` for `idea_promotion_id`; `init-creator` scaffolds the research/boards/system layout with `boards/` and `system/` schema-pinned; `content-idea-set` and `selected-content-idea` are marked deprecated compatibility artifacts; the three live fixture workspaces were migrated and repaired to validate (missing `claude_skills` keys, missing thin `CLAUDE.md` wrappers, one misfiled media intake). Steps 7-10 of the implementation sequence (recall index, board rebuild, prune) defer to slice 4.
+
 Remaining:
 
-- ADR 0020 research module schema slice (slice 3), then the remaining Phase 1 slices in roadmap order.
+- Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3), then the remaining Phase 1 slices in roadmap order.
 
 ### Phase 2: Learning OS
 
@@ -176,8 +178,8 @@ python3 -m unittest tests.test_drift_checks -v
 if rg -n 'workspace-library/creators/<creator-slug>/skills|Skill Runtime And Propagation Decision|Resolve skill runtime layout|Creator Workspace propagation/sync decisions|needs decision|Reject for v1' docs/os-construction docs/creator-workspace-structure.md docs/pipeline-contract.md ARCHITECTURE.md AGENTS.md README.md -g '!docs/os-construction/adversarial-review.md' -g '!docs/os-construction/progress.md'; then exit 1; else exit 0; fi
 ```
 
-Full workflow verification (validate project now requires resolvable research
-packs and reference assets in the owning workspace):
+Full workflow verification (projects anchor on the locked Idea Promotion, and
+the research module validates end to end):
 
 ```bash
 python3 -m unittest discover -s tests
@@ -188,12 +190,21 @@ cp examples/reference-library.example.json .tmp/creators/luna-fit/references/ref
 cp examples/sources/luna-fit-breakdown.example.md .tmp/creators/luna-fit/sources/intakes/luna-fit-breakdown.md
 cp examples/social-research-pack.example.json .tmp/creators/luna-fit/research/social-research-packs/research_luna_fit_2026_06_28.json
 cp examples/video-understanding-pack.example.json .tmp/creators/luna-fit/research/video-understanding-packs/video_research_luna_fit_001.json
+cp examples/creator-content-schedule.example.json .tmp/creators/luna-fit/content-schedule.json
+mkdir -p .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001
+cp examples/research-run.example.json .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/research-run.json
+python3 -c "import json; print(json.dumps(json.load(open('examples/research-evidence.example.json'))))" > .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl
+python3 -c "import json; print(json.dumps(json.load(open('examples/metric-snapshot.example.json'))))" > .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/metric-snapshots.jsonl
+cp examples/idea-queue.example.json .tmp/creators/luna-fit/research/idea-queue/queue.json
+cp examples/idea-queue-entry.example.json .tmp/creators/luna-fit/research/idea-queue/entries/idea_queue_entry_luna_fit_001.json
+cp examples/idea-promotion.example.json .tmp/creators/luna-fit/research/idea-promotions/idea_promotion_luna_fit_001.json
+cp examples/content-board.example.json .tmp/creators/luna-fit/boards/content-board.json
 echo "# Interview Notes (synthetic)" > .tmp/luna-interview.md
 python3 -m influencer_os import-intake .tmp/luna-interview.md --creator-workspace .tmp/creators/luna-fit --source-type interview --notes "Follow-up interview transcript."
-python3 -m influencer_os set-intake-status .tmp/creators/luna-fit source_luna_fit_interview_001 drafted
 python3 -m influencer_os validate workspace .tmp/creators/luna-fit
+python3 -m influencer_os validate research .tmp/creators/luna-fit
+python3 -m influencer_os validate queue .tmp/creators/luna-fit
 python3 -m influencer_os init-project examples/project.example.json --creator-workspace .tmp/creators/luna-fit
-cp examples/selected-content-idea.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/idea/selected-content-idea.json
 cp examples/applied-social-template.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/applied-template.json
 cp examples/micro-journey-video-plan.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/production-plan.json
 cp examples/base-video-generation-plan.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/generation-plan.json
@@ -250,11 +261,19 @@ Slice 2 adversarial fixes (2026-07-03): 140 tests pass; both review probes
 re-run against the fixes — a video creator with empty/mistyped primary
 reference_refs and a workspace with dangling asset source_ref values are
 rejected with readiness blockers.
+Phase 1 slice 3 (2026-07-03): 161 tests pass (11 research-validation tests,
+4 promotion-gate tests, the date-time format tests, and the research enum
+drift check among them); 38 example records validate (18 new); the full
+workflow verification above re-run end to end — workspace (27 checked
+paths), research state (6 records), idea queue (1 entry), and the
+promotion-anchored project (10 checked paths) all validate with zero
+promotion-gate warnings, since the fixture run evidence resolves; the three
+live fixture workspaces validate after migration.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import) and 2 (creator readiness validation) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md` and `docs/workflows/creator-readiness-validation-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the ADR 0020 research module schema slice next — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), and 3 (ADR 0020 research module schema slice) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the Research Findings and Idea Queue workflow next (slice 4 — builds the `create-research-findings` and `manage-idea-queue` producer skills and picks up the recall index, board rebuild, and prune commands deferred from slice 3).
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

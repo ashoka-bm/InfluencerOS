@@ -155,13 +155,31 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Single Image Post Plan | `schemas/single-image-post-plan.schema.json` | `examples/single-image-post-plan.example.json` |
 | Story Sequence Plan | `schemas/story-sequence-plan.schema.json` | `examples/story-sequence-plan.example.json` |
 | Base Video Generation Plan | `schemas/base-video-generation-plan.schema.json` | `examples/base-video-generation-plan.example.json` |
+| Creator Content Schedule | `schemas/creator-content-schedule.schema.json` | `examples/creator-content-schedule.example.json` |
+| Research Run | `schemas/research-run.schema.json` | `examples/research-run.example.json` |
+| Research Evidence (JSONL) | `schemas/research-evidence.schema.json` | `examples/research-evidence.example.json` |
+| Metric Snapshot (JSONL) | `schemas/metric-snapshot.schema.json` | `examples/metric-snapshot.example.json` |
+| Research Findings (frontmatter) | `schemas/research-findings.schema.json` | `examples/research-findings.example.json` |
+| Stable Finding (frontmatter) | `schemas/stable-finding.schema.json` | `examples/stable-finding.example.json` |
+| Research Sources | `schemas/research-sources.schema.json` | `examples/research-sources.example.json` |
+| Research Hashtags | `schemas/research-hashtags.schema.json` | `examples/research-hashtags.example.json` |
+| Research Search Terms | `schemas/research-search-terms.schema.json` | `examples/research-search-terms.example.json` |
+| Reference Creators | `schemas/reference-creators.schema.json` | `examples/reference-creators.example.json` |
+| Research Watchlist | `schemas/research-watchlist.schema.json` | `examples/research-watchlist.example.json` |
+| Idea Queue Entry | `schemas/idea-queue-entry.schema.json` | `examples/idea-queue-entry.example.json` |
+| Idea Queue Manifest | `schemas/idea-queue.schema.json` | `examples/idea-queue.example.json` |
+| Idea Promotion | `schemas/idea-promotion.schema.json` | `examples/idea-promotion.example.json` |
+| Project Warning (JSONL) | `schemas/project-warning.schema.json` | `examples/project-warning.example.json` |
+| Content Board | `schemas/content-board.schema.json` | `examples/content-board.example.json` |
+| Automation Run | `schemas/automation-run.schema.json` | `examples/automation-run.example.json` |
+| System Event | `schemas/system-event.schema.json` | `examples/system-event.example.json` |
 
-The implemented record chain now covers creator setup, research, project planning, output packaging, publication records, analytics snapshots, and performance summaries.
+The implemented record chain now covers creator setup, the ADR 0020 research module (schedule, runs, evidence, findings, intelligence, idea queue, promotions, warnings, board, automation-run and system-event record shapes), project planning anchored on locked Idea Promotions, output packaging, publication records, analytics snapshots, and performance summaries.
 
-The next research-module schema slice should replace the deprecated Content Idea
-Set and Selected Content Idea records with Creator Content Schedule, Research
-Run, Research Evidence, Metric Snapshot, Research Findings, Idea Queue, and idea
-promotion records. See `docs/adr/0020-platform-scoped-research-and-idea-queue.md`.
+The deprecated Content Idea Set and Selected Content Idea records are out of the
+intended pipeline (ADR 0020); their schemas remain only as compatibility
+artifacts. Projects reference `idea_promotion_id`, and deeper research
+provenance resolves transitively through the locked promotion.
 
 ## Format-Specific Production Plans
 

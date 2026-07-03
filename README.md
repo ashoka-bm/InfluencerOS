@@ -143,13 +143,24 @@ Intake paths are schema-pinned under `sources/`, and `validate workspace` requir
 python3 -m influencer_os init-project examples/project.example.json --creator-workspace workspace-library/creators/luna-fit
 ```
 
-After adding the selected idea and plan records, validate the project with:
+After adding the plan records, validate the project with:
 
 ```bash
 python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
 ```
 
-Project validation resolves provenance against the owning workspace: referenced reference assets must exist in the reference library, research pack IDs must resolve to `research/<kind>/<pack-id>.json` records, and a packaged project's output package must match the project, applied template, and plan records.
+Project validation anchors on the locked Idea Promotion: `source_refs.idea_promotion_id` must resolve to `research/idea-promotions/<id>.json` in the owning workspace, the promotion must list the project and point to a real idea queue entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, and a packaged project's output package must match the project, applied template, and plan records.
+
+## Validate Research State
+
+Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:
+
+```bash
+python3 -m influencer_os validate research workspace-library/creators/luna-fit
+python3 -m influencer_os validate queue workspace-library/creators/luna-fit
+```
+
+The promotion gate requires every promotion to point to a real idea queue entry; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path.
 
 ## Validate Any Record
 
