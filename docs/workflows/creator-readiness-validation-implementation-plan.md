@@ -57,11 +57,13 @@ create-influencer conductor mirrors it into `progress/setup-checklist.md`).
 
 At `content_ready`, `generation_ready`, and `active`:
 
-1. Foundation files populated: `context/SOUL.md`, `context/USER.md`,
+1. Foundation files populated and mechanically shaped: `context/SOUL.md`, `context/USER.md`,
    `context/MEMORY.md`, `brand_context/identity.md`, `brand_context/soul.md`,
    `brand_context/personal-brand.md`, `brand_context/voice-samples.md` each
    contain non-heading content beyond their `init-creator` scaffold, and none
-   contains a `TBD` placeholder token.
+   contains a `TBD` placeholder token. Rich brand-context files also need the
+   required template sections and lower-bound word/sample floors; this catches
+   sentence stubs and older thin files without replacing human quality review.
 2. Always-loaded context byte caps (documented hard maxes):
    `context/SOUL.md` <= 3,072 bytes, `context/USER.md` <= 1,536 bytes,
    `context/MEMORY.md` <= 2,500 bytes (matching the `memory-write` cap).
@@ -150,8 +152,9 @@ Behavior tests (new `tests/test_readiness_validation.py`):
 2. A `content_ready` workspace with populated files, an intake, and mapped
    asset kinds validates.
 3. Each blocker fails individually at `content_ready`: scaffold-only file,
-   `TBD` token, oversized `context/` file, zero intakes, missing required
-   kind for a declared medium.
+   sentence-stub foundation file, missing required foundation sections, too few
+   voice samples, `TBD` token, oversized `context/` file, zero intakes, missing
+   required kind for a declared medium.
 4. One failing run reports multiple blockers in a single error.
 5. Asset existence: an `approved` asset with a missing `path` fails; a
    `prompted` asset without `prompt_path` fails; a `planned` asset without

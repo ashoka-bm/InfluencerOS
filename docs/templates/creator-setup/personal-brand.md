@@ -59,6 +59,14 @@ Include:
 - audience pains
 - audience desires
 - audience sophistication level
+- audience language: exact phrases, words to use, words to avoid
+- jobs-to-be-done
+- tried alternatives
+- objections
+- trigger moments
+- trusted sources and audience hangouts
+- negative audience: who this creator should not attract
+- proof and trust cues
 - audience boundaries
 
 ## Content Strategy

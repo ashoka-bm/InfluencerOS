@@ -24,6 +24,7 @@ Keep:
 - Runtime Capsule: under 250 words
 - Brand Snapshot: compact bullets, not prose
 - Audience: primary, secondary, pains, desires, sophistication, boundaries
+- Audience operating signals: audience language, jobs-to-be-done, tried alternatives, objections, trigger moments, trusted sources, negative audience, proof and trust cues
 - Content Strategy: concrete surfaces, mediums, priorities, intended audience response, research implications, revisit cadence
 - Content Pillars: 3-7 pillars, each 4-6 bullets
 - Surface Strategy: 2-5 surfaces
@@ -41,6 +42,14 @@ Pull from the intake:
 - positioning and audience promise
 - primary and secondary audiences
 - niche and category
+- audience language, including exact phrases and words to avoid
+- jobs-to-be-done
+- tried alternatives
+- objections
+- trigger moments
+- trusted sources and audience hangouts
+- negative audience
+- proof and trust cues
 - content surfaces
 - content mediums
 - content pillars with priorities
@@ -69,6 +78,8 @@ Ask only for gaps that block strategy:
 
 - Which surfaces matter first?
 - Which content mediums are in scope?
+- What exact audience language should shape strategy?
+- Which jobs-to-be-done, tried alternatives, objections, trigger moments, trusted sources, negative audience, and proof and trust cues matter?
 - Which pillars are primary, secondary, or experimental?
 - What should research optimize for?
 - Which partnerships are prohibited?

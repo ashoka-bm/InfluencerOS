@@ -33,6 +33,60 @@ FOUNDATION_FILES = [
     "brand_context/voice-samples.md",
 ]
 
+# Deterministic floor for "ready" creator foundations. This does not judge
+# quality; it catches sentence-stubs and older files that lack the sections
+# downstream skills depend on.
+FOUNDATION_QUALITY_RULES = {
+    "brand_context/identity.md": {
+        "min_words": 300,
+        "required_headings": (
+            "Runtime Capsule",
+            "Status",
+            "Identity Snapshot",
+            "Origin Story",
+            "Public Role",
+            "Continuity Rules",
+            "Contradictions To Avoid",
+            "Source Notes",
+        ),
+    },
+    "brand_context/soul.md": {
+        "min_words": 350,
+        "required_headings": (
+            "Runtime Capsule",
+            "Status",
+            "Soul Snapshot",
+            "Values",
+            "Belief Matrix",
+            "Emotional Logic",
+            "Audience Emotional Contract",
+            "Source Notes",
+        ),
+    },
+    "brand_context/personal-brand.md": {
+        "min_words": 500,
+        "required_headings": (
+            "Runtime Capsule",
+            "Status",
+            "Brand Snapshot",
+            "Positioning",
+            "Audience",
+            "Content Strategy",
+            "Content Pillars",
+            "Surface Strategy",
+            "Medium Strategy",
+            "Monetization And Partnerships",
+            "Boundaries And Safety",
+            "Growth Goals",
+            "Source Notes",
+        ),
+    },
+    "brand_context/voice-samples.md": {
+        "min_words": 200,
+        "min_voice_samples": 5,
+    },
+}
+
 # Documented hard maxes for the always-loaded context files; the MEMORY cap
 # matches the memory-write pre-write check.
 CONTEXT_BYTE_CAPS = {
@@ -84,6 +138,9 @@ PRIMARY_REF_REQUIRED_BY_MEDIUM = {
 INTAKE_ID_PATTERN = re.compile(r"source_[a-zA-Z0-9_-]+")
 
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b")
+SECTION_HEADING_PATTERN = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+VOICE_SAMPLE_HEADING_PATTERN = re.compile(r"^#{2,3}\s+(?:\d+\.\s+|Sample:)", re.MULTILINE)
+WORD_PATTERN = re.compile(r"\b[\w][\w'-]*\b")
 
 # Source-type routing from the creator-setup Source Import rules: master-intake
 # material (breakdowns, interviews) lands in intakes/, external docs in
@@ -616,6 +673,48 @@ def _foundation_blockers(workspace_dir):
         byte_cap = CONTEXT_BYTE_CAPS.get(relative_path)
         if byte_cap is not None and len(content.encode("utf-8")) > byte_cap:
             blockers.append(f"{relative_path} exceeds its {byte_cap}-byte cap")
+        if populated:
+            blockers.extend(_foundation_quality_blockers(relative_path, content))
+    return blockers
+
+
+def _foundation_quality_blockers(relative_path, content):
+    rules = FOUNDATION_QUALITY_RULES.get(relative_path)
+    if rules is None:
+        return []
+
+    blockers = []
+    min_words = rules.get("min_words")
+    if min_words is not None:
+        word_count = len(WORD_PATTERN.findall(content))
+        if word_count < min_words:
+            blockers.append(
+                f"{relative_path} is too thin for ready status "
+                f"({word_count} words; minimum {min_words})"
+            )
+
+    required_headings = rules.get("required_headings", ())
+    if required_headings:
+        present_headings = {
+            heading.strip().lower() for heading in SECTION_HEADING_PATTERN.findall(content)
+        }
+        missing = [
+            heading for heading in required_headings if heading.lower() not in present_headings
+        ]
+        if missing:
+            blockers.append(
+                f"{relative_path} missing required section(s): {', '.join(missing)}"
+            )
+
+    min_voice_samples = rules.get("min_voice_samples")
+    if min_voice_samples is not None:
+        sample_count = len(VOICE_SAMPLE_HEADING_PATTERN.findall(content))
+        if sample_count < min_voice_samples:
+            blockers.append(
+                f"{relative_path} has {sample_count} voice sample(s); "
+                f"minimum {min_voice_samples}"
+            )
+
     return blockers
 
 

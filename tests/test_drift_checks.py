@@ -31,6 +31,16 @@ REGISTRY_PATH = "docs/os-construction/skill-registry.md"
 MATRIX_PATH = "docs/os-construction/context-matrix.md"
 INSTALLED_REGISTRY_SECTIONS = ("Core Workflow Skills", "Creator Setup Subskills", "System Skills")
 FUTURE_REGISTRY_SECTION = "Missing Future Skills"
+PERSONAL_BRAND_AUDIENCE_TERMS = (
+    "audience language",
+    "jobs-to-be-done",
+    "tried alternatives",
+    "objections",
+    "trigger moments",
+    "trusted sources",
+    "negative audience",
+    "proof and trust cues",
+)
 
 # A numbered list entry pointing at a durable doc, e.g. "3. `docs/...`":
 # thin adapters must not restate the read order in any form (ADR 0019).
@@ -163,6 +173,23 @@ class ContextMatrixDriftTests(unittest.TestCase):
                     self.workflows,
                     f"`{skill}` coverage names an unknown workflow: {workflow}",
                 )
+
+
+class CreatorSetupTemplateDriftTests(unittest.TestCase):
+    def test_personal_brand_template_and_skill_keep_icp_grade_audience_fields(self):
+        template = read_repo_text("docs/templates/creator-setup/personal-brand.md").lower()
+        skill = read_repo_text("skills/create-personal-brand/SKILL.md").lower()
+        for term in PERSONAL_BRAND_AUDIENCE_TERMS:
+            self.assertIn(
+                term,
+                template,
+                f"personal-brand template no longer asks for `{term}`",
+            )
+            self.assertIn(
+                term,
+                skill,
+                f"create-personal-brand skill no longer extracts `{term}`",
+            )
 
 
 def frontmatter_dependencies(skill_name):

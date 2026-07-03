@@ -118,6 +118,8 @@ Creator Setup files should be small enough for precise downstream use and large 
 
 If a source brief is rich, compress it by downstream use: keep material that changes continuity, emotional angle, strategy, safety, or reference generation. Keep the full source under `sources/` instead of copying it into the foundation files.
 
+The target sizes remain authoring guidance. Ready-state validation enforces a lower deterministic floor: the rich brand-context files must be meaningfully populated, carry the required template sections, avoid `TBD`, and provide enough voice samples to support style fidelity. Human review still decides whether the substance is strong.
+
 ### `creator-profile.json`
 
 The Creator Profile is the operational summary for automation. It should store the structured fields that routine research, idea generation, planning, and output packaging need without copying every detail from the richer files.
@@ -198,6 +200,9 @@ It should include:
 
 - positioning
 - audience promise
+- primary and secondary audience definitions
+- audience language, jobs-to-be-done, tried alternatives, objections, and trigger moments
+- trusted sources, audience hangouts, negative audience, and proof and trust cues
 - content strategy
 - content pillars
 - platform posture
@@ -451,7 +456,7 @@ Workspace readiness statuses:
 
 `creator-workspace.json` stores the machine-readable status. `progress/setup-checklist.md` should explain medium-specific blockers and review notes.
 
-The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `content_ready`, `generation_ready`, or `active` fails validation with the full blocker list until the medium-based blockers are met. Judgment-level review (whether the foundation is any good) stays human.
+The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `content_ready`, `generation_ready`, or `active` fails validation with the full blocker list until the medium-based blockers and foundation-quality floors are met. The quality floors are intentionally mechanical: required sections, minimum word counts below the target budgets, no `TBD`, context byte caps, and enough voice samples. Judgment-level review (whether the foundation is any good) stays human.
 
 ## Known Schema And CLI Gaps
 
@@ -466,7 +471,7 @@ Likely gaps:
 Closed gaps:
 
 - master intake import: `import-intake` copies setup sources into `sources/` and records `source_intakes` provenance; `validate workspace` resolves intake paths (Phase 1 slice 1, 2026-07-03).
-- reference-asset file existence and foundation completeness: `validate workspace` enforces the medium-based readiness blockers at `content_ready`, `generation_ready`, and `active` — populated foundation files without `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, and lifecycle-appropriate asset/prompt file existence with workspace containment (Phase 1 slice 2, 2026-07-03; see `docs/workflows/creator-readiness-validation-implementation-plan.md`).
+- reference-asset file existence and foundation completeness: `validate workspace` enforces the medium-based readiness blockers at `content_ready`, `generation_ready`, and `active` — populated foundation files with required sections and lower-bound word/sample floors, no `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, and lifecycle-appropriate asset/prompt file existence with workspace containment (Phase 1 slice 2, 2026-07-03; see `docs/workflows/creator-readiness-validation-implementation-plan.md`).
 
 ## Next Grilling Questions
 
