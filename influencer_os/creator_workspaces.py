@@ -150,6 +150,10 @@ MARKDOWN_SCAFFOLDS = {
 
 ## Medium-Based Blockers
 
+Track each reference asset by its reference-library lifecycle status —
+planned, prompted, generated (awaiting user approval), or approved. Never
+mark an asset "completed"; name its status.
+
 ### Text
 
 - [ ] Brand voice guide completed
@@ -158,30 +162,31 @@ MARKDOWN_SCAFFOLDS = {
 
 ### Image
 
-- [ ] Three character assets completed or prompted
-- [ ] Brand or visual system reference completed
+- [ ] Character identity plate — planned
+- [ ] Full-body turnaround sheet — planned
+- [ ] Macro detail card — planned
+- [ ] Brand or visual system reference — planned
 - [ ] Image style guidance completed
-- [ ] Required image prompts or approved image references completed
 
 ### Video
 
-- [ ] Character identity plate completed
-- [ ] Full-body turnaround sheet completed
-- [ ] Macro detail card completed
-- [ ] Primary location reference completed
-- [ ] Outfit or wardrobe reference completed
-- [ ] Default video style card completed
+- [ ] Character identity plate — planned
+- [ ] Full-body turnaround sheet — planned
+- [ ] Macro detail card — planned
+- [ ] Primary location reference — planned
+- [ ] Outfit or wardrobe reference — planned
+- [ ] Default video style card — planned
 - [ ] Shot and motion constraints completed
 
 ### Voiceover Or Spoken Audio
 
-- [ ] Voice sample or accepted voice style note completed
+- [ ] Voice sample or voice style note — planned
 - [ ] Pronunciation and tone boundaries completed
 
 ### Carousel Or Story Sequence
 
 - [ ] Sequence style guidance completed
-- [ ] Slide or frame visual system completed
+- [ ] Slide or frame visual system — planned
 - [ ] Text overlay policy completed
 
 ## Review Notes

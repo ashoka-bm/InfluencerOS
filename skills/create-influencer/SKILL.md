@@ -113,6 +113,8 @@ Use these output shapes:
 *Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
 
 - 2026-07-03: Baseline established; no corrections recorded yet.
+- 2026-07-03: After any approved provider generation, update `progress/setup-checklist.md`, `context/MEMORY.md`, and the daily note in the same run — supersede every "no generation has been run" or "assets are prompt-staged only" claim. Stale no-generation notes conflicted with a generated identity plate in the Nia Sol run.
+- 2026-07-03: Track each reference asset in the setup checklist by its lifecycle status (planned / prompted / generated pending approval / approved); never use grouped wording like "completed or prompted". When a generation call runs, record the generation date, tool, and any accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`, and leave the asset `generated` until the user explicitly approves the look.
 
 ## Self-Update
 

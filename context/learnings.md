@@ -17,6 +17,8 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### create-influencer
 
 - Pending repeated feedback.
+- 2026-07-03: Nia Sol run review: stale no-generation notes survived an approved generation call; the skill now requires superseding checklist/MEMORY/daily-note claims in the same run as any generation.
+- 2026-07-03: Nia Sol run review: checklist grouped wording (completed or prompted) hid which assets existed; scaffold and skill now track per-asset lifecycle status, and generated assets record date/tool/deviations in usage_notes.
 
 ### wrap-up
 

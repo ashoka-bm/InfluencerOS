@@ -342,6 +342,10 @@ If the user provides only an interview and one image, the system may extrapolate
 
 Planned or prompted assets should still use stable asset IDs so downstream plans can name what is missing. Provider-backed generation remains blocked until the user approves the exact call or batch.
 
+When an approved generation call runs, record it in the same run: keep `prompt_path` pointing at the prompt used, record the generation date and tool in the asset's `usage_notes` (plus any accepted deviations from the prompt), and leave the asset `generated` — `approved` is a separate human decision after reviewing the output. Update `progress/setup-checklist.md`, `context/MEMORY.md`, and the daily note so no "no generation has been run" claim goes stale. A dedicated provider-run record with structured generation metadata lands with Phase 3 (Generation OS) asset provenance capture.
+
+`progress/setup-checklist.md` tracks each reference asset by its lifecycle status (planned, prompted, generated pending approval, approved) — never a bare "completed", and never grouped wording like "completed or prompted" that hides which assets actually exist.
+
 ## Source Import
 
 When user-provided materials are imported, the workflow copies them into `sources/` and records source provenance in `creator-workspace.json` through the CLI:
