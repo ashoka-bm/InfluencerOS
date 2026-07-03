@@ -15,6 +15,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.projects import init_project, validate_project
+from influencer_os.research import validate_queue, validate_research
 from influencer_os.runs import DEFAULT_WORKSPACE, init_run
 from influencer_os.validation import ValidationError, validate_examples, validate_file
 
@@ -24,8 +25,8 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record"], help="Validation target.")
-    validate_parser.add_argument("path", nargs="?", help="Path for workspace/project validation, or schema name for record validation.")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue"], help="Validation target.")
+    validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
     init_parser = subparsers.add_parser("init-run", help="Initialize a dry-run workspace from a creator profile.")
@@ -98,6 +99,20 @@ def main(argv=None):
                 result = validate_project(args.path)
                 print(f"Validated project: {result['project_path']}")
                 print(f"Checked {len(result['checked_paths'])} project paths.")
+                return 0
+            if args.target == "research":
+                if not args.path:
+                    raise ValueError("validate research requires a creator workspace path")
+                result = validate_research(args.path)
+                print(f"Validated research state: {result['workspace_path']}")
+                print(f"Checked {len(result['checked_paths'])} research records.")
+                return 0
+            if args.target == "queue":
+                if not args.path:
+                    raise ValueError("validate queue requires a creator workspace path")
+                result = validate_queue(args.path)
+                print(f"Validated idea queue: {result['manifest_path']}")
+                print(f"Checked {result['entry_count']} queue entries.")
                 return 0
             return 0
 
