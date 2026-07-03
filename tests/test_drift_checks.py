@@ -165,6 +165,100 @@ class ContextMatrixDriftTests(unittest.TestCase):
                 )
 
 
+def frontmatter_dependencies(skill_name):
+    text = read_repo_text(f"skills/{skill_name}/SKILL.md")
+    match = re.match(r"^---\n(.*?)\n---", text, flags=re.DOTALL)
+    if match is None:
+        return None
+    frontmatter = match.group(1)
+    if re.search(r"^dependencies:\s*\[\s*\]\s*$", frontmatter, flags=re.MULTILINE):
+        return []
+    block = re.search(
+        r"^dependencies:\n((?:\s+-\s+.+\n?)+)", frontmatter, flags=re.MULTILINE
+    )
+    if block is None:
+        return None
+    return re.findall(r"-\s+([a-z0-9-]+)", block.group(1))
+
+
+def skill_body(skill_name):
+    text = read_repo_text(f"skills/{skill_name}/SKILL.md")
+    return text.split("---", 2)[2] if text.startswith("---") else text
+
+
+class ConductorCallGraphDriftTests(unittest.TestCase):
+    CONDUCTORS = ("influencer-os", "create-influencer")
+    MAP_SECTION = "Creation-Flow Call Graph (skill → skill)"
+
+    def test_conductors_declare_dependencies_frontmatter(self):
+        for skill in self.CONDUCTORS:
+            deps = frontmatter_dependencies(skill)
+            self.assertTrue(
+                deps,
+                f"skills/{skill}/SKILL.md declares no `dependencies` frontmatter (ADR 0017)",
+            )
+
+    def test_dependencies_exist_on_disk_or_are_planned_with_halt(self):
+        for skill in sorted(skills_on_disk()):
+            deps = frontmatter_dependencies(skill)
+            if not deps:
+                continue
+            body = skill_body(skill)
+            for dep in deps:
+                if (ROOT / "skills" / dep / "SKILL.md").exists():
+                    continue
+                planned_lines = [
+                    line for line in body.splitlines() if dep in line and "[PLANNED" in line
+                ]
+                self.assertTrue(
+                    planned_lines,
+                    f"skills/{skill} depends on missing skill {dep!r} "
+                    "without a [PLANNED] marker in its body",
+                )
+                self.assertIn(
+                    "halt",
+                    body.lower(),
+                    f"skills/{skill} names [PLANNED] dependencies but declares no halt instruction",
+                )
+
+    def test_dependencies_are_registered(self):
+        registry = read_repo_text(REGISTRY_PATH)
+        known = set()
+        for heading in INSTALLED_REGISTRY_SECTIONS + (FUTURE_REGISTRY_SECTION,):
+            known |= table_skill_names(markdown_section(registry, heading))
+        for skill in sorted(skills_on_disk()):
+            deps = frontmatter_dependencies(skill)
+            for dep in deps or []:
+                self.assertIn(
+                    dep, known, f"skills/{skill} depends on unregistered skill {dep!r}"
+                )
+
+    def test_content_conductor_declares_phase_owners(self):
+        body = skill_body("influencer-os")
+        self.assertIn("## Phase Owners", body, "influencer-os declares no phase-to-owner table")
+        owners_section = body.split("## Phase Owners")[1]
+        for dep in frontmatter_dependencies("influencer-os"):
+            self.assertIn(
+                dep, owners_section, f"phase-owner table names no phase for dependency {dep!r}"
+            )
+
+    def test_conductor_frontmatter_matches_architecture_map(self):
+        map_text = read_repo_text("docs/os-construction/architecture-map.md")
+        section = markdown_section(map_text, self.MAP_SECTION)
+        fences = re.findall(r"```text\n(.*?)```", section, flags=re.DOTALL)
+        for skill in self.CONDUCTORS:
+            fence = next((f for f in fences if f"skills/{skill}/SKILL.md" in f), None)
+            self.assertIsNotNone(
+                fence, f"architecture-map call graph has no fence for skills/{skill}"
+            )
+            map_skills = set(re.findall(r"Skill\((?:skill: \")?([a-z0-9-]+)\"?\)", fence))
+            self.assertEqual(
+                map_skills,
+                set(frontmatter_dependencies(skill) or []),
+                f"architecture-map call graph and skills/{skill} `dependencies` frontmatter disagree",
+            )
+
+
 class MemoryPolicyDriftTests(unittest.TestCase):
     def test_root_memory_stays_within_byte_cap(self):
         from influencer_os.memory import MEMORY_BYTE_CAP

@@ -44,6 +44,7 @@ Completed:
 - Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
 - Added drift checks (`tests/test_drift_checks.py`, Batch A / workstreams 1, 3, 4, 8): adapter read order and imports per ADR 0019, bidirectional skill-registry coverage including future-table enforcement, and context-matrix coverage against known workflow rows.
 - Hardened the validator (Batch B / workstream 13): fail-closed schema subset with intra-file `$ref` to `#/definitions`, `oneOf`, `anyOf`, and `allOf`; unknown keywords, type names, formats, and unsupported construct forms raise `SchemaDefinitionError` instead of silently passing; example coverage is derived from disk so every schema requires a matching example and vice versa.
+- Formalized the conductor call graph (Batch E / workstream 10, ADR 0017): both conductors declare `dependencies` frontmatter; `skills/influencer-os/SKILL.md` carries a `## Dependencies` table and a `## Phase Owners` table naming an owner skill per producing phase with explicit `Skill(skill: "...")` invocations; the six Phase 1 producers and `distill-creator-learning` are `[PLANNED]` halt markers per the execution decisions (halt and surface the missing skill, never improvise); a drift check fails if a conductor names a skill neither on disk nor `[PLANNED]`-marked, requires the halt rule, requires registration, and diffs conductor frontmatter against the `architecture-map.md` call graph. The architecture map's call-graph fence was renumbered to the conductor's actual phases and stale BUILT/PLANNED statuses from batches A-D were refreshed.
 - Built the self-improvement loop (Batch D / workstreams 9, 7, and the workstream 5 residue, ADR 0016): `skills/wrap-up` and `skills/memory-write` exist with registry and context-matrix rows; `python3 -m influencer_os log-learning` appends dated, deduplicated per-skill entries to `context/learnings.md`; `python3 -m influencer_os memory-write` performs deduplicated `MEMORY.md` writes and refuses any write past the 2,500-byte cap; both conductors carry `## Rules` and `## Self-Update`; a worked `skills/influencer-os/SKILL.local.md` exists; Tier 0 creator recall rules are defined in `docs/creator-workspace-structure.md`; and drift checks now enforce the root memory cap, the conductor sections, and the local-override example. Root `context/MEMORY.md` was refreshed, fixing the stale line that named the wrong repo as the Agentic OS source of truth.
 - Landed the determinism fixes (Batch C / workstreams 12, 14, and the workstream 6 residue): `project.schema.json` requires `acceptance_criteria` (optional `constraints`/`dependencies`); output-package `source_refs` require `applied_social_template_id` and `video_understanding_pack_ids`; project and output-package provenance IDs resolve to real workspace records (`references/reference-library.json` assets and `research/<kind>/<pack-id>.json` files) with dangling references failing validation; a packaged project cross-checks its output package against the applied template; `validate record <schema> <path>` validates any mid-pipeline record; and a `generation_ready` workspace fails validation without at least one approved `character` or `video_style` asset. The transitional research/idea layout is documented in `docs/creator-workspace-structure.md`.
 
@@ -189,12 +190,14 @@ python3 -m influencer_os validate record output-package examples/output-package.
 Latest validation result:
 
 ```text
-Ran 76 tests in 1.207s
+Ran 81 tests in 1.170s
 OK
 Validated 20 example records.
 Full workflow verification above re-run end to end after the Batch C changes.
 Batch D dogfood: log-learning appended a real dated entry to
 context/learnings.md; context/MEMORY.md at 1,330/2,500 bytes.
+Batch E mutation probe: removing a dependency from the conductor frontmatter
+makes the call-graph drift check fail naming the missing skill.
 Drift checks: 10 tests pass; planting an unregistered skills/ folder makes the
 registry and matrix checks fail, confirming the checks catch real drift.
 Validator hardening: 18 new tests cover $ref/oneOf/anyOf/allOf enforcement,
@@ -205,7 +208,7 @@ No stale old creator-skill runtime paths found outside historical adversarial-re
 
 ## Next Work Queue
 
-1. Continue the Phase 0C batches from the short-term plan Execution Decisions. Batches A (drift-check guardrails), B (validator hardening), C (determinism fixes and readiness gate), and D (self-improvement loop and memory) are done; next is Batch E (workstream 10: conductor `dependencies` frontmatter, phase-to-owner table with `[PLANNED]` halt markers, call-graph drift check against `architecture-map.md`), then F (propagation build-out), G (copy-plan coverage and closeout).
+1. Continue the Phase 0C batches from the short-term plan Execution Decisions. Batches A (drift-check guardrails), B (validator hardening), C (determinism fixes and readiness gate), D (self-improvement loop and memory), and E (conductor call graph) are done; next is Batch F (workstream 11 propagation build-out: `update-creators`, backup-protected batch refresh, `.claude/skills/` in the workspace schema, workspace wrappers, inert gated zones), then G (copy-plan coverage and closeout).
 2. Update progress docs with parity verification results after each batch.
 3. After Phase 0C exits, start Phase 1 in the roadmap's slice order: master intake import first.
 

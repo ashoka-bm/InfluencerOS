@@ -1,6 +1,14 @@
 ---
 name: create-influencer
 description: Use to run the full Creator Setup workflow from intake through accepted creator foundation, workspace files, reference requirements, provider-neutral prompts, and readiness checklist.
+dependencies:
+  - create-identity
+  - create-soul
+  - create-personal-brand
+  - create-voice-samples
+  - create-creator-profile
+  - create-runtime-context
+  - create-reference-library
 ---
 
 # Create An Influencer

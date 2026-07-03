@@ -1,6 +1,14 @@
 ---
 name: influencer-os
 description: Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, and creating provider-neutral generation plans.
+dependencies:
+  - create-research-findings
+  - manage-idea-queue
+  - promote-idea
+  - apply-social-template
+  - create-production-plan
+  - create-output-package
+  - distill-creator-learning
 ---
 
 # InfluencerOS Flow
@@ -23,6 +31,39 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.
 9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
 10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
+
+## Dependencies
+
+Producer skills this conductor routes to (mirrors the `dependencies` frontmatter; kept in agreement with `docs/os-construction/architecture-map.md` by a drift check):
+
+| Skill | Produces | Status |
+| --- | --- | --- |
+| `create-research-findings` | Research Findings backed by dated evidence | [PLANNED — Phase 1] |
+| `manage-idea-queue` | Scored Idea Queue entries | [PLANNED — Phase 1] |
+| `promote-idea` | Human-approved Idea Promotion + Projects | [PLANNED — Phase 1] |
+| `apply-social-template` | Applied Social Template | [PLANNED — Phase 1] |
+| `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [PLANNED — Phase 1] |
+| `create-output-package` | Output Package + provenance | [PLANNED — Phase 1] |
+| `distill-creator-learning` | Creator Memory lessons from performance evidence | [PLANNED — Phase 2] |
+
+**Halt rule (ADR 0016/0017):** when a phase's owner skill is marked `[PLANNED]` and its folder does not exist under `skills/`, halt at that phase, tell the user which skill is missing and which Phase 1 slice builds it, and stop. Never improvise the phase from base knowledge and never pretend the skill ran. Each `[PLANNED]` marker is an open build obligation tracked in `docs/os-construction/skill-registry.md` (Missing Future Skills) and the roadmap Phase 1 slice list.
+
+## Phase Owners
+
+| Phase | Owner | Invocation | Status |
+| --- | --- | --- | --- |
+| 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — | [BUILT] |
+| 2. Video Understanding Pack | `influencer-os` (inline, v1) | — | [BUILT] |
+| 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` | [PLANNED] |
+| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` | [PLANNED] |
+| 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` | [PLANNED] |
+| 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` | [PLANNED] |
+| 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [PLANNED] |
+| 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [PLANNED] |
+| 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [PLANNED] |
+| 10. Generation Approval Gate | user (exact-call approval) | — | [BUILT gate] |
+| Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [PLANNED] |
+| Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [PLANNED — Phase 2] |
 
 ## Video Understanding Requirements
 

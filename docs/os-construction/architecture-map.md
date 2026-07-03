@@ -24,9 +24,9 @@ Workflow contracts         schemas/ (20) + docs/pipeline-contract.md            
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT + PLANNED]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
-Self-improvement loop      skills/wrap-up, skills/memory-write                           [PLANNED — ADR 0016]
+Self-improvement loop      skills/wrap-up, skills/memory-write + memory CLI              [BUILT — ADR 0016]
 Propagation                CLI: init-creator, sync-creator-runtime, update-creators      [BUILT + PLANNED — ADR 0018]
-Drift checks               tests/ parity checks                                          [PLANNED]
+Drift checks               tests/test_drift_checks.py                                    [BUILT; runtime-sync check lands in WS11]
 Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere-access  [DEFERRED / GATED]
 ```
 
@@ -80,11 +80,11 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 
 ### Skills (`skills/<skill-name>/`)
 
-Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. These ADR-0017 conventions (`references/`, `SKILL.local.md`, `## Rules`/`## Self-Update`, `dependencies` frontmatter) are **[PLANNED]** — none exist on disk yet; they land in workstreams 9–10. The [BUILT] skills below currently carry only a plain `SKILL.md`.
+Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skills below remain [PLANNED].
 
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
-| `influencer-os` | conductor | Content-creation conductor (10 phases). | [BUILT; call graph to formalize] |
+| `influencer-os` | conductor | Content-creation conductor (10 phases; `dependencies` + `## Phase Owners` declared). | [BUILT] |
 | `create-influencer` | conductor | Creator-setup conductor (13 phases). | [BUILT] |
 | `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
 | `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
@@ -100,31 +100,34 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [PLANNED — Phase 1] |
 | `create-output-package` | planning | Output Package + provenance. | [PLANNED — Phase 1] |
 | `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2] |
-| `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [PLANNED — ADR 0016] |
-| `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes. | [PLANNED — ADR 0016] |
+| `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
+| `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes (2,500-byte cap via CLI). | [BUILT — ADR 0016] |
 
 ### Runtime CLI (`influencer_os/`)
 
 | Path | Role | Status |
 | --- | --- | --- |
 | `cli.py` | Command surface; routes to helpers, holds no product rules. | [BUILT] |
-| `validation.py` | Schema + record validation (harden `$ref`/`oneOf`/`anyOf`/`allOf`). | [BUILT; hardening PLANNED] |
-| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime`, `update-creators`. | [BUILT + PLANNED] |
-| `projects.py` | Project scaffolding + validation (+ provenance resolution). | [BUILT; provenance resolve PLANNED] |
+| `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
+| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime` (built); `update-creators` (WS11). | [BUILT + PLANNED] |
+| `projects.py` | Project scaffolding + validation + provenance resolution. | [BUILT — WS12] |
+| `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
 
 ### Tests (`tests/`) — parity + contract
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `test_schema_validation.py` | All examples validate (derive list from disk, not hardcoded). | [BUILT; harden PLANNED] |
-| `test_cli.py` | CLI command behavior. | [BUILT] |
-| adapter read-order drift check | Fail if `CLAUDE.md`/`SOUL.md` stop importing `AGENTS.md` or restate a divergent read order. | [PLANNED — ADR 0019] |
-| skill-registry drift check | Every registered skill exists; every on-disk skill is registered. | [PLANNED] |
-| context-matrix coverage check | Every skill/workflow has a matrix row. | [PLANNED] |
-| workspace-structure check | `init-creator` produces the documented tree incl. `.claude/skills/`. | [PLANNED] |
-| project-output-layout check | Project scaffolding is deterministic. | [PLANNED] |
-| Tier-0 memory policy check | `context/MEMORY.md` byte cap enforced. | [PLANNED] |
+| `test_schema_validation.py` | All examples validate; coverage derived from disk; fail-closed subset tests. | [BUILT — WS13] |
+| `test_cli.py` | CLI behavior incl. provenance resolution and readiness gates. | [BUILT] |
+| `test_memory.py` | Bounded memory/learnings writers + CLI. | [BUILT — ADR 0016] |
+| adapter read-order drift check | Fails if `CLAUDE.md`/`SOUL.md` stop importing `AGENTS.md` or restate a divergent read order. | [BUILT — `test_drift_checks.py`] |
+| skill-registry drift check | Bidirectional coverage; future table may not name on-disk skills. | [BUILT — `test_drift_checks.py`] |
+| context-matrix coverage check | Every on-disk skill has coverage naming known workflows. | [BUILT — `test_drift_checks.py`] |
+| conductor call-graph drift check | Dependencies exist or are `[PLANNED]` with a halt rule; frontmatter matches this map. | [BUILT — WS10] |
+| workspace-structure check | `init-creator` produces the documented tree incl. `.claude/skills/` (schema entry lands in WS11). | [BUILT — `test_cli.py`] |
+| project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
+| Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
 
 ### Deferred / gated subsystems
 
@@ -142,22 +145,26 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 The content conductor owns the pipeline. Per ADR 0017 each conductor declares a `## Dependencies` table and a phase→owner map with explicit `Skill(skill: "...")` invocations (mirroring the reference `00-social-content` orchestrator). Producer skills marked [PLANNED] are approved but unbuilt; until built, the conductor must halt at that phase and surface the missing skill (never pretend it ran).
 
 ```text
-skills/influencer-os/SKILL.md  (content conductor)
-  Phase 1  load Creator Workspace + Creator Profile        owner: influencer-os (inline)         [BUILT]
+skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + `## Phase Owners` [BUILT — WS10])
+  Phase 1  Creator Profile, Strategy, Schedule             owner: influencer-os (inline)         [BUILT]
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
   Phase 3  Research Findings           -> Skill(create-research-findings)                         [PLANNED]
   Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [PLANNED]
   Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [PLANNED]
-  Phase 6  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]
-  Phase 7  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
+  Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [PLANNED]
+  Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]
+  Phase 8  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
              format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)
              format_carousel         -> CarouselPlan
              format_single_image_post-> SingleImagePostPlan
              format_story_sequence   -> StorySequencePlan                                         [PLANNED]
-  Phase 9  Base Video Generation Plan  owner: create-production-plan (provider-neutral)           [PLANNED]
+  Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [PLANNED]
   Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
   (post)   Output Package             -> Skill(create-output-package)                             [PLANNED]
   (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2]
+
+  Until a [PLANNED] owner exists on disk, the conductor halts at that phase and surfaces the
+  missing skill (halt rule in skills/influencer-os/SKILL.md ## Dependencies).
 ```
 
 ```text
@@ -184,7 +191,7 @@ skills/wrap-up/SKILL.md
   -> fix method directly        -> edit target SKILL.md / SKILL.local.md
   -> reconcile registry+matrix  -> docs/os-construction/skill-registry.md, context-matrix.md
   -> promote durable fact       -> Skill(memory-write)
-  -> commit only when user asks
+  -> verify (tests + validate examples), then commit per AGENTS.md Git Rules
 
 skills/memory-write/SKILL.md
   -> add/replace/remove one fact in context/MEMORY.md, deduped, within byte cap -> confirm
