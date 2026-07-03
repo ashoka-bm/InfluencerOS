@@ -7,6 +7,7 @@ philosophy — fail-closed, no third-party dependency. Supported: top-level
 Nested mappings or any other construct are errors, never silent skips.
 """
 import json
+from collections import Counter
 from pathlib import Path
 
 from influencer_os.validation import ValidationError, load_json, validate_file, validate_record
@@ -171,6 +172,10 @@ def check_promotion_slot_claims(workspace_dir, promotion):
             f"Idea promotion {promotion_id} claims schedule slots but the "
             "workspace has no content-schedule.json"
         )
+    # Schema-validate before reading: this check is reachable from validate
+    # project, which does not otherwise validate the schedule, and a
+    # malformed slot must fail cleanly, not crash on a missing key.
+    validate_file("creator-content-schedule", schedule_path)
     slots = {
         slot["slot_id"]: slot
         for slot in load_json(schedule_path).get("calendar_slots", [])
@@ -380,6 +385,13 @@ def validate_research(workspace_path):
     if stable_dir.exists():
         for stable_path in sorted(stable_dir.glob("*.md")):
             stable_data = validate_stable_finding_file(stable_path)
+            # The entries/promotions filename==id pattern: it also makes a
+            # duplicated stable_finding_id impossible at rest.
+            if stable_data["stable_finding_id"] != stable_path.stem:
+                raise ValidationError(
+                    f"{stable_path}: filename does not match stable_finding_id "
+                    f"{stable_data['stable_finding_id']!r}"
+                )
             check_creator_scope(stable_data, scope, stable_path)
             checked.append(str(stable_path.relative_to(workspace_dir)))
 
@@ -410,6 +422,7 @@ def validate_research(workspace_path):
                         f"the containing run {_run_id!r}"
                     )
 
+            run_records = {filename: [] for filename, *_ in RESEARCH_JSONL_FILES}
             for filename, schema_name, id_field, outputs_field in RESEARCH_JSONL_FILES:
                 jsonl_path = run_dir / filename
                 jsonl_ids = set()
@@ -417,7 +430,20 @@ def validate_research(workspace_path):
                     records = validate_jsonl_file(
                         schema_name, jsonl_path, record_check=run_scoped
                     )
-                    jsonl_ids = {record[id_field] for record in records}
+                    id_counts = Counter(record[id_field] for record in records)
+                    duplicate_ids = sorted(
+                        record_id for record_id, count in id_counts.items() if count > 1
+                    )
+                    if duplicate_ids:
+                        # A duplicated id validates against the declared
+                        # outputs (set comparison) but makes every ref to it
+                        # ambiguous and bricks the recall index rebuild.
+                        raise ValidationError(
+                            f"{jsonl_path}: duplicate {id_field} values within "
+                            f"the run: {duplicate_ids}"
+                        )
+                    run_records[filename] = records
+                    jsonl_ids = set(id_counts)
                     checked.append(str(jsonl_path.relative_to(workspace_dir)))
                 declared_ids = set(run_record["outputs"][outputs_field])
                 # Prune records removals instead of rewriting outputs, so the
@@ -451,6 +477,22 @@ def validate_research(workspace_path):
                         f"not present in {filename} and not pruned: {ghost}"
                     )
 
+            # Metric snapshots are run-scoped observations of run evidence:
+            # a snapshot whose evidence_id is absent from the run severs the
+            # trajectory link and can never be pruned (snapshots prune with
+            # their evidence).
+            run_evidence_ids = {
+                record["evidence_id"] for record in run_records["evidence.jsonl"]
+            }
+            for snapshot in run_records["metric-snapshots.jsonl"]:
+                if snapshot["evidence_id"] not in run_evidence_ids:
+                    raise ValidationError(
+                        f"{run_dir / 'metric-snapshots.jsonl'}: metric snapshot "
+                        f"{snapshot['metric_snapshot_id']} snapshots evidence "
+                        f"{snapshot['evidence_id']!r}, which is not in this "
+                        "run's evidence.jsonl"
+                    )
+
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():
         intel_path = research_dir / "intelligence" / filename
         if intel_path.exists():
@@ -477,20 +519,57 @@ def validate_research(workspace_path):
             validate_jsonl_file(schema_name, system_path, record_check=record_check)
             checked.append(str(system_path.relative_to(workspace_dir)))
 
-    warnings, promotion_paths = validate_promotions(workspace_dir, scope=scope)
+    warnings, promotion_paths, _promotions_by_id = validate_promotions(
+        workspace_dir, scope=scope
+    )
     checked.extend(promotion_paths)
+
+    # Promotion checks run identically on the research and queue paths: when
+    # the queue exists, the research path also verifies the entry-side
+    # consistency (manifest agreement, ref resolution, and the
+    # entry <-> promotion <-> project closure).
+    queue_manifest_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    if queue_manifest_path.exists():
+        _check_queue_consistency(workspace_dir, scope)
+        checked.append("research/idea-queue/queue.json")
 
     return {"workspace_path": workspace_dir, "checked_paths": checked, "warnings": warnings}
 
 
 def validate_queue(workspace_path):
     workspace_dir = Path(workspace_path)
-    queue_dir = workspace_dir / "research" / "idea-queue"
-    manifest_path = queue_dir / "queue.json"
+    manifest_path = workspace_dir / "research" / "idea-queue" / "queue.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"Missing idea queue manifest: {manifest_path}")
 
     scope = load_workspace_scope(workspace_dir)
+
+    # Entry-side consistency first (queue-focused errors surface first),
+    # then the same promotion check set as validate research (gate, creator
+    # scope, filename==id, slot claims, gate warnings) so no promotion state
+    # can validate on one command and fail the other.
+    entries = _check_queue_consistency(workspace_dir, scope)
+    warnings, _promotion_paths, _promotions_by_id = validate_promotions(
+        workspace_dir, scope=scope
+    )
+
+    return {
+        "workspace_path": workspace_dir,
+        "entry_count": len(entries),
+        "manifest_path": manifest_path,
+        "warnings": warnings,
+    }
+
+
+def _check_queue_consistency(workspace_dir, scope):
+    """Entry-side queue consistency, shared by validate_queue and
+    validate_research: manifest/entry agreement, evidence and finding ref
+    resolution, and the entry <-> promotion <-> project closure."""
+    workspace_dir = Path(workspace_dir)
+    queue_dir = workspace_dir / "research" / "idea-queue"
+    manifest_path = queue_dir / "queue.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Missing idea queue manifest: {manifest_path}")
 
     manifest = load_json(manifest_path)
     validate_record("idea-queue", manifest)
@@ -552,12 +631,14 @@ def validate_queue(workspace_path):
                 f"Queue manifest status_counts omit statuses present in the queue: {uncounted}"
             )
 
-    evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
+    evidence_runs, metric_runs, metric_evidence = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
     known_finding_ids = collect_finding_ids(workspace_dir)
     for entry in entries.values():
         for ref in entry["evidence_refs"]:
-            problems = resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids)
+            problems = resolve_evidence_ref(
+                ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence
+            )
             if problems:
                 raise ValidationError(
                     f"{entry['idea_queue_entry_id']}: {problems[0]}"
@@ -573,6 +654,9 @@ def validate_queue(workspace_path):
     # Slice 5 link consistency: entry <-> promotion <-> project links hold at
     # rest. The promotion act writes both sides in one workflow, so a
     # one-sided link is always invalid state, never an in-progress step.
+    # Promotions load schema-valid here for the entry-side closure; the
+    # per-promotion gate, creator scope, filename==id, and slot-claim checks
+    # run in validate_promotions on both validator paths.
     promotions_by_id = {}
     promotions_dir = workspace_dir / "research" / "idea-promotions"
     if promotions_dir.exists():
@@ -664,23 +748,7 @@ def validate_queue(workspace_path):
                     f"projects missing from linked_project_ids: {missing}"
                 )
 
-    for promotion in promotions_by_id.values():
-        if promotion["promotion_status"] != "active":
-            continue
-        entry = entries.get(promotion["idea_queue_entry_id"])
-        if entry is None:
-            raise ValidationError(
-                f"Idea promotion {promotion['idea_promotion_id']} does not "
-                "point to a real idea queue entry: "
-                f"{promotion['idea_queue_entry_id']!r} has no entry file"
-            )
-        check_promotion_entry_links(promotion, entry)
-
-    return {
-        "workspace_path": workspace_dir,
-        "entry_count": len(entries),
-        "manifest_path": manifest_path,
-    }
+    return entries
 
 
 def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
@@ -722,14 +790,16 @@ def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
     check_promotion_created_projects(promotion, projects_by_id)
     check_promotion_slot_claims(workspace_dir, promotion)
 
-    evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
+    evidence_runs, metric_runs, metric_evidence = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
     warnings = []
 
     unresolved = []
     for ref in promotion["evidence_refs"]:
         unresolved.extend(
-            resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids)
+            resolve_evidence_ref(
+                ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence
+            )
         )
     if unresolved:
         message = (
@@ -763,13 +833,15 @@ def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
 
 
 def validate_promotions(workspace_path, scope=None):
-    """Validate every promotion record and its gate; returns warning strings."""
+    """Validate every promotion record and its gate. Returns warning strings,
+    checked paths, and the promotion map keyed by idea_promotion_id."""
     workspace_dir = Path(workspace_path)
     if scope is None:
         scope = load_workspace_scope(workspace_dir)
     promotions_dir = workspace_dir / "research" / "idea-promotions"
     warnings = []
     checked = []
+    promotions_by_id = {}
     if promotions_dir.exists():
         projects_by_id = collect_project_manifests(workspace_dir)
         claimed_slots = {}
@@ -801,17 +873,21 @@ def validate_promotions(workspace_path, scope=None):
                             f"one active promotion: {earlier} and "
                             f"{promotion['idea_promotion_id']}"
                         )
+            promotions_by_id[promotion["idea_promotion_id"]] = promotion
             checked.append(str(promotion_path.relative_to(workspace_dir)))
-    return warnings, checked
+    return warnings, checked, promotions_by_id
 
 
 def collect_research_record_ids(workspace_dir):
     """Scan run JSONL files and map evidence and metric snapshot ids to their
-    containing run folder. File-first by design: the recall index is a
-    rebuildable projection, never a validation dependency. Cross-run duplicate
-    ids fail closed because they make run-scoped ref resolution ambiguous."""
+    containing run folder, plus each metric snapshot's evidence link.
+    File-first by design: the recall index is a rebuildable projection, never
+    a validation dependency. Duplicate ids fail closed — cross-run because
+    they make run-scoped ref resolution ambiguous, within-run because every
+    ref to the id becomes ambiguous and the recall index rebuild fails."""
     evidence_runs = {}
     metric_runs = {}
+    metric_evidence = {}
     runs_dir = Path(workspace_dir) / "research" / "runs"
     if runs_dir.exists():
         scans = (
@@ -834,22 +910,30 @@ def collect_research_record_ids(workspace_dir):
                         )
                     record_id = record[id_field]
                     existing_run = id_runs.get(record_id)
-                    if existing_run is not None and existing_run != run_id:
+                    if existing_run == run_id:
+                        raise ValidationError(
+                            f"{jsonl_path}:{line_number}: {id_field} {record_id!r} "
+                            "is duplicated within the run; ids must be unique"
+                        )
+                    if existing_run is not None:
                         raise ValidationError(
                             f"{jsonl_path}:{line_number}: {id_field} {record_id!r} "
                             f"appears in more than one run ({existing_run!r} and "
                             f"{run_id!r}); ids must resolve to exactly one run"
                         )
                     id_runs[record_id] = run_id
-    return evidence_runs, metric_runs
+                    if id_field == "metric_snapshot_id":
+                        metric_evidence[record_id] = record.get("evidence_id")
+    return evidence_runs, metric_runs, metric_evidence
 
 
-def resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids):
+def resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence=None):
     """Return problem strings for one structured evidence ref (empty when the
     ref resolves). Evidence and metric snapshots must live in the run the ref
     names — the ADR 0020 ref shape carries research_run_id precisely so
-    provenance cannot float across runs. Video packs may be workspace-level,
-    so they resolve by id alone."""
+    provenance cannot float across runs — and each referenced snapshot must
+    snapshot the ref's own evidence, not another record's. Video packs may be
+    workspace-level, so they resolve by id alone."""
     problems = []
     ref_run = ref["research_run_id"]
     evidence_id = ref["evidence_id"]
@@ -875,6 +959,15 @@ def resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids):
             problems.append(
                 f"metric snapshot ref {metric_id!r} resolves to run "
                 f"{metric_run!r}, but the ref names run {ref_run!r}"
+            )
+        elif (
+            metric_evidence is not None
+            and metric_evidence.get(metric_id) != evidence_id
+        ):
+            problems.append(
+                f"metric snapshot ref {metric_id!r} snapshots evidence "
+                f"{metric_evidence.get(metric_id)!r}, not the ref's evidence "
+                f"{evidence_id!r}"
             )
     for pack_id in ref.get("video_understanding_pack_ids", []):
         if pack_id not in video_pack_ids:
@@ -913,8 +1006,25 @@ def collect_finding_ids(workspace_dir):
 
 def collect_video_pack_ids(workspace_dir):
     """Video Understanding Pack ids resolve to <pack-id>.json files, either in
-    the workspace-level pack directory or inside a run folder."""
+    the workspace-level pack directory or inside a run folder. The file is
+    read and its video_understanding_pack_id must match the filename stem, so
+    a ref cannot resolve through a mislabeled or malformed pack file."""
     research_dir = Path(workspace_dir) / "research"
-    pack_ids = {path.stem for path in research_dir.glob("video-understanding-packs/*.json")}
-    pack_ids |= {path.stem for path in research_dir.glob("runs/*/video-understanding-packs/*.json")}
+    pack_ids = set()
+    for pattern in (
+        "video-understanding-packs/*.json",
+        "runs/*/video-understanding-packs/*.json",
+    ):
+        for path in sorted(research_dir.glob(pattern)):
+            try:
+                record = load_json(path)
+            except json.JSONDecodeError as exc:
+                raise ValidationError(f"{path}: invalid JSON: {exc}") from None
+            pack_id = record.get("video_understanding_pack_id")
+            if pack_id != path.stem:
+                raise ValidationError(
+                    f"{path}: filename does not match "
+                    f"video_understanding_pack_id {pack_id!r}"
+                )
+            pack_ids.add(pack_id)
     return pack_ids

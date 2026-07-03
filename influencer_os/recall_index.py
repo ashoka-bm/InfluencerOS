@@ -28,7 +28,8 @@ INDEX_DB_RELATIVE = Path("index") / "influencer-os.sqlite"
 # Record types whose bare id must resolve to exactly one source locator.
 # Finding ids are exempt: a finding may live in findings.md and also be
 # promoted into a stable-finding file, and the recall draft resolves
-# finding_id to "findings.md section or stable finding metadata".
+# finding_id to "findings.md section or stable finding metadata". The
+# stable_finding_id itself is unique — one stable-finding file per id.
 UNIQUE_RECORD_TYPES = frozenset({
     "research-evidence",
     "metric-snapshot",
@@ -37,6 +38,7 @@ UNIQUE_RECORD_TYPES = frozenset({
     "project",
     "video-understanding-pack",
     "content-card",
+    "stable-finding",
 })
 
 INDEX_COLUMNS = (

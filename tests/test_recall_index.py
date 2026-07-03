@@ -175,6 +175,22 @@ class RecallIndexFailClosedTests(unittest.TestCase):
                 collect_index_rows(workspace_dir)
             self.assertIn("more than one source", str(ctx.exception))
 
+    def test_duplicate_stable_finding_id_fails_closed(self):
+        # Two stable-finding files carrying the same stable_finding_id make
+        # bare-id resolution ambiguous; rest validation also rejects this via
+        # the filename==id rule, and the projection defends itself too.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            stable_dir = workspace_dir / "research" / "stable-findings"
+            original = stable_dir / "stable_finding_luna_fit_001.md"
+            (stable_dir / "stable_finding_luna_fit_copy.md").write_text(
+                original.read_text()
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("more than one source", str(ctx.exception))
+
     def test_malformed_jsonl_fails_closed_with_line(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)

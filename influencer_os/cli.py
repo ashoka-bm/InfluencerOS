@@ -132,6 +132,8 @@ def main(argv=None):
                 result = validate_queue(args.path)
                 print(f"Validated idea queue: {result['manifest_path']}")
                 print(f"Checked {result['entry_count']} queue entries.")
+                for warning in result.get("warnings", []):
+                    print(warning, file=sys.stderr)
                 return 0
             if args.target == "board":
                 if not args.path:

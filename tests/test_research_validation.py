@@ -1198,6 +1198,252 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             validate_research(workspace_dir)
 
 
+class ValidatorPathParityTests(unittest.TestCase):
+    """Five-slice review: the queue and research paths run the same
+    promotion check set, so no promotion state validates on one command
+    and fails the other."""
+
+    def promotion_path(self, workspace_dir, promotion_id=PROMOTION_ID):
+        return (
+            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+        )
+
+    def test_queue_rejects_superseded_promotion_with_dangling_entry(self):
+        # Previously only active promotions were entry-checked on the queue
+        # path; a superseded promotion with a ghost entry passed validate
+        # queue while validate research rejected it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promo2 = load_example("idea-promotion")
+            promo2["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            promo2["promotion_status"] = "superseded"
+            promo2["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_ghost"
+            promo2["project_ids_created"] = []
+            promo2["schedule_slot_ids"] = []
+            write_json(
+                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                promo2,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn(
+                "does not point to a real idea queue entry", str(ctx.exception)
+            )
+
+    def test_queue_rejects_foreign_creator_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo.__setitem__(
+                    "creator_profile_id", "creator_other"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("creator_other", str(ctx.exception))
+
+    def test_queue_rejects_promotion_filename_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion_path = self.promotion_path(workspace_dir)
+            promotion_path.rename(
+                promotion_path.with_name("idea_promotion_luna_fit_wrong.json")
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("filename does not match idea_promotion_id", str(ctx.exception))
+
+    def test_queue_rejects_dangling_slot_claim(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo.__setitem__(
+                    "schedule_slot_ids", ["slot_luna_ghost"]
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("resolves to no schedule slot", str(ctx.exception))
+
+    def test_queue_reports_gate_warnings(self):
+        # The gate's human-approved unresolved-evidence warnings surface on
+        # the queue path too; previously validate_queue had no warnings
+        # channel at all.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo["evidence_refs"][0].__setitem__(
+                    "evidence_id", "evidence_luna_fit_never_existed"
+                ),
+            )
+
+            result = validate_queue(workspace_dir)
+            self.assertTrue(result["warnings"])
+            self.assertIn("unresolved evidence refs", result["warnings"][0])
+
+    def test_research_path_enforces_entry_closure(self):
+        # The slice 5 P1 closure (a promoted entry must leave production
+        # work behind) previously lived only in validate_queue; an active
+        # promotion with zero projects passed validate research.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
+            shutil.rmtree(workspace_dir / "projects" / PROJECT_ID)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo.__setitem__("project_ids_created", []),
+            )
+            entry_path = (
+                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            )
+            edit_json(
+                entry_path,
+                lambda entry: entry.__setitem__("linked_project_ids", []),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("no linked project", str(ctx.exception))
+
+
+class ResearchRecordLinkageTests(unittest.TestCase):
+    """Five-slice review: run records stay unambiguous and linked."""
+
+    def run_path(self, workspace_dir, filename):
+        return workspace_dir / "research" / "runs" / RUN_ID / filename
+
+    def test_duplicate_evidence_id_within_a_run_fails(self):
+        # A duplicated id passes set-based outputs reconciliation but makes
+        # every ref ambiguous and bricks the recall index rebuild.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            evidence_path = self.run_path(workspace_dir, "evidence.jsonl")
+            duplicate = load_example("research-evidence")
+            duplicate["source_summary"] = "Conflicting duplicate record."
+            with evidence_path.open("a") as handle:
+                handle.write(json.dumps(duplicate) + "\n")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("duplicate evidence_id values", str(ctx.exception))
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("duplicated within the run", str(ctx.exception))
+
+    def test_metric_snapshot_must_reference_run_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            snapshot = load_example("metric-snapshot")
+            snapshot["evidence_id"] = "evidence_luna_fit_ghost"
+            write_jsonl(
+                self.run_path(workspace_dir, "metric-snapshots.jsonl"), [snapshot]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("snapshots evidence", message)
+            self.assertIn("evidence_luna_fit_ghost", message)
+
+    def test_evidence_ref_pairing_must_match(self):
+        # A ref pairing evidence A with a snapshot of evidence B severs the
+        # metric trajectory; refs must cite snapshots of their own evidence.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            evidence_b = load_example("research-evidence")
+            evidence_b["evidence_id"] = "evidence_luna_fit_002"
+            with self.run_path(workspace_dir, "evidence.jsonl").open("a") as handle:
+                handle.write(json.dumps(evidence_b) + "\n")
+            snapshot_b = load_example("metric-snapshot")
+            snapshot_b["metric_snapshot_id"] = "metric_snapshot_luna_fit_002"
+            snapshot_b["evidence_id"] = "evidence_luna_fit_002"
+            with self.run_path(workspace_dir, "metric-snapshots.jsonl").open(
+                "a"
+            ) as handle:
+                handle.write(json.dumps(snapshot_b) + "\n")
+            edit_json(
+                self.run_path(workspace_dir, "research-run.json"),
+                lambda run: (
+                    run["outputs"]["evidence_ids"].append("evidence_luna_fit_002"),
+                    run["outputs"]["metric_snapshot_ids"].append(
+                        "metric_snapshot_luna_fit_002"
+                    ),
+                ),
+            )
+            entry_path = (
+                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            )
+            edit_json(
+                entry_path,
+                lambda entry: entry["evidence_refs"][0].__setitem__(
+                    "metric_snapshot_ids", ["metric_snapshot_luna_fit_002"]
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("not the ref's evidence", str(ctx.exception))
+
+    def test_slot_claims_fail_cleanly_on_malformed_schedule(self):
+        # Reachable from validate project, which does not otherwise validate
+        # the schedule: a slot missing its status must fail with a validation
+        # error, not crash with a KeyError.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].pop("status"),
+            )
+
+            with self.assertRaises(ValidationError):
+                validate_queue(workspace_dir)
+
+    def test_video_pack_id_must_match_filename(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            pack_path = (
+                workspace_dir
+                / "research"
+                / "video-understanding-packs"
+                / "video_research_luna_fit_001.json"
+            )
+            edit_json(
+                pack_path,
+                lambda pack: pack.__setitem__(
+                    "video_understanding_pack_id", "video_research_luna_fit_999"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn(
+                "filename does not match video_understanding_pack_id",
+                str(ctx.exception),
+            )
+
+    def test_stable_finding_filename_must_match_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            stable_dir = workspace_dir / "research" / "stable-findings"
+            (stable_dir / "stable_finding_luna_fit_001.md").rename(
+                stable_dir / "wrong-name.md"
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn(
+                "filename does not match stable_finding_id", str(ctx.exception)
+            )
+
+
 class ResearchCliTests(unittest.TestCase):
     def run_cli(self, *args):
         return subprocess.run(

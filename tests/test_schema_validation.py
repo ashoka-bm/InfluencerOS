@@ -115,6 +115,17 @@ class SchemaValidationTests(unittest.TestCase):
         valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
         validate_record("creator-workspace", valid)
 
+    def test_idea_promotion_requires_evidence_refs(self):
+        # Projects resolve evidence provenance transitively through the
+        # locked promotion, so a promotion with no evidence refs would sever
+        # the Product Invariant's research-evidence trace silently.
+        example = load_json("examples/idea-promotion.example.json")
+        invalid = deepcopy(example)
+        invalid["evidence_refs"] = []
+
+        with self.assertRaises(ValidationError):
+            validate_record("idea-promotion", invalid)
+
     def test_video_style_primary_is_optional_for_text_first_creators(self):
         example = load_json("examples/creator-profile.example.json")
         text_first = deepcopy(example)
