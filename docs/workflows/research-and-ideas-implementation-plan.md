@@ -5,6 +5,8 @@ Status: **Slice 3 complete (2026-07-03).** The schema surface of this plan
 the user-approved Execution Decisions below; the verification record lives in
 `docs/os-construction/progress.md`. Steps 7-10 (recall index, board rebuild,
 prune) execute with slice 4, the Research Findings and Idea Queue workflow.
+A post-landing review hardening batch closed the findings recorded in
+Post-Review Hardening below (same day).
 Last updated: 2026-07-03
 
 ## Goal
@@ -825,3 +827,55 @@ Execution batches, guardrails first:
   `selected-content-idea`, doc/skill vocabulary updates, registry and
   context-matrix reconciliation, and the full exit-criteria run recorded in
   `docs/os-construction/progress.md`.
+
+## Post-Review Hardening (User-Approved 2026-07-03)
+
+An adversarial post-landing review (schema-vs-plan conformance plus a code
+correctness pass) confirmed the slice landed per the Execution Decisions and
+surfaced the gaps below; one approved batch closed them the same day.
+
+Fixed:
+
+1. The promotion gate and `validate queue` now resolve
+   `video_understanding_pack_ids` in `evidence_refs` (against
+   `research/video-understanding-packs/` and
+   `research/runs/<run-id>/video-understanding-packs/`). Before the fix a
+   promotion citing a nonexistent video pack validated silently, leaving the
+   Product Invariant's video-evidence trace unenforced at the research layer.
+2. The enum drift check now pins `project.schema.json`'s cached
+   `source_platforms`/`source_platform_content_types` enum copies —
+   previously the only embeddings outside the drift test's scan, despite
+   Execution Decision 5 requiring every occurrence pinned.
+3. Project warnings enforce the pairing rule this plan states: `project_id`
+   and `idea_promotion_id` appear together when a warning targets promoted
+   work, and neither for queue-level warnings. The schema cannot express the
+   semantic trigger, so the check lives in JSONL validation with `path:line`
+   context.
+4. The raw run-JSONL id scan (`collect_research_record_ids`, reachable from
+   `validate queue` and `validate project` without prior schema validation)
+   reports file and line on malformed JSON and on records missing their id
+   field, instead of surfacing a bare `json.loads` error.
+5. Run folder names must match `research_run_id`, matching the filename==id
+   rule entries and promotions already enforce.
+6. Queue manifest `status_counts`, when present, must match entry statuses
+   (explicit zero counts are allowed; omitting a present status fails).
+7. JSONL splitting uses newline-only splitting; `splitlines()` broke records
+   on raw U+2028/U+2029, which are legal inside JSON strings.
+8. Sixteen tests pin previously untested failure paths: the six promotion
+   resolution/cached-ref failure modes in `projects.py`, invalid-JSON JSONL
+   lines, stable-finding schema failures, and each fix above.
+
+Deferred to slice 4 (with the recall index, which subsumes most of them):
+
+- per-record `research_run_id` checked against the containing run folder,
+- `evidence_refs[].research_run_id` resolution (today refs resolve through a
+  global id pool across runs),
+- reconciling `research-run.json` `outputs` id lists against the run's JSONL
+  contents.
+
+Open question (explicitly not decided in this batch): nothing compares a
+Project's `target_formats`/`platform_targets` to the locked promotion's
+`approved_formats`/`approved_platforms`. If the approval snapshot is meant to
+constrain project targets, that cross-check is a deliberate follow-up; if
+projects may diverge from the approved surface, record that rule here and in
+the workflow doc when decided.

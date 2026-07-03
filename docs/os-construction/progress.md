@@ -92,9 +92,11 @@ Completed:
 
 - ADR 0020 research module schema slice (slice 3, 2026-07-03, per the user-approved Execution Decisions in `docs/workflows/research-and-ideas-implementation-plan.md`, batches A-D): 18 new schemas and luna-fit examples landed as one coherent set (content schedule, research run, JSONL evidence and metric snapshots, findings and stable-finding frontmatter, five intelligence files, idea queue entry and manifest, idea promotion, project warning, content board, automation-run and system-event record shapes); the validator gained a fail-closed `date-time` format; an enum drift check pins every research schema's platform/content-type enum to the canonical ADR 0020 constants; `influencer_os/research.py` validates JSONL line by line, findings frontmatter (scoped YAML subset, no third-party dependency) with the summary char limit, queue manifest/entry consistency with evidence resolution, and the promotion gate (a promotion must point to a real queue entry; unresolved evidence warns for human-approved promotions and fails for automated paths) via `validate research` and `validate queue`; the project schema migrated to the new status ladder (`created` → `planning` → `ready_for_generation` → `generated` → `packaged` → ...) with `source_refs` anchored on `idea_promotion_id` (cached deeper refs must match the locked promotion), the `idea/` folder replaced by `evidence-brief.md`, and the applied template, four production plans, and output package swapped `selected_content_idea_id` for `idea_promotion_id`; `init-creator` scaffolds the research/boards/system layout with `boards/` and `system/` schema-pinned; `content-idea-set` and `selected-content-idea` are marked deprecated compatibility artifacts; the three live fixture workspaces were migrated and repaired to validate (missing `claude_skills` keys, missing thin `CLAUDE.md` wrappers, one misfiled media intake). Steps 7-10 of the implementation sequence (recall index, board rebuild, prune) defer to slice 4.
 
+- Addressed the slice 3 post-landing review (2026-07-03; findings recorded in the slice plan): the promotion gate and queue validation now resolve `video_understanding_pack_ids` (a promotion citing a nonexistent video pack warned nothing before — the Product Invariant's video-evidence trace was unenforced); the enum drift check extends to `project.schema.json`'s cached `source_platforms`/`source_platform_content_types` copies (previously the only unpinned embeddings); project warnings enforce the ADR 0020 pairing rule (`project_id` and `idea_promotion_id` together for promoted work, neither for queue-level warnings); the raw run-JSONL id scan reports file and line on malformed JSON instead of a bare decode error reachable from `validate queue`/`validate project`; run folder names must match `research_run_id` (the entries/promotions filename==id pattern); queue manifest `status_counts` are verified against entry statuses; JSONL splitting no longer breaks on raw U+2028/U+2029 inside JSON strings; and 16 tests pin the previously untested failure paths (promotion resolution and cached-ref mismatches in `projects.py`, invalid-JSON JSONL, stable-finding schema failures).
+
 Remaining:
 
-- Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3), then the remaining Phase 1 slices in roadmap order.
+- Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
 
 ### Phase 2: Learning OS
 
@@ -269,6 +271,12 @@ paths), research state (6 records), idea queue (1 entry), and the
 promotion-anchored project (10 checked paths) all validate with zero
 promotion-gate warnings, since the fixture run evidence resolves; the three
 live fixture workspaces validate after migration.
+Slice 3 review hardening (2026-07-03): 177 tests pass (16 added, all
+review findings reproduced as failing probes before the fix — an
+unresolvable video pack ref, a lone `project_id` warning, a mismatched
+run folder, stale `status_counts`, malformed run JSONL, and the six
+promotion failure paths in `projects.py`); 38 example records and the
+three live fixture workspaces still validate unchanged.
 ```
 
 ## Next Work Queue

@@ -31,24 +31,42 @@ SYSTEM_JSONL_FILES = (
 )
 
 
-def validate_jsonl_file(schema_name, path):
+def _iter_jsonl_lines(path):
+    # Split on newlines only: splitlines() would also break on U+2028/U+2029,
+    # which are legal inside JSON strings, corrupting records and line numbers.
+    for line_number, line in enumerate(path.read_text().split("\n"), start=1):
+        if line.strip():
+            yield line_number, line
+
+
+def validate_jsonl_file(schema_name, path, record_check=None):
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Missing JSONL file: {path}")
     records = []
-    for line_number, line in enumerate(path.read_text().splitlines(), start=1):
-        if not line.strip():
-            continue
+    for line_number, line in _iter_jsonl_lines(path):
         try:
             record = json.loads(line)
         except json.JSONDecodeError as exc:
             raise ValidationError(f"{path}:{line_number}: invalid JSON: {exc}") from None
         try:
             validate_record(schema_name, record)
+            if record_check is not None:
+                record_check(record)
         except ValidationError as exc:
             raise ValidationError(f"{path}:{line_number}: {exc}") from None
         records.append(record)
     return records
+
+
+def check_project_warning_pairing(record):
+    """A warning targeting promoted work carries both project_id and
+    idea_promotion_id; a queue-level warning carries neither (ADR 0020)."""
+    if ("project_id" in record) != ("idea_promotion_id" in record):
+        raise ValidationError(
+            "project warning must carry both project_id and idea_promotion_id "
+            "when it targets promoted work, and neither for queue-level warnings"
+        )
 
 
 def parse_frontmatter(path):
@@ -161,6 +179,13 @@ def validate_research(workspace_path):
             if not run_manifest.exists():
                 raise ValidationError(f"Research run folder has no research-run.json: {run_dir}")
             validate_file("research-run", run_manifest)
+            run_record = load_json(run_manifest)
+            if run_record["research_run_id"] != run_dir.name:
+                raise ValidationError(
+                    f"{run_manifest}: folder name {run_dir.name!r} does not match "
+                    f"research_run_id {run_record['research_run_id']!r} "
+                    "(layout is research/runs/<research-run-id>/)"
+                )
             checked.append(str(run_manifest.relative_to(workspace_dir)))
             for filename, schema_name in RESEARCH_JSONL_FILES:
                 jsonl_path = run_dir / filename
@@ -182,7 +207,10 @@ def validate_research(workspace_path):
     for filename, schema_name in SYSTEM_JSONL_FILES:
         system_path = workspace_dir / "system" / filename
         if system_path.exists():
-            validate_jsonl_file(schema_name, system_path)
+            record_check = (
+                check_project_warning_pairing if schema_name == "project-warning" else None
+            )
+            validate_jsonl_file(schema_name, system_path, record_check=record_check)
             checked.append(str(system_path.relative_to(workspace_dir)))
 
     warnings, promotion_paths = validate_promotions(workspace_dir)
@@ -231,7 +259,25 @@ def validate_queue(workspace_path):
                 f"{entries[entry_id]['status']!r} for {entry_id}"
             )
 
+    status_counts = manifest.get("status_counts")
+    if status_counts is not None:
+        actual_counts = {}
+        for status in manifest_refs.values():
+            actual_counts[status] = actual_counts.get(status, 0) + 1
+        for status, count in status_counts.items():
+            if actual_counts.get(status, 0) != count:
+                raise ValidationError(
+                    f"Queue manifest status_counts[{status!r}] is {count}, but "
+                    f"{actual_counts.get(status, 0)} entries have that status"
+                )
+        uncounted = sorted(set(actual_counts) - set(status_counts))
+        if uncounted:
+            raise ValidationError(
+                f"Queue manifest status_counts omit statuses present in the queue: {uncounted}"
+            )
+
     evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
+    video_pack_ids = collect_video_pack_ids(workspace_dir)
     for entry in entries.values():
         for ref in entry["evidence_refs"]:
             if ref["evidence_id"] not in evidence_ids:
@@ -244,6 +290,12 @@ def validate_queue(workspace_path):
                     raise ValidationError(
                         f"{entry['idea_queue_entry_id']}: metric snapshot ref {metric_id!r} "
                         "does not resolve to any research run metric snapshot"
+                    )
+            for pack_id in ref.get("video_understanding_pack_ids", []):
+                if pack_id not in video_pack_ids:
+                    raise ValidationError(
+                        f"{entry['idea_queue_entry_id']}: video understanding pack ref "
+                        f"{pack_id!r} does not resolve to a video-understanding-pack record"
                     )
 
     return {
@@ -276,6 +328,7 @@ def validate_promotion_gate(workspace_dir, promotion):
         raise ValidationError(f"{entry_path}: {exc}") from None
 
     evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
+    video_pack_ids = collect_video_pack_ids(workspace_dir)
     unresolved = []
     for ref in promotion["evidence_refs"]:
         if ref["evidence_id"] not in evidence_ids:
@@ -284,6 +337,11 @@ def validate_promotion_gate(workspace_dir, promotion):
             metric_id
             for metric_id in ref.get("metric_snapshot_ids", [])
             if metric_id not in metric_ids
+        )
+        unresolved.extend(
+            pack_id
+            for pack_id in ref.get("video_understanding_pack_ids", [])
+            if pack_id not in video_pack_ids
         )
     if unresolved:
         message = (
@@ -325,12 +383,31 @@ def collect_research_record_ids(workspace_dir):
     metric_ids = set()
     runs_dir = Path(workspace_dir) / "research" / "runs"
     if runs_dir.exists():
-        for jsonl_path in runs_dir.glob("*/evidence.jsonl"):
-            for line in jsonl_path.read_text().splitlines():
-                if line.strip():
-                    evidence_ids.add(json.loads(line).get("evidence_id"))
-        for jsonl_path in runs_dir.glob("*/metric-snapshots.jsonl"):
-            for line in jsonl_path.read_text().splitlines():
-                if line.strip():
-                    metric_ids.add(json.loads(line).get("metric_snapshot_id"))
+        scans = (
+            ("evidence.jsonl", "evidence_id", evidence_ids),
+            ("metric-snapshots.jsonl", "metric_snapshot_id", metric_ids),
+        )
+        for filename, id_field, ids in scans:
+            for jsonl_path in sorted(runs_dir.glob(f"*/{filename}")):
+                for line_number, line in _iter_jsonl_lines(jsonl_path):
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        raise ValidationError(
+                            f"{jsonl_path}:{line_number}: invalid JSON: {exc}"
+                        ) from None
+                    if id_field not in record:
+                        raise ValidationError(
+                            f"{jsonl_path}:{line_number}: record has no {id_field}"
+                        )
+                    ids.add(record[id_field])
     return evidence_ids, metric_ids
+
+
+def collect_video_pack_ids(workspace_dir):
+    """Video Understanding Pack ids resolve to <pack-id>.json files, either in
+    the workspace-level pack directory or inside a run folder."""
+    research_dir = Path(workspace_dir) / "research"
+    pack_ids = {path.stem for path in research_dir.glob("video-understanding-packs/*.json")}
+    pack_ids |= {path.stem for path in research_dir.glob("runs/*/video-understanding-packs/*.json")}
+    return pack_ids

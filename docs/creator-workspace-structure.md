@@ -180,8 +180,9 @@ the project must match it. A video pack id in project or output-package
 `reference_asset_id` must exist in `references/reference-library.json`;
 `validate project` fails on a dangling reference. `validate research` and
 `validate queue` cover the research records, and the promotion gate warns on
-unresolved evidence for human-approved promotions while failing any future
-automated promotion path.
+unresolved evidence (evidence ids, metric snapshot ids, and video pack ids
+alike) for human-approved promotions while failing any future automated
+promotion path.
 
 Shared local indexes may live outside individual creator folders:
 

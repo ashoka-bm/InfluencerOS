@@ -681,6 +681,91 @@ class PropagationTests(unittest.TestCase):
 
 
 class ProvenanceResolutionTests(unittest.TestCase):
+    def test_validate_project_rejects_missing_promotion_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+            )
+            promotion_path.unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("does not resolve", str(ctx.exception))
+
+    def test_validate_project_rejects_promotion_id_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+            )
+            rewrite_json(
+                promotion_path,
+                lambda promotion: promotion.update(idea_promotion_id="idea_promotion_other_001"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("idea_promotion_other_001", str(ctx.exception))
+
+    def test_validate_project_rejects_promotion_creator_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+            )
+            rewrite_json(
+                promotion_path,
+                lambda promotion: promotion.update(creator_profile_id="creator_other"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("creator_profile_id does not match project", str(ctx.exception))
+
+    def test_validate_project_rejects_project_not_listed_in_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+            )
+            rewrite_json(
+                promotion_path,
+                lambda promotion: promotion.update(project_ids_created=["project_other_001"]),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("project_ids_created", str(ctx.exception))
+
+    def test_validate_project_rejects_cached_queue_entry_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["source_refs"].update(
+                    idea_queue_entry_id="idea_queue_entry_other_001"
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("Cached idea_queue_entry_id", str(ctx.exception))
+
+    def test_validate_project_rejects_cached_refs_beyond_the_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["source_refs"]["research_evidence_ids"].append(
+                    "evidence_luna_fit_uncarried"
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("evidence_luna_fit_uncarried", str(ctx.exception))
+
     def test_validate_project_rejects_dangling_reference_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)

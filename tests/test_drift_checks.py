@@ -28,10 +28,14 @@ RESEARCH_MODULE_SCHEMAS = (
     "idea-queue-entry", "idea-queue", "idea-promotion", "project-warning",
     "content-board", "automation-run", "system-event",
 )
+# project.schema.json caches both enums in source_refs (source_platforms /
+# source_platform_content_types); those copies must stay pinned too.
+ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + ("project",)
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",
-    "platform_recommendations", "preferred_platforms",
+    "platform_recommendations", "preferred_platforms", "source_platforms",
 }
+CONTENT_TYPE_PROPERTY_NAMES = {"platform_content_type", "source_platform_content_types"}
 
 # The canonical read order lives once in AGENTS.md (ADR 0019). This list is the
 # drift check's fixed expectation: removing a doc from AGENTS.md fails here.
@@ -252,7 +256,7 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     continue
                 if prop_name in PLATFORM_PROPERTY_NAMES and "enum" in target:
                     yield f"{path}.{prop_name}", "platform", target["enum"]
-                if prop_name == "platform_content_type" and "enum" in target:
+                if prop_name in CONTENT_TYPE_PROPERTY_NAMES and "enum" in target:
                     yield f"{path}.{prop_name}", "content_type", target["enum"]
             for key, child in node.items():
                 yield from self.iter_platform_enums(child, f"{path}.{key}")
@@ -263,7 +267,7 @@ class ResearchEnumDriftTests(unittest.TestCase):
     def test_every_research_schema_matches_the_canonical_enums(self):
         expected = {"platform": RESEARCH_PLATFORMS, "content_type": RESEARCH_CONTENT_TYPES}
         found_any = {"platform": False, "content_type": False}
-        for schema_name in RESEARCH_MODULE_SCHEMAS:
+        for schema_name in ENUM_PINNED_SCHEMAS:
             schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
             for location, kind, values in self.iter_platform_enums(schema, schema_name):
                 found_any[kind] = True
