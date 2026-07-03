@@ -1,6 +1,8 @@
 # Short-Term Plan: Parity Hardening
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
+
+Status: **Complete (2026-07-03).** All workstreams 0-15 landed via execution batches A-G; the verification record and exit-criteria run live in `docs/os-construction/progress.md`. This plan is retained as the Phase 0C record. Next work: Phase 1 slice 1 (master intake import) per the roadmap.
 
 ## Goal
 

@@ -71,7 +71,7 @@ Remaining:
 
 ### Phase 0C: Parity Hardening
 
-This is the next short-term work.
+Complete (2026-07-03). All exit criteria below pass; `docs/os-construction/progress.md` records the run.
 
 Exit criteria (each maps to a command or test; nothing exits on "documented"):
 

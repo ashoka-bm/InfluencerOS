@@ -10,7 +10,7 @@ This file tracks repo-level product progress. It is public project state. Privat
 
 Goal: Make the repo self-orienting for future agents before deeper implementation.
 
-Status: In progress.
+Status: Complete (2026-07-03). Phase 0C parity hardening exited with all roadmap criteria passing; see Current Verification below.
 
 Completed:
 
@@ -44,6 +44,7 @@ Completed:
 - Recorded the Phase 0C execution decisions and batch order in the short-term plan: validator subset with fail-closed unknown keywords, 2,500-character memory cap at root and creator scope, `[PLANNED]` halt markers with a Phase 1 build obligation for the producer skills, reference-only copy policy, subagent-pattern deferral, and no PRD-to-issues conversion.
 - Added drift checks (`tests/test_drift_checks.py`, Batch A / workstreams 1, 3, 4, 8): adapter read order and imports per ADR 0019, bidirectional skill-registry coverage including future-table enforcement, and context-matrix coverage against known workflow rows.
 - Hardened the validator (Batch B / workstream 13): fail-closed schema subset with intra-file `$ref` to `#/definitions`, `oneOf`, `anyOf`, and `allOf`; unknown keywords, type names, formats, and unsupported construct forms raise `SchemaDefinitionError` instead of silently passing; example coverage is derived from disk so every schema requires a matching example and vice versa.
+- Closed out Phase 0C (Batch G / workstream 15): inspected the reference `.claude/agents/` (four typed subagents) and `.claude/commands/` (`/start-here`, `/archive-gsd`) and added copy-plan rows (subagents: defer, ADR only on adoption by a Phase 1 producer; commands: do not copy now); recorded the reference-only copy policy in the copy plan; updated the architecture-map subagent decision to reference the classification; refreshed the parity plan's gap audit (all success criteria met 2026-07-03); reviewed the comparison map framing against the copy plan and decisions; and re-ran every roadmap Phase 0C exit criterion end to end.
 - Built the propagation mechanism (Batch F / workstream 11, ADR 0018): `update-creators` refreshes baseline skill copies across every Creator Workspace with a backup-protected sync (replaced skill folders are copied to `.claude/skills-backup/<skill-name>/` before refresh) while preserving `SKILL.local.md` files, creator-only skills, and all creator state; `init-creator` writes thin workspace `AGENTS.md`/`CLAUDE.md` wrappers; `creator-workspace.schema.json` now requires the `.claude/skills/` directory (closing the missing-directory gap); and gated zones (scripts, settings, hooks, cron) are documented as inert with a test asserting no gated-zone content is scaffolded.
 - Formalized the conductor call graph (Batch E / workstream 10, ADR 0017): both conductors declare `dependencies` frontmatter; `skills/influencer-os/SKILL.md` carries a `## Dependencies` table and a `## Phase Owners` table naming an owner skill per producing phase with explicit `Skill(skill: "...")` invocations; the six Phase 1 producers and `distill-creator-learning` are `[PLANNED]` halt markers per the execution decisions (halt and surface the missing skill, never improvise); a drift check fails if a conductor names a skill neither on disk nor `[PLANNED]`-marked, requires the halt rule, requires registration, and diffs conductor frontmatter against the `architecture-map.md` call graph. The architecture map's call-graph fence was renumbered to the conductor's actual phases and stale BUILT/PLANNED statuses from batches A-D were refreshed.
 - Built the self-improvement loop (Batch D / workstreams 9, 7, and the workstream 5 residue, ADR 0016): `skills/wrap-up` and `skills/memory-write` exist with registry and context-matrix rows; `python3 -m influencer_os log-learning` appends dated, deduplicated per-skill entries to `context/learnings.md`; `python3 -m influencer_os memory-write` performs deduplicated `MEMORY.md` writes and refuses any write past the 2,500-byte cap; both conductors carry `## Rules` and `## Self-Update`; a worked `skills/influencer-os/SKILL.local.md` exists; Tier 0 creator recall rules are defined in `docs/creator-workspace-structure.md`; and drift checks now enforce the root memory cap, the conductor sections, and the local-override example. Root `context/MEMORY.md` was refreshed, fixing the stale line that named the wrong repo as the Agentic OS source of truth.
@@ -51,19 +52,13 @@ Completed:
 
 Remaining:
 
-- Finish Phase 0C parity hardening from `docs/os-construction/short-term-plan.md`.
-- Add the remaining drift checks: conductor call graph (workstream 10) and creator runtime sync (workstream 11).
-- Implement parity-review workstreams 9-15 (self-learning skills, machine-actionable call graph, propagation build-out, determinism fixes, validator hardening, acceptance-criteria determinism, copy-plan coverage) from `docs/os-construction/short-term-plan.md`. Category prefixes (decided against, ADR 0017) and the propagation mechanism (approved, ADR 0018) are now resolved.
-- Update architecture maps after parity hardening changes.
-- Review `docs/os-construction/maps/agentic-os-vs-influencer-os.md` before creating its Excalidraw scene.
-- Use `docs/os-construction/short-term-plan.md` as the next-agent handoff.
-- Add ADRs for any new divergences from Agentic OS.
+- Optional: render the comparison map Excalidraw scene (framing reviewed 2026-07-03).
 
 ### Phase 1: Planning OS
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: Contracted and partially scaffolded. New Planning OS implementation is blocked until Phase 0C parity hardening is complete.
+Status: Contracted and partially scaffolded. Phase 0C parity hardening is complete (2026-07-03); the roadmap entry criteria are met and implementation may start with the master intake import slice.
 
 Completed:
 
@@ -186,6 +181,7 @@ cp examples/micro-journey-video-plan.example.json .tmp/creators/luna-fit/project
 cp examples/base-video-generation-plan.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/generation-plan.json
 python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day
 python3 -m influencer_os validate record output-package examples/output-package.example.json
+python3 -m influencer_os update-creators --workspace-root .tmp/creators
 ```
 
 Latest validation result:
@@ -205,13 +201,16 @@ Validator hardening: 18 new tests cover $ref/oneOf/anyOf/allOf enforcement,
 fail-closed unknown keywords/formats/types, and disk-derived example coverage
 (a schema without an example now fails validation).
 No stale old creator-skill runtime paths found outside historical adversarial-review notes.
+Phase 0C exit (2026-07-03): every roadmap exit criterion re-run end to end and
+passing — 86-test suite, 20 example records, 18 drift checks, full
+workspace/project/record workflow incl. update-creators (11 skills synced,
+11 backed up), and the stale-path check.
 ```
 
 ## Next Work Queue
 
-1. Finish Phase 0C with Batch G (workstream 15 and closeout): add copy-plan rows for the reference `.claude/agents/` and `.claude/commands/` per the execution decisions (reference-only copy policy; subagent pattern classified defer), reconcile remaining docs, review the comparison map framing, and run every roadmap Phase 0C exit criterion end to end, recording results here. Batches A-F are done.
-2. Update progress docs with parity verification results after each batch.
-3. After Phase 0C exits, start Phase 1 in the roadmap's slice order: master intake import first.
+1. Phase 0C is complete. Start Phase 1 (Planning OS) in the roadmap's slice order: master intake import first, then creator readiness validation, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
+2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
 

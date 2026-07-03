@@ -21,3 +21,4 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### wrap-up
 
 - 2026-07-03: Batch D built the self-improvement loop: log-learning and memory-write CLIs are the deterministic writers behind the wrap-up and memory-write skills.
+- 2026-07-03: Phase 0C closed via batches A-G; the exit-criteria run is the wrap-up verification pattern: suite, examples, drift checks, full workflow, stale-path check.

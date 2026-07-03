@@ -136,7 +136,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Hooks | `.claude/hooks/` | [DEFERRED] | Explicit approval; memory-capture/skill-auto-commit only automate skills that already run manually. |
 | Cron | `cron/jobs/` | [DEFERRED] | Phase 4 Automation OS. |
 | Command Centre | `command-centre/` | [DEFERRED] | After file-first OS is stable + explicit scope approval. |
-| Subagents | `.claude/agents/` | [DEFERRED — decision pending] | See "Subagent decision" below; needs its own ADR before adoption. |
+| Subagents | `.claude/agents/` | [DEFERRED — classified defer, copy plan WS15] | See "Subagent decision" below; adoption ADR written only when a Phase 1 producer reaches for it. |
 | Anywhere-access | hosted APIs | [DEFERRED] | After Phase 4 + provider/security ADR. |
 | Propagation content zones | scripts/settings/hooks/cron in `add-client.sh` | [GATED — ADR 0018] | Each fills when its subsystem is un-deferred. |
 
@@ -248,4 +248,4 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 
 ## Subagent Decision (open)
 
-The reference ships a `.claude/agents/` subsystem (e.g. `ssc-designer`, `ssc-image-generator`) invoked via `Agent(tool: "...", inputs: {...})` — orchestrators delegate heavy sub-tasks to typed subagents that return structured objects. The copy plan never evaluated this subsystem. It is a candidate pattern for the [PLANNED] producer skills (e.g. a research subagent, an idea-generation subagent). This is **[DEFERRED — decision pending]**: adopting it is a divergence-test event and needs its own ADR before use. Placed here so the option is visible, not silently omitted.
+The reference ships a `.claude/agents/` subsystem (e.g. `ssc-designer`, `ssc-image-generator`) invoked via `Agent(tool: "...", inputs: {...})` — orchestrators delegate heavy sub-tasks to typed subagents that return structured objects. The copy plan classified this subsystem in workstream 15 (2026-07-03): **defer** — revisit when the first Phase 1 producer skill is built, and write the adoption ADR only if that build actually reaches for the pattern (adoption is a divergence-test event). It remains a candidate for the [PLANNED] producer skills (e.g. a research subagent, an idea-generation subagent). Placed here so the option is visible, not silently omitted.

@@ -1,6 +1,6 @@
 # Agentic OS Copy And Adaptation Plan
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 
 This audit compares InfluencerOS with the purchased Agentic OS reference at `/Users/ashokaji/code/External repos/Agentic Academy/agentic-os`.
 
@@ -34,6 +34,8 @@ Files and subsystems inspected in this rerun:
 - `scripts/update-clients.sh`
 - `cron/jobs/*.md`
 - `.claude/skills/*/SKILL.md`
+- `.claude/agents/*.md` (added 2026-07-03, workstream 15)
+- `.claude/commands/*.md` (added 2026-07-03, workstream 15)
 
 Audit result:
 
@@ -44,6 +46,8 @@ Audit result:
 ## Scope
 
 This file is a decision aid. It does not approve implementation by itself. New architecture changes still need the divergence test in `docs/os-construction/divergence-test.md` and an ADR or alignment-doc update when they depart from the purchased Agentic OS reference.
+
+Copy policy (user-approved execution decision, 2026-07-02): purchased Agentic OS files are reference-only. Nothing is copied verbatim into this repo; every adopted pattern is re-authored in InfluencerOS vocabulary. "copy exactly" rows adopt the convention, never the file contents.
 
 Reference files inspected:
 
@@ -75,6 +79,8 @@ Reference files inspected:
 | Inventories | Purchased Agentic OS keeps registries inside docs and app state. | InfluencerOS currently maps schemas, docs, skills, and runtime modules, but does not have machine-readable inventories. | adapt for InfluencerOS | Full environment inventories are outside product scope, but a schema/skill/workflow registry may reduce drift. | Add inventories only when drift appears. Start with docs tables before YAML unless automation needs machine-readable data. | proposed |
 | Hooks and automatic capture | Purchased Agentic OS uses Claude/Codex hooks for memory capture, session sync, branch guards, workflow guards, and notifications. | InfluencerOS has no hooks. It relies on manual docs, CLI validation, and explicit approval gates. | do not copy | Hooks would add hidden behavior and risk provider or privacy boundary violations before the product workflows are stable. | Do not add hooks in v1. Reconsider only for validation or memory capture after explicit approval. | accepted |
 | Installation and update machinery | Purchased Agentic OS has installer, updater, client sync, memory setup, cron setup, command-centre launchers, and backup/update safety behavior. | InfluencerOS is a product repo, not an installable Agentic OS distribution. It now has creator runtime skill sync, but no installer/updater distribution machinery. | adapt for InfluencerOS | Installer/updater machinery solves a different problem. The needed subset is creator skill sync for local creator-root execution. | Keep `sync-creator-runtime`; do not copy install/update scripts in Phase 0. | accepted |
+| `.claude/agents/` typed subagents | Purchased Agentic OS ships four typed subagents (`ssc-designer`, `ssc-image-generator`, `ssc-template-builder`, `l2s-content-packager`) that orchestrators spawn via `Agent(...)` for heavy sub-tasks; each declares name/description/tools frontmatter and returns a structured result. | InfluencerOS has no subagents; the content conductor routes to producer skills, six of which are `[PLANNED]` Phase 1 builds behind halt markers. | defer | The pattern is a real candidate for the Phase 1 producer skills (research, idea generation), but there is nothing to delegate to yet, and adopting it is a divergence-test event that needs its own ADR (user-approved execution decision, 2026-07-02). | Revisit when the first Phase 1 producer skill is built; write the adoption ADR only if that build actually reaches for the pattern. `architecture-map.md` records the same status. | accepted (defer) |
+| `.claude/commands/` slash commands | Purchased Agentic OS ships `/start-here` (first-run onboarding guard and entry point) and `/archive-gsd` (GSD project archival). | InfluencerOS has no slash commands; onboarding is the `create-influencer` conductor triggered by description, and GSD-style phased-execution tooling is not part of this product. | do not copy now | Commands are runtime-specific launchers, not architecture. InfluencerOS skills trigger by description per the skill registry. | Keep description-based skill triggering. Reconsider a `/start-here`-style entry command only if first-run onboarding friction is observed; `archive-gsd` has no InfluencerOS analog. | accepted |
 
 ## Resolved Immediate Decisions
 
@@ -86,7 +92,8 @@ Reference files inspected:
 1. Skill runtime layout: finalized in ADR 0017 — repo `skills/` is the baseline source; Creator Workspaces get copied runtime skills under `.claude/skills/`; skills add per-skill `references/` and machine-actionable `dependencies` frontmatter.
 2. Creator Workspace propagation: resolved in ADR 0018 — the full propagation mechanism is approved as CLI subcommands; skills and structure propagate now; scripts, settings, hooks, and cron content stay gated until un-deferred.
 3. Sync/update tooling: `sync-creator-runtime` refreshes baseline copied skills while preserving `SKILL.local.md` and creator-only skills; `update-creators` adds backup-protected batch refresh (ADR 0018).
-4. Skill naming: decided in ADR 0017 — no category prefixes; plain kebab-case names grouped by the skill-registry `category` column.
+4. Skill naming: decided in ADR 0017 — no category prefixes; plain kebab-case names grouped by the skill-registry section tables.
+5. Workstream 15 (2026-07-03): `.claude/agents/` and `.claude/commands/` inspected and classified above; the reference-only copy policy is recorded in the Scope section; the subagent pattern stays deferred with its ADR written only on adoption.
 
 ## Recommended Implementation Order
 

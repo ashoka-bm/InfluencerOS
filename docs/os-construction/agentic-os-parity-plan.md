@@ -89,46 +89,44 @@ Current assessment: none of these are true.
 
 ## Immediate Gap Audit
 
-Run a file-by-file parity audit against the Agentic OS baseline and classify each gap.
+Gap audit updated 2026-07-03 after Phase 0C batches A-F closed the parity workstreams.
 
 | Agentic OS pattern | Current InfluencerOS state | Gap | Next action |
 | --- | --- | --- | --- |
-| Root adapters | Present: `AGENTS.md`, `CLAUDE.md`, `SOUL.md`. | Need drift check. | Add lightweight adapter read-order check. |
-| Root context | Present: `context/`. | Needs memory budget and write rules. | Add context memory policy. |
-| Root brand context | Present: `brand_context/`. | Needs stronger templates/examples. | Expand only when doing OS marketing content. |
-| Context matrix | Present. | Needs Creator Workspace path specificity. | Harden matrix. |
-| Skill registry | Present. | Needs all skill rows and triggers verified. | Audit `skills/` against registry. |
-| Skill runtime layout | Repo source `skills/`; creator runtime copies under `.claude/skills/`. | Implemented for copied skills; category-prefix convention remains future. | Keep copied skill runtime; decide category prefixes before adding many new skills. |
-| Skill local overrides | Documented and copied runtime path exists. | Needs broader drift checks. | Add checks that runtime sync preserves `SKILL.local.md`. |
-| Multi-client architecture | Adapted to creators. | Skill propagation implemented; scripts/settings/hooks/cron still deferred. | Revisit broader propagation only with explicit approval. |
-| Projects/output consolidation | Partially defined. | Needs exact project folder layout. | Define selected idea through output package folders. |
-| Memory tiers | ADRs exist. | Tier 0 creator recall not operational. | Implement creator `MEMORY.md`, distilled learnings, progress load rules. |
-| Semantic recall | Contracted. | Not implemented. | Defer until Tier 0 and project layout are stable. |
+| Root adapters | Present: `AGENTS.md` canonical, `CLAUDE.md`/`SOUL.md` thin importers (ADR 0019). | None — adapter drift check built (`tests/test_drift_checks.py`). | Keep the check green. |
+| Root context | Present: `context/` with a 2,500-byte `MEMORY.md` cap enforced by `memory-write` and a drift check. | None. | Keep the cap check green. |
+| Root brand context | Present: `brand_context/`. | Stubs only. | Expand only when doing OS marketing content. |
+| Context matrix | Present with workspace paths and skill coverage. | None — coverage enforced by a drift check. | Keep the check green. |
+| Skill registry | Present; bidirectional coverage enforced, future table may not name on-disk skills. | None. | Keep the check green. |
+| Skill runtime layout | Repo source `skills/`; creator runtime copies under `.claude/skills/` (ADR 0017: no category prefixes). | None. | — |
+| Skill local overrides | Documented; worked `skills/influencer-os/SKILL.local.md` exists; sync preservation tested. | None. | — |
+| Multi-client architecture | Adapted to creators; `init-creator`/`sync-creator-runtime`/`update-creators` built with backups (ADR 0018). | Scripts/settings/hooks/cron zones stay inert by design. | Revisit gated zones only with explicit approval. |
+| Projects/output consolidation | Project paths pinned in `project.schema.json`; provenance IDs resolve to real records. | None for the transitional layout; ADR 0020 layout lands in Phase 1. | Build the research module slice in Phase 1. |
+| Memory tiers | Tier 0 rules defined (`docs/creator-workspace-structure.md`); writers built (`memory-write`, `log-learning`). | Operational creator usage begins with Phase 1 creator work. | Use the writers in Phase 1 workflows. |
+| Semantic recall | Contracted. | Not implemented. | Defer until Tier 0 usage and project layout are proven in Phase 1-2. |
 | Cron/scheduled workflows | Deferred. | Need job-definition pattern later. | Copy markdown job pattern in Automation OS phase. |
 | Hooks | Deferred. | Need explicit future approval. | Do not add in v1 without new ADR. |
 | Command Centre | Deferred. | None for v1. | Revisit after Automation OS. |
+| Subagents (`.claude/agents/`) | Classified defer (copy plan, workstream 15). | None for v1. | ADR only if a Phase 1 producer adopts the pattern. |
 | Provider boundaries | Present and stricter. | Needs provider registry later. | Add only when real adapters are introduced. |
 
 ## Recommended Next Step
 
-Run a focused parity hardening pass, not a rebuild.
-
-Order:
-
-1. Harden context matrix and skill registry against actual files.
-2. Define exact project output layout.
-3. Implement Tier 0 creator recall rules.
-4. Add adapter/context/skill registry/runtime sync drift checks.
-5. Then move into first Planning OS implementation slice.
+The parity hardening pass is complete (Phase 0C batches A-G; see
+`docs/os-construction/progress.md` for the verification record). Next: the
+first Planning OS implementation slice — master intake import — in the
+roadmap's Phase 1 slice order.
 
 ## Success Criteria
 
 InfluencerOS is ready for implementation when:
 
-- every existing skill is registered,
-- every registered skill has context-matrix coverage through an explicit skill row or the workflow row that invokes it,
-- copied creator runtime skills are implemented and verified,
-- root and creator memory policies are explicit,
-- creator override rules are reflected in workspace docs,
-- project output layout is deterministic,
-- tests or checks catch adapter, registry, and schema drift.
+- every existing skill is registered — met (drift check),
+- every registered skill has context-matrix coverage through an explicit skill row or the workflow row that invokes it — met (drift check),
+- copied creator runtime skills are implemented and verified — met (tests),
+- root and creator memory policies are explicit — met (byte cap + Tier 0 rules),
+- creator override rules are reflected in workspace docs — met,
+- project output layout is deterministic — met (schema-pinned paths + validation),
+- tests or checks catch adapter, registry, and schema drift — met (`tests/test_drift_checks.py`).
+
+All criteria met 2026-07-03.

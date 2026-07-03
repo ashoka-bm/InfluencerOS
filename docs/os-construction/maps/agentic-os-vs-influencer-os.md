@@ -1,6 +1,8 @@
 # Agentic OS vs InfluencerOS Architecture Comparison
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
+
+Framing reviewed 2026-07-03 (Phase 0C Batch G): the four lanes agree with `agentic-os-copy-plan.md` and the recorded execution decisions. The Excalidraw scene remains optional and pending.
 
 ## Purpose
 
@@ -100,7 +102,7 @@ The main adaptation is domain: Agentic OS is a general business assistant with m
 - General brand/business context becomes Creator Profile plus creator `brand_context/`.
 - Generic outputs become schema-backed records and Output Packages.
 - Broad session memory becomes creator-scoped memory with provenance.
-- Research becomes dated, sourced Social Research Packs and optional Video Understanding Packs.
+- Research becomes dated, sourced, platform-scoped research per ADR 0020 (Research Runs, Evidence, Findings, Idea Queue), with Social Research Packs and Video Understanding Packs as the transitional records until the Phase 1 research slice lands.
 - Provider integrations become explicit approval gates.
 - Skill routing becomes conductor skills tied to workflow records.
 - Agentic OS flywheel becomes InfluencerOS planning and learning loops.
@@ -114,6 +116,7 @@ The main adaptation is domain: Agentic OS is a general business assistant with m
 - Platform publishing/scheduling.
 - Provider-backed generation runtime.
 - Cross-creator learning aggregation.
+- Typed subagents (`.claude/agents/`) and slash commands (`.claude/commands/`) — classified in the copy plan (workstream 15); subagent adoption gets its own ADR only when a Phase 1 producer skill reaches for it.
 
 ## What We Reject For V1
 
