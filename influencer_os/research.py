@@ -81,7 +81,80 @@ def check_project_warning_pairing(record):
         )
 
 
-def check_project_warning_target_refs(record, workspace_dir):
+def collect_project_manifests(workspace_dir):
+    """Map project_id -> (manifest path, manifest) from projects/*/project.json.
+
+    Project folders are named by project_slug (`init-project` layout), so
+    resolution goes through each manifest's project_id; id-named folders in
+    older fixtures resolve the same way. A duplicate project_id fails closed
+    because it makes link resolution ambiguous."""
+    workspace_dir = Path(workspace_dir)
+    projects_dir = workspace_dir / "projects"
+    manifests = {}
+    if projects_dir.exists():
+        for manifest_path in sorted(projects_dir.glob("*/project.json")):
+            try:
+                record = load_json(manifest_path)
+            except json.JSONDecodeError as exc:
+                raise ValidationError(f"{manifest_path}: invalid JSON: {exc}") from None
+            project_id = record.get("project_id")
+            if not isinstance(project_id, str) or not project_id:
+                raise ValidationError(
+                    f"{manifest_path}: project manifest has no project_id"
+                )
+            if project_id in manifests:
+                raise ValidationError(
+                    f"project_id {project_id!r} appears more than once under "
+                    f"projects/: {manifests[project_id][0]} and {manifest_path}"
+                )
+            manifests[project_id] = (manifest_path, record)
+    return manifests
+
+
+def check_promotion_entry_links(promotion, entry):
+    """An active promotion pins its queue entry: the entry must be promoted
+    and must back-link the promotion. Superseded and cancelled promotions
+    impose no entry requirement — the entry may have reverted or been
+    re-promoted (slice 5 lifecycle rules)."""
+    if promotion["promotion_status"] != "active":
+        return
+    promotion_id = promotion["idea_promotion_id"]
+    entry_id = entry["idea_queue_entry_id"]
+    if entry["status"] != "promoted":
+        raise ValidationError(
+            f"Idea promotion {promotion_id} is active but its queue entry "
+            f"{entry_id} has status {entry['status']!r}; an active promotion "
+            "requires the entry to be 'promoted'"
+        )
+    if promotion_id not in entry.get("linked_idea_promotion_ids", []):
+        raise ValidationError(
+            f"Idea promotion {promotion_id} is active but queue entry "
+            f"{entry_id} does not list it in linked_idea_promotion_ids"
+        )
+
+
+def check_promotion_created_projects(promotion, projects_by_id):
+    """Every project a promotion claims to have created must exist and must
+    lock this promotion as its upstream ref (source_refs.idea_promotion_id).
+    Projects are never deleted in v1, so a dangling id is invalid state."""
+    promotion_id = promotion["idea_promotion_id"]
+    for project_id in promotion["project_ids_created"]:
+        if project_id not in projects_by_id:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} lists created project "
+                f"{project_id!r} with no project record"
+            )
+        _, project = projects_by_id[project_id]
+        locked = project.get("source_refs", {}).get("idea_promotion_id")
+        if locked != promotion_id:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} lists created project "
+                f"{project_id!r}, but that project's locked promotion is "
+                f"{locked!r}; source_refs.idea_promotion_id does not point back"
+            )
+
+
+def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None):
     """A warning must target records that exist and form one consistent
     promotion chain — queue entries, projects, and promotions are never
     deleted in v1, so a dangling target is invalid state, not history, and
@@ -99,8 +172,9 @@ def check_project_warning_target_refs(record, workspace_dir):
         )
     if "project_id" in record:
         project_id = record["project_id"]
-        project_path = workspace_dir / "projects" / project_id / "project.json"
-        if not project_path.exists():
+        if projects_by_id is None:
+            projects_by_id = collect_project_manifests(workspace_dir)
+        if project_id not in projects_by_id:
             raise ValidationError(
                 f"project warning {warning_id} targets project {project_id!r} "
                 "with no project record"
@@ -114,7 +188,7 @@ def check_project_warning_target_refs(record, workspace_dir):
                 f"project warning {warning_id} targets idea promotion "
                 f"{promotion_id!r} with no promotion record"
             )
-        project = load_json(project_path)
+        _, project = projects_by_id[project_id]
         locked_promotion = project.get("source_refs", {}).get("idea_promotion_id")
         if locked_promotion != promotion_id:
             raise ValidationError(
@@ -460,6 +534,82 @@ def validate_queue(workspace_path):
                     "frontmatter, stable finding, or run output"
                 )
 
+    # Slice 5 link consistency: entry <-> promotion <-> project links hold at
+    # rest. The promotion act writes both sides in one workflow, so a
+    # one-sided link is always invalid state, never an in-progress step.
+    promotions_by_id = {}
+    promotions_dir = workspace_dir / "research" / "idea-promotions"
+    if promotions_dir.exists():
+        for promotion_path in sorted(promotions_dir.glob("*.json")):
+            promotion = load_json(promotion_path)
+            try:
+                validate_record("idea-promotion", promotion)
+            except ValidationError as exc:
+                raise ValidationError(f"{promotion_path}: {exc}") from None
+            promotions_by_id[promotion["idea_promotion_id"]] = promotion
+    projects_by_id = collect_project_manifests(workspace_dir)
+
+    for entry_id, entry in entries.items():
+        linked_promotions = entry.get("linked_idea_promotion_ids", [])
+        for promotion_id in linked_promotions:
+            promotion = promotions_by_id.get(promotion_id)
+            if promotion is None:
+                raise ValidationError(
+                    f"{entry_id}: linked idea promotion {promotion_id!r} has "
+                    "no promotion record"
+                )
+            if promotion["idea_queue_entry_id"] != entry_id:
+                raise ValidationError(
+                    f"{entry_id}: linked idea promotion {promotion_id!r} was "
+                    f"promoted from {promotion['idea_queue_entry_id']!r}"
+                )
+        active = [
+            promotion_id
+            for promotion_id in linked_promotions
+            if promotions_by_id[promotion_id]["promotion_status"] == "active"
+        ]
+        if entry["status"] == "promoted":
+            if not linked_promotions:
+                raise ValidationError(
+                    f"{entry_id}: status is 'promoted' but "
+                    "linked_idea_promotion_ids is empty"
+                )
+            if not active:
+                raise ValidationError(
+                    f"{entry_id}: status is 'promoted' but no linked promotion "
+                    "is active; the entry should have reverted with the last "
+                    "active promotion"
+                )
+            if len(active) > 1:
+                raise ValidationError(
+                    f"{entry_id}: more than one linked promotion is active "
+                    f"({sorted(active)}); scope expansion must supersede the "
+                    "earlier promotion, not add a second active one"
+                )
+        elif active:
+            raise ValidationError(
+                f"{entry_id}: status is {entry['status']!r} but the entry "
+                f"links active promotion(s) {sorted(active)}"
+            )
+        for project_id in entry.get("linked_project_ids", []):
+            if project_id not in projects_by_id:
+                raise ValidationError(
+                    f"{entry_id}: linked project {project_id!r} has no "
+                    "project record"
+                )
+
+    for promotion in promotions_by_id.values():
+        if promotion["promotion_status"] != "active":
+            continue
+        entry = entries.get(promotion["idea_queue_entry_id"])
+        if entry is None:
+            raise ValidationError(
+                f"Idea promotion {promotion['idea_promotion_id']} does not "
+                "point to a real idea queue entry: "
+                f"{promotion['idea_queue_entry_id']!r} has no entry file"
+            )
+        check_promotion_entry_links(promotion, entry)
+
     return {
         "workspace_path": workspace_dir,
         "entry_count": len(entries),
@@ -467,7 +617,7 @@ def validate_queue(workspace_path):
     }
 
 
-def validate_promotion_gate(workspace_dir, promotion):
+def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
     """Enforce the promotion gate (Phase 0C workstream 12 residue).
 
     A promotion must point to a real idea queue entry. Unresolved evidence
@@ -500,6 +650,10 @@ def validate_promotion_gate(workspace_dir, promotion):
             f"format ({sorted(promotion['approved_formats'])}); record the "
             "approval intent on the queue entry instead until the format lands"
         )
+    check_promotion_entry_links(promotion, entry)
+    if projects_by_id is None:
+        projects_by_id = collect_project_manifests(workspace_dir)
+    check_promotion_created_projects(promotion, projects_by_id)
 
     evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
@@ -550,6 +704,7 @@ def validate_promotions(workspace_path, scope=None):
     warnings = []
     checked = []
     if promotions_dir.exists():
+        projects_by_id = collect_project_manifests(workspace_dir)
         for promotion_path in sorted(promotions_dir.glob("*.json")):
             promotion = load_json(promotion_path)
             try:
@@ -562,7 +717,11 @@ def validate_promotions(workspace_path, scope=None):
                     f"{promotion['idea_promotion_id']!r}"
                 )
             check_creator_scope(promotion, scope, promotion_path)
-            warnings.extend(validate_promotion_gate(workspace_dir, promotion))
+            warnings.extend(
+                validate_promotion_gate(
+                    workspace_dir, promotion, projects_by_id=projects_by_id
+                )
+            )
             checked.append(str(promotion_path.relative_to(workspace_dir)))
     return warnings, checked
 

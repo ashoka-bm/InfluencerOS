@@ -822,6 +822,234 @@ class CreatorScopeTests(unittest.TestCase):
             self.assertIn("owned by a different creator", str(ctx.exception))
 
 
+PROMOTION_ID = "idea_promotion_luna_fit_001"
+PROJECT_ID = "project_luna_tiny_reset_001"
+
+
+def set_entry_status(workspace_dir, status):
+    """Flip the scaffold entry's status with the manifest kept consistent."""
+    entry_path = (
+        workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+    )
+    entry = json.loads(entry_path.read_text())
+    entry["status"] = status
+    write_json(entry_path, entry)
+    queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    queue = json.loads(queue_path.read_text())
+    for ref in queue["entry_refs"]:
+        if ref["idea_queue_entry_id"] == ENTRY_ID:
+            ref["status"] = status
+    queue["status_counts"] = {status: 1}
+    write_json(queue_path, queue)
+    return entry
+
+
+def edit_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    write_json(path, record)
+    return record
+
+
+class PromotionLinkConsistencyTests(unittest.TestCase):
+    """Slice 5 batch A: promotion <-> entry <-> project links hold at rest."""
+
+    def promotion_path(self, workspace_dir, promotion_id=PROMOTION_ID):
+        return (
+            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+        )
+
+    def entry_path(self, workspace_dir):
+        return (
+            workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+        )
+
+    def test_active_promotion_requires_promoted_entry_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            set_entry_status(workspace_dir, "shortlisted")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("active", message)
+            self.assertIn("'shortlisted'", message)
+
+    def test_active_promotion_requires_entry_backlink(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.entry_path(workspace_dir),
+                lambda entry: entry.__setitem__("linked_idea_promotion_ids", []),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("linked_idea_promotion_ids", str(ctx.exception))
+
+    def test_promotion_created_projects_must_resolve(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo["project_ids_created"].append("project_luna_ghost"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("project_luna_ghost", message)
+            self.assertIn("no project record", message)
+
+    def test_promotion_created_project_must_point_back(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            # The example warning pairs this project with the promotion and
+            # would fail first; clear the warnings stream so the closure
+            # check under test is what fires.
+            write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
+            edit_json(
+                workspace_dir / "projects" / PROJECT_ID / "project.json",
+                lambda project: project["source_refs"].__setitem__(
+                    "idea_promotion_id", "idea_promotion_luna_fit_other"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("does not point back", str(ctx.exception))
+
+    def test_promoted_entry_requires_linked_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.entry_path(workspace_dir),
+                lambda entry: entry.__setitem__("linked_idea_promotion_ids", []),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("linked_idea_promotion_ids is empty", str(ctx.exception))
+
+    def test_promoted_entry_requires_an_active_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo.__setitem__("promotion_status", "cancelled"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("no linked promotion is active", str(ctx.exception))
+
+    def test_promoted_entry_rejects_second_active_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            second = load_example("idea-promotion")
+            second["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            second["project_ids_created"] = []
+            write_json(
+                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                second,
+            )
+            edit_json(
+                self.entry_path(workspace_dir),
+                lambda entry: entry["linked_idea_promotion_ids"].append(
+                    "idea_promotion_luna_fit_002"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("supersede", str(ctx.exception))
+
+    def test_entry_linked_promotion_must_name_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            second = load_example("idea-promotion")
+            second["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            second["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            second["promotion_status"] = "cancelled"
+            second["project_ids_created"] = []
+            write_json(
+                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                second,
+            )
+            edit_json(
+                self.entry_path(workspace_dir),
+                lambda entry: entry["linked_idea_promotion_ids"].append(
+                    "idea_promotion_luna_fit_002"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("was promoted from", str(ctx.exception))
+
+    def test_entry_linked_projects_must_resolve(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.entry_path(workspace_dir),
+                lambda entry: entry["linked_project_ids"].append("project_luna_ghost"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("project_luna_ghost", message)
+            self.assertIn("no project record", message)
+
+    def test_non_promoted_entry_rejects_active_linked_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            set_entry_status(workspace_dir, "shortlisted")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("'shortlisted'", message)
+            self.assertIn("active", message)
+
+    def test_cancelled_promotion_allows_reverted_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                self.promotion_path(workspace_dir),
+                lambda promo: promo.__setitem__("promotion_status", "cancelled"),
+            )
+            set_entry_status(workspace_dir, "shortlisted")
+
+            validate_research(workspace_dir)
+            validate_queue(workspace_dir)
+
+    def test_warning_resolves_slug_foldered_project(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            # init-project names project folders by project_slug, not
+            # project_id; resolution must go through the manifest.
+            (workspace_dir / "projects" / PROJECT_ID).rename(
+                workspace_dir / "projects" / "tiny-reset-after-laptop-day"
+            )
+
+            validate_research(workspace_dir)
+            validate_queue(workspace_dir)
+
+    def test_duplicate_project_id_across_folders_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            project = load_example("project")
+            write_json(
+                workspace_dir / "projects" / "duplicate-slug" / "project.json",
+                project,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("more than once", str(ctx.exception))
+
+
 class ResearchCliTests(unittest.TestCase):
     def run_cli(self, *args):
         return subprocess.run(
