@@ -53,6 +53,12 @@ def populate_promotion_records(workspace_dir):
     entry_path = workspace_dir / "research" / "idea-queue" / "entries" / "idea_queue_entry_luna_fit_001.json"
     entry_path.parent.mkdir(parents=True, exist_ok=True)
     copy_example_record("idea-queue-entry.example.json", entry_path)
+    # The promotion claims a schedule slot; the gate resolves it and
+    # requires it filled, so the workspace carries the schedule.
+    copy_example_record(
+        "creator-content-schedule.example.json",
+        workspace_dir / "content-schedule.json",
+    )
 
 
 def scaffold_project_workspace(temp_dir):

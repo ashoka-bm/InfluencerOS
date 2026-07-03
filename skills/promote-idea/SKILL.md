@@ -81,7 +81,7 @@ the sequence before validating.
   `source_refs.idea_promotion_id` as the single upstream ref (cached
   deeper refs are optional and must stay subsets of the locked
   promotion).
-- Run `python3 -m influencer_os init-project <manifest> <creator-workspace>`,
+- Run `python3 -m influencer_os init-project <manifest> --creator-workspace <creator-workspace>`,
   then replace the scaffolded `evidence-brief.md` with a compact
   production-facing brief: the hook, why the evidence says it works, the
   reusable elements to copy, avoid notes, and the source evidence ids.
@@ -101,6 +101,9 @@ the sequence before validating.
 - Set the entry status to `promoted`; append the promotion id to
   `linked_idea_promotion_ids` and the created project ids to
   `linked_project_ids`; update `updated_on`.
+- A completed promotion must leave the entry linking at least one
+  Project — the validators enforce this closure, so a promotion that
+  creates no production work is invalid state, not a deferral.
 - Keep `research/idea-queue/queue.json` exact: the entry's ref status and
   `status_counts` must match. Never delete the entry.
 

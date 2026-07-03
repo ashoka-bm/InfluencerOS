@@ -154,6 +154,42 @@ def check_promotion_created_projects(promotion, projects_by_id):
             )
 
 
+def check_promotion_slot_claims(workspace_dir, promotion):
+    """An active promotion's claimed schedule slots must resolve and be
+    filled. Superseded/cancelled promotions impose nothing: the schedule is
+    mutable planning state, so freed slots legitimately reopen or disappear
+    while the locked promotion keeps its historical claim."""
+    if promotion["promotion_status"] != "active":
+        return
+    claimed = promotion.get("schedule_slot_ids", [])
+    if not claimed:
+        return
+    promotion_id = promotion["idea_promotion_id"]
+    schedule_path = Path(workspace_dir) / "content-schedule.json"
+    if not schedule_path.exists():
+        raise ValidationError(
+            f"Idea promotion {promotion_id} claims schedule slots but the "
+            "workspace has no content-schedule.json"
+        )
+    slots = {
+        slot["slot_id"]: slot
+        for slot in load_json(schedule_path).get("calendar_slots", [])
+    }
+    for slot_id in claimed:
+        if slot_id not in slots:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} claims {slot_id!r}, which "
+                "resolves to no schedule slot in content-schedule.json"
+            )
+        status = slots[slot_id]["status"]
+        if status != "filled":
+            raise ValidationError(
+                f"Idea promotion {promotion_id} is active but claimed slot "
+                f"{slot_id} has status {status!r}; a claimed slot must be "
+                "'filled'"
+            )
+
+
 def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None):
     """A warning must target records that exist and form one consistent
     promotion chain — queue entries, projects, and promotions are never
@@ -591,11 +627,41 @@ def validate_queue(workspace_path):
                 f"{entry_id}: status is {entry['status']!r} but the entry "
                 f"links active promotion(s) {sorted(active)}"
             )
-        for project_id in entry.get("linked_project_ids", []):
+        linked_projects = entry.get("linked_project_ids", [])
+        for project_id in linked_projects:
             if project_id not in projects_by_id:
                 raise ValidationError(
                     f"{entry_id}: linked project {project_id!r} has no "
                     "project record"
+                )
+        # Slice 5 review P1: promotion must leave production work behind.
+        # The rule is entry-level, not a promotion-level minimum, because an
+        # active supersede-expansion promotion legitimately creates no new
+        # project — the entry still links the superseded promotion's work.
+        if entry["status"] == "promoted" and not linked_projects:
+            raise ValidationError(
+                f"{entry_id}: status is 'promoted' but the entry has no "
+                "linked project; a promotion must leave production work "
+                "behind in linked_project_ids"
+            )
+        for project_id in linked_projects:
+            _, project = projects_by_id[project_id]
+            locked = project.get("source_refs", {}).get("idea_promotion_id")
+            if locked not in linked_promotions:
+                raise ValidationError(
+                    f"{entry_id}: linked project {project_id!r} locks "
+                    f"promotion {locked!r}, which is not among the entry's "
+                    "linked promotions"
+                )
+        for promotion_id in linked_promotions:
+            missing = sorted(
+                set(promotions_by_id[promotion_id]["project_ids_created"])
+                - set(linked_projects)
+            )
+            if missing:
+                raise ValidationError(
+                    f"{entry_id}: linked promotion {promotion_id} created "
+                    f"projects missing from linked_project_ids: {missing}"
                 )
 
     for promotion in promotions_by_id.values():
@@ -654,6 +720,7 @@ def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
     if projects_by_id is None:
         projects_by_id = collect_project_manifests(workspace_dir)
     check_promotion_created_projects(promotion, projects_by_id)
+    check_promotion_slot_claims(workspace_dir, promotion)
 
     evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
@@ -705,6 +772,7 @@ def validate_promotions(workspace_path, scope=None):
     checked = []
     if promotions_dir.exists():
         projects_by_id = collect_project_manifests(workspace_dir)
+        claimed_slots = {}
         for promotion_path in sorted(promotions_dir.glob("*.json")):
             promotion = load_json(promotion_path)
             try:
@@ -722,6 +790,17 @@ def validate_promotions(workspace_path, scope=None):
                     workspace_dir, promotion, projects_by_id=projects_by_id
                 )
             )
+            if promotion["promotion_status"] == "active":
+                for slot_id in promotion.get("schedule_slot_ids", []):
+                    earlier = claimed_slots.setdefault(
+                        slot_id, promotion["idea_promotion_id"]
+                    )
+                    if earlier != promotion["idea_promotion_id"]:
+                        raise ValidationError(
+                            f"Schedule slot {slot_id} is claimed by more than "
+                            f"one active promotion: {earlier} and "
+                            f"{promotion['idea_promotion_id']}"
+                        )
             checked.append(str(promotion_path.relative_to(workspace_dir)))
     return warnings, checked
 

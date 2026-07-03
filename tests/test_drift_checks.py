@@ -235,6 +235,25 @@ class CreatorSetupTemplateDriftTests(unittest.TestCase):
             )
 
 
+class SkillCliInvocationDriftTests(unittest.TestCase):
+    def test_promote_idea_names_real_init_project_invocation(self):
+        # Slice 5 review: the skill taught a positional creator-workspace
+        # argument, but the CLI requires the --creator-workspace flag; an
+        # agent following the skill failed mid-construction.
+        skill = read_repo_text("skills/promote-idea/SKILL.md")
+        invocations = [
+            line for line in skill.splitlines() if "init-project" in line
+        ]
+        self.assertTrue(invocations, "promote-idea no longer documents init-project")
+        for line in invocations:
+            if "influencer_os init-project" in line:
+                self.assertIn(
+                    "--creator-workspace",
+                    line,
+                    f"init-project invocation missing --creator-workspace: {line!r}",
+                )
+
+
 def frontmatter_dependencies(skill_name):
     text = read_repo_text(f"skills/{skill_name}/SKILL.md")
     match = re.match(r"^---\n(.*?)\n---", text, flags=re.DOTALL)

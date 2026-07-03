@@ -122,6 +122,8 @@ Completed:
 
 - Slice 5 batch C (2026-07-03), closing the slice: conductor dependency and phase-owner statuses (phases 5-6), the architecture-map skill table and call graph, and the repository-map flow flipped to [BUILT]; `manage-idea-queue`'s halt text now hands off to the built gate instead of halting on a missing skill; `update-creators` propagated 14 runtime skills to all three fixture workspaces; the slice plan status and this progress record close the slice.
 
+- Addressed the slice 5 review (2026-07-03; one P1 and two P2 findings, all confirmed by reproduction; decisions recorded in the slice plan): the promotion-to-project path is now closed entry-level — a `promoted` entry must link at least one resolvable project, every linked project's locked promotion must be among the entry's linked promotions, and every linked promotion's `project_ids_created` must appear in the entry's `linked_project_ids` (entry-level rather than a promotion-level minimum because an active supersede-expansion promotion legitimately creates no new project; before the fix an active supported-format promotion with `project_ids_created: []`, no project folders, and no entry links passed both validators). Schedule slot claims are enforced for active promotions — claimed `schedule_slot_ids` must resolve to real slots in `content-schedule.json`, claimed slots must be `filled`, and a slot may be claimed by at most one active promotion; superseded/cancelled promotions keep historical claims unchecked because the schedule is mutable planning state (the example schedule slot flipped from `open` to `filled`, fixing the shipped fixture that contradicted the skill rule). And the `promote-idea` skill's `init-project` invocation gained the required `--creator-workspace` flag — the documented form would have failed in argparse mid-construction, right after the promotion snapshot was written — pinned by a new drift test on the skill's command line.
+
 Remaining:
 
 - Format-specific production planning (slice 6, including text-format routing per ADR 0020), then Output Package registration (slice 7).
@@ -377,6 +379,15 @@ Slice 5 batch C (2026-07-03): 254 tests pass; drift checks pass with
 the conductor and architecture-map statuses flipped to [BUILT];
 `update-creators` synced 14 runtime skills into all three fixture
 workspaces with zero overrides lost. Slice 5 complete.
+Slice 5 review fixes (2026-07-03): 262 tests pass (8 added — 6 closure
+and slot negatives reproduced failing first, the positive
+historical-slot-claim pin, and the skill CLI-invocation drift test); the
+P1 zero-project repro now fails `validate queue`; the CLI project test
+scaffold gained `content-schedule.json` (scaffolds mirror real
+workspaces — the promotion claims a slot, so the workspace carries the
+schedule); 38 example records validate after the slot fixture flip; the
+three live fixture workspaces still pass `validate research`; updated
+skill re-synced to all fixtures.
 ```
 
 ## Next Work Queue

@@ -1137,3 +1137,39 @@ new negative tests per batch; each link-consistency gap fails a crafted
 bad fixture and passes the consistent example chain; a slug-foldered
 project resolves everywhere an id-foldered one does; the skill flips to
 built everywhere the drift checks look.
+
+### Slice 5 Review (User-Approved 2026-07-03)
+
+A post-landing review surfaced three findings (one P1, two P2), all
+confirmed by reproduction; one approved batch closed them the same day.
+
+1. (P1) A supported-format active promotion with `project_ids_created: []`,
+   no project folders, and no entry `linked_project_ids` passed
+   `validate research` and `validate queue`, leaving the slice's core
+   promotion-to-project path unenforced. Fix is entry-level closure, not a
+   promotion-level minimum: a `promoted` entry must link at least one
+   resolvable project, every linked project's locked promotion must be
+   among the entry's linked promotions, and every linked promotion's
+   `project_ids_created` must all appear in the entry's
+   `linked_project_ids`. Entry-level was chosen because an active
+   supersede-expansion promotion (recording a newly approved,
+   not-yet-supported format) legitimately creates no new project — the
+   production work lives on projects created by the superseded promotion,
+   which the entry still links. The schema keeps `project_ids_created`
+   allowing empty for the same reason.
+2. (P2) Slot claims were documented but unenforced, and the shipped
+   fixture contradicted the rule (the example promotion claimed
+   `slot_luna_2026_07_09_midweek` while the example schedule left it
+   `open`). The gate now enforces claims for **active** promotions only:
+   each claimed `schedule_slot_ids` value must resolve to a real slot in
+   `content-schedule.json`, each claimed slot must be `filled`, and at
+   most one active promotion may claim a given slot. Superseded and
+   cancelled promotions impose nothing — the schedule is mutable planning
+   state, so freed slots legitimately reopen or disappear while the locked
+   promotion keeps its historical claim. The example slot flipped to
+   `filled`.
+3. (P2) The `promote-idea` skill's `init-project` invocation omitted the
+   required `--creator-workspace` flag, so an agent following it would
+   fail mid-construction after writing the promotion snapshot. Fixed, and
+   a drift test pins the skill's `init-project` line to the real CLI
+   signature.
