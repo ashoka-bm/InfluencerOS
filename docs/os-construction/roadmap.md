@@ -40,7 +40,7 @@ Phase 0C exit criteria are runnable checks today (each names a command or test).
 
 Goal: make the repo self-orienting and close enough to Agentic OS that future agents can implement without architectural drift.
 
-Status: in progress.
+Status: complete (2026-07-03). One optional Phase 0B item remains: render the comparison Excalidraw scene.
 
 ### Phase 0A: Foundation Docs
 
@@ -69,9 +69,10 @@ Completed:
 
 Remaining:
 
-- review comparison framing,
-- optionally render comparison Excalidraw scene,
-- update maps after parity hardening changes.
+- optionally render the comparison Excalidraw scene (framing reviewed
+  2026-07-03; the visual map drafts refresh with that render — the
+  file-granular source of truth is `architecture-map.md`, which is maintained
+  with each slice).
 
 ### Phase 0C: Parity Hardening
 

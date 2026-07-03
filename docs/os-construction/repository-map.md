@@ -121,20 +121,20 @@ The full creation flow uses a conductor-plus-skills structure.
 
 ```text
 skills/influencer-os/SKILL.md
-  -> load Creator Workspace and Creator Profile
-  -> call video understanding workflow when real videos are used
-  -> call social research workflow
-  -> create Social Research Pack
-  -> create Social Post Format Shortlist
-  -> create Content Idea Set with exactly five ideas
-  -> stop for Selected Content Idea
+  -> load Creator Workspace, Creator Profile, and Creator Content Schedule
+  -> create Video Understanding Packs when real videos are analyzed
+  -> run Research Runs with JSONL evidence and metric snapshots
+  -> update Research Findings (create-research-findings)
+  -> update the scored Idea Queue (manage-idea-queue)
+  -> stop at the Idea Promotion Gate for human approval (promote-idea, slice 5)
+  -> a locked Idea Promotion creates one or more Projects
   -> create Applied Social Template
-  -> route by target_format_id
+  -> route by approved format
       -> Micro-Journey Video Plan
       -> Carousel Plan
       -> Single Image Post Plan
       -> Story Sequence Plan
-  -> create Base Video Generation Plan when needed
+  -> create Base Video Generation Plan when generation is planned
   -> stop at Generation Approval Gate
   -> create Output Package when an artifact exists
 ```
@@ -145,6 +145,11 @@ Runtime helpers should follow the same direction:
 influencer_os/cli.py
   -> creator_workspaces.py
   -> projects.py
+  -> research.py
+  -> boards.py
+  -> recall_index.py
+  -> prune.py
+  -> memory.py
   -> runs.py
   -> validation.py
   -> schemas/
