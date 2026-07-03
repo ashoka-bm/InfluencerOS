@@ -1,0 +1,44 @@
+{
+  "content_board_id": "content_board_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "updated_on": "2026-07-03T10:00:00",
+  "columns": [
+    {
+      "column_id": "column_queue",
+      "title": "Idea Queue"
+    },
+    {
+      "column_id": "column_in_production",
+      "title": "In Production"
+    }
+  ],
+  "cards": [
+    {
+      "content_card_id": "card_idea_queue_entry_luna_fit_001",
+      "card_type": "idea",
+      "status": "promoted",
+      "source_record_type": "idea_queue_entry",
+      "source_record_id": "idea_queue_entry_luna_fit_001",
+      "warning_badges": [
+        "important"
+      ],
+      "child_card_ids": [
+        "card_project_luna_tiny_reset_001"
+      ]
+    },
+    {
+      "content_card_id": "card_project_luna_tiny_reset_001",
+      "card_type": "project",
+      "status": "planning",
+      "source_record_type": "project",
+      "source_record_id": "project_luna_tiny_reset_001",
+      "warning_badges": [],
+      "child_card_ids": [],
+      "parent_card_id": "card_idea_queue_entry_luna_fit_001"
+    }
+  ],
+  "manual_order": [
+    "card_idea_queue_entry_luna_fit_001",
+    "card_project_luna_tiny_reset_001"
+  ]
+}

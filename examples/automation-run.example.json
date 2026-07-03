@@ -1,0 +1,17 @@
+{
+  "automation_run_id": "automation_run_luna_fit_001",
+  "job_id": "job_scheduled_research_luna_fit",
+  "job_type": "scheduled_research",
+  "started_on": "2026-07-03T09:00:00",
+  "completed_on": "2026-07-03T09:41:00",
+  "run_status": "completed",
+  "creator_profile_id": "creator_luna_fit",
+  "material_update": true,
+  "linked_research_run_ids": [
+    "research_run_luna_fit_2026_07_03_001"
+  ],
+  "event_ids": [
+    "event_luna_fit_001"
+  ],
+  "notification_summary": "One new promoted-ready idea; one urgency badge refreshed."
+}

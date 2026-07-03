@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/reference-creators.schema.json",
+  "title": "ReferenceCreators",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reference_creators_id",
+    "creator_profile_id",
+    "updated_on",
+    "items"
+  ],
+  "properties": {
+    "reference_creators_id": {
+      "type": "string",
+      "pattern": "^reference_creators_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference_creator_id": {
+            "type": "string",
+            "pattern": "^reference_creator_[a-zA-Z0-9_-]+$"
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "x",
+                "instagram",
+                "tiktok",
+                "substack",
+                "medium",
+                "reddit",
+                "facebook",
+                "linkedin"
+              ]
+            },
+            "minItems": 1
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "adjacent_creator",
+              "general_trend",
+              "farther_field"
+            ]
+          },
+          "user_approved_core_reference": {
+            "type": "boolean"
+          },
+          "measurement_rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "audience_overlap_note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recent_signal_note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "creator_profile_id": {
+            "type": "string",
+            "pattern": "^creator_[a-zA-Z0-9_-]+$"
+          },
+          "usefulness_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "active",
+              "flagged_for_removal",
+              "retired"
+            ]
+          },
+          "added_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "updated_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_evaluated_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "reference_creator_id",
+          "handle",
+          "display_name",
+          "platforms",
+          "relationship",
+          "user_approved_core_reference",
+          "measurement_rationale",
+          "audience_overlap_note",
+          "recent_signal_note",
+          "creator_profile_id",
+          "usefulness_score",
+          "status",
+          "added_on",
+          "updated_on",
+          "last_evaluated_on",
+          "rationale"
+        ]
+      }
+    }
+  }
+}

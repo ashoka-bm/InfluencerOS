@@ -315,6 +315,20 @@ class ValidatorSubsetTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, "2026-02-30")
 
+    def test_date_time_format_requires_real_timestamps(self):
+        schema = {"type": "string", "format": "date-time"}
+
+        validate_schema_subset(schema, "2026-07-03T14:30:00")
+        for bad_value in (
+            "2026-07-03",  # date without time
+            "2026-07-03 14:30:00",  # missing T separator
+            "2026-99-99T14:30:00",  # impossible date
+            "2026-07-03T25:00:00",  # impossible time
+        ):
+            with self.subTest(value=bad_value):
+                with self.assertRaises(ValidationError):
+                    validate_schema_subset(schema, bad_value)
+
     def test_enum_must_be_a_list(self):
         # A string enum would silently degrade to substring matching.
         schema = {"type": "string", "enum": "abc"}

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/metric-snapshot.schema.json",
+  "title": "MetricSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metric_snapshot_id",
+    "evidence_id",
+    "research_run_id",
+    "creator_profile_id",
+    "captured_on",
+    "platform",
+    "visible_metrics"
+  ],
+  "properties": {
+    "metric_snapshot_id": {
+      "type": "string",
+      "pattern": "^metric_snapshot_[a-zA-Z0-9_-]+$"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+    },
+    "research_run_id": {
+      "type": "string",
+      "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "captured_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "x",
+        "instagram",
+        "tiktok",
+        "substack",
+        "medium",
+        "reddit",
+        "facebook",
+        "linkedin"
+      ]
+    },
+    "visible_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "views": {
+          "type": "number",
+          "minimum": 0
+        },
+        "likes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "comments": {
+          "type": "number",
+          "minimum": 0
+        },
+        "shares": {
+          "type": "number",
+          "minimum": 0
+        },
+        "saves": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reposts": {
+          "type": "number",
+          "minimum": 0
+        },
+        "other": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "posted_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "observed_age": {
+      "type": "string",
+      "minLength": 1
+    },
+    "velocity_estimate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_creator_baseline": {
+      "type": "string",
+      "minLength": 1
+    },
+    "outperformance_note": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

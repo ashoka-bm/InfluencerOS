@@ -1,0 +1,21 @@
+{
+  "research_watchlist_id": "research_watchlist_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "updated_on": "2026-07-03",
+  "items": [
+    {
+      "watchlist_item_id": "watchlist_luna_fit_001",
+      "target_type": "topic",
+      "target_ref": "walking pad desk setups",
+      "user_approved": true,
+      "platform": "tiktok",
+      "creator_profile_id": "creator_luna_fit",
+      "usefulness_score": 74,
+      "status": "active",
+      "added_on": "2026-07-03",
+      "updated_on": "2026-07-03",
+      "last_evaluated_on": "2026-07-03",
+      "rationale": "Surfaced two adjacent-creator desk-reset trends in the last run."
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "creator_content_schedule_id": "content_schedule_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "updated_on": "2026-07-03",
+  "cadence_expectations": "Around three short-form posts per week, intentionally irregular; quality over cadence.",
+  "content_goals": [
+    {
+      "goal_id": "goal_luna_desk_reset_education",
+      "name": "Desk reset education",
+      "description": "Teach one tiny repeatable physical reset per post.",
+      "target_mix": "About half of monthly output.",
+      "preferred_platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "preferred_formats": [
+        "format_short_form_video"
+      ]
+    }
+  ],
+  "calendar_slots": [
+    {
+      "slot_id": "slot_luna_2026_07_09_midweek",
+      "target_date": "2026-07-09",
+      "date_flexibility": "plus or minus two days",
+      "content_goal_id": "goal_luna_desk_reset_education",
+      "topic_cluster": "desk resets",
+      "status": "open"
+    }
+  ],
+  "drift_checks": {
+    "under_served": [
+      "evening wind-down resets"
+    ],
+    "over_served": [],
+    "recent_repetition_notes": [
+      "Two neck-focused resets in a row; vary the body area next."
+    ]
+  },
+  "blackout_dates": [
+    "2026-07-20"
+  ]
+}

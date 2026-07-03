@@ -1,0 +1,46 @@
+{
+  "evidence_id": "evidence_luna_fit_001",
+  "research_run_id": "research_run_luna_fit_2026_07_03_001",
+  "creator_profile_id": "creator_luna_fit",
+  "source_url": "https://www.instagram.com/reel/example-desk-reset",
+  "platform": "instagram",
+  "platform_content_type": "instagram_reel",
+  "captured_on": "2026-07-03T09:12:00",
+  "source_relationship": "adjacent_creator",
+  "source_summary": "Adjacent desk-wellness creator showing a 90-second lunch-break reset at a standing desk.",
+  "topic_tags": [
+    "desk resets",
+    "lunch break",
+    "posture"
+  ],
+  "content_pillar_ids": [
+    "pillar_tiny_resets"
+  ],
+  "signal_summary": "Roughly four times the creator's usual view baseline within 48 hours; saves skew high.",
+  "reusable_elements": {
+    "hook": "Your lunch break is long enough for this.",
+    "thumbnail_or_first_frame": "Standing at desk, hands on lower back, mid-stretch.",
+    "structure_or_pacing": "Hook, three moves at fifteen seconds each, single payoff line.",
+    "format_notes": "Vertical, natural office light, no music ducking under voice.",
+    "copyable_moves": [
+      "three-move structure",
+      "payoff line naming the feeling"
+    ],
+    "avoid_notes": [
+      "No before/after body framing per Luna's boundaries."
+    ]
+  },
+  "confidence": "medium",
+  "limitations": "Single-platform signal; visible metrics only, no retention data.",
+  "source_account": {
+    "handle": "@deskwellnessdaily",
+    "display_name": "Desk Wellness Daily",
+    "url": "https://www.instagram.com/deskwellnessdaily"
+  },
+  "visible_metrics": {
+    "views": 412000,
+    "likes": 31000,
+    "comments": 540,
+    "saves": 8800
+  }
+}

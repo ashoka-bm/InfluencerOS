@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-findings.schema.json",
+  "title": "ResearchFindings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_findings_id",
+    "creator_profile_id",
+    "last_updated",
+    "last_ran",
+    "summary_char_limit",
+    "active_platforms",
+    "active_topic_clusters",
+    "source_run_ids",
+    "finding_ids"
+  ],
+  "properties": {
+    "research_findings_id": {
+      "type": "string",
+      "pattern": "^research_findings_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_ran": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "summary_char_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "active_platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "x",
+          "instagram",
+          "tiktok",
+          "substack",
+          "medium",
+          "reddit",
+          "facebook",
+          "linkedin"
+        ]
+      }
+    },
+    "active_topic_clusters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "source_run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^finding_[a-zA-Z0-9_-]+$"
+      }
+    }
+  }
+}

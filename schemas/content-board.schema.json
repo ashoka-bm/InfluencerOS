@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/content-board.schema.json",
+  "title": "ContentBoard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content_board_id",
+    "creator_profile_id",
+    "updated_on",
+    "columns",
+    "cards",
+    "manual_order"
+  ],
+  "properties": {
+    "content_board_id": {
+      "type": "string",
+      "pattern": "^content_board_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "column_id": {
+            "type": "string",
+            "pattern": "^column_[a-zA-Z0-9_-]+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "column_id",
+          "title"
+        ]
+      },
+      "minItems": 1
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content_card_id": {
+            "type": "string",
+            "pattern": "^card_[a-zA-Z0-9_-]+$"
+          },
+          "card_type": {
+            "type": "string",
+            "enum": [
+              "idea",
+              "project"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_record_type": {
+            "type": "string",
+            "enum": [
+              "idea_queue_entry",
+              "project"
+            ]
+          },
+          "source_record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "warning_badges": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "info",
+                "important",
+                "urgent"
+              ]
+            }
+          },
+          "child_card_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^card_[a-zA-Z0-9_-]+$"
+            }
+          },
+          "parent_card_id": {
+            "type": "string",
+            "pattern": "^card_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "required": [
+          "content_card_id",
+          "card_type",
+          "status",
+          "source_record_type",
+          "source_record_id",
+          "warning_badges",
+          "child_card_ids"
+        ]
+      }
+    },
+    "manual_order": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^card_[a-zA-Z0-9_-]+$"
+      }
+    }
+  }
+}

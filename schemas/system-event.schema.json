@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/system-event.schema.json",
+  "title": "SystemEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "occurred_on",
+    "event_type",
+    "severity",
+    "message",
+    "source_type",
+    "source_id"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^event_[a-zA-Z0-9_-]+$"
+    },
+    "occurred_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "important",
+        "urgent"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "creator_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^project_[a-zA-Z0-9_-]+$"
+    },
+    "idea_queue_entry_id": {
+      "type": "string",
+      "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+    },
+    "content_card_id": {
+      "type": "string",
+      "pattern": "^card_[a-zA-Z0-9_-]+$"
+    },
+    "linked_record_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "delivery_channel": {
+      "type": "string",
+      "enum": [
+        "none",
+        "kanban",
+        "telegram"
+      ]
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "delivered",
+        "failed"
+      ]
+    }
+  }
+}

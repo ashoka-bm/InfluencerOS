@@ -1,0 +1,14 @@
+{
+  "idea_queue_id": "idea_queue_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "updated_on": "2026-07-03",
+  "entry_refs": [
+    {
+      "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+      "status": "promoted"
+    }
+  ],
+  "status_counts": {
+    "promoted": 1
+  }
+}

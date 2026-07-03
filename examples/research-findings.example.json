@@ -1,0 +1,21 @@
+{
+  "research_findings_id": "research_findings_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "last_updated": "2026-07-03",
+  "last_ran": "2026-07-03T09:40:00",
+  "summary_char_limit": 6000,
+  "active_platforms": [
+    "instagram",
+    "tiktok"
+  ],
+  "active_topic_clusters": [
+    "desk resets",
+    "evening wind-down"
+  ],
+  "source_run_ids": [
+    "research_run_luna_fit_2026_07_03_001"
+  ],
+  "finding_ids": [
+    "finding_luna_fit_desk_reset_lunch"
+  ]
+}

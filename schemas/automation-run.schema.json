@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/automation-run.schema.json",
+  "title": "AutomationRun",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "automation_run_id",
+    "job_id",
+    "job_type",
+    "started_on",
+    "completed_on",
+    "run_status",
+    "creator_profile_id",
+    "material_update",
+    "linked_research_run_ids",
+    "event_ids"
+  ],
+  "properties": {
+    "automation_run_id": {
+      "type": "string",
+      "pattern": "^automation_run_[a-zA-Z0-9_-]+$"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^job_[a-zA-Z0-9_-]+$"
+    },
+    "job_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "started_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run_status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "completed_no_material_update",
+        "failed"
+      ]
+    },
+    "creator_profile_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "material_update": {
+      "type": "boolean"
+    },
+    "linked_research_run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^event_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "last_error": {
+      "type": "string",
+      "minLength": 1
+    },
+    "threshold_config": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "notification_summary": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

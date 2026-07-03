@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/project-warning.schema.json",
+  "title": "ProjectWarning",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_warning_id",
+    "idea_queue_entry_id",
+    "warning_type",
+    "severity",
+    "message",
+    "detected_on",
+    "suggested_actions"
+  ],
+  "properties": {
+    "project_warning_id": {
+      "type": "string",
+      "pattern": "^project_warning_[a-zA-Z0-9_-]+$"
+    },
+    "idea_queue_entry_id": {
+      "type": "string",
+      "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+    },
+    "warning_type": {
+      "type": "string",
+      "enum": [
+        "source_trend_stale",
+        "urgency_window_expired",
+        "evidence_strength_dropped",
+        "creator_fit_concern",
+        "schedule_slot_no_longer_fits",
+        "platform_payoff_changed",
+        "reference_source_unavailable",
+        "stronger_variant_found"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "important",
+        "urgent"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "detected_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "suggested_actions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^project_[a-zA-Z0-9_-]+$"
+    },
+    "idea_promotion_id": {
+      "type": "string",
+      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+    },
+    "source_evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "source_score_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "resolved_status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "resolved"
+      ]
+    }
+  }
+}

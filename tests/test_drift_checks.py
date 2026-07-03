@@ -1,9 +1,37 @@
+import json
 import re
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# Canonical ADR 0020 research enums. The validator resolves only intra-file
+# $ref, so every research-module schema repeats these; this check pins each
+# copy to the one canonical list. Legacy compatibility records (social
+# research packs) are deliberately out of scope.
+RESEARCH_PLATFORMS = ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin"]
+RESEARCH_CONTENT_TYPES = [
+    "x_post", "x_thread",
+    "instagram_reel", "instagram_post", "instagram_story", "instagram_carousel",
+    "tiktok_video",
+    "substack_article", "substack_note",
+    "medium_article",
+    "reddit_thread", "reddit_comment",
+    "facebook_post", "facebook_reel",
+    "linkedin_post", "linkedin_article",
+]
+RESEARCH_MODULE_SCHEMAS = (
+    "creator-content-schedule", "research-run", "research-evidence", "metric-snapshot",
+    "research-findings", "stable-finding", "research-sources", "research-hashtags",
+    "research-search-terms", "reference-creators", "research-watchlist",
+    "idea-queue-entry", "idea-queue", "idea-promotion", "project-warning",
+    "content-board", "automation-run", "system-event",
+)
+PLATFORM_PROPERTY_NAMES = {
+    "platform", "platforms", "active_platforms", "approved_platforms",
+    "platform_recommendations", "preferred_platforms",
+}
 
 # The canonical read order lives once in AGENTS.md (ADR 0019). This list is the
 # drift check's fixed expectation: removing a doc from AGENTS.md fails here.
@@ -211,6 +239,40 @@ def frontmatter_dependencies(skill_name):
 def skill_body(skill_name):
     text = read_repo_text(f"skills/{skill_name}/SKILL.md")
     return text.split("---", 2)[2] if text.startswith("---") else text
+
+
+class ResearchEnumDriftTests(unittest.TestCase):
+    def iter_platform_enums(self, node, path=""):
+        if isinstance(node, dict):
+            for prop_name, prop_schema in node.get("properties", {}).items():
+                target = prop_schema
+                if isinstance(target, dict) and isinstance(target.get("items"), dict):
+                    target = target["items"]
+                if not isinstance(target, dict):
+                    continue
+                if prop_name in PLATFORM_PROPERTY_NAMES and "enum" in target:
+                    yield f"{path}.{prop_name}", "platform", target["enum"]
+                if prop_name == "platform_content_type" and "enum" in target:
+                    yield f"{path}.{prop_name}", "content_type", target["enum"]
+            for key, child in node.items():
+                yield from self.iter_platform_enums(child, f"{path}.{key}")
+        elif isinstance(node, list):
+            for index, child in enumerate(node):
+                yield from self.iter_platform_enums(child, f"{path}[{index}]")
+
+    def test_every_research_schema_matches_the_canonical_enums(self):
+        expected = {"platform": RESEARCH_PLATFORMS, "content_type": RESEARCH_CONTENT_TYPES}
+        found_any = {"platform": False, "content_type": False}
+        for schema_name in RESEARCH_MODULE_SCHEMAS:
+            schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
+            for location, kind, values in self.iter_platform_enums(schema, schema_name):
+                found_any[kind] = True
+                self.assertEqual(
+                    values,
+                    expected[kind],
+                    f"{location} diverges from the canonical ADR 0020 {kind} enum",
+                )
+        self.assertTrue(all(found_any.values()), "drift check found no research enums to pin")
 
 
 class ConductorCallGraphDriftTests(unittest.TestCase):

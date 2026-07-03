@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-hashtags.schema.json",
+  "title": "ResearchHashtags",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_hashtags_id",
+    "creator_profile_id",
+    "updated_on",
+    "items"
+  ],
+  "properties": {
+    "research_hashtags_id": {
+      "type": "string",
+      "pattern": "^research_hashtags_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hashtag_id": {
+            "type": "string",
+            "pattern": "^hashtag_[a-zA-Z0-9_-]+$"
+          },
+          "tag": {
+            "type": "string",
+            "pattern": "^#?[A-Za-z0-9_]+$"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "x",
+              "instagram",
+              "tiktok",
+              "substack",
+              "medium",
+              "reddit",
+              "facebook",
+              "linkedin"
+            ]
+          },
+          "creator_profile_id": {
+            "type": "string",
+            "pattern": "^creator_[a-zA-Z0-9_-]+$"
+          },
+          "usefulness_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "active",
+              "flagged_for_removal",
+              "retired"
+            ]
+          },
+          "added_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "updated_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_evaluated_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "hashtag_id",
+          "tag",
+          "platform",
+          "creator_profile_id",
+          "usefulness_score",
+          "status",
+          "added_on",
+          "updated_on",
+          "last_evaluated_on",
+          "rationale"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/idea-queue.schema.json",
+  "title": "IdeaQueue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "idea_queue_id",
+    "creator_profile_id",
+    "updated_on",
+    "entry_refs"
+  ],
+  "properties": {
+    "idea_queue_id": {
+      "type": "string",
+      "pattern": "^idea_queue_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "entry_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idea_queue_entry_id": {
+            "type": "string",
+            "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "reviewed",
+              "shortlisted",
+              "needs_more_research",
+              "promoted",
+              "rejected",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "idea_queue_entry_id",
+          "status"
+        ]
+      }
+    },
+    "status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "new": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shortlisted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_more_research": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "promoted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "grouping_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

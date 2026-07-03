@@ -1,0 +1,19 @@
+{
+  "metric_snapshot_id": "metric_snapshot_luna_fit_001",
+  "evidence_id": "evidence_luna_fit_001",
+  "research_run_id": "research_run_luna_fit_2026_07_03_001",
+  "creator_profile_id": "creator_luna_fit",
+  "captured_on": "2026-07-03T09:12:00",
+  "platform": "instagram",
+  "visible_metrics": {
+    "views": 412000,
+    "likes": 31000,
+    "comments": 540,
+    "saves": 8800
+  },
+  "posted_on": "2026-07-01",
+  "observed_age": "about 48 hours",
+  "velocity_estimate": "Roughly 8,500 views per hour and holding.",
+  "reference_creator_baseline": "Creator's trailing median reel is about 95,000 views.",
+  "outperformance_note": "About 4.3x the account baseline at capture time."
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/stable-finding.schema.json",
+  "title": "StableFinding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stable_finding_id",
+    "creator_profile_id",
+    "finding_id",
+    "created_on",
+    "last_confirmed_on",
+    "source_run_ids",
+    "topic_cluster",
+    "platforms",
+    "status"
+  ],
+  "properties": {
+    "stable_finding_id": {
+      "type": "string",
+      "pattern": "^stable_finding_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "finding_id": {
+      "type": "string",
+      "pattern": "^finding_[a-zA-Z0-9_-]+$"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_confirmed_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "source_run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+      },
+      "minItems": 1
+    },
+    "topic_cluster": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "x",
+          "instagram",
+          "tiktok",
+          "substack",
+          "medium",
+          "reddit",
+          "facebook",
+          "linkedin"
+        ]
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "superseded",
+        "retired"
+      ]
+    },
+    "superseded_by": {
+      "type": "string",
+      "pattern": "^stable_finding_[a-zA-Z0-9_-]+$"
+    }
+  }
+}

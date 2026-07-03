@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-evidence.schema.json",
+  "title": "ResearchEvidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "research_run_id",
+    "creator_profile_id",
+    "source_url",
+    "platform",
+    "platform_content_type",
+    "captured_on",
+    "source_relationship",
+    "source_summary",
+    "topic_tags",
+    "content_pillar_ids",
+    "signal_summary",
+    "reusable_elements",
+    "confidence",
+    "limitations"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+    },
+    "research_run_id": {
+      "type": "string",
+      "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "source_url": {
+      "type": "string",
+      "pattern": "^https?://"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "x",
+        "instagram",
+        "tiktok",
+        "substack",
+        "medium",
+        "reddit",
+        "facebook",
+        "linkedin"
+      ]
+    },
+    "platform_content_type": {
+      "type": "string",
+      "enum": [
+        "x_post",
+        "x_thread",
+        "instagram_reel",
+        "instagram_post",
+        "instagram_story",
+        "instagram_carousel",
+        "tiktok_video",
+        "substack_article",
+        "substack_note",
+        "medium_article",
+        "reddit_thread",
+        "reddit_comment",
+        "facebook_post",
+        "facebook_reel",
+        "linkedin_post",
+        "linkedin_article"
+      ]
+    },
+    "captured_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_relationship": {
+      "type": "string",
+      "enum": [
+        "adjacent_creator",
+        "general_trend",
+        "farther_field"
+      ]
+    },
+    "source_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "topic_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "content_pillar_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^pillar_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "signal_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reusable_elements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hook": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thumbnail_or_first_frame": {
+          "type": "string",
+          "minLength": 1
+        },
+        "structure_or_pacing": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format_notes": {
+          "type": "string",
+          "minLength": 1
+        },
+        "copyable_moves": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "avoid_notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "hook",
+        "thumbnail_or_first_frame",
+        "structure_or_pacing",
+        "format_notes",
+        "copyable_moves",
+        "avoid_notes"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "limitations": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_account": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "handle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        }
+      },
+      "required": [
+        "handle",
+        "display_name",
+        "url"
+      ]
+    },
+    "visible_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "views": {
+          "type": "number",
+          "minimum": 0
+        },
+        "likes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "comments": {
+          "type": "number",
+          "minimum": 0
+        },
+        "shares": {
+          "type": "number",
+          "minimum": 0
+        },
+        "saves": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reposts": {
+          "type": "number",
+          "minimum": 0
+        },
+        "other": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

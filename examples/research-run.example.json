@@ -1,0 +1,31 @@
+{
+  "research_run_id": "research_run_luna_fit_2026_07_03_001",
+  "creator_profile_id": "creator_luna_fit",
+  "started_on": "2026-07-03T09:00:00",
+  "completed_on": "2026-07-03T09:40:00",
+  "mode": "scheduled_needs",
+  "scope": "Desk-reset trends for the open midweek education slot.",
+  "platforms": [
+    "instagram",
+    "tiktok"
+  ],
+  "material_update": true,
+  "outputs": {
+    "finding_ids": [
+      "finding_luna_fit_desk_reset_lunch"
+    ],
+    "idea_queue_entry_ids": [
+      "idea_queue_entry_luna_fit_001"
+    ],
+    "evidence_ids": [
+      "evidence_luna_fit_001"
+    ],
+    "metric_snapshot_ids": [
+      "metric_snapshot_luna_fit_001"
+    ],
+    "research_intelligence_updates": [
+      "Raised usefulness of #deskreset on instagram to 74."
+    ]
+  },
+  "run_status": "completed"
+}

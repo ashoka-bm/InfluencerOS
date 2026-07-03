@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/creator-content-schedule.schema.json",
+  "title": "CreatorContentSchedule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "creator_content_schedule_id",
+    "creator_profile_id",
+    "creator_slug",
+    "updated_on",
+    "cadence_expectations",
+    "content_goals",
+    "calendar_slots",
+    "drift_checks"
+  ],
+  "properties": {
+    "creator_content_schedule_id": {
+      "type": "string",
+      "pattern": "^content_schedule_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "creator_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "cadence_expectations": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "goal_id": {
+            "type": "string",
+            "pattern": "^goal_[a-zA-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_mix": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preferred_platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "x",
+                "instagram",
+                "tiktok",
+                "substack",
+                "medium",
+                "reddit",
+                "facebook",
+                "linkedin"
+              ]
+            }
+          },
+          "preferred_formats": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "goal_id",
+          "name",
+          "description",
+          "target_mix",
+          "preferred_platforms",
+          "preferred_formats"
+        ]
+      },
+      "minItems": 1
+    },
+    "calendar_slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "slot_id": {
+            "type": "string",
+            "pattern": "^slot_[a-zA-Z0-9_-]+$"
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "date_flexibility": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content_goal_id": {
+            "type": "string",
+            "pattern": "^goal_[a-zA-Z0-9_-]+$"
+          },
+          "topic_cluster": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "reserved",
+              "filled",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "slot_id",
+          "target_date",
+          "date_flexibility",
+          "content_goal_id",
+          "topic_cluster",
+          "status"
+        ]
+      }
+    },
+    "drift_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "under_served": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "over_served": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recent_repetition_notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "under_served",
+        "over_served",
+        "recent_repetition_notes"
+      ]
+    },
+    "blackout_dates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date"
+      }
+    },
+    "active_campaigns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "time_sensitive_insertions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "recently_published_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

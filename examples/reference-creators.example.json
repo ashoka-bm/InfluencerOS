@@ -1,0 +1,27 @@
+{
+  "reference_creators_id": "reference_creators_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "updated_on": "2026-07-03",
+  "items": [
+    {
+      "reference_creator_id": "reference_creator_luna_fit_001",
+      "handle": "@deskwellnessdaily",
+      "display_name": "Desk Wellness Daily",
+      "platforms": [
+        "instagram"
+      ],
+      "relationship": "adjacent_creator",
+      "user_approved_core_reference": true,
+      "measurement_rationale": "Consistent outperformance on the shared desk-reset topic cluster.",
+      "audience_overlap_note": "Office workers with sedentary routines; near-total overlap.",
+      "recent_signal_note": "Lunch-break reset reel at 4x baseline this week.",
+      "creator_profile_id": "creator_luna_fit",
+      "usefulness_score": 74,
+      "status": "active",
+      "added_on": "2026-07-03",
+      "updated_on": "2026-07-03",
+      "last_evaluated_on": "2026-07-03",
+      "rationale": "Surfaced two adjacent-creator desk-reset trends in the last run."
+    }
+  ]
+}

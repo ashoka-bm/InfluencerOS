@@ -1,0 +1,19 @@
+{
+  "research_sources_id": "research_sources_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "updated_on": "2026-07-03",
+  "items": [
+    {
+      "source_intel_id": "source_intel_luna_fit_001",
+      "url": "https://www.instagram.com/deskwellnessdaily",
+      "platform": "instagram",
+      "creator_profile_id": "creator_luna_fit",
+      "usefulness_score": 74,
+      "status": "active",
+      "added_on": "2026-07-03",
+      "updated_on": "2026-07-03",
+      "last_evaluated_on": "2026-07-03",
+      "rationale": "Surfaced two adjacent-creator desk-reset trends in the last run."
+    }
+  ]
+}

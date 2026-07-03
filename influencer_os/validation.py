@@ -58,7 +58,7 @@ KNOWN_KEYWORDS = ANNOTATION_KEYWORDS | VALIDATION_KEYWORDS
 
 KNOWN_TYPE_NAMES = {"array", "boolean", "integer", "null", "number", "object", "string"}
 
-SUPPORTED_FORMATS = {"date"}
+SUPPORTED_FORMATS = {"date", "date-time"}
 
 MAX_REF_CHAIN_LENGTH = 25
 
@@ -170,6 +170,13 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
                 datetime.date.fromisoformat(value)
             except ValueError:
                 raise ValidationError(f"{path}: {value!r} is not a real calendar date") from None
+        if format_name == "date-time" and isinstance(value, str):
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", value):
+                raise ValidationError(f"{path}: {value!r} is not YYYY-MM-DDTHH:MM:SS")
+            try:
+                datetime.datetime.fromisoformat(value)
+            except ValueError:
+                raise ValidationError(f"{path}: {value!r} is not a real timestamp") from None
 
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0):

@@ -1,0 +1,76 @@
+{
+  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+  "creator_profile_id": "creator_luna_fit",
+  "approved_by": "user",
+  "approved_on": "2026-07-03",
+  "intended_payoff": "Viewer feels the reset is doable today and saves it for tomorrow's lunch.",
+  "approved_platforms": [
+    "instagram",
+    "tiktok"
+  ],
+  "approved_formats": [
+    "format_short_form_video"
+  ],
+  "research_finding_ids": [
+    "finding_luna_fit_desk_reset_lunch"
+  ],
+  "evidence_refs": [
+    {
+      "research_run_id": "research_run_luna_fit_2026_07_03_001",
+      "evidence_id": "evidence_luna_fit_001",
+      "metric_snapshot_ids": [
+        "metric_snapshot_luna_fit_001"
+      ],
+      "video_understanding_pack_ids": [
+        "video_research_luna_fit_001"
+      ]
+    }
+  ],
+  "score_snapshot": {
+    "evidence_strength": {
+      "score": 78,
+      "rationale": "Two adjacent creators outperforming baseline on the same premise."
+    },
+    "viral_potential": {
+      "score": 66,
+      "rationale": "Strong hook pattern, but the niche caps ceiling."
+    },
+    "audience_nurture_value": {
+      "score": 82,
+      "rationale": "Directly serves desk-worker reset habit building."
+    },
+    "creator_fit": {
+      "score": 88,
+      "rationale": "Matches Luna's calm two-minute reset persona exactly."
+    },
+    "schedule_fit": {
+      "score": 71,
+      "rationale": "Fits the open midweek education slot."
+    },
+    "production_readiness": {
+      "score": 75,
+      "rationale": "Single location, existing style card, no new assets."
+    },
+    "urgency": {
+      "score": 55,
+      "rationale": "Trend is rising but not spiking; two-week window."
+    },
+    "measurement_clarity": {
+      "score": 70,
+      "rationale": "Saves and completion rate map cleanly to the payoff."
+    }
+  },
+  "creative_elements_to_carry_forward": [
+    "three-move structure",
+    "payoff line naming the feeling",
+    "lunch-break time anchor"
+  ],
+  "project_ids_created": [
+    "project_luna_tiny_reset_001"
+  ],
+  "promotion_status": "active",
+  "schedule_slot_ids": [
+    "slot_luna_2026_07_09_midweek"
+  ]
+}

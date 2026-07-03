@@ -1,7 +1,7 @@
 # Research And Ideas Implementation Plan
 
-Status: Slice 3 execution planned (2026-07-03); the Execution Decisions
-section below awaits user approval before implementation.
+Status: Slice 3 in execution (2026-07-03). The Execution Decisions below were
+user-approved on 2026-07-03; do not reopen without user approval.
 Last updated: 2026-07-03
 
 ## Goal
@@ -754,11 +754,17 @@ Minimum indexed columns:
 - Automation and notification work in this slice is record shapes only;
   scheduling and Telegram delivery are a separately approved build-out.
 
-## Execution Decisions (2026-07-03, Pending User Approval)
+## Execution Decisions (User-Approved 2026-07-03)
 
 Phase 1 slice 3 executes this plan's schema surface; the four Open
-Implementation Questions are resolved here. Implement only after user
-approval; once approved, do not reopen without user approval.
+Implementation Questions are resolved here. Do not reopen without user
+approval.
+
+Correction (2026-07-03, during execution): `youtube_short` and
+`youtube_video` are dropped from the seeded content-type enum below — YouTube
+is not in the ADR 0020 research platform set, so those values could never be
+paired with a valid `platform`. They join the enum when YouTube joins the
+platform set. `x_thread` is added alongside `x_post`.
 
 1. Slice split: slice 3 lands implementation-sequence steps 1-6, 11, and 12
    (all module schemas and examples as one coherent set per ADR 0020, the

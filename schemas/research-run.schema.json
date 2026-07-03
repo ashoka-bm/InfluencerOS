@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-run.schema.json",
+  "title": "ResearchRun",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_run_id",
+    "creator_profile_id",
+    "started_on",
+    "completed_on",
+    "mode",
+    "scope",
+    "platforms",
+    "material_update",
+    "outputs",
+    "run_status"
+  ],
+  "properties": {
+    "research_run_id": {
+      "type": "string",
+      "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "started_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "scheduled_needs",
+        "wildcard_discovery",
+        "reference_creator_watchlist",
+        "topic_overlap_scan",
+        "urgent_trend_check",
+        "queue_refresh",
+        "hashtag_search_term_check"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "x",
+          "instagram",
+          "tiktok",
+          "substack",
+          "medium",
+          "reddit",
+          "facebook",
+          "linkedin"
+        ]
+      },
+      "minItems": 1
+    },
+    "material_update": {
+      "type": "boolean"
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^finding_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "idea_queue_entry_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "metric_snapshot_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^metric_snapshot_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "research_intelligence_updates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "finding_ids",
+        "idea_queue_entry_ids",
+        "evidence_ids",
+        "metric_snapshot_ids",
+        "research_intelligence_updates"
+      ]
+    },
+    "run_status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "completed_no_material_update",
+        "failed"
+      ]
+    },
+    "error": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
