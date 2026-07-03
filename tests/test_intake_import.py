@@ -12,6 +12,7 @@ from influencer_os.creator_workspaces import (
     set_intake_status,
     validate_creator_workspace,
 )
+from influencer_os.validation import ValidationError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -175,6 +176,26 @@ class ImportIntakeTests(unittest.TestCase):
                     notes="Missing file.",
                 )
 
+    def test_impossible_calendar_date_fails_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            manifest_before = read_manifest(workspace_dir)
+            source_path = write_source_file(temp_dir)
+
+            with self.assertRaises(ValidationError):
+                import_intake(
+                    workspace_dir,
+                    source_path,
+                    source_type="breakdown",
+                    notes="Impossible date.",
+                    imported_on="2026-99-99",
+                )
+
+            self.assertEqual(read_manifest(workspace_dir), manifest_before)
+            self.assertFalse(
+                (workspace_dir / "sources" / "intakes" / "master-breakdown-v2.md").exists()
+            )
+
     def test_imported_on_defaults_to_today(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_valid_workspace(temp_dir)
@@ -249,6 +270,45 @@ class IntakeProvenanceValidationTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("sources/intakes/luna-fit-breakdown.md", str(ctx.exception))
+
+    def append_intake_entry(self, workspace_dir, path_value):
+        manifest = read_manifest(workspace_dir)
+        manifest["source_intakes"].append(
+            {
+                "source_id": "source_luna_fit_escape_001",
+                "source_type": "notes",
+                "path": path_value,
+                "imported_on": "2026-07-03",
+                "extraction_status": "pending",
+                "notes": "Escape probe.",
+            }
+        )
+        (workspace_dir / "creator-workspace.json").write_text(
+            json.dumps(manifest, indent=2) + "\n"
+        )
+
+    def test_validate_workspace_rejects_intake_path_escaping_the_workspace(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            outside_file = Path(temp_dir) / "outside-intake.md"
+            outside_file.write_text("# Outside the workspace\n")
+            # The file exists, so rejection must be about containment, not existence.
+            self.append_intake_entry(workspace_dir, "../../outside-intake.md")
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("outside-intake.md", str(ctx.exception))
+
+    def test_validate_workspace_rejects_absolute_intake_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            outside_file = Path(temp_dir) / "absolute-intake.md"
+            outside_file.write_text("# Absolute path\n")
+            self.append_intake_entry(workspace_dir, str(outside_file))
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("absolute-intake.md", str(ctx.exception))
 
 
 class IntakeCliTests(unittest.TestCase):

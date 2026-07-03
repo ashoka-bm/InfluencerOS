@@ -405,13 +405,22 @@ def validate_creator_workspace(workspace_path):
 
 
 def _validate_source_intakes(workspace_dir, manifest):
-    missing = sorted(
-        entry["path"]
-        for entry in manifest["source_intakes"]
-        if not (workspace_dir / entry["path"]).is_file()
-    )
+    workspace_root = workspace_dir.resolve()
+    escaping = []
+    missing = []
+    for entry in manifest["source_intakes"]:
+        raw_path = entry["path"]
+        resolved = (workspace_dir / raw_path).resolve()
+        if Path(raw_path).is_absolute() or not resolved.is_relative_to(workspace_root):
+            escaping.append(raw_path)
+        elif not resolved.is_file():
+            missing.append(raw_path)
+    if escaping:
+        raise ValueError(
+            f"Source intake paths must stay inside the workspace: {', '.join(sorted(escaping))}"
+        )
     if missing:
-        raise FileNotFoundError(f"Missing source intake files: {', '.join(missing)}")
+        raise FileNotFoundError(f"Missing source intake files: {', '.join(sorted(missing))}")
 
 
 def _validate_readiness_gates(manifest, reference_library):

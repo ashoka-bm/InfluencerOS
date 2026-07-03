@@ -264,6 +264,16 @@ class ValidatorSubsetTests(unittest.TestCase):
         with self.assertRaises(SchemaDefinitionError):
             validate_schema_subset(schema, "matches-first-branch")
 
+    def test_date_format_rejects_impossible_calendar_dates(self):
+        # Shape-only checking would accept 2026-99-99 as durable evidence dates.
+        schema = {"type": "string", "format": "date"}
+
+        validate_schema_subset(schema, "2026-07-03")
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "2026-99-99")
+        with self.assertRaises(ValidationError):
+            validate_schema_subset(schema, "2026-02-30")
+
     def test_enum_must_be_a_list(self):
         # A string enum would silently degrade to substring matching.
         schema = {"type": "string", "enum": "abc"}

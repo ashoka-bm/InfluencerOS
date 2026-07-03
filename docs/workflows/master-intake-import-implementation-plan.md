@@ -129,6 +129,31 @@ must exist inside the workspace. Missing intake files fail validation naming
 the missing paths. This runs on real workspaces (`validate workspace`), not
 on the bare example JSON, matching how existing workspace checks work.
 
+Hardened after the 2026-07-03 adversarial review (see Adversarial Review
+below): the check also rejects absolute paths and `..` escapes after
+`resolve()` (containment failure is a distinct error from a missing file),
+and the validator's `date` format now requires a real calendar date via
+`datetime.date.fromisoformat`, not just the YYYY-MM-DD shape.
+
+## Adversarial Review (2026-07-03)
+
+Post-landing review of the slice commits found two confirmed issues, both
+reproduced, fixed, and covered by negative tests the same day:
+
+- P1 — intake provenance was not contained to the workspace:
+  `validate workspace` accepted `source_intakes[].path` values like
+  `../../outside-intake.md` or absolute paths, breaking the local-first
+  provenance contract. Fixed in `_validate_source_intakes` with a
+  resolve-based containment check; escaping paths fail with a dedicated
+  error. Tests: `test_validate_workspace_rejects_intake_path_escaping_the_workspace`,
+  `test_validate_workspace_rejects_absolute_intake_path`.
+- P2 — `--imported-on` accepted impossible calendar dates (`2026-99-99`):
+  the validator's `date` format was shape-only. Fixed at the validator seam
+  so every `format: "date"` field in every schema is calendar-checked, with
+  the shape regex retained (3.11+ `fromisoformat` alone would loosen it).
+  Tests: `test_impossible_calendar_date_fails_before_any_write`,
+  `test_date_format_rejects_impossible_calendar_dates`.
+
 ## Skill And Doc Changes
 
 - `skills/create-influencer/SKILL.md` phase 1 (Intake and provenance) names

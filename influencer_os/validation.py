@@ -14,6 +14,7 @@ Example coverage is derived from disk: every ``schemas/*.schema.json`` must
 have a matching ``examples/*.example.json`` and vice versa.
 """
 
+import datetime
 import json
 import re
 from pathlib import Path
@@ -161,8 +162,14 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
         if format_name not in SUPPORTED_FORMATS:
             raise SchemaDefinitionError(f"{path}: unsupported format {format_name!r}")
         if format_name == "date" and isinstance(value, str):
+            # Keep the shape check: 3.11+ fromisoformat also accepts other
+            # ISO 8601 forms (e.g. 20260703) that must stay rejected.
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
                 raise ValidationError(f"{path}: {value!r} is not YYYY-MM-DD")
+            try:
+                datetime.date.fromisoformat(value)
+            except ValueError:
+                raise ValidationError(f"{path}: {value!r} is not a real calendar date") from None
 
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0):

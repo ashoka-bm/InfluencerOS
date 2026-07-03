@@ -78,6 +78,7 @@ Completed:
 - Project validation CLI support.
 - Tests for project scaffolding and validation.
 - Master intake import (slice 1, 2026-07-03, per `docs/workflows/master-intake-import-implementation-plan.md`): `import-intake` copies a setup source into the type-mapped `sources/` folder and appends a schema-valid `source_intakes` entry (`pending`, deterministic ids, fail-closed on duplicate destinations/ids); `set-intake-status` moves extraction status forward only (`pending` → `drafted` → `reviewed`); `validate workspace` resolves every intake path to a real file; `skills/create-influencer` phase 1 now invokes the commands; `examples/sources/luna-fit-breakdown.example.md` backs the example manifest's declared intake; 13 tests in `tests/test_intake_import.py`.
+- Addressed the slice 1 adversarial review (2026-07-03; findings recorded in the slice plan): intake provenance is now contained to the workspace — `validate workspace` rejects absolute `source_intakes` paths and `..` escapes after `resolve()` with a dedicated containment error (both reproduced as accepted before the fix); and the validator's `date` format now requires a real calendar date via `datetime.date.fromisoformat` on top of the YYYY-MM-DD shape check, so `2026-99-99` fails everywhere `format: "date"` appears, including `import-intake --imported-on`. Four negative tests added.
 
 Remaining:
 
@@ -219,6 +220,11 @@ verification above re-run end to end with the import-intake dogfood
 (source_luna_fit_interview_001 imported, moved to drafted, workspace
 validated with 25 checked paths); `rg -n "no master intake import command"
 docs/workflows/creator-setup.md` finds nothing.
+Slice 1 adversarial fixes (2026-07-03): 113 tests pass (4 new negative
+tests); both review probes re-run against the fixes — an escaping or
+absolute intake path is rejected with the containment error, and
+import-intake --imported-on 2026-99-99 fails with "not a real calendar
+date".
 ```
 
 ## Next Work Queue
