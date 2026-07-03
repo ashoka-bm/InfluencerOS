@@ -111,6 +111,22 @@ Refresh every Creator Workspace at once (each replaced skill folder is backed up
 python3 -m influencer_os update-creators
 ```
 
+## Import Setup Sources
+
+Import a master breakdown, interview transcript, or other setup source into a Creator Workspace. The file is copied under `sources/` by type (`breakdown`/`interview` → `intakes/`, `handoff`/`import` → `imports/`, `notes` → `notes/`) and a `source_intakes` provenance entry is recorded in `creator-workspace.json` with `extraction_status: "pending"`:
+
+```bash
+python3 -m influencer_os import-intake path/to/master-breakdown.md --creator-workspace workspace-library/creators/luna-fit --source-type breakdown --notes "Master breakdown provided by user."
+```
+
+Record extraction progress as setup advances (`drafted` when foundation drafts are derived, `reviewed` after human review; forward-only):
+
+```bash
+python3 -m influencer_os set-intake-status workspace-library/creators/luna-fit source_luna_fit_breakdown_001 drafted
+```
+
+`validate workspace` requires every recorded intake path to resolve to a real file.
+
 ## Initialize A Project
 
 ```bash

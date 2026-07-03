@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -60,7 +60,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: Contracted and partially scaffolded. Phase 0C parity hardening is complete (2026-07-03); the roadmap entry criteria are met and implementation may start with the master intake import slice.
+Status: In progress. Slice 1 (master intake import) landed 2026-07-03; the next slice is creator readiness validation.
 
 Completed:
 
@@ -77,10 +77,11 @@ Completed:
 - `init-project` CLI support.
 - Project validation CLI support.
 - Tests for project scaffolding and validation.
+- Master intake import (slice 1, 2026-07-03, per `docs/workflows/master-intake-import-implementation-plan.md`): `import-intake` copies a setup source into the type-mapped `sources/` folder and appends a schema-valid `source_intakes` entry (`pending`, deterministic ids, fail-closed on duplicate destinations/ids); `set-intake-status` moves extraction status forward only (`pending` → `drafted` → `reviewed`); `validate workspace` resolves every intake path to a real file; `skills/create-influencer` phase 1 now invokes the commands; `examples/sources/luna-fit-breakdown.example.md` backs the example manifest's declared intake; 13 tests in `tests/test_intake_import.py`.
 
 Remaining:
 
-- Import workflow from a master creator intake.
+- Creator readiness validation (slice 2), then the remaining Phase 1 slices in roadmap order.
 
 ### Phase 2: Learning OS
 
@@ -173,8 +174,12 @@ python3 -m influencer_os validate examples
 python3 -m influencer_os init-creator examples/creator-workspace.example.json --workspace-root .tmp/creators
 cp examples/creator-profile.example.json .tmp/creators/luna-fit/creator-profile.json
 cp examples/reference-library.example.json .tmp/creators/luna-fit/references/reference-library.json
+cp examples/sources/luna-fit-breakdown.example.md .tmp/creators/luna-fit/sources/intakes/luna-fit-breakdown.md
 cp examples/social-research-pack.example.json .tmp/creators/luna-fit/research/social-research-packs/research_luna_fit_2026_06_28.json
 cp examples/video-understanding-pack.example.json .tmp/creators/luna-fit/research/video-understanding-packs/video_research_luna_fit_001.json
+echo "# Interview Notes (synthetic)" > .tmp/luna-interview.md
+python3 -m influencer_os import-intake .tmp/luna-interview.md --creator-workspace .tmp/creators/luna-fit --source-type interview --notes "Follow-up interview transcript."
+python3 -m influencer_os set-intake-status .tmp/creators/luna-fit source_luna_fit_interview_001 drafted
 python3 -m influencer_os validate workspace .tmp/creators/luna-fit
 python3 -m influencer_os init-project examples/project.example.json --creator-workspace .tmp/creators/luna-fit
 cp examples/selected-content-idea.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/idea/selected-content-idea.json
@@ -208,11 +213,17 @@ passing — the full test suite (86 tests at the exit run; grown by the
 post-closeout re-review fixes since), 20 example records, 18 drift checks, full
 workspace/project/record workflow incl. update-creators (11 skills synced,
 11 backed up), and the stale-path check.
+Phase 1 slice 1 (2026-07-03): 107 tests pass (13 new in
+tests/test_intake_import.py); 20 example records validate; the full workflow
+verification above re-run end to end with the import-intake dogfood
+(source_luna_fit_interview_001 imported, moved to drafted, workspace
+validated with 25 checked paths); `rg -n "no master intake import command"
+docs/workflows/creator-setup.md` finds nothing.
 ```
 
 ## Next Work Queue
 
-1. Phase 0C is complete. Start Phase 1 (Planning OS) in the roadmap's slice order: master intake import first, then creator readiness validation, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point. The slice 1 plan is drafted at `docs/workflows/master-intake-import-implementation-plan.md` (2026-07-03); its Proposed Decisions section awaits user approval before implementation.
+1. Phase 1 slice 1 (master intake import) is complete (2026-07-03; record in `docs/workflows/master-intake-import-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: creator readiness validation next, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

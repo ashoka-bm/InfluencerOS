@@ -25,6 +25,11 @@ def copy_example_record(example_name, destination):
 def populate_workspace_records(workspace_dir):
     copy_example_record("creator-profile.example.json", workspace_dir / "creator-profile.json")
     copy_example_record("reference-library.example.json", workspace_dir / "references" / "reference-library.json")
+    # The example manifest declares this source intake; place it so intake
+    # provenance resolves during workspace validation.
+    (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
+        (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
+    )
 
 
 def populate_research_packs(workspace_dir):

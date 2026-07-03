@@ -55,7 +55,7 @@ The workflow is complete when the Creator Workspace is `content_ready` or `gener
 
 Run these internal phases in order:
 
-1. **Intake and provenance**: copy source files into `sources/` and record source intake metadata.
+1. **Intake and provenance**: import each source file with `python3 -m influencer_os import-intake <source-file> --creator-workspace <workspace-path> --source-type <type> --notes "<provenance note>"` — it copies the file into `sources/` by type and records the `source_intakes` entry as `pending`. Record extraction progress with `python3 -m influencer_os set-intake-status <workspace-path> <source-id> drafted` once foundation drafts are derived, and `reviewed` after the user reviews the extraction.
 2. **Identity generation**: use `create-identity` to create `brand_context/identity.md` as the continuity and production-bible file.
 3. **Soul generation**: use `create-soul` to create `brand_context/soul.md` as the psychology, belief, emotional logic, and audience-contract file.
 4. **Personal brand generation**: use `create-personal-brand` to create `brand_context/personal-brand.md` as the content strategy, platform posture, monetization, disclosure, and brand-safety file.

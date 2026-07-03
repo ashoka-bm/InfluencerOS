@@ -2,9 +2,11 @@
 
 Date: 2026-07-03
 
-Status: Draft. Phase 1 (Planning OS) slice 1 per the roadmap. The Proposed
-Decisions section below is pending user approval; implement only after those
-decisions are approved.
+Status: **Complete (2026-07-03).** Phase 1 (Planning OS) slice 1 per the
+roadmap. The user approved all four decisions below on 2026-07-03 and the
+slice landed the same day; the verification record lives in
+`docs/os-construction/progress.md`. This plan is retained as the slice
+record.
 
 ## Goal
 
@@ -190,13 +192,17 @@ The slice is done when every check below passes and is recorded in
 - `python3 -m influencer_os validate examples` passes.
 - The updated full-workflow verification passes end to end, including an
   `import-intake` call and the intake-path provenance check.
-- `rg -n "no master intake import command" docs/` finds nothing.
+- `rg -n "no master intake import command" docs/workflows/creator-setup.md`
+  finds nothing (the phrase survives only as history in this plan and the
+  progress log).
 
 This slice is the first runnable piece of the roadmap Phase 1 exit criterion
 "Creator Workspace setup works from a reviewed intake"; the criterion becomes
 fully runnable when slice 2 (creator readiness validation) lands.
 
-## Proposed Decisions (Pending User Approval)
+## Approved Decisions (User-Approved 2026-07-03)
+
+Do not reopen these without user approval:
 
 1. Scope: include `set-intake-status` alongside `import-intake`.
    Recommendation: yes — it completes the provenance lifecycle

@@ -196,6 +196,8 @@ python3 -m influencer_os validate workspace <creator-workspace>
 python3 -m influencer_os validate project <project-path>
 python3 -m influencer_os validate record <schema-name> <record-path>
 python3 -m influencer_os init-creator <workspace-manifest> [--workspace-root <dir>]
+python3 -m influencer_os import-intake <source-file> --creator-workspace <path> --source-type <type> --notes "<note>" [--source-id <id>] [--imported-on YYYY-MM-DD]
+python3 -m influencer_os set-intake-status <creator-workspace> <source-id> <drafted|reviewed>
 python3 -m influencer_os sync-creator-runtime <creator-workspace>
 python3 -m influencer_os update-creators [--workspace-root <dir>]
 python3 -m influencer_os init-project <project-manifest> --creator-workspace <path>
@@ -204,7 +206,7 @@ python3 -m influencer_os memory-write <MEMORY.md-path> "<fact>" [--section "<sec
 python3 -m influencer_os log-learning <learnings-path> <skill-name> "<entry>" [--date YYYY-MM-DD]
 ```
 
-Validation resolves provenance: `validate project` requires reference assets and research packs to exist in the owning workspace, and packaged projects must cross-match their output package against the project, applied template, and plan records. `memory-write` enforces the 2,500-byte `MEMORY.md` cap before writing; `update-creators` backs up each replaced skill folder to `.claude/skills-backup/`.
+Validation resolves provenance: `validate project` requires reference assets and research packs to exist in the owning workspace, packaged projects must cross-match their output package against the project, applied template, and plan records, and `validate workspace` requires every `source_intakes` path to resolve to a real file. `import-intake` copies a setup source under `sources/` by type and records the provenance entry; `set-intake-status` moves its extraction status forward only (`pending` → `drafted` → `reviewed`). `memory-write` enforces the 2,500-byte `MEMORY.md` cap before writing; `update-creators` backs up each replaced skill folder to `.claude/skills-backup/`.
 
 Run state is local and ignored under `workspace-library/runs/`.
 

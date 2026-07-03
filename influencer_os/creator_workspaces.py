@@ -1,3 +1,4 @@
+import datetime
 import json
 import shutil
 from pathlib import Path
@@ -15,6 +16,20 @@ SKILLS_BACKUP_DIR = Path(".claude") / "skills-backup"
 # Medium-based readiness: generation implies visual output, so a
 # generation_ready workspace needs at least one approved asset of these kinds.
 GENERATION_READY_ASSET_TYPES = {"character", "video_style"}
+
+# Source-type routing from the creator-setup Source Import rules: master-intake
+# material (breakdowns, interviews) lands in intakes/, external docs in
+# imports/, informal notes in notes/.
+INTAKE_DESTINATIONS = {
+    "breakdown": "sources/intakes",
+    "interview": "sources/intakes",
+    "handoff": "sources/imports",
+    "import": "sources/imports",
+    "notes": "sources/notes",
+}
+
+# Extraction lifecycle is forward-only; skipping "drafted" is allowed.
+EXTRACTION_STATUS_ORDER = {"pending": 0, "drafted": 1, "reviewed": 2}
 
 STANDARD_DIRECTORIES = [
     "context",
@@ -152,6 +167,105 @@ def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
     return workspace_dir
 
 
+def import_intake(workspace_path, source_file, source_type, notes, source_id=None, imported_on=None):
+    workspace_dir = Path(workspace_path)
+    manifest_path = workspace_dir / "creator-workspace.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Missing creator workspace manifest: {manifest_path}")
+    manifest = load_json(manifest_path)
+    validate_record("creator-workspace", manifest)
+
+    source_file = Path(source_file)
+    if not source_file.is_file():
+        raise FileNotFoundError(f"Missing intake source file: {source_file}")
+    if source_type not in INTAKE_DESTINATIONS:
+        raise ValueError(
+            f"Unknown source type {source_type!r}; expected one of {sorted(INTAKE_DESTINATIONS)}"
+        )
+
+    relative_destination = f"{INTAKE_DESTINATIONS[source_type]}/{source_file.name}"
+    destination = workspace_dir / relative_destination
+    if destination.exists():
+        raise FileExistsError(f"Intake destination already exists: {destination}")
+
+    existing_ids = {entry["source_id"] for entry in manifest["source_intakes"]}
+    if source_id is None:
+        source_id = _next_intake_id(manifest["creator_slug"], source_type, existing_ids)
+    elif source_id in existing_ids:
+        raise ValueError(f"Source intake id already recorded: {source_id!r}")
+
+    entry = {
+        "source_id": source_id,
+        "source_type": source_type,
+        "path": relative_destination,
+        "imported_on": imported_on or datetime.date.today().isoformat(),
+        "extraction_status": "pending",
+        "notes": notes,
+    }
+    updated_manifest = dict(manifest)
+    updated_manifest["source_intakes"] = manifest["source_intakes"] + [entry]
+    validate_record("creator-workspace", updated_manifest)
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source_file, destination)
+    _write_manifest(manifest_path, updated_manifest)
+
+    return {
+        "workspace_path": workspace_dir,
+        "source_id": source_id,
+        "source_type": source_type,
+        "destination": destination,
+        "extraction_status": "pending",
+    }
+
+
+def set_intake_status(workspace_path, source_id, new_status):
+    workspace_dir = Path(workspace_path)
+    manifest_path = workspace_dir / "creator-workspace.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Missing creator workspace manifest: {manifest_path}")
+    manifest = load_json(manifest_path)
+    validate_record("creator-workspace", manifest)
+
+    if new_status not in EXTRACTION_STATUS_ORDER:
+        ordered = sorted(EXTRACTION_STATUS_ORDER, key=EXTRACTION_STATUS_ORDER.get)
+        raise ValueError(f"Unknown extraction status {new_status!r}; expected one of {ordered}")
+
+    matches = [entry for entry in manifest["source_intakes"] if entry["source_id"] == source_id]
+    if not matches:
+        raise ValueError(f"Unknown source intake id: {source_id!r}")
+    entry = matches[0]
+
+    previous_status = entry["extraction_status"]
+    if EXTRACTION_STATUS_ORDER[new_status] <= EXTRACTION_STATUS_ORDER[previous_status]:
+        raise ValueError(
+            f"Extraction status only moves forward: {previous_status!r} -> {new_status!r} is not allowed"
+        )
+
+    entry["extraction_status"] = new_status
+    validate_record("creator-workspace", manifest)
+    _write_manifest(manifest_path, manifest)
+
+    return {
+        "workspace_path": workspace_dir,
+        "source_id": source_id,
+        "previous_status": previous_status,
+        "extraction_status": new_status,
+    }
+
+
+def _next_intake_id(creator_slug, source_type, existing_ids):
+    prefix = f"source_{creator_slug.replace('-', '_')}_{source_type}"
+    sequence = 1
+    while f"{prefix}_{sequence:03d}" in existing_ids:
+        sequence += 1
+    return f"{prefix}_{sequence:03d}"
+
+
+def _write_manifest(manifest_path, manifest):
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS_DIR):
     workspace_dir = Path(workspace_path)
     manifest_path = workspace_dir / "creator-workspace.json"
@@ -279,6 +393,7 @@ def validate_creator_workspace(workspace_path):
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
 
+    _validate_source_intakes(workspace_dir, manifest)
     _validate_readiness_gates(manifest, reference_library)
 
     return {
@@ -287,6 +402,16 @@ def validate_creator_workspace(workspace_path):
         "workspace_path": workspace_dir,
         "checked_paths": sorted(set(required_paths)),
     }
+
+
+def _validate_source_intakes(workspace_dir, manifest):
+    missing = sorted(
+        entry["path"]
+        for entry in manifest["source_intakes"]
+        if not (workspace_dir / entry["path"]).is_file()
+    )
+    if missing:
+        raise FileNotFoundError(f"Missing source intake files: {', '.join(missing)}")
 
 
 def _validate_readiness_gates(manifest, reference_library):

@@ -6,7 +6,10 @@ from pathlib import Path
 from influencer_os.memory import DEFAULT_MEMORY_SECTION, append_skill_learning, write_memory_fact
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
+    INTAKE_DESTINATIONS,
+    import_intake,
     init_creator,
+    set_intake_status,
     sync_creator_runtime,
     update_creators,
     validate_creator_workspace,
@@ -39,6 +42,19 @@ def main(argv=None):
 
     update_creators_parser = subparsers.add_parser("update-creators", help="Refresh copied runtime skills across every Creator Workspace under a root.")
     update_creators_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
+
+    intake_parser = subparsers.add_parser("import-intake", help="Import a setup source file into a Creator Workspace and record source intake provenance.")
+    intake_parser.add_argument("source_file", help="Path to the source file to import.")
+    intake_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+    intake_parser.add_argument("--source-type", required=True, choices=sorted(INTAKE_DESTINATIONS), help="Source intake type; routes the file under sources/.")
+    intake_parser.add_argument("--notes", required=True, help="Provenance note for the source intake record.")
+    intake_parser.add_argument("--source-id", help="Optional explicit source id; auto-generated when omitted.")
+    intake_parser.add_argument("--imported-on", help="Import date as YYYY-MM-DD; defaults to today.")
+
+    intake_status_parser = subparsers.add_parser("set-intake-status", help="Move a source intake's extraction status forward (pending -> drafted -> reviewed).")
+    intake_status_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+    intake_status_parser.add_argument("source_id", help="Source intake id from creator-workspace.json.")
+    intake_status_parser.add_argument("status", choices=["drafted", "reviewed"], help="New extraction status.")
 
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
@@ -109,6 +125,27 @@ def main(argv=None):
             print(f"Synced creator runtime: {result['workspace_path']}")
             print(f"Synced {len(result['synced_skills'])} skills into {result['skills_path']}")
             print(f"Preserved {result['preserved_overrides']} local overrides")
+            return 0
+
+        if args.command == "import-intake":
+            result = import_intake(
+                args.creator_workspace,
+                args.source_file,
+                source_type=args.source_type,
+                notes=args.notes,
+                source_id=args.source_id,
+                imported_on=args.imported_on,
+            )
+            print(f"Imported intake {result['source_id']} -> {result['destination']}")
+            print("Next phase: derive foundation drafts (create-influencer)")
+            return 0
+
+        if args.command == "set-intake-status":
+            result = set_intake_status(args.creator_workspace, args.source_id, args.status)
+            print(
+                f"Set intake {result['source_id']} extraction status: "
+                f"{result['previous_status']} -> {result['extraction_status']}"
+            )
             return 0
 
         if args.command == "init-project":

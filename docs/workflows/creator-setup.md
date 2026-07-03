@@ -344,13 +344,25 @@ Planned or prompted assets should still use stable asset IDs so downstream plans
 
 ## Source Import
 
-When user-provided materials are imported, the workflow should copy them into `sources/` and record source provenance in `creator-workspace.json`.
+When user-provided materials are imported, the workflow copies them into `sources/` and records source provenance in `creator-workspace.json` through the CLI:
 
-Recommended placement:
+```bash
+python3 -m influencer_os import-intake <source-file> --creator-workspace <workspace-path> --source-type breakdown --notes "Master breakdown provided by user."
+```
 
-- master breakdowns: `sources/intakes/`
-- imported docs or exports: `sources/imports/`
-- informal notes: `sources/notes/`
+The command routes the file by `--source-type` and appends a `source_intakes` entry with `extraction_status: "pending"`. As setup advances, record extraction progress (forward-only) with:
+
+```bash
+python3 -m influencer_os set-intake-status <workspace-path> <source-id> <drafted|reviewed>
+```
+
+`validate workspace` requires every recorded intake path to resolve to a real file.
+
+Placement by source type:
+
+- master breakdowns and interview transcripts (`breakdown`, `interview`): `sources/intakes/`
+- imported docs, exports, or handoffs (`import`, `handoff`): `sources/imports/`
+- informal notes (`notes`): `sources/notes/`
 - original media references: appropriate folders under `references/`, with source linkage from `reference-library.json`
 
 The workflow does not need a path-reference-only system for original external locations. The copied workspace files are the durable local source.
@@ -441,12 +453,15 @@ The current implementation can scaffold the Creator Workspace, but it does not y
 
 Likely gaps:
 
-- no master intake import command
 - no guided interview command
-- no explicit review or acceptance metadata beyond workspace status
+- no explicit review or acceptance metadata beyond workspace status (source intakes track `pending`/`drafted`/`reviewed` via `set-intake-status`; the whole-foundation acceptance state does not)
 - no file-existence validation for reference asset paths
 - no markdown completeness validation for `context/` or `brand_context/` files
 - no provider-neutral prompt file generation command
+
+Closed gaps:
+
+- master intake import: `import-intake` copies setup sources into `sources/` and records `source_intakes` provenance; `validate workspace` resolves intake paths (Phase 1 slice 1, 2026-07-03).
 
 ## Next Grilling Questions
 

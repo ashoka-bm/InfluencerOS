@@ -109,7 +109,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `cli.py` | Command surface; routes to helpers, holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
-| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11] |
+| `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + provenance resolution. | [BUILT — WS12] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
@@ -128,6 +128,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | workspace-structure check | `init-creator` produces the documented tree incl. `.claude/skills/` (schema entry lands in WS11). | [BUILT — `test_cli.py`] |
 | project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
+| source-intake provenance check | `validate workspace` fails when a `source_intakes` path names a missing file; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
 
 ### Deferred / gated subsystems
 
