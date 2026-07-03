@@ -2,10 +2,19 @@
 
 Creator Workspaces are ignored local folders for real AI creators. The public repo stores the reusable operating system; `workspace-library/creators/<creator-slug>/` stores private creator state, references, projects, analytics evidence, memory, and progress.
 
+## Current Build/Test Mode
+
+The repo is still in a system-building and workflow-testing phase. Creator Workspaces created during this phase are test fixtures unless the user explicitly promotes one as production creator state.
+
+Fixture workspaces may contain generated personas, generated images, reference prompts, fake research, draft projects, and memory used only to test the operating system. They are expected to be wiped before real creator onboarding starts. Do not preserve, migrate, or optimize around fixture creator data unless the user explicitly asks.
+
+Durable implementation work lives in the public repo: docs, schemas, tests, CLI behavior, skills, templates, examples, and validation rules. `workspace-library/` remains private local state and must not become the source of product truth.
+
 ## Principles
 
 - Keep the public repo reusable: schemas, examples, docs, tests, skills, and shared prompts live at the repository root.
-- Keep real creator state private: creator identities, media references, generated work, platform records, analytics, memory, and progress live under `workspace-library/`, which is gitignored.
+- Keep real creator state private once production onboarding begins: creator identities, media references, generated work, platform records, analytics, memory, and progress live under `workspace-library/`, which is gitignored.
+- Treat current `workspace-library/` creator contents as disposable fixtures during build/test mode.
 - Keep always-loaded context tiny: `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md` mirror Agentic OS and should be loaded first in routine creator work.
 - Keep richer creator detail lazy-loaded: `brand_context/` holds identity, psychology, brand strategy, and voice samples.
 - Keep the Creator Profile typed but not bloated: `creator-profile.json` is the operational summary, while `brand_context/` holds richer detail.
@@ -119,6 +128,8 @@ workspace-library/creators/<creator-slug>/
         SKILL.local.md
   progress/
 ```
+
+The structure above is the target production layout. In build/test mode, a workspace that follows this layout is still a fixture unless the user explicitly accepts it as durable creator state.
 
 ### Transitional Layout (Phase 0C)
 

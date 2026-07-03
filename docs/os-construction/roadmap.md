@@ -1,8 +1,12 @@
 # InfluencerOS Roadmap
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 
 This roadmap defines phase order, exit criteria, and implementation priorities. Progress status lives in `docs/os-construction/progress.md`.
+
+## Build/Test Data Policy
+
+Until the user declares real onboarding has started, Creator Workspace contents under `workspace-library/` are disposable fixtures for validating the OS. Build work should optimize the system contracts, skills, validation, and workflow ergonomics, not preserve current test creator data as if it were permanent.
 
 ## North Star
 

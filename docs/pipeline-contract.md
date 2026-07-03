@@ -30,6 +30,8 @@ records/
 
 `workspace-library/` is ignored by git. The repository stores product contracts, schemas, examples, and tests; run state stays local.
 
+During the current build phase, local run and creator data are disposable test fixtures unless the user explicitly promotes them. The operator expects to wipe fixture data before real creator onboarding.
+
 ## Local Creator Layout
 
 Real creator state lives under `workspace-library/creators/<creator-slug>/`.

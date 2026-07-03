@@ -4,6 +4,12 @@ Last updated: 2026-07-03
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
+## Current Build/Test Data Policy
+
+InfluencerOS is being built and tested before real creator onboarding. Current Creator Workspace contents under `workspace-library/` are disposable fixtures unless the user explicitly promotes a workspace as production creator state.
+
+This includes generated personas, generated reference images, prompts, research notes, draft projects, workspace memory, and setup progress. The operator expects to wipe this test data before using the system for real creators. Durable progress is the operating system work recorded in this repo: docs, schemas, tests, CLI behavior, skills, templates, examples, and validation rules.
+
 ## Phase Map
 
 ### Phase 0: Architecture Foundation

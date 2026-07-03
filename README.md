@@ -22,6 +22,12 @@ InfluencerOS v1 is platform-agnostic. It targets short vertical videos that can 
 
 See [docs/os-construction/progress.md](docs/os-construction/progress.md) for the current phase map and build status.
 
+## Current Build/Test Data Policy
+
+InfluencerOS is currently in a system-building and workflow-testing phase. Any creator workspaces, generated personas, reference prompts, generated media, research notes, projects, memory, or progress files under `workspace-library/` are disposable test data unless the user explicitly says otherwise.
+
+The durable work is the operating system itself: docs, schemas, tests, CLI behavior, skills, templates, examples, and validation rules. Before real creator onboarding starts, the operator expects to wipe the test creator data and start from clean, accepted creator foundations.
+
 ## Start Here
 
 - [CONTEXT.md](CONTEXT.md): product vocabulary and naming source of truth.
@@ -92,6 +98,8 @@ This creates a local ignored creator workspace under:
 ```text
 workspace-library/creators/
 ```
+
+During the current build phase, creator workspaces initialized here are fixtures for testing setup, validation, generation gates, and workflow ergonomics. Do not treat their contents as permanent production data unless the user explicitly promotes a workspace out of test status.
 
 After authoring `creator-profile.json` and `references/reference-library.json`, validate the workspace with:
 

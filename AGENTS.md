@@ -71,6 +71,7 @@ Promotion).
 ## Operating Rules
 
 - Treat `/Users/ashokaji/code/External repos/Agentic Academy/agentic-os` as the Agentic OS architecture reference. If InfluencerOS needs to diverge from that reference, surface the divergence and record the architectural decision before coding it.
+- Treat current Creator Workspace contents as build/test fixtures. During this system-building phase, creator profiles, generated persona details, references, media assets, research, projects, memory, and progress under `workspace-library/` are disposable validation data, not permanent production creator state. The operator expects to wipe test creator data before real creator onboarding starts.
 - Treat v1 as local-first. Command Centre, hosted execution, hooks, cron, and anywhere-access are deferred until explicitly approved.
 - Keep workflow boundaries deterministic: name the inputs, outputs, schema or template, provenance links, validation, and approval gate.
 - Use test-driven, context-driven, and domain-driven development for behavior changes.
