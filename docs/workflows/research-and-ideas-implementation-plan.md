@@ -1,12 +1,13 @@
 # Research And Ideas Implementation Plan
 
-Status: **Slice 3 complete (2026-07-03).** The schema surface of this plan
-(implementation-sequence steps 1-6, 11, 12 plus the promotion gate) landed via
-the user-approved Execution Decisions below; the verification record lives in
-`docs/os-construction/progress.md`. Steps 7-10 (recall index, board rebuild,
-prune) execute with slice 4, the Research Findings and Idea Queue workflow.
-A post-landing review hardening batch closed the findings recorded in
-Post-Review Hardening below (same day).
+Status: **Slice 3 complete (2026-07-03); slice 4 in progress (2026-07-03).**
+The schema surface of this plan (implementation-sequence steps 1-6, 11, 12
+plus the promotion gate) landed via the user-approved Execution Decisions
+below; the verification record lives in `docs/os-construction/progress.md`.
+Steps 7-10 (recall index, board rebuild, prune) execute with slice 4, the
+Research Findings and Idea Queue workflow, per the Slice 4 Execution
+Decisions at the end of this plan. A post-landing review hardening batch
+closed the findings recorded in Post-Review Hardening below (same day).
 Last updated: 2026-07-03
 
 ## Goal
@@ -972,3 +973,69 @@ Declined with rationale:
   checks against the live entry would reject exactly the drift the snapshot
   design anticipates. Entry ownership is checked (fix 2); snapshot content
   is not re-derived.
+
+## Slice 4 Execution Decisions (User-Approved 2026-07-03)
+
+Slice 4 is the Research Findings and Idea Queue workflow: the
+`create-research-findings` and `manage-idea-queue` producer skills,
+implementation-sequence steps 7-10 (recall index, board rebuild, prune), and
+the three run-scoped consistency checks deferred from the slice 3 review.
+Five decisions were approved individually. Do not reopen without user
+approval.
+
+1. Index layout: one shared SQLite at
+   `workspace-library/index/influencer-os.sqlite`, per ADR 0010.
+   `rebuild-index <creator-workspace>` deletes and reinserts only that
+   creator's rows, so rebuilds stay scoped while cross-creator lookup stays
+   possible. Indexed columns follow the ADR 0010 provenance minimum: record
+   id, record type, creator profile id, creator slug, project id when
+   applicable, source path, line number or record offset when applicable,
+   content hash, indexed timestamp.
+2. Validation is file-first. The three deferred run-scoped consistency
+   checks (per-record `research_run_id` vs the containing run folder,
+   `evidence_refs[].research_run_id` resolution instead of the global id
+   pool, and `research-run.json` `outputs` reconciliation against the run's
+   JSONL contents) land in `validate research`/`validate queue` reading
+   canonical files directly. The recall index is a pure rebuildable
+   projection and never a validation dependency, so validation has no
+   stale-index failure mode.
+3. CLI surface is projection/maintenance only: `rebuild-index`,
+   `rebuild-board`, `validate board`, and `prune`. Skills author canonical
+   records directly and the validators gate them. Mechanical write helpers
+   (for example `append-evidence`) join later only if repeated slice usage
+   shows agents fumbling a mechanical step — the same trigger rule as the
+   deferred `/watch` import command.
+4. `prune` is dry-run by default and deletes only with `--apply`. It removes
+   unpromoted, unreferenced evidence past the 30-day retention window and
+   never touches records referenced by a queue entry, promotion, or project
+   (test-pinned). Stale queue entries are kept for auditability per the
+   workflow doc. Metric-snapshot trajectory compaction is deferred until a
+   real snapshot corpus exists; this slice adds no trajectory schema.
+5. Scope stops at the queue. `manage-idea-queue` creates, updates, scores,
+   and stales entries and keeps the manifest and board consistent; it never
+   writes an `IdeaPromotion` or a `Project`. Promotion is slice 5
+   (`promote-idea`) per the roadmap order, and the human-approval gate is
+   untouched this slice.
+
+Execution batches, guardrails first, TDD per batch:
+
+- Batch A: the three run-scoped consistency checks in `validate research`
+  and `validate queue`, each gap reproduced by a failing test first.
+- Batch B: the recall index — SQLite layer per ADR 0010 plus
+  `rebuild-index`; idempotent-rebuild and id-resolution tests.
+- Batch C: the board — `rebuild-board` (deterministic card ids, manual order
+  survives rebuild) and `validate board` (the board must agree with
+  canonical records).
+- Batch D: `prune` with the retention rules and preservation tests.
+- Batch E: the two producer skills encoding the workflow doc's run-mode,
+  material-update, evidence-quality, and intelligence-approval rules;
+  registry, context-matrix, architecture-map, and conductor status flips;
+  runtime propagation to fixture workspaces; docs and the progress and
+  verification records.
+
+Success condition: all batches land with the pre-slice test suite green plus
+new negative tests per batch; the three consistency checks fail crafted bad
+fixtures and pass the live fixture workspaces; `rebuild-index` and
+`rebuild-board` are idempotent and deterministic; `prune --apply` provably
+never removes promotion-referenced evidence; both producer skills flip to
+built everywhere the drift checks look.
