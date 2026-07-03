@@ -1,7 +1,8 @@
 # Research And Ideas Implementation Plan
 
-Status: Draft
-Last updated: 2026-07-02
+Status: Slice 3 execution planned (2026-07-03); the Execution Decisions
+section below awaits user approval before implementation.
+Last updated: 2026-07-03
 
 ## Goal
 
@@ -753,10 +754,65 @@ Minimum indexed columns:
 - Automation and notification work in this slice is record shapes only;
   scheduling and Telegram delivery are a separately approved build-out.
 
-## Open Implementation Questions
+## Execution Decisions (2026-07-03, Pending User Approval)
 
-- Exact location for creator-scoped warning projections.
-- Whether stable findings should become Markdown-only or have JSON sidecars.
-- Exact schema naming for platform and content type enums.
-- Whether to create example files for one sample creator or use generic examples
-  only.
+Phase 1 slice 3 executes this plan's schema surface; the four Open
+Implementation Questions are resolved here. Implement only after user
+approval; once approved, do not reopen without user approval.
+
+1. Slice split: slice 3 lands implementation-sequence steps 1-6, 11, and 12
+   (all module schemas and examples as one coherent set per ADR 0020, the
+   project schema migration, JSONL and frontmatter validation, workspace
+   layout, CLI validation targets, deprecation, and doc/registry/matrix
+   reconciliation) plus the promotion-gate validation moved out of Phase 0C
+   workstream 12. Steps 7-10 (recall index, board rebuild command, prune
+   command) defer to slice 4, where the Research Findings and Idea Queue
+   workflow first exercises them. AutomationRun and SystemEvent land as
+   record shapes only, per ADR 0020.
+2. Downstream provenance swap: `applied-social-template`, the four
+   format-specific production plans, and `output-package` replace
+   `selected_content_idea_id` with `idea_promotion_id` in the same slice, and
+   the project cross-record checks compare that field against
+   `project.source_refs.idea_promotion_id`. Leaving the old field in
+   downstream records would keep `SelectedContentIdea` in the intended
+   pipeline, which the success condition forbids.
+3. Warning projections (open question 1): creator-scoped projections live at
+   `system/project-warnings.jsonl` and `system/creator-events.jsonl` under
+   the Creator Workspace, as drafted. The caveat stands: the operations
+   subsystem may relocate `system/` later.
+4. Stable findings (open question 2): Markdown-only with validated YAML
+   frontmatter (`stable-finding.schema.json` covering id, creator, dates,
+   source run/finding refs) — the same pattern as `findings.md`. No JSON
+   sidecars; a second file per finding is a drift surface.
+5. Enum naming (open question 3): `platform` is the closed ADR 0020 set —
+   `x`, `instagram`, `tiktok`, `substack`, `medium`, `reddit`, `facebook`,
+   `linkedin`. `platform_content_type` is a closed, curated snake_case enum
+   seeded from the ADR examples (`x_post`, `instagram_reel`,
+   `instagram_post`, `instagram_story`, `instagram_carousel`,
+   `tiktok_video`, `substack_article`, `substack_note`, `medium_article`,
+   `reddit_thread`, `reddit_comment`, `facebook_post`, `facebook_reel`,
+   `linkedin_post`, `linkedin_article`, `youtube_short`, `youtube_video`);
+   extending it is a deliberate schema change. Because the validator resolves
+   only intra-file `$ref`, each schema repeats the enums, and a drift test
+   asserts every occurrence matches one canonical constant.
+6. Examples (open question 4): continue the `luna-fit` sample creator so
+   research examples chain to the existing profile, workspace, and project
+   examples. All sample data is disposable build/test fixture data per the
+   build test data policy.
+
+Execution batches, guardrails first:
+
+- Batch A: all new schemas plus examples (steps 1, plus the
+  `stable-finding` frontmatter schema); enum drift test.
+- Batch B: JSONL line validation, `findings.md`/stable-finding frontmatter
+  validation, and the `validate research` / `validate queue` CLI targets.
+- Batch C: project schema migration (statuses, source refs, paths),
+  downstream provenance swap, promotion-gate validation (a promotion must
+  name a real queue entry; unresolved evidence refs warn for human-approved
+  promotions and fail for future automated paths), and `init-project`
+  updates including the `evidence-brief.md` scaffold.
+- Batch D: workspace layout helpers (research folders, board, system
+  projections), deprecation markers for `content-idea-set` and
+  `selected-content-idea`, doc/skill vocabulary updates, registry and
+  context-matrix reconciliation, and the full exit-criteria run recorded in
+  `docs/os-construction/progress.md`.
