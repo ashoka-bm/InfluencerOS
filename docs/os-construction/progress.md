@@ -210,7 +210,7 @@ workspace/project/record workflow incl. update-creators (11 skills synced,
 
 ## Next Work Queue
 
-1. Phase 0C is complete. Start Phase 1 (Planning OS) in the roadmap's slice order: master intake import first, then creator readiness validation, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
+1. Phase 0C is complete. Start Phase 1 (Planning OS) in the roadmap's slice order: master intake import first, then creator readiness validation, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point. The slice 1 plan is drafted at `docs/workflows/master-intake-import-implementation-plan.md` (2026-07-03); its Proposed Decisions section awaits user approval before implementation.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
