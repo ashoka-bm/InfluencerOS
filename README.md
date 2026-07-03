@@ -125,7 +125,7 @@ Record extraction progress as setup advances (`drafted` when foundation drafts a
 python3 -m influencer_os set-intake-status workspace-library/creators/luna-fit source_luna_fit_breakdown_001 drafted
 ```
 
-`validate workspace` requires every recorded intake path to resolve to a real file.
+Intake paths are schema-pinned under `sources/`, and `validate workspace` requires every recorded intake path to resolve to a real file inside the workspace (symlink escapes are rejected).
 
 ## Initialize A Project
 

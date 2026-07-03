@@ -206,7 +206,7 @@ python3 -m influencer_os memory-write <MEMORY.md-path> "<fact>" [--section "<sec
 python3 -m influencer_os log-learning <learnings-path> <skill-name> "<entry>" [--date YYYY-MM-DD]
 ```
 
-Validation resolves provenance: `validate project` requires reference assets and research packs to exist in the owning workspace, packaged projects must cross-match their output package against the project, applied template, and plan records, and `validate workspace` requires every `source_intakes` path to resolve to a real file. `import-intake` copies a setup source under `sources/` by type and records the provenance entry; `set-intake-status` moves its extraction status forward only (`pending` → `drafted` → `reviewed`). `memory-write` enforces the 2,500-byte `MEMORY.md` cap before writing; `update-creators` backs up each replaced skill folder to `.claude/skills-backup/`.
+Validation resolves provenance: `validate project` requires reference assets and research packs to exist in the owning workspace, packaged projects must cross-match their output package against the project, applied template, and plan records, and `validate workspace` requires every `source_intakes` path to resolve to a real file inside the workspace (paths are schema-pinned under `sources/`; symlink escapes are rejected after `resolve()`). `import-intake` copies a setup source under `sources/` by type and records the provenance entry; `set-intake-status` moves its extraction status forward only (`pending` → `drafted` → `reviewed`). `memory-write` enforces the 2,500-byte `MEMORY.md` cap before writing; `update-creators` backs up each replaced skill folder to `.claude/skills-backup/`.
 
 Run state is local and ignored under `workspace-library/runs/`.
 

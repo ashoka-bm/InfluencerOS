@@ -57,7 +57,7 @@
         "properties": {
           "source_id": { "type": "string", "pattern": "^source_[a-zA-Z0-9_-]+$" },
           "source_type": { "type": "string", "enum": ["breakdown", "interview", "handoff", "import", "notes"] },
-          "path": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "pattern": "^sources/(intakes|imports|notes)/[^/]+$" },
           "imported_on": { "type": "string", "format": "date" },
           "extraction_status": { "type": "string", "enum": ["pending", "drafted", "reviewed"] },
           "notes": { "type": "string", "minLength": 1 }

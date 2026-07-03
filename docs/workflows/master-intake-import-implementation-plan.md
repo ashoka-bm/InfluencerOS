@@ -57,8 +57,9 @@ Deterministic boundary per `AGENTS.md`:
 - Outputs: the file copied under the type-mapped `sources/` subdirectory; one
   new `source_intakes` entry in `creator-workspace.json` with
   `extraction_status: "pending"`.
-- Schema: existing `creator-workspace.schema.json` `source_intakes` items. No
-  schema change is required.
+- Schema: existing `creator-workspace.schema.json` `source_intakes` items.
+  (Initially unchanged; after the adversarial review the `path` field was
+  schema-pinned under `sources/` — see Adversarial Review below.)
 - Provenance links: the `source_intakes` entry is the provenance record —
   source id, type, workspace-relative path, import date, extraction status,
   notes (ADR 0002 consequence: "record the source intake path, date, and
@@ -153,6 +154,17 @@ reproduced, fixed, and covered by negative tests the same day:
   the shape regex retained (3.11+ `fromisoformat` alone would loosen it).
   Tests: `test_impossible_calendar_date_fails_before_any_write`,
   `test_date_format_rejects_impossible_calendar_dates`.
+
+Follow-up (2026-07-03, user-approved): P1 containment is also enforced
+declaratively. `creator-workspace.schema.json` pins `source_intakes[].path`
+with `^sources/(intakes|imports|notes)/[^/]+$`, so traversal, absolute
+paths, wrong directories, and nested paths fail at the schema seam in any
+context that validates the record — not only in `validate workspace`. The
+behavioral `resolve()` containment check remains as the second layer for
+schema-conforming paths that escape via symlinks
+(`test_validate_workspace_rejects_symlinked_intake_escaping_the_workspace`);
+schema-seam coverage lives in
+`test_workspace_intake_paths_are_pinned_under_sources`.
 
 ## Skill And Doc Changes
 

@@ -63,6 +63,25 @@ class SchemaValidationTests(unittest.TestCase):
                 with self.assertRaises(ValidationError):
                     validate_record("output-package", invalid)
 
+    def test_workspace_intake_paths_are_pinned_under_sources(self):
+        example = load_json("examples/creator-workspace.example.json")
+        for bad_path in (
+            "../../outside-intake.md",
+            "/tmp/outside-intake.md",
+            "research/misfiled-intake.md",
+            "sources/other/misfiled-intake.md",
+            "sources/intakes/nested/too-deep.md",
+        ):
+            invalid = deepcopy(example)
+            invalid["source_intakes"][0]["path"] = bad_path
+            with self.subTest(path=bad_path):
+                with self.assertRaises(ValidationError):
+                    validate_record("creator-workspace", invalid)
+
+        valid = deepcopy(example)
+        valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
+        validate_record("creator-workspace", valid)
+
     def test_content_ideas_require_evidence_refs(self):
         example = load_json("examples/content-idea-set.example.json")
         invalid = deepcopy(example)

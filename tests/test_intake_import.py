@@ -287,28 +287,44 @@ class IntakeProvenanceValidationTests(unittest.TestCase):
             json.dumps(manifest, indent=2) + "\n"
         )
 
-    def test_validate_workspace_rejects_intake_path_escaping_the_workspace(self):
+    def remove_intake_entry(self, workspace_dir, source_id):
+        manifest = read_manifest(workspace_dir)
+        manifest["source_intakes"] = [
+            entry for entry in manifest["source_intakes"] if entry["source_id"] != source_id
+        ]
+        (workspace_dir / "creator-workspace.json").write_text(
+            json.dumps(manifest, indent=2) + "\n"
+        )
+
+    def test_validate_workspace_rejects_traversal_and_absolute_intake_paths(self):
+        # Raw escapes are rejected by the schema pattern before the
+        # behavioral containment check runs.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_valid_workspace(temp_dir)
             outside_file = Path(temp_dir) / "outside-intake.md"
             outside_file.write_text("# Outside the workspace\n")
-            # The file exists, so rejection must be about containment, not existence.
-            self.append_intake_entry(workspace_dir, "../../outside-intake.md")
 
-            with self.assertRaises(ValueError) as ctx:
-                validate_creator_workspace(workspace_dir)
-            self.assertIn("outside-intake.md", str(ctx.exception))
+            for bad_path in ("../../outside-intake.md", str(outside_file)):
+                self.append_intake_entry(workspace_dir, bad_path)
+                with self.subTest(path=bad_path):
+                    with self.assertRaises(ValidationError):
+                        validate_creator_workspace(workspace_dir)
+                self.remove_intake_entry(workspace_dir, "source_luna_fit_escape_001")
 
-    def test_validate_workspace_rejects_absolute_intake_path(self):
+    def test_validate_workspace_rejects_symlinked_intake_escaping_the_workspace(self):
+        # A schema-conforming path that resolves outside the workspace via a
+        # symlink is caught by the behavioral containment check.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_valid_workspace(temp_dir)
-            outside_file = Path(temp_dir) / "absolute-intake.md"
-            outside_file.write_text("# Absolute path\n")
-            self.append_intake_entry(workspace_dir, str(outside_file))
+            outside_file = Path(temp_dir) / "outside-intake.md"
+            outside_file.write_text("# Outside the workspace\n")
+            link_path = workspace_dir / "sources" / "intakes" / "escape-link.md"
+            link_path.symlink_to(outside_file)
+            self.append_intake_entry(workspace_dir, "sources/intakes/escape-link.md")
 
             with self.assertRaises(ValueError) as ctx:
                 validate_creator_workspace(workspace_dir)
-            self.assertIn("absolute-intake.md", str(ctx.exception))
+            self.assertIn("escape-link.md", str(ctx.exception))
 
 
 class IntakeCliTests(unittest.TestCase):

@@ -128,7 +128,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | workspace-structure check | `init-creator` produces the documented tree incl. `.claude/skills/` (schema entry lands in WS11). | [BUILT — `test_cli.py`] |
 | project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
-| source-intake provenance check | `validate workspace` fails when a `source_intakes` path names a missing file, an absolute path, or a `..` escape outside the workspace; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
+| source-intake provenance check | `source_intakes` paths are schema-pinned under `sources/(intakes\|imports\|notes)/`; `validate workspace` additionally fails on missing files and symlink escapes after `resolve()`; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
 
 ### Deferred / gated subsystems
 
