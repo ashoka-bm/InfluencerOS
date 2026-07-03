@@ -35,6 +35,7 @@ InfluencerOS has two context scopes:
 | Creator setup | writes | writes | writes | writes | writes | writes | lazy | never | writes |
 | Social research | full | summary | summary | full | lazy | lazy | writes | lazy | summary |
 | Idea generation | full | summary | summary | summary | lazy | summary | full | lazy | summary |
+| Idea promotion | full | summary | summary | summary | lazy | summary | writes | writes | summary |
 | Template application | full | lazy | lazy | summary | lazy | lazy | full | full | lazy |
 | Production planning | full | full | full | summary | full | full | full | full | summary |
 | Generation planning | full | full | full | summary | full | full | full | full | lazy |
@@ -49,10 +50,11 @@ Current workflow coverage:
 
 | Skill | Context coverage |
 | --- | --- |
-| `influencer-os` | Social research, idea generation, template application, production planning, generation planning, output packaging, learning distillation |
+| `influencer-os` | Social research, idea generation, idea promotion, template application, production planning, generation planning, output packaging, learning distillation |
 | `create-influencer` | Creator setup |
 | `create-research-findings` | Social research |
 | `manage-idea-queue` | Idea generation |
+| `promote-idea` | Idea promotion |
 | `create-creator-profile` | Creator setup |
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |
