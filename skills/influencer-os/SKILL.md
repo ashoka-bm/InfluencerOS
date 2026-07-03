@@ -89,9 +89,10 @@ Tool boundary:
 
 - Use `/watch` or the installed `watch` skill only to inspect public URLs or
   user-provided local files.
-- Prefer native captions and sampled frames. Run with Whisper disabled unless
-  the user explicitly approves the exact transcription fallback or has already
-  configured it for this research run.
+- Prefer native captions and sampled frames. Run with Whisper disabled (pass
+  `--no-whisper`; the upstream default falls back to Whisper on caption-less
+  videos) unless the user explicitly approves the exact transcription fallback
+  or has already configured it for this research run.
 - Ask before installing global tooling, running first-run setup that installs
   dependencies, or processing batches of videos.
 - Use ignored working storage such as

@@ -32,6 +32,7 @@ The note must include:
 | Workflows chain modular skills through an orchestrator. | Conductor skills declare a `## Dependencies` table and a phase-to-owner map with explicit `Skill(skill: "...")` calls (ADR 0017); `skills/influencer-os/SKILL.md` is the content conductor and `skills/create-influencer/SKILL.md` the setup conductor. | Adopted; formalized in ADR 0017 |
 | Outputs live in predictable project folders. | Creator outputs live under `workspace-library/creators/<creator-slug>/projects/<project-id>/`. | Adopted |
 | System skills improve themselves from feedback. | `wrap-up` and `memory-write` system skills write `context/learnings.md`, `process-learnings.md`, `SKILL.local.md`, and `context/MEMORY.md`; behavior skills carry `## Rules`/`## Self-Update`. | Accepted in ADR 0016 |
+| External tools plug in through explicit skill/tool boundaries without vendoring. | `bradautomates/claude-video` `/watch` is an optional external acquisition tool for Video Understanding Packs; it stays outside the repo, out of conductor `dependencies`, and inside the provider boundary (decision record in `docs/video-understanding-research.md`, tracked in the skill-registry External Tool Integrations table). | Adopted (2026-07-03) |
 | Creator performance learning feeds future ideas. | Learning OS records analytics, performance summaries, and distilled creator memory (`distill-creator-learning`) before future ideas use those lessons. | Contracted (Phase 2) |
 
 ## Accepted Divergences

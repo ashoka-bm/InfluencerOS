@@ -51,17 +51,19 @@ For each selected public or local video:
 7. Store observations as a Video Understanding Pack.
 8. Synthesize patterns into Research Findings and Idea Queue updates.
 
-When using `/watch`, pass an explicit output directory under ignored local state, for example:
+When using `/watch`, pass `--no-whisper` (the upstream Whisper fallback runs automatically on caption-less videos otherwise) and an explicit output directory under ignored local state, for example:
 
 ```bash
-/watch <public-url-or-local-path> --out-dir .tmp/watch/<creator-slug>/<research-run-id>/<source-id>
+/watch <public-url-or-local-path> --no-whisper --out-dir .tmp/watch/<creator-slug>/<research-run-id>/<source-id>
 ```
 
 Use focused windows for long videos instead of broad sparse scans:
 
 ```bash
-/watch <public-url-or-local-path> --start 0:00 --end 0:30 --out-dir .tmp/watch/<creator-slug>/<research-run-id>/<source-id>
+/watch <public-url-or-local-path> --no-whisper --start 0:00 --end 0:30 --out-dir .tmp/watch/<creator-slug>/<research-run-id>/<source-id>
 ```
+
+Drop `--no-whisper` only when the user has approved the exact transcription fallback for this research run.
 
 If the installed surface does not expose a slash command, invoke the installed `watch` skill or its bundled script with the same options. Keep downloaded videos, frames, audio snippets, and intermediate transcripts out of tracked source and out of canonical Creator Workspace records unless a downstream workflow explicitly needs a retained source artifact.
 
@@ -76,7 +78,7 @@ InfluencerOS should prefer:
 - focused analysis windows for long videos,
 - timestamped observations over vague summaries.
 
-Run with Whisper disabled unless the user has approved the exact transcription fallback or has already configured it for this research run. Do not use logged-in platform sessions, private URLs, scraping APIs, cookies, or platform API credentials for v1 video understanding.
+Run with Whisper disabled (`--no-whisper`) unless the user has approved the exact transcription fallback or has already configured it for this research run. The upstream default falls back to Whisper automatically when a video has no caption track and prompts for API-key setup on first run, so omitting the flag can trigger a provider-backed call or a setup prompt without an approval step. Do not use logged-in platform sessions, private URLs, scraping APIs, cookies, or platform API credentials for v1 video understanding.
 
 Ask before installing global tools, running first-run setup that installs dependencies, or processing a batch of videos. A single public URL or local file can be analyzed as normal research when the required local tools are already available and no provider-backed fallback is used.
 
@@ -100,10 +102,10 @@ Map `/watch` output into `VideoUnderstandingPack` fields as follows:
 | video title or filename | `sources[].title` |
 | frame sampling mode and focused window | `sources[].analysis_method.frames_sampled`, `focused_range` |
 | transcript source | `sources[].analysis_method.transcript_source` (`captions`, `whisper`, `none`, or `unknown`) |
-| first few timestamped frames and transcript | `observations.opening_hook`, `first_frame_pattern`, `visual_structure`, `spoken_or_text_framing` |
-| repeated structure signals | `observations.template_signals`, `cross_video_patterns` |
-| useful but non-copying moves | `observations.replicable_moves` |
-| creator mismatch or imitation risks | `observations.avoid_notes`, `creator_fit_findings` |
+| first few timestamped frames and transcript | `sources[].observations.opening_hook`, `first_frame_pattern`, `visual_structure`, `spoken_or_text_framing` |
+| repeated structure signals | `sources[].observations.template_signals` per source; `cross_video_patterns` at the pack top level |
+| useful but non-copying moves | `sources[].observations.replicable_moves` |
+| creator mismatch or imitation risks | `sources[].observations.avoid_notes` per source; `creator_fit_findings` at the pack top level |
 
 Store summaries and timestamp-aware observations. Do not store full transcripts or full frame manifests by default.
 
@@ -115,5 +117,5 @@ Agentic OS divergence test:
 - Agentic OS reference: Agentic OS supports modular skills and external services through explicit skill/tool boundaries.
 - InfluencerOS decision: adapt the pattern by using `bradautomates/claude-video` only as optional acquisition tooling; canonical records and approval gates stay in InfluencerOS.
 - Classification: adaptation.
-- Decision record: this file, `skills/influencer-os/SKILL.md`, `docs/provider-boundary.md`, and the Phase 1 progress note.
+- Decision record: this file, `skills/influencer-os/SKILL.md`, `docs/provider-boundary.md`, the Adopted Patterns row in `docs/os-construction/agentic-os-alignment.md`, and the Phase 1 progress note.
 - Status: pass.

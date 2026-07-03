@@ -100,6 +100,8 @@ Completed:
 
 - Integrated `bradautomates/claude-video` `/watch` as the supported external acquisition tool for the existing Video Understanding Pack phase (2026-07-03): `/watch` remains outside the repo and is not a required producer skill; it may inspect public URLs or user-provided local videos, write working files under ignored local storage such as `.tmp/watch/...`, and feed distilled timestamp-aware observations into `VideoUnderstandingPack` records. Native captions and local frame extraction are allowed research actions; Whisper/API transcription fallback, first-run dependency installs, and video batches require explicit approval. Upstream hooks, commands, and hidden automation are not copied into InfluencerOS v1.
 
+- Addressed the watch integration review (2026-07-03; verified against the upstream repo): the documented `/watch` invocations and the conductor tool boundary now pass and name `--no-whisper`, because the upstream default falls back to Whisper automatically on caption-less videos and prompts for API-key setup on first run — the two actions the provider boundary gates behind explicit approval; the record-mapping table uses exact schema paths (`sources[].observations.*` per source; `cross_video_patterns` and `creator_fit_findings` at the pack top level); and the alignment doc gained the external-tool Adopted Patterns row the divergence test cites, so future external-tool decisions can pass under an existing listed pattern.
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -299,6 +301,10 @@ checks pass (21 tests); 38 example records validate. The integration is
 documentation/skill-boundary only: `/watch` is supported as an external
 acquisition tool for Video Understanding Packs, with no vendored scripts,
 hooks, command launchers, or provider-backed transcription by default.
+Watch integration review fixes (2026-07-03): docs-only; 189 tests still
+pass, drift checks pass (21 tests). Upstream flag facts (`--no-whisper`,
+`--out-dir`, `--start`/`--end`, MIT license, auto Whisper fallback and
+first-run setup prompt) verified against the upstream repo.
 ```
 
 ## Next Work Queue
