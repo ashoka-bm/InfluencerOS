@@ -13,6 +13,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### influencer-os
 
 - Pending repeated feedback.
+- 2026-07-03: Use bradautomates/claude-video /watch as optional external acquisition for Video Understanding Packs; keep Whisper, first-run installs, and batches behind approval, and do not add it to dependencies.
 
 ### create-influencer
 

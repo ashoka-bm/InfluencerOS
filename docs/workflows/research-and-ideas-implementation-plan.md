@@ -63,6 +63,28 @@ The first implementation slice is complete when:
 - deprecated `ContentIdeaSet` and `SelectedContentIdea` records are no longer in
   the intended pipeline.
 
+## Video Understanding Tool Integration
+
+Post-slice integration decision (2026-07-03): `bradautomates/claude-video`
+`/watch` is the supported external acquisition tool for the existing Video
+Understanding Pack phase.
+
+This does not change the slice 3 schema surface. It fills the already-built
+`VideoUnderstandingPack` seam with a concrete tool workflow:
+
+- public URL or user-provided local video,
+- native captions when available,
+- sampled frames through local tooling,
+- optional Whisper fallback only with exact approval/configuration,
+- distilled observations stored as `VideoUnderstandingPack` records,
+- evidence refs carried into Idea Queue entries, Idea Promotions, Projects, and
+  Output Packages through `video_understanding_pack_ids`.
+
+Do not vendor the upstream scripts, hooks, or command launchers in this slice.
+If repeated slice 4 usage shows that output import needs to be mechanized, add a
+small local import command that maps watched-video reports into
+`VideoUnderstandingPack` records instead of copying the whole external plugin.
+
 ## Implementation Sequence
 
 1. Add schemas and examples for the full research-module slice.

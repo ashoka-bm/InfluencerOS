@@ -184,7 +184,7 @@ Step input records
 
 Research and generation are separated. Research may browse current public sources and must cite them. Provider-backed generation requires explicit approval.
 
-Video understanding research may use public URLs or local files to inspect frames and transcripts. Whisper-style transcription fallback is provider-backed and requires explicit approval/configuration.
+Video understanding research may use public URLs or local files to inspect frames and transcripts. The supported external acquisition tool is the installed `bradautomates/claude-video` `/watch` workflow, when available; it remains outside the repo and only feeds distilled observations into `VideoUnderstandingPack` records. Whisper-style transcription fallback is provider-backed and requires explicit approval/configuration.
 
 ## CLI
 

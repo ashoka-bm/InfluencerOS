@@ -118,6 +118,28 @@ Current research inputs:
 - public or user-provided real videos when video understanding is useful,
 - local creator reference files when needed for fit checks.
 
+## Video Understanding Tool Decision
+
+When real video analysis is useful, InfluencerOS may use the installed
+`bradautomates/claude-video` `/watch` workflow as an external acquisition tool.
+Its job is to inspect the video source, sample frames, obtain native captions
+when available, and provide timestamped evidence for the agent to summarize.
+
+The canonical workflow output is still a `VideoUnderstandingPack`; `/watch`
+working files are disposable acquisition artifacts. Store only the distilled
+observations needed for research, queue scoring, and production provenance.
+
+Rules:
+
+- Use public URLs or user-provided local files only.
+- Prefer native captions and frames; API transcription fallback requires exact
+  user approval or prior explicit configuration for this research run.
+- Use an ignored output directory such as
+  `.tmp/watch/<creator-slug>/<research-run-id>/<source-id>/` when supported.
+- Use focused windows for long videos instead of broad sparse scans.
+- Do not import the upstream hooks, commands, or hidden automation into
+  InfluencerOS v1.
+
 ## Platform Scope Decision
 
 Every evidence record should include `platform` and `platform_content_type`.

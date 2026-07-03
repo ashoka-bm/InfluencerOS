@@ -222,3 +222,11 @@ When research includes real videos, create a Video Understanding Pack before
 synthesizing findings or queue updates. It stores timestamp-aware observations
 about hooks, first frames, visual structure, transcript framing, template
 signals, and creator-fit findings.
+
+The supported external acquisition tool for that step is the installed
+`bradautomates/claude-video` `/watch` workflow, or a local equivalent with the
+same boundary. `/watch` working files are temporary; the canonical pipeline
+record is the Video Understanding Pack. Native captions and local frame
+extraction are allowed research actions. Whisper or other API-backed
+transcription fallback requires exact approval/configuration, and upstream
+hooks or command launchers are not part of InfluencerOS v1.

@@ -80,6 +80,29 @@ When analyzing videos for research, store:
 - replicable moves,
 - avoid notes.
 
+Preferred acquisition tool: use an installed `watch` skill/plugin from
+`bradautomates/claude-video`, or a local equivalent, when available. The tool is
+not a repo-owned producer dependency and must not be added to this skill's
+`dependencies` frontmatter.
+
+Tool boundary:
+
+- Use `/watch` or the installed `watch` skill only to inspect public URLs or
+  user-provided local files.
+- Prefer native captions and sampled frames. Run with Whisper disabled unless
+  the user explicitly approves the exact transcription fallback or has already
+  configured it for this research run.
+- Ask before installing global tooling, running first-run setup that installs
+  dependencies, or processing batches of videos.
+- Use ignored working storage such as
+  `.tmp/watch/<creator-slug>/<research-run-id>/<source-id>/` via `--out-dir`
+  when the tool supports it.
+- Summarize the observed evidence into a `VideoUnderstandingPack`; do not store
+  downloaded videos, frame folders, audio clips, or full transcripts as
+  canonical records by default.
+- Delete disposable working files after the pack is created unless the user is
+  actively asking follow-up questions about the same video.
+
 ## Idea Queue Requirements
 
 Each queue idea must include:

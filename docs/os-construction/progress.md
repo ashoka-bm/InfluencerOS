@@ -98,6 +98,8 @@ Completed:
 
 - Landed the approval surface decisions (2026-07-03, per the user-approved Approval Surface Decisions in the slice plan): the format vocabulary is a closed enum across `approved_formats`, `format_recommendations`, `target_formats`, `preferred_formats`, and `format_id` (five schemas), pinned by the enum drift check alongside the platform and content-type enums, with a code drift check tying `PRODUCTION_SUPPORTED_FORMATS` to `PRODUCTION_PLAN_SCHEMAS`; the promotion gate hard-fails a promotion approving no production-supported format, mechanizing the slice success condition that was previously a workflow rule; and projects must stay within the locked promotion's approved surface — `target_formats` ⊆ `approved_formats` directly, and `platform_targets` via mapped subset (a distribution surface that maps to an ADR 0020 research platform must be approved; off-set surfaces like `youtube_shorts` stay exempt because the universal format travels there; closing the surface vocabulary defers to the production build-out).
 
+- Integrated `bradautomates/claude-video` `/watch` as the supported external acquisition tool for the existing Video Understanding Pack phase (2026-07-03): `/watch` remains outside the repo and is not a required producer skill; it may inspect public URLs or user-provided local videos, write working files under ignored local storage such as `.tmp/watch/...`, and feed distilled timestamp-aware observations into `VideoUnderstandingPack` records. Native captions and local frame extraction are allowed research actions; Whisper/API transcription fallback, first-run dependency installs, and video batches require explicit approval. Upstream hooks, commands, and hidden automation are not copied into InfluencerOS v1.
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -292,6 +294,11 @@ closed format enum across five schemas, the no-supported-format gate,
 the unapproved target-format and platform-surface project checks, and
 the code-constant drift pins); 38 example records and the three live
 fixture workspaces still validate unchanged.
+Video understanding tool integration (2026-07-03): 189 tests pass; drift
+checks pass (21 tests); 38 example records validate. The integration is
+documentation/skill-boundary only: `/watch` is supported as an external
+acquisition tool for Video Understanding Packs, with no vendored scripts,
+hooks, command launchers, or provider-backed transcription by default.
 ```
 
 ## Next Work Queue

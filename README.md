@@ -162,6 +162,16 @@ python3 -m influencer_os validate queue workspace-library/creators/luna-fit
 
 The promotion gate requires every promotion to point to a real idea queue entry and to approve at least one production-supported format; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path. Projects stay within the locked promotion's approved surface: target formats must be approved, and platform targets that map to a research platform must be approved (off-set surfaces such as YouTube Shorts remain valid targets for the universal format).
 
+## Video Understanding Tool
+
+When research uses real videos, the supported external acquisition tool is
+`bradautomates/claude-video` `/watch` when installed. Use it to inspect public
+URLs or user-provided local files, then store the distilled observations as a
+Video Understanding Pack. Keep `/watch` working files in ignored local storage
+such as `.tmp/watch/...`; do not commit downloaded videos, frames, audio clips,
+or transcripts. Whisper/API transcription fallback, first-run dependency
+installs, and video batches require explicit approval.
+
 ## Validate Any Record
 
 Validate one mid-pipeline record against any schema in `schemas/`:

@@ -1,6 +1,6 @@
 # InfluencerOS Architecture Map
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 
 This is the whole-system blueprint at file granularity: where every file lives, what it owns, and which function or skill calls which other function or skill. It records **structure and call flow, not file internals**. Internals (schema fields, skill prose, function bodies) are defined in the files themselves and built in dedicated TDD passes.
 
@@ -239,7 +239,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
 | Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace`: full medium-based readiness validator at `content_ready`/`generation_ready`/`active` (foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence) plus the generation-ready visual-asset gate [BUILT — WS14 + Phase 1 slice 2] | status transitions stay human |
-| Video understanding | real videos | `video-understanding-pack` | dated, source-linked | `validate record video-understanding-pack` [BUILT — WS12] | none |
+| Video understanding | public URLs or local real videos | `video-understanding-pack` | dated, source-linked; `/watch` or local equivalent only feeds distilled observations | `validate record video-understanding-pack` [BUILT — WS12] | exact approval for Whisper/API transcription fallback, batch processing, or first-run dependency installs |
 | Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` incl. JSONL line validation [BUILT — Phase 1 slice 3] | none |
 | Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit via `validate research` [BUILT — Phase 1 slice 3] | none |
 | Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | `validate queue`: manifest/entry consistency + evidence ref resolution [BUILT — Phase 1 slice 3] | none |

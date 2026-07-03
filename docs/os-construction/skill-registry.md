@@ -49,6 +49,15 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `wrap-up` | session end signals, wrap-up requests, sessions that produced deliverables | git status, `context/learnings.md`, this registry, context matrix | `context/learnings.md`, `docs/os-construction/process-learnings.md`, skill files, `context/MEMORY.md` | yes |
 | `memory-write` | remember this, note that, save to memory, update memory, forget about | target `MEMORY.md` | target `MEMORY.md` (2,500-byte cap via `python3 -m influencer_os memory-write`) | yes |
 
+## External Tool Integrations
+
+These are not repo-owned skills and must not be added to conductor
+`dependencies` frontmatter.
+
+| Tool | Used by workflow | Purpose | Boundary |
+| --- | --- | --- | --- |
+| `watch` (`bradautomates/claude-video`) | Social research / Video Understanding Pack | Inspect public or user-provided local videos, sample frames, obtain native captions, and provide timestamped evidence for `VideoUnderstandingPack` records | external optional tool; no vendoring; Whisper/API fallback, first-run dependency installs, and batches require explicit approval |
+
 ## Missing Future Skills
 
 | Skill | Purpose | Timing |

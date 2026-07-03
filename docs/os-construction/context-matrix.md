@@ -61,6 +61,12 @@ Current workflow coverage:
 | `wrap-up` | Skill/process improvement |
 | `memory-write` | Skill/process improvement |
 
+## External Tool Coverage
+
+| Tool | Context coverage |
+| --- | --- |
+| `watch` (`bradautomates/claude-video`) | Social research / Video Understanding Pack; use the Social research workflow row and write only distilled observations to `research/` |
+
 ## Skill Override Rule
 
 Core skill source files live in repo `skills/<skill-name>/SKILL.md`.
