@@ -77,7 +77,12 @@
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "enum": [
+                "format_short_form_video",
+                "format_carousel",
+                "format_single_image_post",
+                "format_story_sequence"
+              ]
             }
           }
         },

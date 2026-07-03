@@ -873,15 +873,42 @@ Deferred to slice 4 (with the recall index, which subsumes most of them):
 - reconciling `research-run.json` `outputs` id lists against the run's JSONL
   contents.
 
-Open question (explicitly not decided in this batch): nothing compares a
-Project's `target_formats`/`platform_targets` to the locked promotion's
-`approved_formats`/`approved_platforms`. If the approval snapshot is meant to
-constrain project targets, that cross-check is a deliberate follow-up; if
-projects may diverge from the approved surface, record that rule here and in
-the workflow doc when decided. (Related, noted in the second review round:
-`approved_formats` is a free-form string in the promotion schema, so the
-"promotion refuses production-unsupported formats" success condition is a
-workflow rule, not yet a mechanical check. Decide both together.)
+Open question — RESOLVED by the Approval Surface Decisions below: the locked
+promotion constrains project targets, `approved_formats` is a closed enum,
+and the production-support rule is a mechanical gate check.
+
+### Approval Surface Decisions (User-Approved 2026-07-03)
+
+The two open questions from the review rounds were decided together and
+landed as one batch before slice 4:
+
+1. Format vocabulary is a closed enum. `approved_formats`,
+   `format_recommendations`, `target_formats`, `preferred_formats`, and
+   `format_id` all pin to the canonical v1 list (`format_short_form_video`,
+   `format_carousel`, `format_single_image_post`, `format_story_sequence`)
+   with drift-test enforcement, following the platform-enum precedent. The
+   enum is the full known vocabulary, not just production-supported formats:
+   the plan explicitly lets a promotion record not-yet-supported approved
+   formats as long as one is supported, so text formats join the enum (not a
+   separate list) at the production build-out. A code drift check ties
+   `PRODUCTION_SUPPORTED_FORMATS` to `PRODUCTION_PLAN_SCHEMAS` and the
+   canonical enum.
+2. The promotion gate mechanically enforces the success condition: a
+   promotion approving no production-supported format fails validation
+   (record the approval intent on the queue entry instead). Hard fail, not a
+   warning — such a promotion should not exist.
+3. The locked promotion constrains project targets. `target_formats` must be
+   a subset of `approved_formats` (shared vocabulary, direct check). For
+   `platform_targets` the vocabularies differ — they are distribution
+   surfaces (`instagram_reels`, `youtube_shorts`), not research platforms —
+   so the check is a mapped subset: a surface that maps to an ADR 0020
+   research platform (`instagram_reels` → `instagram`) must be approved,
+   while surfaces off the research set (`youtube_*`) stay exempt because the
+   universal format legitimately travels there. Known caveat: an
+   unrecognized surface string is exempt too; closing the surface vocabulary
+   into its own enum belongs to the production build-out. Scope expansion
+   happens by superseding the promotion with a new approval, not by editing
+   project targets past the check.
 
 ### Second Review Round (User-Approved 2026-07-03)
 

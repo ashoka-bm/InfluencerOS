@@ -96,6 +96,8 @@ Completed:
 
 - Addressed the slice 3 second review round (2026-07-03; findings and the declined snapshot-consistency check recorded in the slice plan): `validate research` and `validate queue` enforce creator scoping — they require the owning `creator-workspace.json` and pin every record's `creator_profile_id`/`creator_slug` to it (a workspace previously validated with schedule, run, evidence, queue, and promotion records all claiming `creator_other`); the promotion gate rejects a promotion whose queue entry belongs to a different creator, protecting the `validate project` path too; `multi_platform_package` left the project `content_unit_type` enum until the production build-out adds its plan schema (a `created` project using it validated, then dead-ended at `planning` with no production plan schema); and the README opening flow, platform statement, and schema inventory now teach the ADR 0020 pipeline instead of the deprecated five-ideas flow. Seven creator-scope tests and a schema negative test added.
 
+- Landed the approval surface decisions (2026-07-03, per the user-approved Approval Surface Decisions in the slice plan): the format vocabulary is a closed enum across `approved_formats`, `format_recommendations`, `target_formats`, `preferred_formats`, and `format_id` (five schemas), pinned by the enum drift check alongside the platform and content-type enums, with a code drift check tying `PRODUCTION_SUPPORTED_FORMATS` to `PRODUCTION_PLAN_SCHEMAS`; the promotion gate hard-fails a promotion approving no production-supported format, mechanizing the slice success condition that was previously a workflow rule; and projects must stay within the locked promotion's approved surface — `target_formats` ⊆ `approved_formats` directly, and `platform_targets` via mapped subset (a distribution surface that maps to an ADR 0020 research platform must be approved; off-set surfaces like `youtube_shorts` stay exempt because the universal format travels there; closing the surface vocabulary defers to the production build-out).
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -285,6 +287,11 @@ records all claim `creator_other` — is rejected by `validate research`
 and `validate queue`; a `multi_platform_package` project is rejected at
 the schema; 38 example records and the three live fixture workspaces
 still validate unchanged.
+Approval surface decisions (2026-07-03): 189 tests pass (5 added — the
+closed format enum across five schemas, the no-supported-format gate,
+the unapproved target-format and platform-surface project checks, and
+the code-constant drift pins); 38 example records and the three live
+fixture workspaces still validate unchanged.
 ```
 
 ## Next Work Queue

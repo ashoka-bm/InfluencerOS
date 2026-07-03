@@ -28,14 +28,25 @@ RESEARCH_MODULE_SCHEMAS = (
     "idea-queue-entry", "idea-queue", "idea-promotion", "project-warning",
     "content-board", "automation-run", "system-event",
 )
+# The closed v1 format vocabulary (approval-surface decisions, 2026-07-03).
+# Text formats and multi-platform packaging join with the production build-out.
+RESEARCH_FORMATS = [
+    "format_short_form_video", "format_carousel",
+    "format_single_image_post", "format_story_sequence",
+]
 # project.schema.json caches both enums in source_refs (source_platforms /
-# source_platform_content_types); those copies must stay pinned too.
-ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + ("project",)
+# source_platform_content_types) and output-package embeds format_id twice;
+# those copies must stay pinned too.
+ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + ("project", "output-package")
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",
     "platform_recommendations", "preferred_platforms", "source_platforms",
 }
 CONTENT_TYPE_PROPERTY_NAMES = {"platform_content_type", "source_platform_content_types"}
+FORMAT_PROPERTY_NAMES = {
+    "approved_formats", "format_recommendations", "target_formats",
+    "preferred_formats", "format_id",
+}
 
 # The canonical read order lives once in AGENTS.md (ADR 0019). This list is the
 # drift check's fixed expectation: removing a doc from AGENTS.md fails here.
@@ -258,6 +269,8 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     yield f"{path}.{prop_name}", "platform", target["enum"]
                 if prop_name in CONTENT_TYPE_PROPERTY_NAMES and "enum" in target:
                     yield f"{path}.{prop_name}", "content_type", target["enum"]
+                if prop_name in FORMAT_PROPERTY_NAMES and "enum" in target:
+                    yield f"{path}.{prop_name}", "format", target["enum"]
             for key, child in node.items():
                 yield from self.iter_platform_enums(child, f"{path}.{key}")
         elif isinstance(node, list):
@@ -265,8 +278,12 @@ class ResearchEnumDriftTests(unittest.TestCase):
                 yield from self.iter_platform_enums(child, f"{path}[{index}]")
 
     def test_every_research_schema_matches_the_canonical_enums(self):
-        expected = {"platform": RESEARCH_PLATFORMS, "content_type": RESEARCH_CONTENT_TYPES}
-        found_any = {"platform": False, "content_type": False}
+        expected = {
+            "platform": RESEARCH_PLATFORMS,
+            "content_type": RESEARCH_CONTENT_TYPES,
+            "format": RESEARCH_FORMATS,
+        }
+        found_any = {"platform": False, "content_type": False, "format": False}
         for schema_name in ENUM_PINNED_SCHEMAS:
             schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
             for location, kind, values in self.iter_platform_enums(schema, schema_name):
@@ -277,6 +294,22 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     f"{location} diverges from the canonical ADR 0020 {kind} enum",
                 )
         self.assertTrue(all(found_any.values()), "drift check found no research enums to pin")
+
+    def test_code_constants_match_the_canonical_enums(self):
+        # The surface-mapping platform list and the production-supported
+        # format set are code copies of the canonical vocabulary; pin them
+        # like the schema copies.
+        from influencer_os.projects import PRODUCTION_PLAN_SCHEMAS
+        from influencer_os.projects import RESEARCH_PLATFORMS as CODE_PLATFORMS
+        from influencer_os.research import PRODUCTION_SUPPORTED_FORMATS
+
+        self.assertEqual(list(CODE_PLATFORMS), RESEARCH_PLATFORMS)
+        self.assertTrue(PRODUCTION_SUPPORTED_FORMATS <= set(RESEARCH_FORMATS))
+        self.assertEqual(
+            {f"format_{unit_type}" for unit_type in PRODUCTION_PLAN_SCHEMAS},
+            set(PRODUCTION_SUPPORTED_FORMATS),
+            "PRODUCTION_SUPPORTED_FORMATS must mirror the production plan schemas",
+        )
 
 
 class ConductorCallGraphDriftTests(unittest.TestCase):

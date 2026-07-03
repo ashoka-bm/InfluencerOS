@@ -46,6 +46,26 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, invalid)
 
+    def test_format_fields_reject_unknown_format_ids(self):
+        # The format vocabulary is a closed enum (approval-surface decisions);
+        # a typo like format_shortform_video must fail, not silently never match.
+        cases = (
+            ("idea-promotion", lambda r: r["approved_formats"].append("format_article")),
+            ("idea-queue-entry", lambda r: r["format_recommendations"].append("format_article")),
+            ("project", lambda r: r["target_formats"].append("format_article")),
+            (
+                "creator-content-schedule",
+                lambda r: r["content_goals"][0]["preferred_formats"].append("format_article"),
+            ),
+            ("output-package", lambda r: r["universal_core"].update(format_id="format_article")),
+        )
+        for schema_name, mutate in cases:
+            invalid = deepcopy(load_json(f"examples/{schema_name}.example.json"))
+            mutate(invalid)
+            with self.subTest(schema=schema_name):
+                with self.assertRaises(ValidationError):
+                    validate_record(schema_name, invalid)
+
     def test_project_rejects_production_unsupported_unit_type(self):
         # multi_platform_package has no production plan schema yet; it joins
         # the enum with the production build-out that adds one.

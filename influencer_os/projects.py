@@ -61,6 +61,12 @@ RESEARCH_PACK_LOCATIONS = (
     ("research_", "research/social-research-packs", "social-research-pack", "social_research_pack_id"),
 )
 
+# The ADR 0020 research platform set, used to map distribution surfaces in
+# platform_targets (instagram_reels, tiktok) back to research platforms.
+RESEARCH_PLATFORMS = (
+    "x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin",
+)
+
 
 def init_project(project_manifest_path, creator_workspace):
     project_manifest_path = Path(project_manifest_path)
@@ -182,7 +188,45 @@ def _resolve_promotion(project, workspace_dir):
             f"Idea promotion {promotion_id} does not list project "
             f"{project['project_id']!r} in project_ids_created"
         )
+    _validate_approval_surface(project, promotion)
     return promotion
+
+
+def _research_platform_for_surface(surface):
+    for platform in RESEARCH_PLATFORMS:
+        if surface == platform or surface.startswith(f"{platform}_"):
+            return platform
+    return None
+
+
+def _validate_approval_surface(project, promotion):
+    """A project stays within the locked promotion's approved surface.
+
+    Formats share one vocabulary and must be a subset. platform_targets are
+    distribution surfaces: a surface that maps to an ADR 0020 research
+    platform must be approved; surfaces off the research set (youtube_*) are
+    legitimate targets for the universal format and stay exempt until the
+    surface vocabulary is closed in the production build-out.
+    """
+    unapproved_formats = sorted(
+        set(project["target_formats"]) - set(promotion["approved_formats"])
+    )
+    if unapproved_formats:
+        raise ValueError(
+            "Project target_formats are not in the locked promotion's "
+            f"approved_formats: {unapproved_formats}"
+        )
+    unapproved_surfaces = sorted(
+        surface
+        for surface in project.get("platform_targets", [])
+        if (platform := _research_platform_for_surface(surface)) is not None
+        and platform not in promotion["approved_platforms"]
+    )
+    if unapproved_surfaces:
+        raise ValueError(
+            "Project platform_targets map to research platforms the locked "
+            f"promotion does not approve: {unapproved_surfaces}"
+        )
 
 
 def _validate_cached_promotion_refs(project, promotion):

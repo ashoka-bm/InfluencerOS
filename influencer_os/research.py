@@ -30,6 +30,16 @@ SYSTEM_JSONL_FILES = (
     ("creator-events.jsonl", "system-event"),
 )
 
+# Formats with a production plan schema (projects.PRODUCTION_PLAN_SCHEMAS).
+# A promotion must approve at least one of these; approving only unsupported
+# formats records approval intent on the queue entry instead (ADR 0020).
+PRODUCTION_SUPPORTED_FORMATS = frozenset({
+    "format_short_form_video",
+    "format_carousel",
+    "format_single_image_post",
+    "format_story_sequence",
+})
+
 
 def _iter_jsonl_lines(path):
     # Split on newlines only: splitlines() would also break on U+2028/U+2029,
@@ -379,6 +389,12 @@ def validate_promotion_gate(workspace_dir, promotion):
             f"Idea promotion {promotion_id} points to a queue entry owned by a "
             f"different creator: {entry['creator_profile_id']!r} != "
             f"{promotion['creator_profile_id']!r}"
+        )
+    if not set(promotion["approved_formats"]) & PRODUCTION_SUPPORTED_FORMATS:
+        raise ValidationError(
+            f"Idea promotion {promotion_id} approves no production-supported "
+            f"format ({sorted(promotion['approved_formats'])}); record the "
+            "approval intent on the queue entry instead until the format lands"
         )
 
     evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)

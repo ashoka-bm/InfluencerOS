@@ -56,7 +56,12 @@
       "properties": {
         "format_id": {
           "type": "string",
-          "pattern": "^format_[a-zA-Z0-9_-]+$"
+          "enum": [
+            "format_short_form_video",
+            "format_carousel",
+            "format_single_image_post",
+            "format_story_sequence"
+          ]
         },
         "title_base": {
           "type": "string",
@@ -191,7 +196,12 @@
           },
           "format_id": {
             "type": "string",
-            "pattern": "^format_[a-zA-Z0-9_-]+$"
+            "enum": [
+              "format_short_form_video",
+              "format_carousel",
+              "format_single_image_post",
+              "format_story_sequence"
+            ]
           },
           "title": {
             "type": "string",

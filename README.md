@@ -160,7 +160,7 @@ python3 -m influencer_os validate research workspace-library/creators/luna-fit
 python3 -m influencer_os validate queue workspace-library/creators/luna-fit
 ```
 
-The promotion gate requires every promotion to point to a real idea queue entry; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path.
+The promotion gate requires every promotion to point to a real idea queue entry and to approve at least one production-supported format; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path. Projects stay within the locked promotion's approved surface: target formats must be approved, and platform targets that map to a research platform must be approved (off-set surfaces such as YouTube Shorts remain valid targets for the universal format).
 
 ## Validate Any Record
 

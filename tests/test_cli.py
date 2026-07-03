@@ -738,6 +738,35 @@ class ProvenanceResolutionTests(unittest.TestCase):
                 validate_project(project_dir)
             self.assertIn("project_ids_created", str(ctx.exception))
 
+    def test_validate_project_rejects_unapproved_target_format(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["target_formats"].append("format_carousel"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("format_carousel", str(ctx.exception))
+            self.assertIn("approved_formats", str(ctx.exception))
+
+    def test_validate_project_rejects_unapproved_platform_surface(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            # substack maps to a research platform the promotion does not
+            # approve; youtube_shorts in the example stays exempt (off the
+            # research platform set).
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["platform_targets"].append("substack"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("substack", str(ctx.exception))
+            self.assertIn("does not approve", str(ctx.exception))
+
     def test_validate_project_rejects_cached_queue_entry_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)

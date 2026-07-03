@@ -385,6 +385,18 @@ class PromotionGateTests(unittest.TestCase):
             self.assertIn("video_research_luna_fit_001", result["warnings"][0])
             self.assertIn("human-approved", result["warnings"][0])
 
+    def test_promotion_approving_no_supported_format_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion = load_example("idea-promotion")
+            # The schema enum currently equals the supported set, so simulate
+            # a future text format past the schema, like the automation case.
+            promotion["approved_formats"] = ["format_article"]
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_promotion_gate(workspace_dir, promotion)
+            self.assertIn("no production-supported format", str(ctx.exception))
+
     def test_unresolved_evidence_fails_for_automated_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
