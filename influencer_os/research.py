@@ -82,10 +82,10 @@ def check_project_warning_pairing(record):
 
 
 def check_project_warning_target_refs(record, workspace_dir):
-    """A warning must target records that exist — queue entries, projects,
-    and promotions are never deleted in v1, so a dangling target is invalid
-    state, not history. Without this a warning silently vanishes from the
-    board projection instead of failing validation."""
+    """A warning must target records that exist and form one consistent
+    promotion chain — queue entries, projects, and promotions are never
+    deleted in v1, so a dangling target is invalid state, not history, and
+    a mismatched tuple would badge the wrong card on the board."""
     workspace_dir = Path(workspace_dir)
     warning_id = record.get("project_warning_id", "<unknown>")
     entry_id = record["idea_queue_entry_id"]
@@ -99,7 +99,8 @@ def check_project_warning_target_refs(record, workspace_dir):
         )
     if "project_id" in record:
         project_id = record["project_id"]
-        if not (workspace_dir / "projects" / project_id / "project.json").exists():
+        project_path = workspace_dir / "projects" / project_id / "project.json"
+        if not project_path.exists():
             raise ValidationError(
                 f"project warning {warning_id} targets project {project_id!r} "
                 "with no project record"
@@ -112,6 +113,22 @@ def check_project_warning_target_refs(record, workspace_dir):
             raise ValidationError(
                 f"project warning {warning_id} targets idea promotion "
                 f"{promotion_id!r} with no promotion record"
+            )
+        project = load_json(project_path)
+        locked_promotion = project.get("source_refs", {}).get("idea_promotion_id")
+        if locked_promotion != promotion_id:
+            raise ValidationError(
+                f"project warning {warning_id} pairs project {project_id!r} "
+                f"with idea promotion {promotion_id!r}, but the project's "
+                f"locked promotion is {locked_promotion!r}"
+            )
+        promotion = load_json(promotion_path)
+        promoted_entry = promotion.get("idea_queue_entry_id")
+        if promoted_entry != entry_id:
+            raise ValidationError(
+                f"project warning {warning_id} targets queue entry "
+                f"{entry_id!r}, but idea promotion {promotion_id!r} was "
+                f"promoted from {promoted_entry!r}"
             )
 
 
@@ -386,6 +403,14 @@ def validate_queue(workspace_path):
             check_creator_scope(record, scope, entry_path)
             entries[record["idea_queue_entry_id"]] = record
 
+    ref_ids = [ref["idea_queue_entry_id"] for ref in manifest["entry_refs"]]
+    duplicate_refs = sorted(
+        ref_id for ref_id in set(ref_ids) if ref_ids.count(ref_id) > 1
+    )
+    if duplicate_refs:
+        raise ValidationError(
+            f"Queue manifest lists entries more than once: {duplicate_refs}"
+        )
     manifest_refs = {ref["idea_queue_entry_id"]: ref["status"] for ref in manifest["entry_refs"]}
     missing = sorted(set(manifest_refs) - set(entries))
     if missing:
@@ -419,12 +444,20 @@ def validate_queue(workspace_path):
 
     evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
+    known_finding_ids = collect_finding_ids(workspace_dir)
     for entry in entries.values():
         for ref in entry["evidence_refs"]:
             problems = resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids)
             if problems:
                 raise ValidationError(
                     f"{entry['idea_queue_entry_id']}: {problems[0]}"
+                )
+        for finding_id in entry.get("source_finding_ids", []):
+            if finding_id not in known_finding_ids:
+                raise ValidationError(
+                    f"{entry['idea_queue_entry_id']}: source finding ref "
+                    f"{finding_id!r} does not resolve to any findings "
+                    "frontmatter, stable finding, or run output"
                 )
 
     return {
@@ -470,6 +503,8 @@ def validate_promotion_gate(workspace_dir, promotion):
 
     evidence_runs, metric_runs = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
+    warnings = []
+
     unresolved = []
     for ref in promotion["evidence_refs"]:
         unresolved.extend(
@@ -482,8 +517,28 @@ def validate_promotion_gate(workspace_dir, promotion):
         )
         if promotion["approved_by"] != "user":
             raise ValidationError(message)
-        return [f"warning: {message} (human-approved promotion: warning only)"]
-    return []
+        warnings.append(
+            f"warning: {message} (human-approved promotion: warning only)"
+        )
+
+    known_finding_ids = collect_finding_ids(workspace_dir)
+    unresolved_findings = sorted(
+        finding_id
+        for finding_id in set(promotion.get("research_finding_ids", []))
+        if finding_id not in known_finding_ids
+    )
+    if unresolved_findings:
+        message = (
+            f"idea promotion {promotion_id} has research finding refs that "
+            "resolve to no findings frontmatter, stable finding, or run "
+            f"output: {unresolved_findings}"
+        )
+        if promotion["approved_by"] != "user":
+            raise ValidationError(message)
+        warnings.append(
+            f"warning: {message} (human-approved promotion: warning only)"
+        )
+    return warnings
 
 
 def validate_promotions(workspace_path, scope=None):
@@ -590,6 +645,32 @@ def resolve_evidence_ref(ref, evidence_runs, metric_runs, video_pack_ids):
                 "to a video-understanding-pack record"
             )
     return problems
+
+
+def collect_finding_ids(workspace_dir):
+    """Every finding id the workspace has declared: the rolling findings
+    frontmatter, stable findings, and each run's immutable outputs. Findings
+    legitimately rotate out of the rolling summary (the char limit demotes
+    them), so refs resolve against the union — a ghost id fails while a
+    rotated finding still resolves through the run that produced it."""
+    research_dir = Path(workspace_dir) / "research"
+    finding_ids = set()
+    findings_path = research_dir / "findings.md"
+    if findings_path.exists():
+        data, _body = parse_frontmatter(findings_path)
+        finding_ids.update(data.get("finding_ids", []))
+    stable_dir = research_dir / "stable-findings"
+    if stable_dir.exists():
+        for stable_path in sorted(stable_dir.glob("*.md")):
+            data, _body = parse_frontmatter(stable_path)
+            if data.get("finding_id"):
+                finding_ids.add(data["finding_id"])
+    runs_dir = research_dir / "runs"
+    if runs_dir.exists():
+        for manifest_path in sorted(runs_dir.glob("*/research-run.json")):
+            outputs = load_json(manifest_path).get("outputs", {})
+            finding_ids.update(outputs.get("finding_ids", []))
+    return finding_ids
 
 
 def collect_video_pack_ids(workspace_dir):

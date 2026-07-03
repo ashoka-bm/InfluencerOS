@@ -246,6 +246,62 @@ class ResearchStateValidationTests(unittest.TestCase):
             self.assertIn("project_luna_ghost", message)
             self.assertIn("no project record", message)
 
+    def test_warning_entry_mismatching_promotion_chain_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            # A second real entry: the warning tuple names it while the
+            # promotion was locked from the first entry.
+            entry = load_example("idea-queue-entry")
+            entry["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            write_json(
+                workspace_dir / "research" / "idea-queue" / "entries"
+                / "idea_queue_entry_luna_fit_002.json",
+                entry,
+            )
+            warning = load_example("project-warning")
+            warning["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", [warning]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("was promoted from", str(ctx.exception))
+
+    def test_warning_promotion_mismatching_project_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            # A second real promotion of the same entry: the warning pairs it
+            # with a project locked to the first promotion.
+            promotion = load_example("idea-promotion")
+            promotion["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            write_json(
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_002.json",
+                promotion,
+            )
+            warning = load_example("project-warning")
+            warning["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", [warning]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("locked promotion", str(ctx.exception))
+
+    def test_duplicate_manifest_entry_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+            manifest = json.loads(queue_path.read_text())
+            manifest["entry_refs"].append(dict(manifest["entry_refs"][0]))
+            write_json(queue_path, manifest)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("more than once", str(ctx.exception))
+
     def test_project_warning_with_unpaired_promotion_ids_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
@@ -503,6 +559,60 @@ class RunScopeConsistencyTests(unittest.TestCase):
             message = str(ctx.exception)
             self.assertIn("metric_snapshot_luna_fit_002", message)
             self.assertIn("resolves to run", message)
+
+    def test_dangling_source_finding_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry = json.loads(entry_path.read_text())
+            entry["source_finding_ids"] = ["finding_luna_fit_ghost"]
+            write_json(entry_path, entry)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_queue(workspace_dir)
+            self.assertIn("finding_luna_fit_ghost", str(ctx.exception))
+
+    def test_finding_rotated_out_of_rolling_summary_still_resolves(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            # Simulate the char-limit demotion: the finding leaves the rolling
+            # summary but stays declared by the run that produced it (and by
+            # its stable finding), so queue refs must keep resolving.
+            findings_path = workspace_dir / "research" / "findings.md"
+            findings = load_example("research-findings")
+            findings["finding_ids"] = []
+            findings_path.write_text(
+                frontmatter_block(findings) + "\nNothing rolling right now.\n"
+            )
+
+            validate_queue(workspace_dir)
+
+    def test_promotion_with_dangling_finding_ref_warns_for_human_approved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            promotion = json.loads(promotion_path.read_text())
+            promotion["research_finding_ids"] = ["finding_luna_fit_ghost"]
+            write_json(promotion_path, promotion)
+
+            result = validate_research(workspace_dir)
+            self.assertEqual(len(result["warnings"]), 1)
+            self.assertIn("finding_luna_fit_ghost", result["warnings"][0])
+            self.assertIn("human-approved", result["warnings"][0])
+
+    def test_promotion_with_dangling_finding_ref_fails_for_automated(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion = load_example("idea-promotion")
+            promotion["approved_by"] = "automation"
+            promotion["research_finding_ids"] = ["finding_luna_fit_ghost"]
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_promotion_gate(workspace_dir, promotion)
+            self.assertIn("finding_luna_fit_ghost", str(ctx.exception))
 
     def test_duplicate_evidence_id_across_runs_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:

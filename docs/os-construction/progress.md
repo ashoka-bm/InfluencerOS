@@ -114,6 +114,8 @@ Completed:
 
 - Addressed the slice 4 review (2026-07-03; three P2 findings, all confirmed): `create-research-findings` now says a no-material run still updates `last_ran` in the findings frontmatter while leaving the body, `last_updated`, and finding fields unchanged (the previous "leaves findings.md alone" wording contradicted the workflow contract and would have produced valid-but-stale `last_ran` dates schema validation cannot catch); the same skill now requires all five run `outputs` arrays present and exact — `finding_ids`, `idea_queue_entry_ids`, and `research_intelligence_updates` were previously unmentioned, so a run touching findings or intelligence could validate while hiding that provenance behind empty arrays; and project warnings now fail closed on dangling targets via `check_project_warning_target_refs` (shared by `validate research` and board derivation) — the queue entry must always exist, and the project and promotion must exist for promoted-work warnings. Before the fix a warning naming a nonexistent target validated and silently vanished from the board projection. The base research test scaffold gained the example project (the example warning targets it), and three tests that delete warning targets now clear the warnings stream first so their intended failures fire.
 
+- Addressed the slice 4 second review round (2026-07-03; two P2 and one P3, all confirmed): finding refs now resolve — queue `source_finding_ids` hard-fail and promotion `research_finding_ids` warn/fail (human/automated) against `collect_finding_ids`, the union of findings frontmatter, stable findings, and immutable run `outputs.finding_ids`; the union matters because findings legitimately rotate out of the char-limited rolling summary, so a rotated finding still resolves through the run that produced it while a ghost id fails (a bogus `finding_luna_fit_ghost` previously passed `validate queue` and `validate research`, leaving the Product Invariant's findings trace unenforced). Promoted-work warnings now check chain consistency, not just existence: the project's locked `source_refs.idea_promotion_id` must equal the warning's promotion and that promotion's `idea_queue_entry_id` must equal the warning's entry — before the fix a mismatched tuple validated and badged the wrong project card. And the queue manifest rejects duplicate `entry_refs` (the ref dict silently collapsed duplicates, letting `status_counts` count collapsed values).
+
 Remaining:
 
 - Idea Promotion to Project workflow (slice 5, `promote-idea`), then the remaining Phase 1 slices in roadmap order.
@@ -349,6 +351,11 @@ Slice 4 review fixes (2026-07-03): 234 tests pass (2 added — dangling
 queue-entry and project warning targets); drift checks pass (21 tests);
 the three live fixture workspaces still pass `validate research`;
 updated skill files re-synced to all fixtures.
+Slice 4 second review round (2026-07-03): 241 tests pass (7 added —
+dangling and rotated finding refs for queue and promotion, warning
+chain-consistency mismatches, duplicate manifest refs; each reproduced
+failing first); drift checks pass (21 tests); the three live fixture
+workspaces still pass `validate research`.
 ```
 
 ## Next Work Queue
