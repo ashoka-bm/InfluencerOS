@@ -234,7 +234,7 @@ behavioral containment check; 20 example records validate.
 
 ## Next Work Queue
 
-1. Phase 1 slice 1 (master intake import) is complete (2026-07-03; record in `docs/workflows/master-intake-import-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: creator readiness validation next, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point.
+1. Phase 1 slice 1 (master intake import) is complete (2026-07-03; record in `docs/workflows/master-intake-import-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: creator readiness validation next, then the ADR 0020 research module slice — resolving the four open questions in `docs/workflows/research-and-ideas-implementation-plan.md` at that point. The slice 2 plan is drafted at `docs/workflows/creator-readiness-validation-implementation-plan.md` (2026-07-03); its Proposed Decisions section awaits user approval before implementation.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
