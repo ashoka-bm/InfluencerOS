@@ -115,6 +115,16 @@ class SchemaValidationTests(unittest.TestCase):
         valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
         validate_record("creator-workspace", valid)
 
+    def test_applied_template_format_is_closed_vocabulary(self):
+        # The plan-layer format field was the only format-typed property
+        # outside the closed enum; a made-up format must fail at the schema.
+        example = load_json("examples/applied-social-template.example.json")
+        invalid = deepcopy(example)
+        invalid["target_format_id"] = "format_interpretive_dance"
+
+        with self.assertRaises(ValidationError):
+            validate_record("applied-social-template", invalid)
+
     def test_idea_promotion_requires_evidence_refs(self):
         # Projects resolve evidence provenance transitively through the
         # locked promotion, so a promotion with no evidence refs would sever

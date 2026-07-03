@@ -773,6 +773,22 @@ class ProvenanceResolutionTests(unittest.TestCase):
             self.assertIn("substack", str(ctx.exception))
             self.assertIn("does not approve", str(ctx.exception))
 
+    def test_validate_project_rejects_off_target_template_format(self):
+        # The applied template is plan-layer format routing: its
+        # target_format_id must be one of the project's target_formats,
+        # which in turn stay within the promotion's approved surface.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "plan" / "applied-template.json",
+                lambda template: template.update(target_format_id="format_carousel"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("format_carousel", str(ctx.exception))
+            self.assertIn("target_formats", str(ctx.exception))
+
     def test_validate_project_rejects_cached_queue_entry_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)

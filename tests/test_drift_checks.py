@@ -35,9 +35,12 @@ RESEARCH_FORMATS = [
     "format_single_image_post", "format_story_sequence",
 ]
 # project.schema.json caches both enums in source_refs (source_platforms /
-# source_platform_content_types) and output-package embeds format_id twice;
-# those copies must stay pinned too.
-ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + ("project", "output-package")
+# source_platform_content_types), output-package embeds format_id twice, and
+# applied-social-template carries the plan-layer target_format_id; those
+# copies must stay pinned too.
+ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + (
+    "project", "output-package", "applied-social-template",
+)
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",
     "platform_recommendations", "preferred_platforms", "source_platforms",
@@ -45,8 +48,12 @@ PLATFORM_PROPERTY_NAMES = {
 CONTENT_TYPE_PROPERTY_NAMES = {"platform_content_type", "source_platform_content_types"}
 FORMAT_PROPERTY_NAMES = {
     "approved_formats", "format_recommendations", "target_formats",
-    "preferred_formats", "format_id",
+    "preferred_formats", "format_id", "target_format_id",
 }
+# Pinned-name properties that legitimately carry no enum: the output-package
+# platform adaptation targets the open distribution-surface vocabulary
+# (youtube_shorts et al.), which closes in the production build-out.
+ENUM_EXEMPT_PROPERTIES = {("output-package", "platform")}
 
 # The canonical read order lives once in AGENTS.md (ADR 0019). This list is the
 # drift check's fixed expectation: removing a doc from AGENTS.md fails here.
@@ -277,19 +284,25 @@ def skill_body(skill_name):
 
 class ResearchEnumDriftTests(unittest.TestCase):
     def iter_platform_enums(self, node, path=""):
+        """Yield (location, kind, enum-or-None) for every pinned-name
+        property. None means the property carries no enum — that fails the
+        drift check unless the (schema, property) pair is exempt, so deleting
+        an enum cannot silently drop the pin."""
         if isinstance(node, dict):
+            kinds = (
+                (PLATFORM_PROPERTY_NAMES, "platform"),
+                (CONTENT_TYPE_PROPERTY_NAMES, "content_type"),
+                (FORMAT_PROPERTY_NAMES, "format"),
+            )
             for prop_name, prop_schema in node.get("properties", {}).items():
                 target = prop_schema
                 if isinstance(target, dict) and isinstance(target.get("items"), dict):
                     target = target["items"]
                 if not isinstance(target, dict):
                     continue
-                if prop_name in PLATFORM_PROPERTY_NAMES and "enum" in target:
-                    yield f"{path}.{prop_name}", "platform", target["enum"]
-                if prop_name in CONTENT_TYPE_PROPERTY_NAMES and "enum" in target:
-                    yield f"{path}.{prop_name}", "content_type", target["enum"]
-                if prop_name in FORMAT_PROPERTY_NAMES and "enum" in target:
-                    yield f"{path}.{prop_name}", "format", target["enum"]
+                for names, kind in kinds:
+                    if prop_name in names:
+                        yield f"{path}.{prop_name}", kind, target.get("enum")
             for key, child in node.items():
                 yield from self.iter_platform_enums(child, f"{path}.{key}")
         elif isinstance(node, list):
@@ -306,6 +319,14 @@ class ResearchEnumDriftTests(unittest.TestCase):
         for schema_name in ENUM_PINNED_SCHEMAS:
             schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
             for location, kind, values in self.iter_platform_enums(schema, schema_name):
+                prop_name = location.rsplit(".", 1)[-1]
+                if values is None:
+                    self.assertIn(
+                        (schema_name, prop_name),
+                        ENUM_EXEMPT_PROPERTIES,
+                        f"{location} names a pinned {kind} property but carries no enum",
+                    )
+                    continue
                 found_any[kind] = True
                 self.assertEqual(
                     values,

@@ -344,6 +344,15 @@ def _validate_project_records(project_dir, project, workspace_dir):
                 "Applied template idea_promotion_id does not match project source_refs: "
                 f"{applied_template['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
             )
+        # The template targets a format for this project, and the project's
+        # target_formats already stay within the locked promotion's approved
+        # surface, so this keeps the plan layer inside the approval too.
+        if applied_template["target_format_id"] not in project["target_formats"]:
+            raise ValueError(
+                "Applied template target_format_id is not among the project's "
+                f"target_formats: {applied_template['target_format_id']!r} "
+                f"not in {sorted(project['target_formats'])}"
+            )
         if production_plan["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
                 "Production plan idea_promotion_id does not match project source_refs: "
