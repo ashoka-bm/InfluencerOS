@@ -9,7 +9,8 @@ checks, recall index, content board, retention prune, and the
 the Slice 4 Execution Decisions at the end of this plan, batches A-E. The
 verification records live in `docs/os-construction/progress.md`. A
 post-landing review hardening batch closed the findings recorded in
-Post-Review Hardening below (same day). Next: slice 5, `promote-idea`.
+Post-Review Hardening below (same day). Slice 5 (`promote-idea`) is in
+execution per the Slice 5 Execution Decisions at the end of this plan.
 Last updated: 2026-07-03
 
 ## Goal
@@ -1059,3 +1060,77 @@ outputs, must be absent from the JSONL files, and JSONL contents must equal
 the remainder. Rewriting outputs (loses the audit record) and relaxing the
 declared-but-absent direction (lets runs misdeclare outputs forever) were
 both declined.
+
+## Slice 5 Execution Decisions (User-Approved 2026-07-03)
+
+Slice 5 is the Idea Promotion to Project workflow: the `promote-idea`
+producer skill (the human-approval gate, conductor phases 5-6) plus the
+link-consistency guardrails the promotion act depends on. Four decisions
+were approved individually. Do not reopen without user approval.
+
+1. Link consistency is enforced file-first, both directions. An `active`
+   promotion requires its queue entry to have status `promoted` and to list
+   the promotion in `linked_idea_promotion_ids`; `superseded` and
+   `cancelled` promotions impose no entry requirement (the entry may have
+   reverted or re-promoted). A `promoted` entry requires at least one
+   resolvable linked promotion, and exactly one of its linked promotions
+   may be `active` — zero means the entry should have reverted, more than
+   one means scope expansion skipped the supersede rule. A non-promoted
+   entry may keep links for audit but may link no `active` promotion.
+   Every `linked_idea_promotion_ids` and `linked_project_ids` value must
+   resolve whatever the entry status, and a linked promotion must name that
+   entry. A promotion's `project_ids_created` must resolve to real projects
+   whose `source_refs.idea_promotion_id` points back; the project-side
+   closure (a project must appear in its promotion's `project_ids_created`)
+   already exists in `_resolve_promotion`. Project resolution scans
+   `projects/*/project.json` and matches on the manifest's `project_id` —
+   folder names are project slugs per `init-project` — which also fixes the
+   latent bug where `check_project_warning_target_refs` assumed id-named
+   project folders and would have failed on any constructor-built project.
+2. Schedule slots: when an approved promotion claims `schedule_slot_ids`,
+   `promote-idea` sets those slots' status to `filled` in
+   `content-schedule.json`. The schedule stores no promotion ids; slot
+   linkage resolves promotion → slot, mirroring the board-card rule that
+   canonical records stay free of projection/link state.
+3. Lifecycle is minimal v1 skill rules, no CLI: scope expansion happens by
+   a new promotion that supersedes the old one (old → `superseded`);
+   cancellation sets `cancelled` and reverts the entry to `shortlisted`
+   when no active promotion remains, keeping links for audit; projects
+   created from a cancelled promotion are archived manually. Validation
+   touches lifecycle only through the exactly-one-active rule.
+4. No new CLI write helper (slice 4 decision 3 stands): the skill authors
+   the promotion record, project manifests, and entry/manifest updates
+   directly; `init-project` remains the project constructor, and the
+   validators plus `rebuild-board`/`rebuild-index` gate the result.
+
+Construction order inside the skill: write the locked promotion with the
+planned project ids, `init-project` each supported-format project, fill
+`evidence-brief.md`, flip the entry and queue manifest, update schedule
+slots, then run `validate research`, `validate queue`, `validate project`,
+`rebuild-board`, and `rebuild-index`. `init-project` deliberately checks
+only promotion existence and listing, so construction has no
+mid-sequence failure window; the strict entry-status checks live in the
+gate, which runs at the final validation step.
+
+Execution batches, guardrails first, TDD per batch:
+
+- Batch A: the link-consistency checks in `validate research`,
+  `validate queue`, and the promotion gate, each gap reproduced by a
+  failing test first, plus the slug-foldered project resolution fix with a
+  regression test.
+- Batch B: the `promote-idea` skill encoding the workflow doc's promotion
+  rules — full-package presentation and exact human approval, the locked
+  promotion snapshot, project creation only for production-supported
+  approved formats, the `approval_intent_note` path when no approved
+  format is supported, wildcard and schedule-slot handling, lifecycle
+  rules, and the validation/projection closeout.
+- Batch C: registry, context-matrix, conductor, architecture-map, and
+  repository-map status flips, the `manage-idea-queue` halt-text update,
+  runtime propagation to fixture workspaces, docs, and the progress
+  verification record.
+
+Success condition: all batches land with the pre-slice suite green plus
+new negative tests per batch; each link-consistency gap fails a crafted
+bad fixture and passes the consistent example chain; a slug-foldered
+project resolves everywhere an id-foldered one does; the skill flips to
+built everywhere the drift checks look.
