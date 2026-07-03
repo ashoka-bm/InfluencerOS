@@ -1,7 +1,6 @@
 {
   "carousel_plan_id": "carousel_luna_001",
   "creator_profile_id": "creator_luna_fit",
-  "selected_content_idea_id": "selected_luna_001",
   "applied_social_template_id": "applied_template_luna_001",
   "target_format_id": "format_carousel",
   "first_slide_hook": "Two minutes before your next meeting? Reset here.",
@@ -42,6 +41,6 @@
   "generation_notes": [
     "Each slide should work as a vertical still.",
     "Avoid dense text; let body position and laptop context carry the story."
-  ]
+  ],
+  "idea_promotion_id": "idea_promotion_luna_fit_001"
 }
-

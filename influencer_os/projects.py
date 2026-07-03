@@ -1,11 +1,11 @@
 import shutil
 from pathlib import Path
 
+from influencer_os.research import validate_promotion_gate
 from influencer_os.validation import ValidationError, load_json, validate_file, validate_record
 
 
 PROJECT_DIRECTORIES = [
-    "idea",
     "plan",
     "output-package/assets",
     "output-package/upload-ready",
@@ -17,17 +17,29 @@ PROJECT_DIRECTORIES = [
 ]
 
 PROJECT_SCAFFOLDS = {
-    "performance-summary.md": "# Performance Summary\n\n"
+    "performance-summary.md": "# Performance Summary\n\n",
+    "evidence-brief.md": "# Evidence Brief\n\nSummarize the promoted idea's evidence for production use.\n\n",
 }
 
 PROJECT_STATUS_ORDER = {
-    "idea_selected": 1,
-    "planned": 2,
-    "packaged": 3,
-    "published": 4,
-    "analyzed": 5,
-    "archived": 6,
+    "created": 1,
+    "planning": 2,
+    "ready_for_generation": 3,
+    "generated": 4,
+    "packaged": 5,
+    "published": 6,
+    "analyzed": 7,
+    "archived": 8,
 }
+
+# Optional source_refs cached from the promotion for convenience; each cached
+# value must stay consistent with the locked promotion snapshot.
+PROMOTION_CACHED_SUBSETS = (
+    ("research_finding_ids", "research_finding_ids"),
+    ("research_evidence_ids", "evidence_ids"),
+    ("metric_snapshot_ids", "metric_snapshot_ids"),
+    ("video_understanding_pack_ids", "video_understanding_pack_ids"),
+)
 
 PRODUCTION_PLAN_SCHEMAS = {
     "short_form_video": "micro-journey-video-plan",
@@ -57,6 +69,7 @@ def init_project(project_manifest_path, creator_workspace):
     validate_record("project", project)
 
     _validate_creator_match(project, creator_workspace)
+    _resolve_promotion(project, creator_workspace)
 
     project_dir = creator_workspace / "projects" / project["project_slug"]
     if project_dir.exists():
@@ -89,7 +102,7 @@ def validate_project(project_path):
         raise ValueError(f"Project root path does not match project_slug: {project['project_paths']['root']!r}")
 
     required_paths = ["project.json"]
-    required_paths.extend(project["project_paths"][key] for key in ["idea", "plan", "output_package", "published", "analytics", "performance_summary"])
+    required_paths.extend(project["project_paths"][key] for key in ["plan", "output_package", "published", "analytics", "performance_summary", "evidence_brief"])
     required_paths.extend(_required_record_paths(project))
 
     missing = []
@@ -101,6 +114,9 @@ def validate_project(project_path):
         raise FileNotFoundError(f"Missing project paths: {', '.join(sorted(missing))}")
 
     workspace_dir = _locate_workspace(project_dir)
+    promotion = _resolve_promotion(project, workspace_dir)
+    warnings = validate_promotion_gate(workspace_dir, promotion)
+    _validate_cached_promotion_refs(project, promotion)
     _resolve_source_refs(project["source_refs"], workspace_dir, "Project source_refs")
     _validate_project_records(project_dir, project, workspace_dir)
 
@@ -109,6 +125,7 @@ def validate_project(project_path):
         "project_slug": project["project_slug"],
         "project_path": project_dir,
         "checked_paths": sorted(set(required_paths)),
+        "warnings": warnings,
     }
 
 
@@ -129,9 +146,7 @@ def _validate_creator_match(project, creator_workspace):
 
 def _required_record_paths(project):
     required = []
-    if _status_at_least(project, "idea_selected"):
-        required.append("idea/selected-content-idea.json")
-    if _status_at_least(project, "planned"):
+    if _status_at_least(project, "planning"):
         required.extend([
             "plan/applied-template.json",
             "plan/production-plan.json",
@@ -141,6 +156,63 @@ def _required_record_paths(project):
     if _status_at_least(project, "packaged"):
         required.append("output-package/output-package.json")
     return required
+
+
+def _resolve_promotion(project, workspace_dir):
+    promotion_id = project["source_refs"]["idea_promotion_id"]
+    promotion_path = Path(workspace_dir) / "research" / "idea-promotions" / f"{promotion_id}.json"
+    if not promotion_path.exists():
+        raise ValidationError(
+            f"Project idea_promotion_id {promotion_id!r} does not resolve to "
+            f"research/idea-promotions/{promotion_id}.json"
+        )
+    promotion = _validate_project_record(promotion_path, "idea-promotion")
+    if promotion["idea_promotion_id"] != promotion_id:
+        raise ValidationError(
+            f"Idea promotion file {promotion_path} has idea_promotion_id "
+            f"{promotion['idea_promotion_id']!r}, expected {promotion_id!r}"
+        )
+    if promotion["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValueError(
+            "Idea promotion creator_profile_id does not match project: "
+            f"{promotion['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+        )
+    if project["project_id"] not in promotion["project_ids_created"]:
+        raise ValueError(
+            f"Idea promotion {promotion_id} does not list project "
+            f"{project['project_id']!r} in project_ids_created"
+        )
+    return promotion
+
+
+def _validate_cached_promotion_refs(project, promotion):
+    source_refs = project["source_refs"]
+    cached_entry_id = source_refs.get("idea_queue_entry_id")
+    if cached_entry_id is not None and cached_entry_id != promotion["idea_queue_entry_id"]:
+        raise ValueError(
+            "Cached idea_queue_entry_id does not match the locked promotion: "
+            f"{cached_entry_id!r} != {promotion['idea_queue_entry_id']!r}"
+        )
+
+    promotion_evidence_ids = {ref["evidence_id"] for ref in promotion["evidence_refs"]}
+    promotion_metric_ids = set()
+    promotion_video_pack_ids = set()
+    for ref in promotion["evidence_refs"]:
+        promotion_metric_ids.update(ref.get("metric_snapshot_ids", []))
+        promotion_video_pack_ids.update(ref.get("video_understanding_pack_ids", []))
+    promotion_sets = {
+        "research_finding_ids": set(promotion["research_finding_ids"]),
+        "evidence_ids": promotion_evidence_ids,
+        "metric_snapshot_ids": promotion_metric_ids,
+        "video_understanding_pack_ids": promotion_video_pack_ids,
+    }
+    for cached_field, promotion_key in PROMOTION_CACHED_SUBSETS:
+        cached = set(source_refs.get(cached_field, []))
+        extra = sorted(cached - promotion_sets[promotion_key])
+        if extra:
+            raise ValueError(
+                f"Cached {cached_field} name records the locked promotion does not carry: {extra}"
+            )
 
 
 def _status_at_least(project, status):
@@ -208,23 +280,11 @@ def _research_pack_location(pack_id, context):
 
 
 def _validate_project_records(project_dir, project, workspace_dir):
-    selected_idea = None
     applied_template = None
     production_plan = None
     generation_plan = None
 
-    if _status_at_least(project, "idea_selected"):
-        selected_idea = _validate_project_record(
-            project_dir / "idea" / "selected-content-idea.json",
-            "selected-content-idea",
-        )
-        if selected_idea["selected_content_idea_id"] != project["source_refs"]["selected_content_idea_id"]:
-            raise ValueError(
-                "Selected idea id does not match project source_refs: "
-                f"{selected_idea['selected_content_idea_id']!r} != {project['source_refs']['selected_content_idea_id']!r}"
-            )
-
-    if _status_at_least(project, "planned"):
+    if _status_at_least(project, "planning"):
         applied_template = _validate_project_record(
             project_dir / "plan" / "applied-template.json",
             "applied-social-template",
@@ -235,15 +295,15 @@ def _validate_project_records(project_dir, project, workspace_dir):
             production_plan_schema,
         )
 
-        if applied_template["selected_content_idea_id"] != project["source_refs"]["selected_content_idea_id"]:
+        if applied_template["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
-                "Applied template selected_content_idea_id does not match project source_refs: "
-                f"{applied_template['selected_content_idea_id']!r} != {project['source_refs']['selected_content_idea_id']!r}"
+                "Applied template idea_promotion_id does not match project source_refs: "
+                f"{applied_template['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
             )
-        if production_plan["selected_content_idea_id"] != project["source_refs"]["selected_content_idea_id"]:
+        if production_plan["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
-                "Production plan selected_content_idea_id does not match project source_refs: "
-                f"{production_plan['selected_content_idea_id']!r} != {project['source_refs']['selected_content_idea_id']!r}"
+                "Production plan idea_promotion_id does not match project source_refs: "
+                f"{production_plan['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
             )
         if production_plan["applied_social_template_id"] != applied_template["applied_social_template_id"]:
             raise ValueError(
@@ -272,11 +332,11 @@ def _validate_project_records(project_dir, project, workspace_dir):
                 "Output package project_id does not match project: "
                 f"{output_package['project_id']!r} != {project['project_id']!r}"
             )
-        if output_package["source_refs"]["selected_content_idea_id"] != project["source_refs"]["selected_content_idea_id"]:
+        if output_package["source_refs"]["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
-                "Output package selected_content_idea_id does not match project source_refs: "
-                f"{output_package['source_refs']['selected_content_idea_id']!r} != "
-                f"{project['source_refs']['selected_content_idea_id']!r}"
+                "Output package idea_promotion_id does not match project source_refs: "
+                f"{output_package['source_refs']['idea_promotion_id']!r} != "
+                f"{project['source_refs']['idea_promotion_id']!r}"
             )
         if output_package["source_refs"]["applied_social_template_id"] != applied_template["applied_social_template_id"]:
             raise ValueError(

@@ -1,7 +1,6 @@
 {
   "micro_journey_video_plan_id": "mjvp_luna_001",
   "creator_profile_id": "creator_luna_fit",
-  "selected_content_idea_id": "selected_luna_001",
   "applied_social_template_id": "applied_template_luna_001",
   "default_video_envelope": "universal_short_form_vertical",
   "opening_hook": "Luna steps into frame beside an open laptop: 'Two minutes before your next meeting? Do this with me.'",
@@ -43,5 +42,6 @@
   "continuity_requirements": [
     "Luna's outfit, hair, and apartment lighting stay consistent across shots.",
     "The laptop remains the visual anchor for the meeting constraint."
-  ]
+  ],
+  "idea_promotion_id": "idea_promotion_luna_fit_001"
 }

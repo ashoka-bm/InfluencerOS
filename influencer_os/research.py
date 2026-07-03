@@ -185,7 +185,10 @@ def validate_research(workspace_path):
             validate_jsonl_file(schema_name, system_path)
             checked.append(str(system_path.relative_to(workspace_dir)))
 
-    return {"workspace_path": workspace_dir, "checked_paths": checked}
+    warnings, promotion_paths = validate_promotions(workspace_dir)
+    checked.extend(promotion_paths)
+
+    return {"workspace_path": workspace_dir, "checked_paths": checked, "warnings": warnings}
 
 
 def validate_queue(workspace_path):
@@ -248,6 +251,72 @@ def validate_queue(workspace_path):
         "entry_count": len(entries),
         "manifest_path": manifest_path,
     }
+
+
+def validate_promotion_gate(workspace_dir, promotion):
+    """Enforce the promotion gate (Phase 0C workstream 12 residue).
+
+    A promotion must point to a real idea queue entry. Unresolved evidence
+    refs warn for human-approved promotions (the human saw the evidence) and
+    fail for any future automated promotion path. Returns warning strings.
+    """
+    workspace_dir = Path(workspace_dir)
+    promotion_id = promotion["idea_promotion_id"]
+    entry_id = promotion["idea_queue_entry_id"]
+    entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{entry_id}.json"
+    if not entry_path.exists():
+        raise ValidationError(
+            f"Idea promotion {promotion_id} does not point to a real idea queue entry: "
+            f"research/idea-queue/entries/{entry_id}.json is missing"
+        )
+    entry = load_json(entry_path)
+    try:
+        validate_record("idea-queue-entry", entry)
+    except ValidationError as exc:
+        raise ValidationError(f"{entry_path}: {exc}") from None
+
+    evidence_ids, metric_ids = collect_research_record_ids(workspace_dir)
+    unresolved = []
+    for ref in promotion["evidence_refs"]:
+        if ref["evidence_id"] not in evidence_ids:
+            unresolved.append(ref["evidence_id"])
+        unresolved.extend(
+            metric_id
+            for metric_id in ref.get("metric_snapshot_ids", [])
+            if metric_id not in metric_ids
+        )
+    if unresolved:
+        message = (
+            f"idea promotion {promotion_id} has unresolved evidence refs: "
+            f"{sorted(set(unresolved))}"
+        )
+        if promotion["approved_by"] != "user":
+            raise ValidationError(message)
+        return [f"warning: {message} (human-approved promotion: warning only)"]
+    return []
+
+
+def validate_promotions(workspace_path):
+    """Validate every promotion record and its gate; returns warning strings."""
+    workspace_dir = Path(workspace_path)
+    promotions_dir = workspace_dir / "research" / "idea-promotions"
+    warnings = []
+    checked = []
+    if promotions_dir.exists():
+        for promotion_path in sorted(promotions_dir.glob("*.json")):
+            promotion = load_json(promotion_path)
+            try:
+                validate_record("idea-promotion", promotion)
+            except ValidationError as exc:
+                raise ValidationError(f"{promotion_path}: {exc}") from None
+            if promotion["idea_promotion_id"] != promotion_path.stem:
+                raise ValidationError(
+                    f"{promotion_path}: filename does not match idea_promotion_id "
+                    f"{promotion['idea_promotion_id']!r}"
+                )
+            warnings.extend(validate_promotion_gate(workspace_dir, promotion))
+            checked.append(str(promotion_path.relative_to(workspace_dir)))
+    return warnings, checked
 
 
 def collect_research_record_ids(workspace_dir):

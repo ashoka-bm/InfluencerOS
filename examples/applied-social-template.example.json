@@ -1,6 +1,5 @@
 {
   "applied_social_template_id": "applied_template_luna_001",
-  "selected_content_idea_id": "selected_luna_001",
   "social_template_id": "template_hook_problem_solution",
   "target_format_id": "format_short_form_video",
   "application_rationale": "The chosen idea works because the audience has a specific immediate problem: they are stressed and short on time before a meeting. Hook Problem Solution turns that pressure into a fast relief arc.",
@@ -25,6 +24,6 @@
       "idea_application": "Luna returns to the laptop visibly calmer and more upright.",
       "viewer_question_answered": "What do I get from trying this?"
     }
-  ]
+  ],
+  "idea_promotion_id": "idea_promotion_luna_fit_001"
 }
-

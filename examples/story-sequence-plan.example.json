@@ -1,7 +1,6 @@
 {
   "story_sequence_plan_id": "story_sequence_luna_001",
   "creator_profile_id": "creator_luna_fit",
-  "selected_content_idea_id": "selected_luna_001",
   "applied_social_template_id": "applied_template_luna_001",
   "target_format_id": "format_story_sequence",
   "sequence_arc": "A quick real-time desk reset from tense pre-meeting energy to calm readiness.",
@@ -35,6 +34,6 @@
   "generation_notes": [
     "Frames should feel like quick vertical story cards, not a polished carousel.",
     "Leave safe room for future stickers or captions without relying on them."
-  ]
+  ],
+  "idea_promotion_id": "idea_promotion_luna_fit_001"
 }
-

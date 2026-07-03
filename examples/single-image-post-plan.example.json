@@ -1,7 +1,6 @@
 {
   "single_image_post_plan_id": "single_image_luna_001",
   "creator_profile_id": "creator_luna_fit",
-  "selected_content_idea_id": "selected_luna_001",
   "applied_social_template_id": "applied_template_luna_001",
   "target_format_id": "format_single_image_post",
   "central_visual_idea": "Luna standing beside a laptop in a calm reset pose, turning pre-meeting stress into practical relief.",
@@ -11,6 +10,6 @@
     "The laptop should make the workday constraint visible without showing private details."
   ],
   "text_overlay_policy": "Use one short overlay only: '2-minute reset'. No dense instructional text.",
-  "generation_prompt": "Create a vertical single-image social post of Luna Fit, a warm approachable wellness avatar, standing beside an open laptop in a softly lit apartment. She is mid-reset with relaxed shoulders and a calm expression. Include subtle visual context that she is between meetings. Clean composition, warm neutrals, one bright accent color, no platform UI."
+  "generation_prompt": "Create a vertical single-image social post of Luna Fit, a warm approachable wellness avatar, standing beside an open laptop in a softly lit apartment. She is mid-reset with relaxed shoulders and a calm expression. Include subtle visual context that she is between meetings. Clean composition, warm neutrals, one bright accent color, no platform UI.",
+  "idea_promotion_id": "idea_promotion_luna_fit_001"
 }
-

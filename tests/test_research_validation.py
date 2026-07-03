@@ -9,6 +9,7 @@ from influencer_os.research import (
     parse_frontmatter,
     validate_findings_file,
     validate_jsonl_file,
+    validate_promotion_gate,
     validate_queue,
     validate_research,
 )
@@ -206,6 +207,51 @@ class IdeaQueueValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
             self.assertIn("filename does not match", str(ctx.exception))
+
+
+class PromotionGateTests(unittest.TestCase):
+    def test_resolvable_promotion_produces_no_warnings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+
+            result = validate_research(workspace_dir)
+            self.assertEqual(result["warnings"], [])
+            self.assertIn(
+                "research/idea-promotions/idea_promotion_luna_fit_001.json",
+                result["checked_paths"],
+            )
+
+    def test_promotion_without_real_queue_entry_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("does not point to a real idea queue entry", str(ctx.exception))
+
+    def test_unresolved_evidence_warns_for_human_approved_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl").unlink()
+
+            result = validate_research(workspace_dir)
+            self.assertEqual(len(result["warnings"]), 1)
+            self.assertIn("unresolved evidence refs", result["warnings"][0])
+            self.assertIn("human-approved", result["warnings"][0])
+
+    def test_unresolved_evidence_fails_for_automated_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl").unlink()
+            promotion = load_example("idea-promotion")
+            # Future automated promotion paths never get the human benefit of
+            # the doubt; simulate one past the schema's v1 enum.
+            promotion["approved_by"] = "automation"
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_promotion_gate(workspace_dir, promotion)
+            self.assertIn("unresolved evidence refs", str(ctx.exception))
 
 
 class ResearchCliTests(unittest.TestCase):

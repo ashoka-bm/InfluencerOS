@@ -99,6 +99,8 @@ def main(argv=None):
                 result = validate_project(args.path)
                 print(f"Validated project: {result['project_path']}")
                 print(f"Checked {len(result['checked_paths'])} project paths.")
+                for warning in result.get("warnings", []):
+                    print(warning, file=sys.stderr)
                 return 0
             if args.target == "research":
                 if not args.path:
@@ -106,6 +108,8 @@ def main(argv=None):
                 result = validate_research(args.path)
                 print(f"Validated research state: {result['workspace_path']}")
                 print(f"Checked {len(result['checked_paths'])} research records.")
+                for warning in result.get("warnings", []):
+                    print(warning, file=sys.stderr)
                 return 0
             if args.target == "queue":
                 if not args.path:

@@ -44,6 +44,17 @@ def populate_research_packs(workspace_dir):
     )
 
 
+def populate_promotion_records(workspace_dir):
+    # Projects resolve provenance through the locked promotion, which must
+    # point to a real queue entry (promotion gate).
+    promotion_path = workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+    promotion_path.parent.mkdir(parents=True, exist_ok=True)
+    copy_example_record("idea-promotion.example.json", promotion_path)
+    entry_path = workspace_dir / "research" / "idea-queue" / "entries" / "idea_queue_entry_luna_fit_001.json"
+    entry_path.parent.mkdir(parents=True, exist_ok=True)
+    copy_example_record("idea-queue-entry.example.json", entry_path)
+
+
 def scaffold_project_workspace(temp_dir):
     workspace_dir = init_creator(
         ROOT / "examples" / "creator-workspace.example.json",
@@ -51,6 +62,7 @@ def scaffold_project_workspace(temp_dir):
     )
     populate_workspace_records(workspace_dir)
     populate_research_packs(workspace_dir)
+    populate_promotion_records(workspace_dir)
     project_dir = init_project(
         ROOT / "examples" / "project.example.json",
         creator_workspace=workspace_dir,
@@ -66,7 +78,6 @@ def rewrite_json(path, mutate):
 
 
 def populate_project_records(project_dir):
-    copy_example_record("selected-content-idea.example.json", project_dir / "idea" / "selected-content-idea.json")
     copy_example_record("applied-social-template.example.json", project_dir / "plan" / "applied-template.json")
     copy_example_record("micro-journey-video-plan.example.json", project_dir / "plan" / "production-plan.json")
     copy_example_record("base-video-generation-plan.example.json", project_dir / "plan" / "generation-plan.json")
@@ -385,6 +396,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            populate_promotion_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,
@@ -404,7 +416,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_project_result.returncode, 0, init_project_result.stderr)
             project_dir = workspace_dir / "projects" / "tiny-reset-after-laptop-day"
             self.assertTrue((project_dir / "project.json").exists())
-            self.assertTrue((project_dir / "idea").is_dir())
+            self.assertFalse((project_dir / "idea").exists())
+            self.assertTrue((project_dir / "evidence-brief.md").exists())
             self.assertTrue((project_dir / "plan").is_dir())
             self.assertTrue((project_dir / "output-package" / "assets").is_dir())
             self.assertTrue((project_dir / "output-package" / "upload-ready").is_dir())
@@ -435,6 +448,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            populate_promotion_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,
@@ -494,6 +508,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            populate_promotion_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,

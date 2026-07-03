@@ -4,35 +4,109 @@
   "title": "MicroJourneyVideoPlan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["micro_journey_video_plan_id", "creator_profile_id", "selected_content_idea_id", "applied_social_template_id", "default_video_envelope", "opening_hook", "setup", "escalation", "payoff", "loop_or_ending", "intended_viewer_feeling", "shots", "continuity_requirements"],
+  "required": [
+    "micro_journey_video_plan_id",
+    "creator_profile_id",
+    "idea_promotion_id",
+    "applied_social_template_id",
+    "default_video_envelope",
+    "opening_hook",
+    "setup",
+    "escalation",
+    "payoff",
+    "loop_or_ending",
+    "intended_viewer_feeling",
+    "shots",
+    "continuity_requirements"
+  ],
   "properties": {
-    "micro_journey_video_plan_id": { "type": "string", "pattern": "^mjvp_[a-zA-Z0-9_-]+$" },
-    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
-    "selected_content_idea_id": { "type": "string", "pattern": "^selected_[a-zA-Z0-9_-]+$" },
-    "applied_social_template_id": { "type": "string", "pattern": "^applied_template_[a-zA-Z0-9_-]+$" },
-    "default_video_envelope": { "type": "string", "const": "universal_short_form_vertical" },
-    "opening_hook": { "type": "string", "minLength": 1 },
-    "setup": { "type": "string", "minLength": 1 },
-    "escalation": { "type": "string", "minLength": 1 },
-    "payoff": { "type": "string", "minLength": 1 },
-    "loop_or_ending": { "type": "string", "minLength": 1 },
-    "intended_viewer_feeling": { "type": "string", "minLength": 1 },
+    "micro_journey_video_plan_id": {
+      "type": "string",
+      "pattern": "^mjvp_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "applied_social_template_id": {
+      "type": "string",
+      "pattern": "^applied_template_[a-zA-Z0-9_-]+$"
+    },
+    "default_video_envelope": {
+      "type": "string",
+      "const": "universal_short_form_vertical"
+    },
+    "opening_hook": {
+      "type": "string",
+      "minLength": 1
+    },
+    "setup": {
+      "type": "string",
+      "minLength": 1
+    },
+    "escalation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payoff": {
+      "type": "string",
+      "minLength": 1
+    },
+    "loop_or_ending": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intended_viewer_feeling": {
+      "type": "string",
+      "minLength": 1
+    },
     "shots": {
       "type": "array",
       "minItems": 3,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["shot_id", "time_range", "visual_action", "camera_or_motion", "emotional_job"],
+        "required": [
+          "shot_id",
+          "time_range",
+          "visual_action",
+          "camera_or_motion",
+          "emotional_job"
+        ],
         "properties": {
-          "shot_id": { "type": "string", "pattern": "^shot_[a-zA-Z0-9_-]+$" },
-          "time_range": { "type": "string", "minLength": 1 },
-          "visual_action": { "type": "string", "minLength": 1 },
-          "camera_or_motion": { "type": "string", "minLength": 1 },
-          "emotional_job": { "type": "string", "minLength": 1 }
+          "shot_id": {
+            "type": "string",
+            "pattern": "^shot_[a-zA-Z0-9_-]+$"
+          },
+          "time_range": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visual_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "camera_or_motion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "emotional_job": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
-    "continuity_requirements": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "continuity_requirements": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "idea_promotion_id": {
+      "type": "string",
+      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+    }
   }
 }

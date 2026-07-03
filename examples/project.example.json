@@ -3,28 +3,38 @@
   "creator_profile_id": "creator_luna_fit",
   "project_slug": "tiny-reset-after-laptop-day",
   "created_on": "2026-06-29",
-  "status": "planned",
+  "status": "planning",
   "content_unit_type": "short_form_video",
   "source_refs": {
-    "selected_content_idea_id": "selected_luna_001",
-    "research_pack_ids": [
-      "research_luna_fit_2026_06_28",
-      "video_research_luna_fit_001"
-    ],
+    "idea_promotion_id": "idea_promotion_luna_fit_001",
     "reference_asset_ids": [
       "asset_luna_identity_plate",
       "asset_luna_living_room",
       "asset_luna_default_video_style"
-    ]
+    ],
+    "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+    "research_finding_ids": [
+      "finding_luna_fit_desk_reset_lunch"
+    ],
+    "research_evidence_ids": [
+      "evidence_luna_fit_001"
+    ],
+    "metric_snapshot_ids": [
+      "metric_snapshot_luna_fit_001"
+    ],
+    "video_understanding_pack_ids": [
+      "video_research_luna_fit_001"
+    ],
+    "evidence_brief_path": "evidence-brief.md"
   },
   "project_paths": {
     "root": "projects/tiny-reset-after-laptop-day/",
-    "idea": "idea/",
     "plan": "plan/",
     "output_package": "output-package/",
     "published": "published/",
     "analytics": "analytics/",
-    "performance_summary": "performance-summary.md"
+    "performance_summary": "performance-summary.md",
+    "evidence_brief": "evidence-brief.md"
   },
   "target_formats": [
     "format_short_form_video"
@@ -44,5 +54,5 @@
     "No provider-backed generation calls without explicit user approval.",
     "Vertical short-form video suitable for Reels, TikTok, and Shorts without platform-specific planning."
   ],
-  "notes": "Project begins once the user selects the tiny reset content idea for production."
+  "notes": "Project created from the locked lunch-break reset idea promotion."
 }

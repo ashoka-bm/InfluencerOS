@@ -4,32 +4,94 @@
   "title": "CarouselPlan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["carousel_plan_id", "creator_profile_id", "selected_content_idea_id", "applied_social_template_id", "target_format_id", "first_slide_hook", "slides", "creator_continuity", "generation_notes"],
+  "required": [
+    "carousel_plan_id",
+    "creator_profile_id",
+    "idea_promotion_id",
+    "applied_social_template_id",
+    "target_format_id",
+    "first_slide_hook",
+    "slides",
+    "creator_continuity",
+    "generation_notes"
+  ],
   "properties": {
-    "carousel_plan_id": { "type": "string", "pattern": "^carousel_[a-zA-Z0-9_-]+$" },
-    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
-    "selected_content_idea_id": { "type": "string", "pattern": "^selected_[a-zA-Z0-9_-]+$" },
-    "applied_social_template_id": { "type": "string", "pattern": "^applied_template_[a-zA-Z0-9_-]+$" },
-    "target_format_id": { "type": "string", "const": "format_carousel" },
-    "first_slide_hook": { "type": "string", "minLength": 1 },
+    "carousel_plan_id": {
+      "type": "string",
+      "pattern": "^carousel_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "applied_social_template_id": {
+      "type": "string",
+      "pattern": "^applied_template_[a-zA-Z0-9_-]+$"
+    },
+    "target_format_id": {
+      "type": "string",
+      "const": "format_carousel"
+    },
+    "first_slide_hook": {
+      "type": "string",
+      "minLength": 1
+    },
     "slides": {
       "type": "array",
       "minItems": 2,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["slide_id", "slide_role", "visual_beat", "text_overlay", "viewer_job"],
+        "required": [
+          "slide_id",
+          "slide_role",
+          "visual_beat",
+          "text_overlay",
+          "viewer_job"
+        ],
         "properties": {
-          "slide_id": { "type": "string", "pattern": "^slide_[a-zA-Z0-9_-]+$" },
-          "slide_role": { "type": "string", "minLength": 1 },
-          "visual_beat": { "type": "string", "minLength": 1 },
-          "text_overlay": { "type": "string", "minLength": 1 },
-          "viewer_job": { "type": "string", "minLength": 1 }
+          "slide_id": {
+            "type": "string",
+            "pattern": "^slide_[a-zA-Z0-9_-]+$"
+          },
+          "slide_role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visual_beat": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text_overlay": {
+            "type": "string",
+            "minLength": 1
+          },
+          "viewer_job": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
-    "creator_continuity": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-    "generation_notes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+    "creator_continuity": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "generation_notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "idea_promotion_id": {
+      "type": "string",
+      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+    }
   }
 }
-

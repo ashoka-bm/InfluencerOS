@@ -4,44 +4,243 @@
   "title": "Project",
   "type": "object",
   "additionalProperties": false,
-  "required": ["project_id", "creator_profile_id", "project_slug", "created_on", "status", "content_unit_type", "source_refs", "project_paths", "target_formats", "learning_goal", "acceptance_criteria"],
+  "required": [
+    "project_id",
+    "creator_profile_id",
+    "project_slug",
+    "created_on",
+    "status",
+    "content_unit_type",
+    "source_refs",
+    "project_paths",
+    "target_formats",
+    "learning_goal",
+    "acceptance_criteria"
+  ],
   "properties": {
-    "project_id": { "type": "string", "pattern": "^project_[a-zA-Z0-9_-]+$" },
-    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
-    "project_slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "created_on": { "type": "string", "format": "date" },
-    "status": { "type": "string", "enum": ["idea_selected", "planned", "packaged", "published", "analyzed", "archived"] },
-    "content_unit_type": { "type": "string", "enum": ["short_form_video", "carousel", "single_image_post", "story_sequence", "multi_platform_package"] },
+    "project_id": {
+      "type": "string",
+      "pattern": "^project_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "project_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "created",
+        "planning",
+        "ready_for_generation",
+        "generated",
+        "packaged",
+        "published",
+        "analyzed",
+        "archived"
+      ]
+    },
+    "content_unit_type": {
+      "type": "string",
+      "enum": [
+        "short_form_video",
+        "carousel",
+        "single_image_post",
+        "story_sequence",
+        "multi_platform_package"
+      ]
+    },
     "source_refs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["selected_content_idea_id", "research_pack_ids", "reference_asset_ids"],
+      "required": [
+        "idea_promotion_id",
+        "reference_asset_ids"
+      ],
       "properties": {
-        "selected_content_idea_id": { "type": "string", "pattern": "^selected_[a-zA-Z0-9_-]+$" },
-        "research_pack_ids": { "type": "array", "items": { "type": "string", "pattern": "^(research|video_research)_[a-zA-Z0-9_-]+$" } },
-        "reference_asset_ids": { "type": "array", "items": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" } }
+        "reference_asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^asset_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "idea_promotion_id": {
+          "type": "string",
+          "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+        },
+        "idea_queue_entry_id": {
+          "type": "string",
+          "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+        },
+        "research_finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^finding_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "research_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "metric_snapshot_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^metric_snapshot_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "video_understanding_pack_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^video_research_[a-zA-Z0-9_-]+$"
+          }
+        },
+        "evidence_brief_path": {
+          "type": "string",
+          "const": "evidence-brief.md"
+        },
+        "source_platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x",
+              "instagram",
+              "tiktok",
+              "substack",
+              "medium",
+              "reddit",
+              "facebook",
+              "linkedin"
+            ]
+          }
+        },
+        "source_platform_content_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x_post",
+              "x_thread",
+              "instagram_reel",
+              "instagram_post",
+              "instagram_story",
+              "instagram_carousel",
+              "tiktok_video",
+              "substack_article",
+              "substack_note",
+              "medium_article",
+              "reddit_thread",
+              "reddit_comment",
+              "facebook_post",
+              "facebook_reel",
+              "linkedin_post",
+              "linkedin_article"
+            ]
+          }
+        }
       }
     },
     "project_paths": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["root", "idea", "plan", "output_package", "published", "analytics", "performance_summary"],
+      "required": [
+        "root",
+        "plan",
+        "output_package",
+        "published",
+        "analytics",
+        "performance_summary",
+        "evidence_brief"
+      ],
       "properties": {
-        "root": { "type": "string", "minLength": 1 },
-        "idea": { "type": "string", "const": "idea/" },
-        "plan": { "type": "string", "const": "plan/" },
-        "output_package": { "type": "string", "const": "output-package/" },
-        "published": { "type": "string", "const": "published/" },
-        "analytics": { "type": "string", "const": "analytics/" },
-        "performance_summary": { "type": "string", "const": "performance-summary.md" }
+        "root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan": {
+          "type": "string",
+          "const": "plan/"
+        },
+        "output_package": {
+          "type": "string",
+          "const": "output-package/"
+        },
+        "published": {
+          "type": "string",
+          "const": "published/"
+        },
+        "analytics": {
+          "type": "string",
+          "const": "analytics/"
+        },
+        "performance_summary": {
+          "type": "string",
+          "const": "performance-summary.md"
+        },
+        "evidence_brief": {
+          "type": "string",
+          "const": "evidence-brief.md"
+        }
       }
     },
-    "target_formats": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^format_[a-zA-Z0-9_-]+$" } },
-    "platform_targets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "learning_goal": { "type": "string", "minLength": 1 },
-    "acceptance_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-    "constraints": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "dependencies": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "notes": { "type": "string", "minLength": 1 }
+    "target_formats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^format_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "platform_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "learning_goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }
