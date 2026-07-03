@@ -93,8 +93,8 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
 | `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
 | `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
-| `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [PLANNED — Phase 1] |
-| `manage-idea-queue` | planning | Scored Idea Queue entries. | [PLANNED — Phase 1] |
+| `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
+| `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
 | `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [PLANNED — Phase 1] |
 | `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [PLANNED — Phase 1] |
 | `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [PLANNED — Phase 1] |
@@ -157,8 +157,8 @@ The content conductor owns the pipeline. Per ADR 0017 each conductor declares a 
 skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + `## Phase Owners` [BUILT — WS10])
   Phase 1  Creator Profile, Strategy, Schedule             owner: influencer-os (inline)         [BUILT]
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
-  Phase 3  Research Findings           -> Skill(create-research-findings)                         [PLANNED]
-  Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [PLANNED]
+  Phase 3  Research Findings           -> Skill(create-research-findings)                         [BUILT]
+  Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [BUILT]
   Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [PLANNED]
   Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [PLANNED]
   Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]

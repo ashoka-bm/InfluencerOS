@@ -29,6 +29,8 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | --- | --- | --- | --- | --- |
 | `influencer-os` | content creation flow, research-to-queue, idea promotion to project | Creator Profile, research, project records, context matrix | planning records, generation plans, output records | yes |
 | `create-influencer` | create creator, setup creator, new influencer | intake, references, templates | Creator Workspace files | yes |
+| `create-research-findings` | research run requests, refresh findings, trend/watchlist/hashtag checks | Creator Profile, content schedule, findings, research intelligence | `research/runs/`, `research/findings.md`, `research/stable-findings/`, `research/intelligence/` | yes |
+| `manage-idea-queue` | add/update/score queue ideas, queue refresh, staleness review | findings, evidence refs, Creator Profile, content schedule | `research/idea-queue/`, queue-level `system/project-warnings.jsonl`, board/index via CLI | yes |
 
 ## Creator Setup Subskills
 
@@ -62,8 +64,6 @@ These are not repo-owned skills and must not be added to conductor
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `create-research-findings` | produce concise rolling findings backed by dated evidence | Planning OS |
-| `manage-idea-queue` | create and update scored Idea Queue entries | Planning OS |
 | `promote-idea` | record human-approved Idea Promotion and create project records | Planning OS |
 | `apply-social-template` | adapt a selected template to an idea | Planning OS |
 | `create-production-plan` | route promoted idea to format-specific plan | Planning OS |

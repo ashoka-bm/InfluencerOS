@@ -1,13 +1,15 @@
 # Research And Ideas Implementation Plan
 
-Status: **Slice 3 complete (2026-07-03); slice 4 in progress (2026-07-03).**
-The schema surface of this plan (implementation-sequence steps 1-6, 11, 12
-plus the promotion gate) landed via the user-approved Execution Decisions
-below; the verification record lives in `docs/os-construction/progress.md`.
-Steps 7-10 (recall index, board rebuild, prune) execute with slice 4, the
-Research Findings and Idea Queue workflow, per the Slice 4 Execution
-Decisions at the end of this plan. A post-landing review hardening batch
-closed the findings recorded in Post-Review Hardening below (same day).
+Status: **Slices 3 and 4 complete (2026-07-03).** The schema surface of
+this plan (implementation-sequence steps 1-6, 11, 12 plus the promotion
+gate) landed via the user-approved Execution Decisions below; slice 4
+(the Research Findings and Idea Queue workflow — run-scoped consistency
+checks, recall index, content board, retention prune, and the
+`create-research-findings`/`manage-idea-queue` producer skills) landed via
+the Slice 4 Execution Decisions at the end of this plan, batches A-E. The
+verification records live in `docs/os-construction/progress.md`. A
+post-landing review hardening batch closed the findings recorded in
+Post-Review Hardening below (same day). Next: slice 5, `promote-idea`.
 Last updated: 2026-07-03
 
 ## Goal

@@ -38,8 +38,8 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 
 | Skill | Produces | Status |
 | --- | --- | --- |
-| `create-research-findings` | Research Findings backed by dated evidence | [PLANNED — Phase 1] |
-| `manage-idea-queue` | Scored Idea Queue entries | [PLANNED — Phase 1] |
+| `create-research-findings` | Research Findings backed by dated evidence | [BUILT — Phase 1 slice 4] |
+| `manage-idea-queue` | Scored Idea Queue entries | [BUILT — Phase 1 slice 4] |
 | `promote-idea` | Human-approved Idea Promotion + Projects | [PLANNED — Phase 1] |
 | `apply-social-template` | Applied Social Template | [PLANNED — Phase 1] |
 | `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [PLANNED — Phase 1] |
@@ -54,8 +54,8 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | --- | --- | --- | --- |
 | 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — | [BUILT] |
 | 2. Video Understanding Pack | `influencer-os` (inline, v1) | — | [BUILT] |
-| 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` | [PLANNED] |
-| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` | [PLANNED] |
+| 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` | [BUILT] |
+| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` | [BUILT] |
 | 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` | [PLANNED] |
 | 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` | [PLANNED] |
 | 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [PLANNED] |

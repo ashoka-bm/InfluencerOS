@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), and 3 (ADR 0020 research module schema slice) landed 2026-07-03; the next slice is the Research Findings and Idea Queue workflow (slice 4).
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), and 4 (Research Findings and Idea Queue workflow, batches A-E) landed 2026-07-03; the next slice is the Idea Promotion to Project workflow (slice 5, `promote-idea`).
 
 Completed:
 
@@ -110,9 +110,11 @@ Completed:
 
 - Slice 4 batch D (2026-07-03, per the user-approved pruned-ids decision recorded in the slice plan): `prune <creator-workspace> [--apply] [--retention-days <n>]` landed as `influencer_os/prune.py`. Evidence is prunable only when it is older than the retention window (default 30 days), its id is unreferenced by every queue entry, promotion, and project source-ref cache, and none of its metric snapshots are referenced; its snapshots prune with it, and stale queue entries are never touched (staleness stays auditable). Dry-run by default — only `--apply` deletes, and an applied prune re-runs `validate research` as a post-check. Removals are recorded on the run manifest as optional `pruned_evidence_ids`/`pruned_metric_snapshot_ids` (new schema fields) while `outputs` stays untouched; outputs reconciliation now expects JSONL contents to equal outputs minus pruned, pruned ids must be declared and absent, so a run can still never misdeclare what it produced. Kept JSONL lines are rewritten byte-identical (original raw text, not reserialized). Metric-snapshot trajectory compaction stays deferred per the slice decisions.
 
+- Slice 4 batch E (2026-07-03), closing the slice: the `create-research-findings` and `manage-idea-queue` producer skills landed under `skills/`, encoding the workflow doc's rules — run modes and the run lifecycle (folder==id, run-scoped records, exact outputs declaration), evidence-quality and platform-scoping rules, the material-update discipline (`last_ran` vs `last_updated`, char-limited topic-cluster findings with a Watch Now section), stable-finding promotion, intelligence updates with the user-approval gate for core reference creators, the eight-score queue-entry contract with structured run-scoped evidence refs, the variant and wildcard rules, auditable staleness, queue-level warnings, manifest consistency, and the projection maintenance commands. `manage-idea-queue` carries a hard no-promotion boundary: promotion stays the human-approval gate owned by `promote-idea` (slice 5), and the conductor halts there until it exists. Registry rows moved from Missing Future Skills to Core Workflow Skills, context-matrix Skill Coverage rows added (Social research / Idea generation), conductor dependency and phase-owner statuses plus the architecture-map skill table and call graph flipped to [BUILT], and `update-creators` propagated 13 runtime skills to all three fixture workspaces.
+
 Remaining:
 
-- Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
+- Idea Promotion to Project workflow (slice 5, `promote-idea`), then the remaining Phase 1 slices in roadmap order.
 
 ### Phase 2: Learning OS
 
@@ -336,11 +338,16 @@ idempotence, pruned-ids reconciliation positive and negative); drift
 checks pass (21 tests); a pruned workspace passes `validate research`
 and `validate queue`; `prune` dry-runs cleanly against a live fixture
 workspace (nothing to prune).
+Slice 4 batch E (2026-07-03): 232 tests pass; the three registry/matrix
+drift failures that fired when the skill folders landed were closed by
+the registry, matrix, conductor, and architecture-map updates (the
+drift checks work); `update-creators` synced 13 runtime skills into all
+three fixture workspaces with zero overrides lost. Slice 4 complete.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), and 3 (ADR 0020 research module schema slice) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the Research Findings and Idea Queue workflow next (slice 4 — builds the `create-research-findings` and `manage-idea-queue` producer skills and picks up the recall index, board rebuild, and prune commands deferred from slice 3).
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), and 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the Idea Promotion to Project workflow next (slice 5 — builds `promote-idea`, the human-approval promotion gate that creates Projects from promoted queue entries).
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

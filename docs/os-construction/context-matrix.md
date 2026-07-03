@@ -51,6 +51,8 @@ Current workflow coverage:
 | --- | --- |
 | `influencer-os` | Social research, idea generation, template application, production planning, generation planning, output packaging, learning distillation |
 | `create-influencer` | Creator setup |
+| `create-research-findings` | Social research |
+| `manage-idea-queue` | Idea generation |
 | `create-creator-profile` | Creator setup |
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |
