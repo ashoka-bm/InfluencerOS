@@ -95,7 +95,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
 | `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
 | `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
-| `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [PLANNED — Phase 1] |
+| `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [BUILT — Phase 1 slice 5] |
 | `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [PLANNED — Phase 1] |
 | `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [PLANNED — Phase 1] |
 | `create-output-package` | planning | Output Package + provenance. | [PLANNED — Phase 1] |
@@ -159,8 +159,8 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
   Phase 3  Research Findings           -> Skill(create-research-findings)                         [BUILT]
   Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [BUILT]
-  Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [PLANNED]
-  Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [PLANNED]
+  Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [BUILT]
+  Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [BUILT]
   Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]
   Phase 8  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
              format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)

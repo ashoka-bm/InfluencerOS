@@ -126,7 +126,7 @@ skills/influencer-os/SKILL.md
   -> run Research Runs with JSONL evidence and metric snapshots
   -> update Research Findings (create-research-findings)
   -> update the scored Idea Queue (manage-idea-queue)
-  -> stop at the Idea Promotion Gate for human approval (promote-idea, slice 5)
+  -> stop at the Idea Promotion Gate for human approval (promote-idea)
   -> a locked Idea Promotion creates one or more Projects
   -> create Applied Social Template
   -> route by approved format

@@ -88,9 +88,8 @@ about it without drifting from persona or boundaries.
 
 This skill never creates an `IdeaPromotion` or a `Project`, never sets an
 entry to `promoted`, and never writes outside the queue, warnings stream,
-and projections. Promotion is a human-approval gate owned by `promote-idea`
-(Phase 1 slice 5); until that skill exists, recommend candidates and halt
-at the gate per the conductor's halt rule.
+and projections. Promotion is a human-approval gate owned by
+`promote-idea`: recommend candidates and hand off at the gate.
 
 ## Self-Update
 

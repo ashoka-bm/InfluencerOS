@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), and 4 (Research Findings and Idea Queue workflow, batches A-E) landed 2026-07-03; the next slice is the Idea Promotion to Project workflow (slice 5, `promote-idea`).
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; the next slice is format-specific production planning (slice 6).
 
 Completed:
 
@@ -116,9 +116,15 @@ Completed:
 
 - Addressed the slice 4 second review round (2026-07-03; two P2 and one P3, all confirmed): finding refs now resolve — queue `source_finding_ids` hard-fail and promotion `research_finding_ids` warn/fail (human/automated) against `collect_finding_ids`, the union of findings frontmatter, stable findings, and immutable run `outputs.finding_ids`; the union matters because findings legitimately rotate out of the char-limited rolling summary, so a rotated finding still resolves through the run that produced it while a ghost id fails (a bogus `finding_luna_fit_ghost` previously passed `validate queue` and `validate research`, leaving the Product Invariant's findings trace unenforced). Promoted-work warnings now check chain consistency, not just existence: the project's locked `source_refs.idea_promotion_id` must equal the warning's promotion and that promotion's `idea_queue_entry_id` must equal the warning's entry — before the fix a mismatched tuple validated and badged the wrong project card. And the queue manifest rejects duplicate `entry_refs` (the ref dict silently collapsed duplicates, letting `status_counts` count collapsed values).
 
+- Slice 5 batch A (2026-07-03, per the user-approved Slice 5 Execution Decisions in `docs/workflows/research-and-ideas-implementation-plan.md`): promotion link consistency is enforced at rest, file-first, both directions. An `active` promotion requires its queue entry to be `promoted` and to back-link it in `linked_idea_promotion_ids` (`check_promotion_entry_links`, shared by the gate and `validate queue`); `superseded`/`cancelled` promotions impose no entry requirement, so the cancel-revert lifecycle validates. A `promoted` entry requires at least one resolvable linked promotion and exactly one active among them (zero means the entry should have reverted; two means scope expansion skipped the supersede rule), a non-promoted entry may link no active promotion, every `linked_idea_promotion_ids`/`linked_project_ids` value must resolve, and a linked promotion must name that entry. A promotion's `project_ids_created` must resolve to real projects whose `source_refs.idea_promotion_id` points back (the project-side closure already existed in `_resolve_promotion`). Project resolution now goes through `collect_project_manifests` — scanning `projects/*/project.json` by the manifest's `project_id` with duplicates failing closed — which also fixed the latent bug where `check_project_warning_target_refs` assumed id-named project folders and would have rejected any `init-project`-built (slug-foldered) project a warning targeted.
+
+- Slice 5 batch B (2026-07-03): the `promote-idea` producer skill landed under `skills/`, owning conductor phases 5-6 — full-package presentation before any write (idea, payoff, platforms, formats split supported/pending, slots or wildcard, findings and structured evidence refs, score snapshot, creative elements, and the exact Projects to be created), explicit human approval of exactly that package (`approved_by: user`, no automated path), the locked promotion snapshot with `project_ids_created` declared up front, the construction order (promotion → `init-project` → evidence brief → entry/manifest flip → schedule slots → validate + rebuild), Projects only for production-supported formats with the `approval_intent_note` path when none is supported, schedule slots set to `filled` when claimed, and the supersede/cancel lifecycle rules (scope expansion supersedes, cancel reverts the entry when no active promotion remains, projects archive manually). Registry and context-matrix rows (new Idea promotion workflow row) landed in the same commit because the drift checks pin them to the skill folder.
+
+- Slice 5 batch C (2026-07-03), closing the slice: conductor dependency and phase-owner statuses (phases 5-6), the architecture-map skill table and call graph, and the repository-map flow flipped to [BUILT]; `manage-idea-queue`'s halt text now hands off to the built gate instead of halting on a missing skill; `update-creators` propagated 14 runtime skills to all three fixture workspaces; the slice plan status and this progress record close the slice.
+
 Remaining:
 
-- Idea Promotion to Project workflow (slice 5, `promote-idea`), then the remaining Phase 1 slices in roadmap order.
+- Format-specific production planning (slice 6, including text-format routing per ADR 0020), then Output Package registration (slice 7).
 
 ### Phase 2: Learning OS
 
@@ -356,11 +362,26 @@ dangling and rotated finding refs for queue and promotion, warning
 chain-consistency mismatches, duplicate manifest refs; each reproduced
 failing first); drift checks pass (21 tests); the three live fixture
 workspaces still pass `validate research`.
+Slice 5 batch A (2026-07-03): 254 tests pass (13 added in
+`PromotionLinkConsistencyTests` — 12 reproduced failing first, plus the
+positive cancel-revert pin; the slug-foldered project regression test
+proved the latent warning-target bug before the fix); drift checks pass
+(21 tests); 38 example records validate (the example
+entry→promotion→project chain was already bidirectionally consistent);
+the three live fixture workspaces still pass `validate research`.
+Slice 5 batch B (2026-07-03): 254 tests pass; the skill folder landed
+with its registry row (moved out of Missing Future Skills) and the new
+Idea promotion context-matrix row in one commit, keeping the
+registry/matrix drift checks green.
+Slice 5 batch C (2026-07-03): 254 tests pass; drift checks pass with
+the conductor and architecture-map statuses flipped to [BUILT];
+`update-creators` synced 14 runtime skills into all three fixture
+workspaces with zero overrides lost. Slice 5 complete.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), and 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: the Idea Promotion to Project workflow next (slice 5 — builds `promote-idea`, the human-approval promotion gate that creates Projects from promoted queue entries).
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), and 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: format-specific production planning next (slice 6 — extends content unit types and format routing to text formats per ADR 0020; until it lands, promotion may only create Projects for supported formats).
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
