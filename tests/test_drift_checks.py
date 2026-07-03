@@ -29,7 +29,7 @@ THIN_ADAPTERS = ("CLAUDE.md", "SOUL.md")
 
 REGISTRY_PATH = "docs/os-construction/skill-registry.md"
 MATRIX_PATH = "docs/os-construction/context-matrix.md"
-INSTALLED_REGISTRY_SECTIONS = ("Core Workflow Skills", "Creator Setup Subskills")
+INSTALLED_REGISTRY_SECTIONS = ("Core Workflow Skills", "Creator Setup Subskills", "System Skills")
 FUTURE_REGISTRY_SECTION = "Missing Future Skills"
 
 # A numbered list entry pointing at a durable doc, e.g. "3. `docs/...`":
@@ -163,6 +163,31 @@ class ContextMatrixDriftTests(unittest.TestCase):
                     self.workflows,
                     f"`{skill}` coverage names an unknown workflow: {workflow}",
                 )
+
+
+class MemoryPolicyDriftTests(unittest.TestCase):
+    def test_root_memory_stays_within_byte_cap(self):
+        from influencer_os.memory import MEMORY_BYTE_CAP
+
+        size = len((ROOT / "context" / "MEMORY.md").read_bytes())
+        self.assertLessEqual(
+            size,
+            MEMORY_BYTE_CAP,
+            f"context/MEMORY.md is {size} bytes, over the {MEMORY_BYTE_CAP}-byte cap; consolidate it",
+        )
+
+    def test_conductor_skills_carry_rules_and_self_update(self):
+        for skill in ("influencer-os", "create-influencer"):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            for heading in ("## Rules", "## Self-Update"):
+                self.assertIn(heading, text, f"skills/{skill}/SKILL.md is missing {heading} (ADR 0016)")
+
+    def test_worked_local_override_exists(self):
+        overrides = list((ROOT / "skills").glob("*/SKILL.local.md"))
+        self.assertTrue(
+            overrides,
+            "no skills/*/SKILL.local.md worked example exists (ADR 0016 requires at least one)",
+        )
 
 
 if __name__ == "__main__":

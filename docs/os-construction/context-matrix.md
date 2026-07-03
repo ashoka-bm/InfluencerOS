@@ -58,6 +58,8 @@ Current workflow coverage:
 | `create-voice-samples` | Creator setup |
 | `create-reference-library` | Creator setup |
 | `create-runtime-context` | Creator setup |
+| `wrap-up` | Skill/process improvement |
+| `memory-write` | Skill/process improvement |
 
 ## Skill Override Rule
 

@@ -18,3 +18,6 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 - Pending repeated feedback.
 
+### wrap-up
+
+- 2026-07-03: Batch D built the self-improvement loop: log-learning and memory-write CLIs are the deterministic writers behind the wrap-up and memory-write skills.

@@ -99,3 +99,18 @@ Use these output shapes:
 - `docs/templates/creator-setup/reference-prompts/standard-outfit-reference-prompt.md`
 - `docs/templates/creator-setup/reference-prompts/standard-location-reference-prompts.md`
 - `docs/templates/creator-setup/reference-prompts/standard-object-reference-prompts.md`
+
+## Rules
+
+*Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
+
+- 2026-07-03: Baseline established; no corrections recorded yet.
+
+## Self-Update
+
+When the user flags an issue with this skill mid-run or at wrap-up:
+
+- Scope-specific correction (one creator, or the OS persona) → record it in the applicable `SKILL.local.md`: the creator's runtime copy, or `skills/create-influencer/SKILL.local.md` for the OS persona.
+- System-wide correction → add a dated entry to `## Rules` above and fix the offending step in this file.
+- Log the change via `python3 -m influencer_os log-learning context/learnings.md create-influencer "<what changed>"` so it has a record.
+- Promote a local rule into this base file only when repeated feedback shows it applies system-wide (ADR 0014).

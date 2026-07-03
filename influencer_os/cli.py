@@ -1,7 +1,9 @@
 import argparse
+import datetime
 import sys
 from pathlib import Path
 
+from influencer_os.memory import DEFAULT_MEMORY_SECTION, append_skill_learning, write_memory_fact
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     init_creator,
@@ -37,6 +39,17 @@ def main(argv=None):
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
     project_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    memory_parser = subparsers.add_parser("memory-write", help="Add one durable fact to a MEMORY.md file, deduplicated and capped.")
+    memory_parser.add_argument("memory_file", help="Path to the MEMORY.md file.")
+    memory_parser.add_argument("fact", help="One-line durable fact.")
+    memory_parser.add_argument("--section", default=DEFAULT_MEMORY_SECTION, help="Target section heading, without the leading '## '.")
+
+    learning_parser = subparsers.add_parser("log-learning", help="Append a dated per-skill learning entry to a learnings file.")
+    learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
+    learning_parser.add_argument("skill_name", help="Skill folder name the learning applies to.")
+    learning_parser.add_argument("entry", help="One-line learning entry.")
+    learning_parser.add_argument("--date", dest="entry_date", help="Entry date as YYYY-MM-DD; defaults to today.")
 
     args = parser.parse_args(argv)
 
@@ -101,6 +114,23 @@ def main(argv=None):
             )
             print(f"Initialized project: {project_dir}")
             print("Next phase: add selected idea and production plan")
+            return 0
+
+        if args.command == "memory-write":
+            result = write_memory_fact(args.memory_file, args.fact, section=args.section)
+            if result["status"] == "duplicate":
+                print("Already saved; no change.")
+            else:
+                print(f"Saved memory fact ({result['bytes_used']}/{result['byte_cap']} bytes).")
+            return 0
+
+        if args.command == "log-learning":
+            entry_date = args.entry_date or datetime.date.today().isoformat()
+            result = append_skill_learning(args.learnings_file, args.skill_name, args.entry, entry_date)
+            if result["status"] == "duplicate":
+                print("Learning already recorded; no change.")
+            else:
+                print(f"Logged learning for {args.skill_name}.")
             return 0
     except (ValidationError, FileExistsError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

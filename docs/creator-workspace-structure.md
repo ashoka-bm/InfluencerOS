@@ -157,6 +157,17 @@ The SQL database is an index and query layer over workspace files. It is not the
 
 The semantic index is a low-context retrieval projection over selected narrative and summary files. It should index distilled learnings and performance summaries, not raw analytics by default.
 
+## Creator Memory And Recall (Tier 0)
+
+Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or semantic index.
+
+- `context/MEMORY.md` is the curated always-loaded creator memory. Cap: 2,500 bytes, enforced by the pre-write check in `python3 -m influencer_os memory-write`; consolidate before the cap is breached. Sections: Active Threads, Decisions, Blockers.
+- `memory/learnings.md` stores distilled creator lessons via `python3 -m influencer_os log-learning`. Every distilled lesson must link back to its evidence (project, published post record, or analytics snapshot IDs); the evidence itself stays in the owning project.
+- `memory/daily/` holds dated session notes (`YYYY-MM-DD.md`). Lazy-loaded; finalized by the `wrap-up` skill when a session worked in this workspace.
+- Loaded by default in creator work: `context/SOUL.md`, `context/USER.md`, `context/MEMORY.md`. Everything else is lazy-loaded per `docs/os-construction/context-matrix.md`.
+- Indexed later (Phase 2): `memory/learnings.md` and performance summaries feed the SQL and semantic indexes. Raw analytics are never indexed into default semantic memory.
+- Root OS memory (repo `context/MEMORY.md`, same cap) and creator memory are separate scopes. Facts about one creator never go to root memory, and OS facts never go to a Creator Workspace.
+
 ## File Responsibilities
 
 `AGENTS.md` is optional local creator operating context. It should not redefine the shared OS; it should tell agents to always load `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md` first, then lazy-load richer files only when needed.

@@ -108,3 +108,18 @@ Story sequence plans should define frame-level moments, sequence arc, lightweigh
 ## Provider Boundary
 
 Drafting ideas, prompts, plans, shot lists, and generation plans is allowed. Calling a provider is not allowed without explicit approval.
+
+## Rules
+
+*Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
+
+- 2026-07-03: Baseline established; no corrections recorded yet.
+
+## Self-Update
+
+When the user flags an issue with this skill mid-run or at wrap-up:
+
+- Scope-specific correction (one creator, or the OS persona) → record it in the applicable `SKILL.local.md`: the creator's runtime copy, or `skills/influencer-os/SKILL.local.md` for the OS persona.
+- System-wide correction → add a dated entry to `## Rules` above and fix the offending step in this file.
+- Log the change via `python3 -m influencer_os log-learning context/learnings.md influencer-os "<what changed>"` so it has a record.
+- Promote a local rule into this base file only when repeated feedback shows it applies system-wide (ADR 0014).

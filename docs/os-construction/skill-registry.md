@@ -42,6 +42,13 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-reference-library` | plan visual/audio references | `references/reference-library.json` |
 | `create-runtime-context` | create tiny runtime context | `context/SOUL.md`, `context/USER.md`, `context/MEMORY.md` |
 
+## System Skills
+
+| Skill | Triggers on | Reads | Writes | Override support |
+| --- | --- | --- | --- | --- |
+| `wrap-up` | session end signals, wrap-up requests, sessions that produced deliverables | git status, `context/learnings.md`, this registry, context matrix | `context/learnings.md`, `docs/os-construction/process-learnings.md`, skill files, `context/MEMORY.md` | yes |
+| `memory-write` | remember this, note that, save to memory, update memory, forget about | target `MEMORY.md` | target `MEMORY.md` (2,500-byte cap via `python3 -m influencer_os memory-write`) | yes |
+
 ## Missing Future Skills
 
 | Skill | Purpose | Timing |
@@ -53,7 +60,5 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-production-plan` | route promoted idea to format-specific plan | Planning OS |
 | `create-output-package` | register package and provenance | Planning OS |
 | `distill-creator-learning` | convert performance evidence into creator memory | Learning OS |
-| `wrap-up` | capture learnings, self-correct skills, reconcile this registry, promote memory | System — ADR 0016 (Phase 0C) |
-| `memory-write` | bounded, deduped `context/MEMORY.md` writes | System — ADR 0016 (Phase 0C) |
 
-Coverage for these planned skills is deferred per the Context Coverage Rule until they are built; context-matrix rows land with each skill's build step: WS9 builds the system skills, while the producer skills are built in their Phase 1 slices — WS10 only adds `[PLANNED]` halt markers for them to the conductor, and each marker is an open build obligation. Per ADR 0017 this registry gains `category` and `dependencies` columns in workstream 10; the columns above are the pre-ADR-0017 set.
+Coverage for these planned skills is deferred per the Context Coverage Rule until they are built; the producer skills are built in their Phase 1 slices — WS10 only adds `[PLANNED]` halt markers for them to the conductor, and each marker is an open build obligation. Per ADR 0017 this registry gains `category` and `dependencies` columns in workstream 10; the columns above are the pre-ADR-0017 set.
