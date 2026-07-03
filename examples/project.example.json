@@ -35,5 +35,14 @@
     "tiktok"
   ],
   "learning_goal": "Test whether a visible workday constraint plus a tiny relief routine improves early retention for Luna's apartment wellness audience.",
+  "acceptance_criteria": [
+    "A validated micro-journey production plan exists for the short-form video format.",
+    "The base video generation plan stays provider-neutral and references only reference-library assets.",
+    "Every production-plan beat maps to one applied-template beat."
+  ],
+  "constraints": [
+    "No provider-backed generation calls without explicit user approval.",
+    "Vertical short-form video suitable for Reels, TikTok, and Shorts without platform-specific planning."
+  ],
   "notes": "Project begins once the user selects the tiny reset content idea for production."
 }

@@ -5,7 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from influencer_os.creator_workspaces import sync_creator_runtime
+from influencer_os.creator_workspaces import (
+    init_creator,
+    sync_creator_runtime,
+    validate_creator_workspace,
+)
+from influencer_os.projects import init_project, validate_project
+from influencer_os.validation import ValidationError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +24,38 @@ def copy_example_record(example_name, destination):
 def populate_workspace_records(workspace_dir):
     copy_example_record("creator-profile.example.json", workspace_dir / "creator-profile.json")
     copy_example_record("reference-library.example.json", workspace_dir / "references" / "reference-library.json")
+
+
+def populate_research_packs(workspace_dir):
+    copy_example_record(
+        "social-research-pack.example.json",
+        workspace_dir / "research" / "social-research-packs" / "research_luna_fit_2026_06_28.json",
+    )
+    copy_example_record(
+        "video-understanding-pack.example.json",
+        workspace_dir / "research" / "video-understanding-packs" / "video_research_luna_fit_001.json",
+    )
+
+
+def scaffold_project_workspace(temp_dir):
+    workspace_dir = init_creator(
+        ROOT / "examples" / "creator-workspace.example.json",
+        workspace_root=Path(temp_dir),
+    )
+    populate_workspace_records(workspace_dir)
+    populate_research_packs(workspace_dir)
+    project_dir = init_project(
+        ROOT / "examples" / "project.example.json",
+        creator_workspace=workspace_dir,
+    )
+    populate_project_records(project_dir)
+    return workspace_dir, project_dir
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 
 def populate_project_records(project_dir):
@@ -407,6 +445,8 @@ class CliTests(unittest.TestCase):
             )
             self.assertEqual(init_project_result.returncode, 0, init_project_result.stderr)
 
+            populate_workspace_records(workspace_dir)
+            populate_research_packs(workspace_dir)
             project_dir = workspace_dir / "projects" / "tiny-reset-after-laptop-day"
             populate_project_records(project_dir)
             validate_result = subprocess.run(
@@ -524,6 +564,125 @@ class CliTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1)
             self.assertIn("does not match creator workspace", result.stderr)
+
+
+class ProvenanceResolutionTests(unittest.TestCase):
+    def test_validate_project_rejects_dangling_reference_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["source_refs"]["reference_asset_ids"].append("asset_missing_prop"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("asset_missing_prop", str(ctx.exception))
+
+    def test_validate_project_rejects_missing_research_pack_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            pack_path = (
+                workspace_dir / "research" / "video-understanding-packs" / "video_research_luna_fit_001.json"
+            )
+            pack_path.unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("video_research_luna_fit_001", str(ctx.exception))
+
+    def test_validate_project_accepts_packaged_project_with_matching_output_package(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            copy_example_record(
+                "output-package.example.json",
+                project_dir / "output-package" / "output-package.json",
+            )
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            result = validate_project(project_dir)
+            self.assertEqual(result["project_id"], "project_luna_tiny_reset_001")
+
+    def test_validate_project_rejects_output_package_template_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = project_dir / "output-package" / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(
+                package_path,
+                lambda package: package["source_refs"].update(
+                    applied_social_template_id="applied_template_other_001"
+                ),
+            )
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            with self.assertRaises(ValueError):
+                validate_project(project_dir)
+
+
+class ReadinessGateTests(unittest.TestCase):
+    def init_workspace_with_status(self, temp_dir, status):
+        manifest = json.loads((ROOT / "examples" / "creator-workspace.example.json").read_text())
+        manifest["status"] = status
+        manifest_path = Path(temp_dir) / "creator-workspace.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        workspace_dir = init_creator(manifest_path, workspace_root=Path(temp_dir) / "creators")
+        populate_workspace_records(workspace_dir)
+        return workspace_dir
+
+    def test_generation_ready_requires_an_approved_visual_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = self.init_workspace_with_status(temp_dir, "generation_ready")
+
+            def demote_all_assets(library):
+                for asset in library["assets"]:
+                    asset["asset_status"] = "generated"
+
+            rewrite_json(workspace_dir / "references" / "reference-library.json", demote_all_assets)
+
+            with self.assertRaises(ValidationError):
+                validate_creator_workspace(workspace_dir)
+
+    def test_generation_ready_passes_with_approved_visual_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = self.init_workspace_with_status(temp_dir, "generation_ready")
+
+            result = validate_creator_workspace(workspace_dir)
+            self.assertEqual(result["creator_slug"], "luna-fit")
+
+
+class ValidateRecordCliTests(unittest.TestCase):
+    def run_validate_record(self, *args):
+        return subprocess.run(
+            [sys.executable, "-m", "influencer_os", "validate", "record", *args],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def test_validate_record_accepts_matching_record(self):
+        result = self.run_validate_record("project", "examples/project.example.json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Validated record", result.stdout)
+
+    def test_validate_record_rejects_mismatched_record(self):
+        result = self.run_validate_record("project", "examples/creator-profile.example.json")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("error:", result.stderr)
+
+    def test_validate_record_requires_schema_and_path(self):
+        result = self.run_validate_record()
+
+        self.assertEqual(result.returncode, 1)
 
 
 if __name__ == "__main__":

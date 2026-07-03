@@ -10,7 +10,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.projects import init_project, validate_project
 from influencer_os.runs import DEFAULT_WORKSPACE, init_run
-from influencer_os.validation import ValidationError, validate_examples
+from influencer_os.validation import ValidationError, validate_examples, validate_file
 
 
 def main(argv=None):
@@ -18,8 +18,9 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project"], help="Validation target.")
-    validate_parser.add_argument("path", nargs="?", help="Path for workspace or project validation.")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record"], help="Validation target.")
+    validate_parser.add_argument("path", nargs="?", help="Path for workspace/project validation, or schema name for record validation.")
+    validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
     init_parser = subparsers.add_parser("init-run", help="Initialize a dry-run workspace from a creator profile.")
     init_parser.add_argument("creator_profile", help="Path to a Creator Profile JSON file.")
@@ -44,6 +45,12 @@ def main(argv=None):
             if args.target == "examples":
                 results = validate_examples()
                 print(f"Validated {len(results)} example records.")
+                return 0
+            if args.target == "record":
+                if not args.path or not args.record_path:
+                    raise ValueError("validate record requires a schema name and a record path")
+                validate_file(args.path, args.record_path)
+                print(f"Validated record against {args.path}: {args.record_path}")
                 return 0
             if args.target == "workspace":
                 if not args.path:

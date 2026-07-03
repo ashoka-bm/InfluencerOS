@@ -46,6 +46,23 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, invalid)
 
+    def test_project_requires_acceptance_criteria(self):
+        example = load_json("examples/project.example.json")
+        invalid = deepcopy(example)
+        invalid.pop("acceptance_criteria")
+
+        with self.assertRaises(ValidationError):
+            validate_record("project", invalid)
+
+    def test_output_package_requires_template_and_video_pack_refs(self):
+        example = load_json("examples/output-package.example.json")
+        for field in ("applied_social_template_id", "video_understanding_pack_ids"):
+            invalid = deepcopy(example)
+            invalid["source_refs"].pop(field)
+            with self.subTest(field=field):
+                with self.assertRaises(ValidationError):
+                    validate_record("output-package", invalid)
+
     def test_content_ideas_require_evidence_refs(self):
         example = load_json("examples/content-idea-set.example.json")
         invalid = deepcopy(example)

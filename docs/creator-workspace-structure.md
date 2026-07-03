@@ -120,6 +120,31 @@ workspace-library/creators/<creator-slug>/
   progress/
 ```
 
+### Transitional Layout (Phase 0C)
+
+The `research/` tree and the project `evidence-brief.md` above are the ADR 0020
+target; they land with the Phase 1 research module slice. Until then,
+`init-creator` scaffolds the current transitional layout, and provenance
+validation resolves against it:
+
+```text
+research/
+  social-research-packs/
+    <social-research-pack-id>.json       # research_* ids
+  video-understanding-packs/
+    <video-understanding-pack-id>.json   # video_research_* ids
+  sources/
+projects/
+  <project-id>/
+    idea/
+      selected-content-idea.json         # replaced by the Idea Promotion in Phase 1
+```
+
+A research pack id in project or output-package `source_refs` must resolve to
+`<directory>/<pack-id>.json` in the owning Creator Workspace, and every
+`reference_asset_id` must exist in `references/reference-library.json`;
+`validate project` fails on a dangling reference.
+
 Shared local indexes may live outside individual creator folders:
 
 ```text

@@ -15,9 +15,13 @@
   },
   "source_refs": {
     "selected_content_idea_id": "selected_luna_001",
+    "applied_social_template_id": "applied_template_luna_001",
     "production_plan_ids": [
       "mjvp_luna_001",
       "bvgp_luna_001"
+    ],
+    "video_understanding_pack_ids": [
+      "video_research_luna_fit_001"
     ],
     "reference_asset_ids": [
       "asset_luna_identity_plate",

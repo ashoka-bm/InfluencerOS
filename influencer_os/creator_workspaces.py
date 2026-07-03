@@ -9,6 +9,10 @@ DEFAULT_CREATOR_WORKSPACE_ROOT = ROOT / "workspace-library" / "creators"
 DEFAULT_SOURCE_SKILLS_DIR = ROOT / "skills"
 CREATOR_RUNTIME_SKILLS_DIR = Path(".claude") / "skills"
 
+# Medium-based readiness: generation implies visual output, so a
+# generation_ready workspace needs at least one approved asset of these kinds.
+GENERATION_READY_ASSET_TYPES = {"character", "video_style"}
+
 STANDARD_DIRECTORIES = [
     "context",
     "brand_context",
@@ -236,12 +240,30 @@ def validate_creator_workspace(workspace_path):
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
 
+    _validate_readiness_gates(manifest, reference_library)
+
     return {
         "creator_slug": manifest["creator_slug"],
         "creator_profile_id": manifest["creator_profile_id"],
         "workspace_path": workspace_dir,
         "checked_paths": sorted(set(required_paths)),
     }
+
+
+def _validate_readiness_gates(manifest, reference_library):
+    if manifest["status"] != "generation_ready":
+        return
+    approved_visual_assets = [
+        asset
+        for asset in reference_library["assets"]
+        if asset["asset_type"] in GENERATION_READY_ASSET_TYPES
+        and asset["asset_status"] == "approved"
+    ]
+    if not approved_visual_assets:
+        raise ValidationError(
+            "generation_ready workspace requires at least one approved visual asset of kind "
+            f"{sorted(GENERATION_READY_ASSET_TYPES)!r} in references/reference-library.json"
+        )
 
 
 def _write_text_if_missing(path, content):

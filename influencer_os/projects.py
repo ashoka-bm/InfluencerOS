@@ -36,6 +36,12 @@ PRODUCTION_PLAN_SCHEMAS = {
     "story_sequence": "story-sequence-plan",
 }
 
+# Research pack ids resolve to <workspace>/<directory>/<pack-id>.json records.
+RESEARCH_PACK_LOCATIONS = (
+    ("video_research_", "research/video-understanding-packs", "video-understanding-pack", "video_understanding_pack_id"),
+    ("research_", "research/social-research-packs", "social-research-pack", "social_research_pack_id"),
+)
+
 
 def init_project(project_manifest_path, creator_workspace):
     project_manifest_path = Path(project_manifest_path)
@@ -87,7 +93,9 @@ def validate_project(project_path):
     if missing:
         raise FileNotFoundError(f"Missing project paths: {', '.join(sorted(missing))}")
 
-    _validate_project_records(project_dir, project)
+    workspace_dir = _locate_workspace(project_dir)
+    _resolve_source_refs(project["source_refs"], workspace_dir, "Project source_refs")
+    _validate_project_records(project_dir, project, workspace_dir)
 
     return {
         "project_id": project["project_id"],
@@ -139,7 +147,60 @@ def _requires_generation_plan(project):
     )
 
 
-def _validate_project_records(project_dir, project):
+def _locate_workspace(project_dir):
+    projects_dir = project_dir.parent
+    workspace_dir = projects_dir.parent
+    if projects_dir.name != "projects" or not (workspace_dir / "creator-workspace.json").exists():
+        raise FileNotFoundError(
+            "Cannot locate creator workspace manifest above project: "
+            f"{project_dir} (expected <workspace>/projects/<project-slug>/)"
+        )
+    return workspace_dir
+
+
+def _resolve_source_refs(source_refs, workspace_dir, context):
+    _resolve_reference_assets(source_refs.get("reference_asset_ids", []), workspace_dir, context)
+    _resolve_research_packs(source_refs.get("research_pack_ids", []), workspace_dir, context)
+    _resolve_research_packs(source_refs.get("video_understanding_pack_ids", []), workspace_dir, context)
+
+
+def _resolve_reference_assets(asset_ids, workspace_dir, context):
+    if not asset_ids:
+        return
+    library_path = workspace_dir / "references" / "reference-library.json"
+    library = _validate_project_record(library_path, "reference-library")
+    known_asset_ids = {asset["asset_id"] for asset in library["assets"]}
+    dangling = sorted(set(asset_ids) - known_asset_ids)
+    if dangling:
+        raise ValidationError(
+            f"{context}: reference_asset_ids do not resolve to reference library assets: {dangling}"
+        )
+
+
+def _resolve_research_packs(pack_ids, workspace_dir, context):
+    for pack_id in pack_ids:
+        directory, schema_name, id_field = _research_pack_location(pack_id, context)
+        pack_path = workspace_dir / directory / f"{pack_id}.json"
+        if not pack_path.exists():
+            raise ValidationError(
+                f"{context}: research pack {pack_id!r} does not resolve to {directory}/{pack_id}.json"
+            )
+        record = _validate_project_record(pack_path, schema_name)
+        if record[id_field] != pack_id:
+            raise ValidationError(
+                f"{context}: research pack file {pack_path} has {id_field} "
+                f"{record[id_field]!r}, expected {pack_id!r}"
+            )
+
+
+def _research_pack_location(pack_id, context):
+    for prefix, directory, schema_name, id_field in RESEARCH_PACK_LOCATIONS:
+        if pack_id.startswith(prefix):
+            return directory, schema_name, id_field
+    raise ValidationError(f"{context}: unrecognized research pack id prefix: {pack_id!r}")
+
+
+def _validate_project_records(project_dir, project, workspace_dir):
     selected_idea = None
     applied_template = None
     production_plan = None
@@ -203,6 +264,19 @@ def _validate_project_records(project_dir, project):
                 "Output package project_id does not match project: "
                 f"{output_package['project_id']!r} != {project['project_id']!r}"
             )
+        if output_package["source_refs"]["selected_content_idea_id"] != project["source_refs"]["selected_content_idea_id"]:
+            raise ValueError(
+                "Output package selected_content_idea_id does not match project source_refs: "
+                f"{output_package['source_refs']['selected_content_idea_id']!r} != "
+                f"{project['source_refs']['selected_content_idea_id']!r}"
+            )
+        if output_package["source_refs"]["applied_social_template_id"] != applied_template["applied_social_template_id"]:
+            raise ValueError(
+                "Output package applied_social_template_id does not match applied template: "
+                f"{output_package['source_refs']['applied_social_template_id']!r} != "
+                f"{applied_template['applied_social_template_id']!r}"
+            )
+        _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
 
 def _validate_project_record(record_path, schema_name):
