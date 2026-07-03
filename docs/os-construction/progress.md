@@ -106,6 +106,8 @@ Completed:
 
 - Slice 4 batch B (2026-07-03): the local recall index landed as `influencer_os/recall_index.py` plus the `rebuild-index <creator-workspace> [--db <path>]` CLI command. One shared SQLite at the ADR 0010 path (`workspace-library/index/influencer-os.sqlite`); a rebuild deletes and reinserts only the named creator's rows, so rebuilds are idempotent and scoped. Rows carry the ADR 0010 provenance minimum (record id/type, creator profile id and slug, project id when applicable, workspace-relative source path, JSONL line number when applicable, sha256 content hash, indexed timestamp). Resolves every draft record kind — evidence and metric snapshots to path+line, finding ids to `findings.md` or stable-finding files (dual residence allowed by design), queue entries, promotions, projects, board cards — plus video understanding packs, added beyond the draft list because the structured evidence-ref shape names them. Bare-id ambiguity fails closed for every type except findings; malformed JSONL fails closed with path:line; a workspace outside the `creators/` layout must pass `--db` explicitly. The index stays a pure projection: no validation path reads it.
 
+- Slice 4 batch C (2026-07-03): the Content Board projection landed as `influencer_os/boards.py` with `rebuild-board <creator-workspace>` and `validate board <creator-workspace>`. Cards are fully derived from canonical records: idea queue entries become parent cards, projects become child cards linked through their locked Idea Promotion (a project whose promotion or queue entry is missing fails the rebuild), card ids are deterministic (`card_<source_record_id>`), and active project warnings badge exactly the card they target — promoted-work warnings badge the project card, queue-level warnings badge the idea card, resolved warnings badge nothing, badges are unique severities ranked urgent → important → info. `columns` and `manual_order` are preserved projection metadata: rebuilds keep the existing arrangement, append new cards in canonical order, and drop stale ids. `validate board` fails a board whose cards disagree with canonical records, whose `manual_order` does not list every card exactly once, or whose board id does not derive from the workspace creator. Fixture correction: the example board had the promoted-work warning badging the parent idea card; the badge moved to the targeted project card per the ADR 0020 pairing rule (the example warning carries `project_id` + `idea_promotion_id`).
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -320,6 +322,12 @@ Slice 4 batch B (2026-07-03): 208 tests pass (9 added in
 `rebuild-index` runs cleanly against the three live fixture workspaces
 at the default ADR 0010 path (0 rows each — correct: no fixture has
 research runs, queues, or projects yet).
+Slice 4 batch C (2026-07-03): 222 tests pass (14 added in
+`tests/test_boards.py`); drift checks pass (21 tests); 38 example
+records validate after the board-badge fixture correction; the
+derivation reproduces the example board fixture exactly, and
+`rebuild-board` + `validate board` run cleanly against a live fixture
+workspace (empty board, 0 cards).
 ```
 
 ## Next Work Queue

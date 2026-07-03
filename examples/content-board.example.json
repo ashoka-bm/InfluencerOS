@@ -19,9 +19,7 @@
       "status": "promoted",
       "source_record_type": "idea_queue_entry",
       "source_record_id": "idea_queue_entry_luna_fit_001",
-      "warning_badges": [
-        "important"
-      ],
+      "warning_badges": [],
       "child_card_ids": [
         "card_project_luna_tiny_reset_001"
       ]
@@ -32,7 +30,9 @@
       "status": "planning",
       "source_record_type": "project",
       "source_record_id": "project_luna_tiny_reset_001",
-      "warning_badges": [],
+      "warning_badges": [
+        "important"
+      ],
       "child_card_ids": [],
       "parent_card_id": "card_idea_queue_entry_luna_fit_001"
     }

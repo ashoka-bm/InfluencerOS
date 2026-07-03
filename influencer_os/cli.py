@@ -14,6 +14,7 @@ from influencer_os.creator_workspaces import (
     update_creators,
     validate_creator_workspace,
 )
+from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.projects import init_project, validate_project
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
@@ -26,8 +27,8 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue"], help="Validation target.")
-    validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue validation, or schema name for record validation.")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board"], help="Validation target.")
+    validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue/board validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
     init_parser = subparsers.add_parser("init-run", help="Initialize a dry-run workspace from a creator profile.")
@@ -65,6 +66,9 @@ def main(argv=None):
     index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
     index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
     index_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
+
+    board_parser = subparsers.add_parser("rebuild-board", help="Rebuild the Content Board projection from canonical records.")
+    board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
     memory_parser = subparsers.add_parser("memory-write", help="Add one durable fact to a MEMORY.md file, deduplicated and capped.")
     memory_parser.add_argument("memory_file", help="Path to the MEMORY.md file.")
@@ -122,6 +126,13 @@ def main(argv=None):
                 result = validate_queue(args.path)
                 print(f"Validated idea queue: {result['manifest_path']}")
                 print(f"Checked {result['entry_count']} queue entries.")
+                return 0
+            if args.target == "board":
+                if not args.path:
+                    raise ValueError("validate board requires a creator workspace path")
+                result = validate_board(args.path)
+                print(f"Validated content board: {result['board_path']}")
+                print(f"Checked {result['card_count']} board cards.")
                 return 0
             return 0
 
@@ -199,6 +210,15 @@ def main(argv=None):
                 f"{result['row_count']} records"
             )
             print(f"Index database: {result['db_path']}")
+            return 0
+
+        if args.command == "rebuild-board":
+            result = rebuild_board(args.creator_workspace)
+            print(
+                f"Rebuilt content board: {result['card_count']} cards "
+                f"({result['idea_cards']} ideas, {result['project_cards']} projects)"
+            )
+            print(f"Board: {result['board_path']}")
             return 0
 
         if args.command == "memory-write":

@@ -190,6 +190,18 @@ validation never depends on it):
 python3 -m influencer_os rebuild-index workspace-library/creators/luna-fit
 ```
 
+## Rebuild The Content Board
+
+Rebuild the Kanban-readable Content Board projection from canonical records
+(idea queue entries become parent cards, projects become child cards, active
+warnings become severity badges; `columns` and `manual_order` survive
+rebuilds), then check an existing board against canonical records:
+
+```bash
+python3 -m influencer_os rebuild-board workspace-library/creators/luna-fit
+python3 -m influencer_os validate board workspace-library/creators/luna-fit
+```
+
 ## Memory And Learnings
 
 Add one durable fact to a `MEMORY.md` file (deduplicated; refuses writes past the 2,500-byte cap):

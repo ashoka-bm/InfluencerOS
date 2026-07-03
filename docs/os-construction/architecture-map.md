@@ -113,6 +113,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
 | `research.py` | JSONL + frontmatter validation, `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A] |
 | `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. | [BUILT — Phase 1 slice 4 batch B] |
+| `boards.py` | Content Board projection: `rebuild-board` (cards derived, columns/manual order preserved) + `validate board` agreement check. | [BUILT — Phase 1 slice 4 batch C] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
 
@@ -123,6 +124,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `test_schema_validation.py` | All examples validate; coverage derived from disk; fail-closed subset tests. | [BUILT — WS13] |
 | `test_cli.py` | CLI behavior incl. provenance resolution and readiness gates. | [BUILT] |
 | `test_recall_index.py` | Index resolution per record kind, idempotent per-creator rebuilds, fail-closed ambiguity, default ADR 0010 path. | [BUILT — Phase 1 slice 4 batch B] |
+| `test_boards.py` | Board derivation (cards, badges, parent/child), metadata preservation, agreement validation, CLI. | [BUILT — Phase 1 slice 4 batch C] |
 | `test_memory.py` | Bounded memory/learnings writers + CLI. | [BUILT — ADR 0016] |
 | adapter read-order drift check | Fails if `CLAUDE.md`/`SOUL.md` stop importing `AGENTS.md` or restate a divergent read order. | [BUILT — `test_drift_checks.py`] |
 | skill-registry drift check | Bidirectional coverage; future table may not name on-disk skills. | [BUILT — `test_drift_checks.py`] |
