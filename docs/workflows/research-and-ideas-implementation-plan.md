@@ -1173,3 +1173,78 @@ confirmed by reproduction; one approved batch closed them the same day.
    fail mid-construction after writing the promotion snapshot. Fixed, and
    a drift test pins the skill's `init-project` line to the real CLI
    signature.
+
+## Five-Slice Review (2026-07-03)
+
+The whole-of-Phase-1 review (slices 1–5, run after slice 5 closed) audited
+each slice against its plan with independent reproduction. Slices 3–5
+findings, all closed in one approved batch the same day:
+
+1. (P2) Promotion checks were split asymmetrically across the validators,
+   and the progress record claimed the gate ran "via `validate research`
+   and `validate queue`" when the queue path never ran it. Reproduced
+   bypasses on `validate queue`: a foreign-creator promotion, a superseded
+   promotion pointing at a nonexistent entry, a promotion file whose name
+   differs from its id, an active promotion claiming a nonexistent slot,
+   and no warnings channel (human-approved unresolved-evidence warnings
+   could never surface). Mirror image: the slice 5 P1 entry-level closure
+   lived only in `validate queue`, so an active promotion with zero
+   projects passed `validate research` — the path `prune --apply`'s
+   post-check actually runs. Fixed structurally: `validate queue` runs
+   `validate_promotions` (gate, creator scope, filename==id, slot claims,
+   warnings) after its entry-side checks, and `validate research` runs the
+   shared `_check_queue_consistency` (manifest agreement, ref resolution,
+   closure) whenever the queue exists. Future promotion checks land in one
+   of those two shared functions and appear on both paths.
+2. (P2) `applied-social-template.target_format_id` escaped the closed
+   format vocabulary (pattern-typed; `format_interpretive_dance` passed
+   `validate project`) and no check tied it to the approval surface. Fixed:
+   the field is the closed enum, pinned by the drift check alongside the
+   other five format properties, and the template's format must be among
+   the project's `target_formats` (already a subset of the promotion's
+   `approved_formats`). The enum drift check also fails on a pinned-name
+   property that carries no enum, closing the silent-drop gap.
+3. (P2) Within-run duplicate JSONL ids validated green (set-based outputs
+   reconciliation collapsed them) but bricked `rebuild-index`, which fails
+   closed on ambiguity — the validators said the workspace was fine while
+   the skill's own closeout step errored. Fixed: duplicates fail both
+   validators with file context.
+4. (P3) `metric-snapshot.evidence_id` was schema-required but resolved
+   nowhere, and a structured evidence ref could pair evidence A with a
+   snapshot of evidence B. Fixed: a snapshot's evidence must exist in its
+   own run, and refs must cite snapshots of their own evidence (dangling
+   snapshots were also unprunable forever, since snapshots prune with
+   their evidence).
+5. (P3) A promotion with `evidence_refs: []` passed schema, gate, and both
+   validators with zero warnings, severing the Product Invariant's
+   research-evidence trace that projects resolve transitively through the
+   locked promotion. Fixed: `minItems: 1` (the queue entry already
+   required one); `research_finding_ids` stays allowed-empty because
+   findings are required only when material findings exist.
+6. (P3) `prune --apply` mutated files before discovering pre-existing
+   invalid state. Fixed with a pre-flight `validate research` that refuses
+   the apply, so corruption is reported as pre-existing, never as
+   prune-caused.
+7. (P3) `check_promotion_slot_claims` crashed with a raw `KeyError` on a
+   schedule slot missing `status` — reachable from `validate project`,
+   which does not otherwise validate the schedule. Fixed: the schedule is
+   schema-validated before slots are read.
+8. (P3) Video pack refs resolved by filename stem without reading the
+   file; a mislabeled or malformed pack file resolved fine. Fixed:
+   `collect_video_pack_ids` reads each pack and requires
+   `video_understanding_pack_id` to match the filename (the projects path
+   already id-matched).
+9. (P3) Stable findings had no filename==id rule and no cross-file
+   uniqueness, and the recall index treated `stable-finding` as
+   non-unique. Fixed: `research/stable-findings/<stable-finding-id>.md`
+   is enforced (matching the documented layout) and the index fails
+   closed on duplicate stable ids.
+10. (P3) `validate project` did no workspace creator pinning, so a wholly
+    foreign chain planted in a workspace passed that one command. Fixed:
+    the project pins to the owning workspace's creator; the promotion and
+    entry already pin to the project.
+
+Slices 1–2 findings from the same review are recorded in their own plan
+docs. The recorded full-workflow verification script was also stale — it
+ran `validate queue` before `init-project`, which the slice 5 closure
+check now correctly rejects; the script in `progress.md` was reordered.

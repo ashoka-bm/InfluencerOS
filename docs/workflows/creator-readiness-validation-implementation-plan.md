@@ -212,6 +212,31 @@ test gap, all reproduced, fixed, and covered by negative tests the same day:
   and location primaries, and drops the video-style primary, proving the
   non-visual path end to end.
 
+## Five-Slice Review (2026-07-03)
+
+The whole-of-Phase-1 review (slices 1–5, run after slice 5 closed) found
+three slice-2-scoped issues:
+
+- P3 — reference-library `asset_id` had no at-rest uniqueness: duplicate
+  ids resolved last-wins through the id→asset dicts, so an ambiguous
+  provenance backbone validated. Fixed: `validate workspace` fails
+  duplicate asset ids at every status
+  (`test_duplicate_asset_ids_are_rejected_even_at_draft`).
+- Test gap — `test_generation_ready_requires_an_approved_visual_asset`
+  demoted all assets and asserted only that validation failed; unrelated
+  missing-file blockers fired too, so the test would still pass with the
+  approved-visual gate deleted. Reworked: asset files are re-placed after
+  the demotion and the test asserts the gate's message specifically.
+- Doc clarification — the P2 `source_ref` provenance check above is
+  readiness-scoped by design (it lives in the status-keyed blocker model;
+  `draft`/`foundation_review` stay permissive). The record wording read
+  unconditional; it is scoped like every other blocker in this slice.
+
+The review also tightened the reference-library path pins alongside the
+intake pins: `.`/`..` final segments and embedded newlines now fail at the
+schema seam (see the master-intake plan's review record for the validator
+anchoring change).
+
 ## Approved Decisions (User-Approved 2026-07-03)
 
 Do not reopen these without user approval:

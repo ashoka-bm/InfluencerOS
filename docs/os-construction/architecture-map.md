@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (20) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (38) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
@@ -66,21 +66,21 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
 | `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
 | `maps/` | Excalidraw map records. | [BUILT] |
-| `docs/adr/0001–0019` | Architectural decisions (0016–0019 added this pass). | [BUILT] |
+| `docs/adr/0001–0020` | Architectural decisions (0020 defined the research module). | [BUILT] |
 
 ### Workflow contracts
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (20) | JSON Schema contract per durable record. | [BUILT] |
-| `examples/*.example.json` (20) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (38) | JSON Schema contract per durable record. | [BUILT] |
+| `examples/*.example.json` (38) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary. | [BUILT] |
 | `docs/creator-workspace-structure.md` | Workspace layout + local-state policy. | [BUILT] |
 
 ### Skills (`skills/<skill-name>/`)
 
-Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skills below remain [PLANNED].
+Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skill status is per-row below: the research, queue, and promotion producers landed in Phase 1 slices 4–5; the remaining [PLANNED] producers belong to Phase 1 slices 6–7 and Phase 2.
 
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |

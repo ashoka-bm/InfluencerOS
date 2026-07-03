@@ -124,6 +124,8 @@ Completed:
 
 - Addressed the slice 5 review (2026-07-03; one P1 and two P2 findings, all confirmed by reproduction; decisions recorded in the slice plan): the promotion-to-project path is now closed entry-level — a `promoted` entry must link at least one resolvable project, every linked project's locked promotion must be among the entry's linked promotions, and every linked promotion's `project_ids_created` must appear in the entry's `linked_project_ids` (entry-level rather than a promotion-level minimum because an active supersede-expansion promotion legitimately creates no new project; before the fix an active supported-format promotion with `project_ids_created: []`, no project folders, and no entry links passed both validators). Schedule slot claims are enforced for active promotions — claimed `schedule_slot_ids` must resolve to real slots in `content-schedule.json`, claimed slots must be `filled`, and a slot may be claimed by at most one active promotion; superseded/cancelled promotions keep historical claims unchecked because the schedule is mutable planning state (the example schedule slot flipped from `open` to `filled`, fixing the shipped fixture that contradicted the skill rule). And the `promote-idea` skill's `init-project` invocation gained the required `--creator-workspace` flag — the documented form would have failed in argparse mid-construction, right after the promotion snapshot was written — pinned by a new drift test on the skill's command line.
 
+- Addressed the five-slice review (2026-07-03; a whole-of-Phase-1 audit of slices 1-5 run after slice 5 closed, with every finding reproduced before its fix; records in the three slice plan docs): `import-intake` refuses symlinked destinations and escaping resolved paths before any write (a pre-planted broken symlink wrote through to a file outside the workspace); `validate workspace` fails duplicate intake ids/paths and duplicate reference-library asset ids at every status; fully anchored `^...$` schema patterns validate whole-string (closing the trailing-newline tolerance) and the intake/reference path pins reject dot segments; promotion checks were unified across the validator paths — `validate queue` now runs the full gate set (creator scope, filename==id, slot claims, warnings channel) and `validate research` runs the entry-side queue consistency, closing four reproduced queue-path bypasses and putting the slice 5 closure on the research path that `prune --apply` actually re-runs; `applied-social-template.target_format_id` joined the closed format enum with a plan-layer surface check (`format_interpretive_dance` previously passed `validate project`); within-run duplicate JSONL ids fail closed (they validated green but bricked `rebuild-index`); metric snapshots must snapshot evidence in their own run and evidence refs must cite snapshots of their own evidence; promotions require at least one evidence ref (Product Invariant trace); `prune --apply` pre-flights `validate research` before mutating; slot claims schema-validate the schedule (clean error instead of a `KeyError` from the `validate project` path); video pack refs resolve by the record's own id; stable findings follow filename==id with recall-index uniqueness; `validate project` pins the chain to the workspace creator; the approved-visual gate test isolates the gate; and the stale docs were refreshed (this file's verification script ran `validate queue` before the project existed, the architecture map's counts/ADR range/producer-status prose, and the slice 1 merged test names).
+
 Remaining:
 
 - Format-specific production planning (slice 6, including text-format routing per ADR 0020), then Output Package registration (slice 7).
@@ -234,14 +236,22 @@ cp examples/content-board.example.json .tmp/creators/luna-fit/boards/content-boa
 echo "# Interview Notes (synthetic)" > .tmp/luna-interview.md
 python3 -m influencer_os import-intake .tmp/luna-interview.md --creator-workspace .tmp/creators/luna-fit --source-type interview --notes "Follow-up interview transcript."
 python3 -m influencer_os validate workspace .tmp/creators/luna-fit
-python3 -m influencer_os validate research .tmp/creators/luna-fit
-python3 -m influencer_os validate queue .tmp/creators/luna-fit
+# The project must exist before research/queue validation: the example
+# promotion lists it in project_ids_created, and the slice 5 closure check
+# (five-slice review: enforced on both validator paths) rejects a promotion
+# whose created projects are missing.
 python3 -m influencer_os init-project examples/project.example.json --creator-workspace .tmp/creators/luna-fit
 cp examples/applied-social-template.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/applied-template.json
 cp examples/micro-journey-video-plan.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/production-plan.json
 cp examples/base-video-generation-plan.example.json .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day/plan/generation-plan.json
+python3 -m influencer_os validate research .tmp/creators/luna-fit
+python3 -m influencer_os validate queue .tmp/creators/luna-fit
 python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day
 python3 -m influencer_os validate record output-package examples/output-package.example.json
+python3 -m influencer_os rebuild-board .tmp/creators/luna-fit
+python3 -m influencer_os validate board .tmp/creators/luna-fit
+python3 -m influencer_os rebuild-index .tmp/creators/luna-fit --db .tmp/creators/index.sqlite
+python3 -m influencer_os prune .tmp/creators/luna-fit
 python3 -m influencer_os update-creators --workspace-root .tmp/creators
 ```
 
@@ -388,6 +398,18 @@ workspaces — the promotion claims a slot, so the workspace carries the
 schedule); 38 example records validate after the slot fixture flip; the
 three live fixture workspaces still pass `validate research`; updated
 skill re-synced to all fixtures.
+Five-slice review fixes (2026-07-03): 287 tests pass (25 added — every
+behavioral finding reproduced as a failing probe before its fix: symlink
+write-through and duplicate ids for slices 1-2, six pattern-seam
+negatives, six queue-path parity probes, six record-linkage probes, the
+off-target template format, the foreign-chain project pin, and the prune
+pre-flight); drift checks pass (22 tests, enum pins extended to
+applied-social-template with no-enum-drop detection); 38 example records
+validate; the three live fixture workspaces pass `validate workspace`
+and `validate research`; the reordered full workflow verification above
+re-run end to end, now covering rebuild-board, validate board,
+rebuild-index (8 records), and prune dry-run alongside the original
+commands (14 skills synced).
 ```
 
 ## Next Work Queue

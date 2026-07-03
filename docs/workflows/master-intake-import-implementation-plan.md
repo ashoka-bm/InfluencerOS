@@ -146,8 +146,8 @@ reproduced, fixed, and covered by negative tests the same day:
   `../../outside-intake.md` or absolute paths, breaking the local-first
   provenance contract. Fixed in `_validate_source_intakes` with a
   resolve-based containment check; escaping paths fail with a dedicated
-  error. Tests: `test_validate_workspace_rejects_intake_path_escaping_the_workspace`,
-  `test_validate_workspace_rejects_absolute_intake_path`.
+  error. Test: `test_validate_workspace_rejects_traversal_and_absolute_intake_paths`
+  (the original two tests merged when the schema pin landed).
 - P2 — `--imported-on` accepted impossible calendar dates (`2026-99-99`):
   the validator's `date` format was shape-only. Fixed at the validator seam
   so every `format: "date"` field in every schema is calendar-checked, with
@@ -165,6 +165,31 @@ schema-conforming paths that escape via symlinks
 (`test_validate_workspace_rejects_symlinked_intake_escaping_the_workspace`);
 schema-seam coverage lives in
 `test_workspace_intake_paths_are_pinned_under_sources`.
+
+## Five-Slice Review (2026-07-03)
+
+The whole-of-Phase-1 review (slices 1–5, run after slice 5 closed) found
+three slice-1-scoped issues, all reproduced before the fix:
+
+- P2 — `import-intake` wrote through a pre-planted broken symlink:
+  `destination.exists()` follows symlinks and returns false for a broken
+  one, so the copy wrote through the link to a file outside the workspace
+  (the same class the P1 fix above closed for validation, left open at the
+  write seam). Fixed: the destination guard also rejects `is_symlink()` and
+  the resolved destination must stay inside the workspace, which also
+  covers a symlinked intake directory. Tests:
+  `test_import_refuses_to_write_through_a_symlinked_destination`,
+  `test_import_refuses_a_symlinked_intake_directory`.
+- P3 — no at-rest uniqueness for `source_intakes`: duplicate `source_id`
+  or `path` values validated (import enforced uniqueness only at import
+  time; hand-edited manifests bypassed it, and `set-intake-status` silently
+  updates the first match). Fixed in `_validate_source_intakes`; duplicates
+  fail with a dedicated error.
+- Info — the schema pin tolerated `.`/`..` final segments and trailing
+  newlines (Python `$` matches before a trailing newline under search).
+  Fixed at both seams: the pin excludes dot segments and embedded newlines,
+  and the validator treats fully anchored `^...$` patterns as whole-string
+  matches repo-wide.
 
 ## Skill And Doc Changes
 
