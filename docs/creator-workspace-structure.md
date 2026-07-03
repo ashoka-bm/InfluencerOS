@@ -157,6 +157,12 @@ The SQL database is an index and query layer over workspace files. It is not the
 
 The semantic index is a low-context retrieval projection over selected narrative and summary files. It should index distilled learnings and performance summaries, not raw analytics by default.
 
+## Propagation And Gated Zones (ADR 0018)
+
+- `init-creator` scaffolds the workspace, copies baseline skills into `.claude/skills/`, and writes thin `AGENTS.md`/`CLAUDE.md` wrappers (the workspace contract lives in its `AGENTS.md`; `CLAUDE.md` imports it).
+- `sync-creator-runtime <workspace>` refreshes one workspace's baseline skill copies; `update-creators` refreshes every workspace under the root. Both preserve `SKILL.local.md` files, creator-only skills, and all creator state, and back up each replaced skill folder to `.claude/skills-backup/<skill-name>/` (latest backup kept) so a refresh can never silently destroy creator edits.
+- Gated zones — scripts, settings, hooks, cron — are deferred and inert: no such content is propagated into a Creator Workspace until each subsystem is explicitly un-deferred.
+
 ## Creator Memory And Recall (Tier 0)
 
 Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or semantic index.

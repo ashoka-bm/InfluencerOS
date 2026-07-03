@@ -25,7 +25,8 @@
     "research": "research/",
     "projects": "projects/",
     "memory": "memory/",
-    "progress": "progress/"
+    "progress": "progress/",
+    "claude_skills": ".claude/skills/"
   },
   "source_intakes": [
     {

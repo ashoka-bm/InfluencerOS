@@ -8,6 +8,7 @@ from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     init_creator,
     sync_creator_runtime,
+    update_creators,
     validate_creator_workspace,
 )
 from influencer_os.projects import init_project, validate_project
@@ -35,6 +36,9 @@ def main(argv=None):
 
     sync_creator_parser = subparsers.add_parser("sync-creator-runtime", help="Refresh copied runtime skills inside a Creator Workspace.")
     sync_creator_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
+    update_creators_parser = subparsers.add_parser("update-creators", help="Refresh copied runtime skills across every Creator Workspace under a root.")
+    update_creators_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
 
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
@@ -114,6 +118,17 @@ def main(argv=None):
             )
             print(f"Initialized project: {project_dir}")
             print("Next phase: add selected idea and production plan")
+            return 0
+
+        if args.command == "update-creators":
+            results = update_creators(workspace_root=Path(args.workspace_root))
+            print(f"Updated {len(results)} creator workspaces.")
+            for result in results:
+                print(
+                    f"- {result['workspace_path']}: {len(result['synced_skills'])} skills synced, "
+                    f"{result['preserved_overrides']} overrides preserved, "
+                    f"{result['backed_up_skills']} skill folders backed up"
+                )
             return 0
 
         if args.command == "memory-write":

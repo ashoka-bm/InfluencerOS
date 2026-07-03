@@ -8,6 +8,7 @@ from pathlib import Path
 from influencer_os.creator_workspaces import (
     init_creator,
     sync_creator_runtime,
+    update_creators,
     validate_creator_workspace,
 )
 from influencer_os.projects import init_project, validate_project
@@ -564,6 +565,98 @@ class CliTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1)
             self.assertIn("does not match creator workspace", result.stderr)
+
+
+class PropagationTests(unittest.TestCase):
+    def make_second_manifest(self, temp_dir):
+        manifest = json.loads((ROOT / "examples" / "creator-workspace.example.json").read_text())
+        manifest["creator_workspace_id"] = "creator_workspace_nova_tech"
+        manifest["creator_slug"] = "nova-tech"
+        manifest["creator_profile_id"] = "creator_nova_tech"
+        manifest["root_path"] = "workspace-library/creators/nova-tech/"
+        manifest_path = Path(temp_dir) / "nova-workspace.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        return manifest_path
+
+    def test_init_creator_writes_thin_claude_wrapper(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_creator(
+                ROOT / "examples" / "creator-workspace.example.json",
+                workspace_root=Path(temp_dir),
+            )
+
+            claude_text = (workspace_dir / "CLAUDE.md").read_text()
+            self.assertIn("@AGENTS.md", claude_text)
+
+    def test_init_creator_carries_no_gated_zone_content(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_creator(
+                ROOT / "examples" / "creator-workspace.example.json",
+                workspace_root=Path(temp_dir),
+            )
+
+            for gated in (".claude/hooks", ".claude/settings.json", "cron", "scripts"):
+                self.assertFalse((workspace_dir / gated).exists(), f"gated zone not inert: {gated}")
+
+    def test_update_creators_refreshes_all_and_preserves_creator_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "creators"
+            ws1 = init_creator(
+                ROOT / "examples" / "creator-workspace.example.json", workspace_root=root
+            )
+            init_creator(self.make_second_manifest(temp_dir), workspace_root=root)
+            (root / "not-a-workspace").mkdir()
+
+            skill_dir = ws1 / ".claude" / "skills" / "influencer-os"
+            (skill_dir / "SKILL.md").write_text("# Stale copy\n")
+            (skill_dir / "SKILL.local.md").write_text("# Local override\n")
+            creator_only = ws1 / ".claude" / "skills" / "creator-only" / "SKILL.md"
+            creator_only.parent.mkdir(parents=True)
+            creator_only.write_text("# Creator-only\n")
+            populate_workspace_records(ws1)
+            profile_before = (ws1 / "creator-profile.json").read_text()
+
+            results = update_creators(workspace_root=root)
+
+            self.assertEqual(len(results), 2)
+            self.assertEqual(
+                (skill_dir / "SKILL.md").read_text(),
+                (ROOT / "skills" / "influencer-os" / "SKILL.md").read_text(),
+            )
+            self.assertEqual((skill_dir / "SKILL.local.md").read_text(), "# Local override\n")
+            self.assertEqual(creator_only.read_text(), "# Creator-only\n")
+            self.assertEqual((ws1 / "creator-profile.json").read_text(), profile_before)
+            backup = ws1 / ".claude" / "skills-backup" / "influencer-os" / "SKILL.md"
+            self.assertEqual(backup.read_text(), "# Stale copy\n")
+
+    def test_update_creators_requires_existing_root(self):
+        with self.assertRaises(FileNotFoundError):
+            update_creators(workspace_root=Path("/nonexistent/creators-root"))
+
+    def test_update_creators_cli_command(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            init_creator(
+                ROOT / "examples" / "creator-workspace.example.json",
+                workspace_root=Path(temp_dir),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "update-creators",
+                    "--workspace-root",
+                    temp_dir,
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Updated 1 creator workspace", result.stdout)
 
 
 class ProvenanceResolutionTests(unittest.TestCase):

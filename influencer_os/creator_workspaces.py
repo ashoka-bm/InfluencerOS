@@ -8,6 +8,9 @@ from influencer_os.validation import ROOT, ValidationError, load_json, validate_
 DEFAULT_CREATOR_WORKSPACE_ROOT = ROOT / "workspace-library" / "creators"
 DEFAULT_SOURCE_SKILLS_DIR = ROOT / "skills"
 CREATOR_RUNTIME_SKILLS_DIR = Path(".claude") / "skills"
+# Replaced skill folders are backed up here on every sync (latest backup kept),
+# so a refresh can never silently destroy creator edits (ADR 0018).
+SKILLS_BACKUP_DIR = Path(".claude") / "skills-backup"
 
 # Medium-based readiness: generation implies visual output, so a
 # generation_ready workspace needs at least one approved asset of these kinds.
@@ -101,7 +104,20 @@ MARKDOWN_SCAFFOLDS = {
 ## Review Notes
 
 """,
-    "AGENTS.md": "# Creator Workspace Instructions\n\nAlways load `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md` first. Lazy-load `brand_context/` files and references only when the task requires detail.\n",
+    "AGENTS.md": """# Creator Workspace Instructions
+
+Always load `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md` first. Lazy-load `brand_context/` files and references only when the task requires detail.
+
+Runtime skills are copies under `.claude/skills/`. Creator-specific overrides live beside each copied skill as `SKILL.local.md`; they survive `sync-creator-runtime` and `update-creators` refreshes, and each replaced skill folder is backed up to `.claude/skills-backup/`.
+
+Gated zones (scripts, settings, hooks, cron) are deferred and inert: no such content is propagated into this workspace until the subsystem is explicitly un-deferred (ADR 0018).
+""",
+    "CLAUDE.md": """# Creator Workspace Claude Adapter
+
+Thin adapter (ADR 0019 pattern): the workspace operating contract lives in `AGENTS.md`. Read it first and follow it.
+
+@AGENTS.md
+""",
 }
 
 JSON_SCAFFOLDS = {
@@ -151,6 +167,7 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
 
     synced = []
     preserved_overrides = 0
+    backed_up_skills = 0
     for source_skill_dir in sorted(source_skills_dir.iterdir()):
         if not source_skill_dir.is_dir():
             continue
@@ -166,6 +183,12 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
             preserved_overrides += 1
 
         if target_skill_dir.exists():
+            backup_dir = workspace_dir / SKILLS_BACKUP_DIR / source_skill_dir.name
+            if backup_dir.exists():
+                shutil.rmtree(backup_dir)
+            backup_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(target_skill_dir, backup_dir)
+            backed_up_skills += 1
             shutil.rmtree(target_skill_dir)
         shutil.copytree(
             source_skill_dir,
@@ -183,7 +206,23 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
         "skills_path": target_skills_dir,
         "synced_skills": synced,
         "preserved_overrides": preserved_overrides,
+        "backed_up_skills": backed_up_skills,
     }
+
+
+def update_creators(workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT, source_skills_dir=DEFAULT_SOURCE_SKILLS_DIR):
+    workspace_root = Path(workspace_root)
+    if not workspace_root.exists():
+        raise FileNotFoundError(f"Missing creator workspace root: {workspace_root}")
+
+    results = []
+    for workspace_dir in sorted(workspace_root.iterdir()):
+        if not workspace_dir.is_dir():
+            continue
+        if not (workspace_dir / "creator-workspace.json").exists():
+            continue
+        results.append(sync_creator_runtime(workspace_dir, source_skills_dir=source_skills_dir))
+    return results
 
 
 def validate_creator_workspace(workspace_path):
@@ -199,7 +238,7 @@ def validate_creator_workspace(workspace_path):
     if manifest["root_path"] != expected_root_suffix:
         raise ValueError(f"Manifest root_path does not match creator_slug: {manifest['root_path']!r}")
 
-    required_paths = ["creator-workspace.json", "AGENTS.md", str(CREATOR_RUNTIME_SKILLS_DIR)]
+    required_paths = ["creator-workspace.json", "AGENTS.md", "CLAUDE.md", str(CREATOR_RUNTIME_SKILLS_DIR)]
     required_paths.extend(manifest["canonical_files"].values())
     required_paths.extend(manifest["directories"].values())
     required_paths.extend(["context/SOUL.md", "context/USER.md", "context/MEMORY.md", "memory/MEMORY.md", "memory/learnings.md", "progress/setup-checklist.md"])

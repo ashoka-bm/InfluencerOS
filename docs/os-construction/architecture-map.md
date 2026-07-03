@@ -22,10 +22,10 @@ First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
 Workflow contracts         schemas/ (20) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
-Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT + PLANNED]
+Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
 Self-improvement loop      skills/wrap-up, skills/memory-write + memory CLI              [BUILT — ADR 0016]
-Propagation                CLI: init-creator, sync-creator-runtime, update-creators      [BUILT + PLANNED — ADR 0018]
+Propagation                CLI: init-creator, sync-creator-runtime, update-creators      [BUILT — ADR 0018]
 Drift checks               tests/test_drift_checks.py                                    [BUILT; runtime-sync check lands in WS11]
 Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere-access  [DEFERRED / GATED]
 ```
@@ -109,7 +109,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `cli.py` | Command surface; routes to helpers, holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
-| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime` (built); `update-creators` (WS11). | [BUILT + PLANNED] |
+| `creator_workspaces.py` | `init-creator`, `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11] |
 | `projects.py` | Project scaffolding + validation + provenance resolution. | [BUILT — WS12] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
@@ -209,8 +209,9 @@ influencer_os/cli.py
   sync-creator-runtime <workspace>   -> creator_workspaces.sync_runtime()
        refresh copied baseline SKILL.md ; preserve SKILL.local.md, creator-only skills,
        context/brand/projects/memory/progress/.env  [BUILT]
-  update-creators [--all]            -> creator_workspaces.update_creators()
-       backup-protected, conflict-safe batch refresh (mirrors update-clients.sh)  [PLANNED]
+  update-creators [--workspace-root] -> creator_workspaces.update_creators()
+       backup-protected batch refresh; replaced skill folders backed up to
+       .claude/skills-backup/ (mirrors update-clients.sh)  [BUILT — WS11]
   gated zones carried but inert: scripts, settings, hooks, cron templates  [GATED]
 ```
 
@@ -220,10 +221,11 @@ Freshly-initialized workspaces contain `.claude/skills/` because `init-creator` 
 
 ```text
 influencer_os/cli.py
-  -> creator_workspaces.py   (workspace scaffold/sync/validate)
-  -> projects.py             (project scaffold/validate; PLANNED: resolve provenance IDs to records)
+  -> creator_workspaces.py   (workspace scaffold/sync/update/validate + readiness gates)
+  -> projects.py             (project scaffold/validate + provenance resolution)
+  -> memory.py               (bounded memory-write + log-learning writers)
   -> runs.py                 (dry-run init)
-  -> validation.py           (schema validation; PLANNED: honor $ref/oneOf/anyOf/allOf)
+  -> validation.py           (fail-closed schema subset incl. $ref/oneOf/anyOf/allOf)
   -> schemas/                (JSON Schema contracts)
 ```
 

@@ -35,9 +35,10 @@
     "directories": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["context", "brand_context", "sources", "references", "research", "projects", "memory", "progress"],
+      "required": ["context", "brand_context", "sources", "references", "research", "projects", "memory", "progress", "claude_skills"],
       "properties": {
         "context": { "type": "string", "const": "context/" },
+        "claude_skills": { "type": "string", "const": ".claude/skills/" },
         "brand_context": { "type": "string", "const": "brand_context/" },
         "sources": { "type": "string", "const": "sources/" },
         "references": { "type": "string", "const": "references/" },
