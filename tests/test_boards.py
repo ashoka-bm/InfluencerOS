@@ -111,6 +111,9 @@ class RebuildBoardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)
             rebuild_board(workspace_dir)
+            # Warning targets must exist, so removing the project requires
+            # clearing the warning that targets it first.
+            (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
             manifest_path = workspace_dir / "projects" / PROJECT_ID / "project.json"
             manifest_path.unlink()
 
@@ -174,6 +177,9 @@ class RebuildBoardTests(unittest.TestCase):
     def test_rebuild_fails_when_project_promotion_is_missing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)
+            # Clear the warning that also targets the promotion, so the
+            # parent-resolution failure is what fires.
+            (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
             (
                 workspace_dir / "research" / "idea-promotions"
                 / "idea_promotion_luna_fit_001.json"

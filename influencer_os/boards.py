@@ -16,6 +16,7 @@ from pathlib import Path
 from influencer_os.research import (
     check_creator_scope,
     check_project_warning_pairing,
+    check_project_warning_target_refs,
     load_workspace_scope,
     validate_jsonl_file,
 )
@@ -114,9 +115,12 @@ def derive_board_cards(workspace_dir):
     project_badges = {}
     warnings_path = workspace_dir / "system" / "project-warnings.jsonl"
     if warnings_path.exists():
+        def warning_check(record):
+            check_project_warning_pairing(record)
+            check_project_warning_target_refs(record, workspace_dir)
+
         warning_records = validate_jsonl_file(
-            "project-warning", warnings_path,
-            record_check=check_project_warning_pairing,
+            "project-warning", warnings_path, record_check=warning_check,
         )
         for warning in warning_records:
             if warning.get("resolved_status") == "resolved":

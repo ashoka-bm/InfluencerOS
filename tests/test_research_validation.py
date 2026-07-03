@@ -106,6 +106,13 @@ def scaffold_research_workspace(temp_dir):
     write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [load_example("project-warning")])
     write_jsonl(workspace_dir / "system" / "creator-events.jsonl", [load_example("system-event")])
 
+    # The example warning targets promoted work, and warning targets must
+    # exist, so the scaffold carries the example project.
+    project = load_example("project")
+    write_json(
+        workspace_dir / "projects" / project["project_id"] / "project.json", project
+    )
+
     return workspace_dir
 
 
@@ -206,6 +213,38 @@ class ResearchStateValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             self.assertIn("stable_finding_luna_fit_001.md", str(ctx.exception))
+
+    def test_warning_targeting_missing_queue_entry_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            warning = load_example("project-warning")
+            warning.pop("project_id")
+            warning.pop("idea_promotion_id")
+            warning["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_ghost"
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", [warning]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("idea_queue_entry_luna_fit_ghost", message)
+            self.assertIn("no entry file", message)
+
+    def test_warning_targeting_missing_project_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            warning = load_example("project-warning")
+            warning["project_id"] = "project_luna_ghost"
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", [warning]
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("project_luna_ghost", message)
+            self.assertIn("no project record", message)
 
     def test_project_warning_with_unpaired_promotion_ids_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -518,6 +557,9 @@ class PromotionGateTests(unittest.TestCase):
     def test_promotion_without_real_queue_entry_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
+            # Clear the warning that also targets the entry, so the promotion
+            # gate failure is what fires.
+            (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
             (workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json").unlink()
 
             with self.assertRaises(ValidationError) as ctx:

@@ -42,9 +42,14 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    `metric-snapshots.jsonl` (`schemas/metric-snapshot.schema.json`). Every
    record carries this run's `research_run_id` and a `platform` +
    `platform_content_type` from the closed enums.
-5. Declare the run's `outputs` exactly: `evidence_ids` and
-   `metric_snapshot_ids` must list precisely the ids written to this run's
-   JSONL files — validation reconciles both directions.
+5. Declare the run's `outputs` exactly — all five arrays are present and
+   precise. `evidence_ids` and `metric_snapshot_ids` list precisely the ids
+   written to this run's JSONL files (validation reconciles both
+   directions); `finding_ids`, `idea_queue_entry_ids`, and
+   `research_intelligence_updates` list every finding, queue entry, and
+   intelligence file this run created or updated. An empty array is correct
+   only when the run truly touched none — leaving one empty after a change
+   hides provenance.
 6. When real videos matter, create a Video Understanding Pack before final
    synthesis (see the `influencer-os` Video Understanding Requirements and
    tool boundary; run `/watch` with `--no-whisper` unless the user approved
@@ -61,9 +66,11 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
 
 ## Findings Discipline
 
-- `last_ran` updates on every run; `last_updated` only when a material
-  finding changes the rolling summary. A run that finds nothing material
-  records run metadata and leaves `findings.md` alone.
+- `last_ran` in the `findings.md` frontmatter updates on every run;
+  `last_updated` only when a material finding changes the rolling summary.
+  A no-material run still updates `last_ran` but leaves the body,
+  `last_updated`, and finding fields unchanged — that is what keeps "not
+  checked recently" distinguishable from "checked, nothing new".
 - Keep the `findings.md` body under `summary_char_limit`. Organize by topic
   cluster first with platform notes inside; keep a short `Watch Now` section
   for time-sensitive opportunities.

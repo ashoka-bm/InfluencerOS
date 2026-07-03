@@ -81,6 +81,40 @@ def check_project_warning_pairing(record):
         )
 
 
+def check_project_warning_target_refs(record, workspace_dir):
+    """A warning must target records that exist — queue entries, projects,
+    and promotions are never deleted in v1, so a dangling target is invalid
+    state, not history. Without this a warning silently vanishes from the
+    board projection instead of failing validation."""
+    workspace_dir = Path(workspace_dir)
+    warning_id = record.get("project_warning_id", "<unknown>")
+    entry_id = record["idea_queue_entry_id"]
+    entry_path = (
+        workspace_dir / "research" / "idea-queue" / "entries" / f"{entry_id}.json"
+    )
+    if not entry_path.exists():
+        raise ValidationError(
+            f"project warning {warning_id} targets queue entry {entry_id!r} "
+            "with no entry file"
+        )
+    if "project_id" in record:
+        project_id = record["project_id"]
+        if not (workspace_dir / "projects" / project_id / "project.json").exists():
+            raise ValidationError(
+                f"project warning {warning_id} targets project {project_id!r} "
+                "with no project record"
+            )
+        promotion_id = record["idea_promotion_id"]
+        promotion_path = (
+            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+        )
+        if not promotion_path.exists():
+            raise ValidationError(
+                f"project warning {warning_id} targets idea promotion "
+                f"{promotion_id!r} with no promotion record"
+            )
+
+
 def load_workspace_scope(workspace_dir):
     """The research module is creator-scoped: every record in a Creator
     Workspace must belong to the workspace's creator."""
@@ -309,6 +343,7 @@ def validate_research(workspace_path):
             if schema_name == "project-warning":
                 def record_check(record):
                     check_project_warning_pairing(record)
+                    check_project_warning_target_refs(record, workspace_dir)
                     check_creator_scope(record, scope)
             else:
                 record_check = scoped

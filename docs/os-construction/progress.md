@@ -112,6 +112,8 @@ Completed:
 
 - Slice 4 batch E (2026-07-03), closing the slice: the `create-research-findings` and `manage-idea-queue` producer skills landed under `skills/`, encoding the workflow doc's rules — run modes and the run lifecycle (folder==id, run-scoped records, exact outputs declaration), evidence-quality and platform-scoping rules, the material-update discipline (`last_ran` vs `last_updated`, char-limited topic-cluster findings with a Watch Now section), stable-finding promotion, intelligence updates with the user-approval gate for core reference creators, the eight-score queue-entry contract with structured run-scoped evidence refs, the variant and wildcard rules, auditable staleness, queue-level warnings, manifest consistency, and the projection maintenance commands. `manage-idea-queue` carries a hard no-promotion boundary: promotion stays the human-approval gate owned by `promote-idea` (slice 5), and the conductor halts there until it exists. Registry rows moved from Missing Future Skills to Core Workflow Skills, context-matrix Skill Coverage rows added (Social research / Idea generation), conductor dependency and phase-owner statuses plus the architecture-map skill table and call graph flipped to [BUILT], and `update-creators` propagated 13 runtime skills to all three fixture workspaces.
 
+- Addressed the slice 4 review (2026-07-03; three P2 findings, all confirmed): `create-research-findings` now says a no-material run still updates `last_ran` in the findings frontmatter while leaving the body, `last_updated`, and finding fields unchanged (the previous "leaves findings.md alone" wording contradicted the workflow contract and would have produced valid-but-stale `last_ran` dates schema validation cannot catch); the same skill now requires all five run `outputs` arrays present and exact — `finding_ids`, `idea_queue_entry_ids`, and `research_intelligence_updates` were previously unmentioned, so a run touching findings or intelligence could validate while hiding that provenance behind empty arrays; and project warnings now fail closed on dangling targets via `check_project_warning_target_refs` (shared by `validate research` and board derivation) — the queue entry must always exist, and the project and promotion must exist for promoted-work warnings. Before the fix a warning naming a nonexistent target validated and silently vanished from the board projection. The base research test scaffold gained the example project (the example warning targets it), and three tests that delete warning targets now clear the warnings stream first so their intended failures fire.
+
 Remaining:
 
 - Idea Promotion to Project workflow (slice 5, `promote-idea`), then the remaining Phase 1 slices in roadmap order.
@@ -343,6 +345,10 @@ drift failures that fired when the skill folders landed were closed by
 the registry, matrix, conductor, and architecture-map updates (the
 drift checks work); `update-creators` synced 13 runtime skills into all
 three fixture workspaces with zero overrides lost. Slice 4 complete.
+Slice 4 review fixes (2026-07-03): 234 tests pass (2 added — dangling
+queue-entry and project warning targets); drift checks pass (21 tests);
+the three live fixture workspaces still pass `validate research`;
+updated skill files re-synced to all fixtures.
 ```
 
 ## Next Work Queue
