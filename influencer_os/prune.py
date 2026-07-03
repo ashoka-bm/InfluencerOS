@@ -162,6 +162,16 @@ def prune_research(workspace_path, retention_days=DEFAULT_RETENTION_DAYS,
             })
 
     if apply:
+        # Pre-flight: refuse to mutate an already-invalid workspace. Without
+        # this, a pre-existing inconsistency surfaces mid-apply and reads as
+        # if the prune corrupted the workspace.
+        try:
+            validate_research(workspace_dir)
+        except (ValidationError, FileNotFoundError) as exc:
+            raise ValidationError(
+                "prune --apply refused: the workspace fails validate research "
+                f"before any change ({exc}); fix the workspace first"
+            ) from exc
         for run in runs:
             evidence_ids = set(run["pruned_evidence_ids"])
             metric_ids = set(run["pruned_metric_snapshot_ids"])

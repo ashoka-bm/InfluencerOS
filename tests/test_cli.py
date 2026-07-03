@@ -773,6 +773,21 @@ class ProvenanceResolutionTests(unittest.TestCase):
             self.assertIn("substack", str(ctx.exception))
             self.assertIn("does not approve", str(ctx.exception))
 
+    def test_validate_project_pins_the_workspace_creator(self):
+        # A project chain claiming a different creator than the owning
+        # workspace previously passed validate project; the chain must be
+        # scoped to the workspace it lives in.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                workspace_dir / "creator-workspace.json",
+                lambda manifest: manifest.update(creator_profile_id="creator_other"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("does not match creator workspace", str(ctx.exception))
+
     def test_validate_project_rejects_off_target_template_format(self):
         # The applied template is plan-layer format routing: its
         # target_format_id must be one of the project's target_formats,

@@ -120,6 +120,9 @@ def validate_project(project_path):
         raise FileNotFoundError(f"Missing project paths: {', '.join(sorted(missing))}")
 
     workspace_dir = _locate_workspace(project_dir)
+    # Pin the project to the owning workspace creator; the promotion and
+    # queue entry pin to the project below, so the whole chain is scoped.
+    _validate_creator_match(project, workspace_dir)
     promotion = _resolve_promotion(project, workspace_dir)
     warnings = validate_promotion_gate(workspace_dir, promotion)
     _validate_cached_promotion_refs(project, promotion)

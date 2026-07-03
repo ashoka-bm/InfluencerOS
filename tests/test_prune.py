@@ -165,6 +165,30 @@ class PrunedReconciliationTests(unittest.TestCase):
 
             validate_research(workspace_dir)
 
+    def test_apply_refuses_an_invalid_workspace_without_mutating(self):
+        # Pre-existing inconsistencies must fail before any file changes, so
+        # the error never reads as if the prune corrupted the workspace.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            add_old_unreferenced_records(workspace_dir)
+            manifest_path, evidence_path, metrics_path = run_paths(workspace_dir)
+            # Plant an unrelated outputs inconsistency (a ghost metric id).
+            manifest = json.loads(manifest_path.read_text())
+            manifest["outputs"]["metric_snapshot_ids"].append(
+                "metric_snapshot_luna_fit_ghost"
+            )
+            write_json(manifest_path, manifest)
+            evidence_before = evidence_path.read_text()
+            metrics_before = metrics_path.read_text()
+            manifest_before = manifest_path.read_text()
+
+            with self.assertRaises(ValidationError) as ctx:
+                prune_research(workspace_dir, apply=True, as_of=AS_OF)
+            self.assertIn("prune --apply refused", str(ctx.exception))
+            self.assertEqual(evidence_path.read_text(), evidence_before)
+            self.assertEqual(metrics_path.read_text(), metrics_before)
+            self.assertEqual(manifest_path.read_text(), manifest_before)
+
     def test_pruned_id_still_present_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)
