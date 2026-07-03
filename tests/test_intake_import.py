@@ -98,6 +98,51 @@ class ImportIntakeTests(unittest.TestCase):
                 destination = workspace_dir / destination_dir / f"{source_type}-material.md"
                 self.assertTrue(destination.exists(), f"{source_type} did not land in {destination_dir}")
 
+    def test_import_refuses_to_write_through_a_symlinked_destination(self):
+        # A pre-planted broken symlink at the destination must not let the
+        # copy write through it to a file outside the workspace.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            outside_target = Path(temp_dir) / "outside-write-target.md"
+            link_path = workspace_dir / "sources" / "intakes" / "evil.md"
+            link_path.symlink_to(outside_target)
+            source_path = write_source_file(temp_dir, name="evil.md")
+            manifest_before = read_manifest(workspace_dir)
+
+            with self.assertRaises(FileExistsError):
+                import_intake(
+                    workspace_dir,
+                    source_path,
+                    source_type="breakdown",
+                    notes="Symlink probe.",
+                )
+
+            self.assertFalse(outside_target.exists())
+            self.assertEqual(read_manifest(workspace_dir), manifest_before)
+
+    def test_import_refuses_a_symlinked_intake_directory(self):
+        # sources/notes itself resolving outside the workspace must fail the
+        # containment check before any write happens.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            outside_dir = Path(temp_dir) / "outside-notes"
+            outside_dir.mkdir()
+            notes_dir = workspace_dir / "sources" / "notes"
+            notes_dir.rmdir()
+            notes_dir.symlink_to(outside_dir)
+            source_path = write_source_file(temp_dir, name="loose-notes.md")
+
+            with self.assertRaises(ValueError) as ctx:
+                import_intake(
+                    workspace_dir,
+                    source_path,
+                    source_type="notes",
+                    notes="Symlinked directory probe.",
+                )
+
+            self.assertIn("inside the workspace", str(ctx.exception))
+            self.assertFalse((outside_dir / "loose-notes.md").exists())
+
     def test_auto_source_ids_are_deterministic_and_skip_collisions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_valid_workspace(temp_dir)
@@ -310,6 +355,55 @@ class IntakeProvenanceValidationTests(unittest.TestCase):
                     with self.assertRaises(ValidationError):
                         validate_creator_workspace(workspace_dir)
                 self.remove_intake_entry(workspace_dir, "source_luna_fit_escape_001")
+
+    def test_validate_workspace_rejects_duplicate_intake_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            (workspace_dir / "sources" / "notes" / "extra-notes.md").write_text("# Notes\n")
+            manifest = read_manifest(workspace_dir)
+            first = manifest["source_intakes"][0]
+            manifest["source_intakes"].append(
+                {
+                    "source_id": first["source_id"],
+                    "source_type": "notes",
+                    "path": "sources/notes/extra-notes.md",
+                    "imported_on": "2026-07-03",
+                    "extraction_status": "pending",
+                    "notes": "Duplicate id probe.",
+                }
+            )
+            (workspace_dir / "creator-workspace.json").write_text(
+                json.dumps(manifest, indent=2) + "\n"
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("Duplicate source intake ids", str(ctx.exception))
+            self.assertIn(first["source_id"], str(ctx.exception))
+
+    def test_validate_workspace_rejects_duplicate_intake_paths(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_valid_workspace(temp_dir)
+            manifest = read_manifest(workspace_dir)
+            first = manifest["source_intakes"][0]
+            manifest["source_intakes"].append(
+                {
+                    "source_id": "source_luna_fit_notes_009",
+                    "source_type": "notes",
+                    "path": first["path"],
+                    "imported_on": "2026-07-03",
+                    "extraction_status": "pending",
+                    "notes": "Duplicate path probe.",
+                }
+            )
+            (workspace_dir / "creator-workspace.json").write_text(
+                json.dumps(manifest, indent=2) + "\n"
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("Duplicate source intake paths", str(ctx.exception))
+            self.assertIn(first["path"], str(ctx.exception))
 
     def test_validate_workspace_rejects_symlinked_intake_escaping_the_workspace(self):
         # A schema-conforming path that resolves outside the workspace via a

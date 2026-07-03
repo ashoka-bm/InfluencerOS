@@ -938,9 +938,16 @@ class ReadinessGateTests(unittest.TestCase):
                     asset["asset_status"] = "generated"
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", demote_all_assets)
+            # Re-place asset files after the demotion so file-existence
+            # blockers stay silent and the approved-visual gate is the only
+            # blocker this test can pass on.
+            place_asset_files(workspace_dir)
 
-            with self.assertRaises(ValidationError):
+            with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("requires at least one approved visual asset", message)
+            self.assertNotIn("is missing", message)
 
     def test_generation_ready_passes_with_approved_visual_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:

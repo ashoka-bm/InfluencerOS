@@ -350,6 +350,35 @@ class DraftLenienceTests(unittest.TestCase):
             self.assertEqual(result["creator_slug"], "luna-fit")
 
 
+class ReferenceLibraryIntegrityTests(unittest.TestCase):
+    def test_duplicate_asset_ids_are_rejected_even_at_draft(self):
+        # Two assets sharing an id make every reference to that id ambiguous
+        # (dict resolution is last-wins), so duplicates fail at every status.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            library_path = workspace_dir / "references" / "reference-library.json"
+
+            def duplicate_brand_asset(library):
+                clone = json.loads(
+                    json.dumps(
+                        next(
+                            asset
+                            for asset in library["assets"]
+                            if asset["asset_id"] == "asset_luna_brand_system"
+                        )
+                    )
+                )
+                clone["usage_notes"] = "Conflicting duplicate of the brand system."
+                library["assets"].append(clone)
+
+            rewrite_json(library_path, duplicate_brand_asset)
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("Duplicate reference library asset ids", str(ctx.exception))
+            self.assertIn("asset_luna_brand_system", str(ctx.exception))
+
+
 class ContentReadyBlockerTests(unittest.TestCase):
     def test_populated_content_ready_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:

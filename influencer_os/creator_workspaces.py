@@ -2,6 +2,7 @@ import datetime
 import json
 import re
 import shutil
+from collections import Counter
 from pathlib import Path
 
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
@@ -322,8 +323,14 @@ def import_intake(workspace_path, source_file, source_type, notes, source_id=Non
 
     relative_destination = f"{INTAKE_DESTINATIONS[source_type]}/{source_file.name}"
     destination = workspace_dir / relative_destination
-    if destination.exists():
+    # exists() follows symlinks and reports False for a broken one, so check
+    # is_symlink() too or the copy would write through the link.
+    if destination.exists() or destination.is_symlink():
         raise FileExistsError(f"Intake destination already exists: {destination}")
+    if not destination.resolve().is_relative_to(workspace_dir.resolve()):
+        raise ValueError(
+            f"Intake destination must stay inside the workspace: {relative_destination}"
+        )
 
     existing_ids = {entry["source_id"] for entry in manifest["source_intakes"]}
     if source_id is None:
@@ -530,6 +537,18 @@ def validate_creator_workspace(workspace_path):
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
 
+    duplicate_asset_ids = sorted(
+        asset_id
+        for asset_id, count in Counter(
+            asset["asset_id"] for asset in reference_library["assets"]
+        ).items()
+        if count > 1
+    )
+    if duplicate_asset_ids:
+        raise ValueError(
+            "Duplicate reference library asset ids: " + ", ".join(duplicate_asset_ids)
+        )
+
     _resolve_reference_refs(creator_profile, reference_library)
     _validate_source_intakes(workspace_dir, manifest)
     _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library)
@@ -543,6 +562,25 @@ def validate_creator_workspace(workspace_path):
 
 
 def _validate_source_intakes(workspace_dir, manifest):
+    duplicate_ids = sorted(
+        source_id
+        for source_id, count in Counter(
+            entry["source_id"] for entry in manifest["source_intakes"]
+        ).items()
+        if count > 1
+    )
+    if duplicate_ids:
+        raise ValueError("Duplicate source intake ids: " + ", ".join(duplicate_ids))
+    duplicate_paths = sorted(
+        path
+        for path, count in Counter(
+            entry["path"] for entry in manifest["source_intakes"]
+        ).items()
+        if count > 1
+    )
+    if duplicate_paths:
+        raise ValueError("Duplicate source intake paths: " + ", ".join(duplicate_paths))
+
     workspace_root = workspace_dir.resolve()
     escaping = []
     missing = []
