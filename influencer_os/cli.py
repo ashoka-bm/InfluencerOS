@@ -16,6 +16,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.projects import init_project, validate_project
+from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
 from influencer_os.runs import DEFAULT_WORKSPACE, init_run
@@ -69,6 +70,11 @@ def main(argv=None):
 
     board_parser = subparsers.add_parser("rebuild-board", help="Rebuild the Content Board projection from canonical records.")
     board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
+    prune_parser = subparsers.add_parser("prune", help="Apply research retention rules (dry-run unless --apply).")
+    prune_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+    prune_parser.add_argument("--apply", action="store_true", help="Delete prunable records; without this flag prune only reports.")
+    prune_parser.add_argument("--retention-days", type=int, default=DEFAULT_RETENTION_DAYS, help="Retention window for unreferenced evidence (default 30).")
 
     memory_parser = subparsers.add_parser("memory-write", help="Add one durable fact to a MEMORY.md file, deduplicated and capped.")
     memory_parser.add_argument("memory_file", help="Path to the MEMORY.md file.")
@@ -219,6 +225,26 @@ def main(argv=None):
                 f"({result['idea_cards']} ideas, {result['project_cards']} projects)"
             )
             print(f"Board: {result['board_path']}")
+            return 0
+
+        if args.command == "prune":
+            result = prune_research(
+                args.creator_workspace,
+                retention_days=args.retention_days,
+                apply=args.apply,
+            )
+            mode = "Pruned" if result["applied"] else "Prunable (dry run)"
+            print(
+                f"{mode}: {result['evidence_pruned']} evidence records, "
+                f"{result['metric_snapshots_pruned']} metric snapshots "
+                f"(cutoff {result['cutoff']}, retention {result['retention_days']} days)"
+            )
+            for run in result["runs"]:
+                print(f"- {run['research_run_id']}: {', '.join(run['pruned_evidence_ids'])}")
+            if not result["runs"]:
+                print("Nothing to prune.")
+            elif not result["applied"]:
+                print("Dry run: pass --apply to delete.")
             return 0
 
         if args.command == "memory-write":

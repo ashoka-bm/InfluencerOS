@@ -259,17 +259,35 @@ def validate_research(workspace_path):
                     jsonl_ids = {record[id_field] for record in records}
                     checked.append(str(jsonl_path.relative_to(workspace_dir)))
                 declared_ids = set(run_record["outputs"][outputs_field])
-                undeclared = sorted(jsonl_ids - declared_ids)
+                # Prune records removals instead of rewriting outputs, so the
+                # manifest keeps its original account of what the run produced:
+                # JSONL contents must equal outputs minus pruned ids.
+                pruned_field = f"pruned_{outputs_field}"
+                pruned_ids = set(run_record.get(pruned_field, []))
+                undeclared_pruned = sorted(pruned_ids - declared_ids)
+                if undeclared_pruned:
+                    raise ValidationError(
+                        f"{run_manifest}: {pruned_field} list ids never "
+                        f"declared in outputs.{outputs_field}: {undeclared_pruned}"
+                    )
+                still_present = sorted(pruned_ids & jsonl_ids)
+                if still_present:
+                    raise ValidationError(
+                        f"{run_manifest}: {pruned_field} list ids still "
+                        f"present in {filename}: {still_present}"
+                    )
+                expected_ids = declared_ids - pruned_ids
+                undeclared = sorted(jsonl_ids - expected_ids)
                 if undeclared:
                     raise ValidationError(
                         f"{run_manifest}: outputs.{outputs_field} omit ids "
                         f"present in {filename}: {undeclared}"
                     )
-                ghost = sorted(declared_ids - jsonl_ids)
+                ghost = sorted(expected_ids - jsonl_ids)
                 if ghost:
                     raise ValidationError(
                         f"{run_manifest}: outputs.{outputs_field} list ids "
-                        f"not present in {filename}: {ghost}"
+                        f"not present in {filename} and not pruned: {ghost}"
                     )
 
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():

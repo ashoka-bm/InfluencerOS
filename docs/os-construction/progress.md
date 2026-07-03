@@ -108,6 +108,8 @@ Completed:
 
 - Slice 4 batch C (2026-07-03): the Content Board projection landed as `influencer_os/boards.py` with `rebuild-board <creator-workspace>` and `validate board <creator-workspace>`. Cards are fully derived from canonical records: idea queue entries become parent cards, projects become child cards linked through their locked Idea Promotion (a project whose promotion or queue entry is missing fails the rebuild), card ids are deterministic (`card_<source_record_id>`), and active project warnings badge exactly the card they target — promoted-work warnings badge the project card, queue-level warnings badge the idea card, resolved warnings badge nothing, badges are unique severities ranked urgent → important → info. `columns` and `manual_order` are preserved projection metadata: rebuilds keep the existing arrangement, append new cards in canonical order, and drop stale ids. `validate board` fails a board whose cards disagree with canonical records, whose `manual_order` does not list every card exactly once, or whose board id does not derive from the workspace creator. Fixture correction: the example board had the promoted-work warning badging the parent idea card; the badge moved to the targeted project card per the ADR 0020 pairing rule (the example warning carries `project_id` + `idea_promotion_id`).
 
+- Slice 4 batch D (2026-07-03, per the user-approved pruned-ids decision recorded in the slice plan): `prune <creator-workspace> [--apply] [--retention-days <n>]` landed as `influencer_os/prune.py`. Evidence is prunable only when it is older than the retention window (default 30 days), its id is unreferenced by every queue entry, promotion, and project source-ref cache, and none of its metric snapshots are referenced; its snapshots prune with it, and stale queue entries are never touched (staleness stays auditable). Dry-run by default — only `--apply` deletes, and an applied prune re-runs `validate research` as a post-check. Removals are recorded on the run manifest as optional `pruned_evidence_ids`/`pruned_metric_snapshot_ids` (new schema fields) while `outputs` stays untouched; outputs reconciliation now expects JSONL contents to equal outputs minus pruned, pruned ids must be declared and absent, so a run can still never misdeclare what it produced. Kept JSONL lines are rewritten byte-identical (original raw text, not reserialized). Metric-snapshot trajectory compaction stays deferred per the slice decisions.
+
 Remaining:
 
 - Research Findings and Idea Queue workflow (slice 4, including the recall index, board rebuild, and prune commands deferred from slice 3, plus the run-scoped consistency checks deferred from the slice 3 review: per-record `research_run_id` vs the containing run, `evidence_refs[].research_run_id` resolution, and run `outputs` reconciliation against JSONL contents), then the remaining Phase 1 slices in roadmap order.
@@ -328,6 +330,12 @@ records validate after the board-badge fixture correction; the
 derivation reproduces the example board fixture exactly, and
 `rebuild-board` + `validate board` run cleanly against a live fixture
 workspace (empty board, 0 cards).
+Slice 4 batch D (2026-07-03): 232 tests pass (10 added in
+`tests/test_prune.py` — retention, protection, dry-run isolation,
+idempotence, pruned-ids reconciliation positive and negative); drift
+checks pass (21 tests); a pruned workspace passes `validate research`
+and `validate queue`; `prune` dry-runs cleanly against a live fixture
+workspace (nothing to prune).
 ```
 
 ## Next Work Queue

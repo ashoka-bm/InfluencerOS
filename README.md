@@ -202,6 +202,19 @@ python3 -m influencer_os rebuild-board workspace-library/creators/luna-fit
 python3 -m influencer_os validate board workspace-library/creators/luna-fit
 ```
 
+## Prune Research Retention
+
+Apply the research retention rules (dry-run by default; deletes only with
+`--apply`). Prune removes unreferenced evidence older than the retention
+window plus its metric snapshots, never touches records a queue entry,
+promotion, or project references, and records removals on the run manifest
+(`pruned_evidence_ids`) so the run's original `outputs` stay intact:
+
+```bash
+python3 -m influencer_os prune workspace-library/creators/luna-fit
+python3 -m influencer_os prune workspace-library/creators/luna-fit --apply
+```
+
 ## Memory And Learnings
 
 Add one durable fact to a `MEMORY.md` file (deduplicated; refuses writes past the 2,500-byte cap):

@@ -1047,3 +1047,13 @@ D: `prune` deletes evidence lines, so batch D must decide how a pruned run
 stays valid (rewrite the run manifest's outputs lists, record pruned ids, or
 relax the declared-but-pruned direction). Open until batch D; surface it as
 a decision before coding prune.
+
+Batch D decision (user-approved 2026-07-03): record pruned ids. The run
+manifest gains optional `pruned_evidence_ids` / `pruned_metric_snapshot_ids`
+fields that `prune --apply` appends to; `outputs` is never rewritten, so the
+manifest keeps its original account of what the run produced. Reconciliation
+becomes exact against outputs minus pruned: pruned ids must be declared in
+outputs, must be absent from the JSONL files, and JSONL contents must equal
+the remainder. Rewriting outputs (loses the audit record) and relaxing the
+declared-but-absent direction (lets runs misdeclare outputs forever) were
+both declined.
