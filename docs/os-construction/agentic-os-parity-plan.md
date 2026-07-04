@@ -101,7 +101,7 @@ Gap audit updated 2026-07-03 after Phase 0C batches A-F closed the parity workst
 | Skill runtime layout | Repo source `skills/`; creator runtime copies under `.claude/skills/` (ADR 0017: no category prefixes). | None. | — |
 | Skill local overrides | Documented; worked `skills/influencer-os/SKILL.local.md` exists; sync preservation tested. | None. | — |
 | Multi-client architecture | Adapted to creators; `init-creator`/`sync-creator-runtime`/`update-creators` built with backups (ADR 0018). | Scripts/settings/hooks/cron zones stay inert by design. | Revisit gated zones only with explicit approval. |
-| Projects/output consolidation | Project paths pinned in `project.schema.json`; provenance IDs resolve to real records. | None for the transitional layout; ADR 0020 layout lands in Phase 1. | Build the research module slice in Phase 1. |
+| Projects/output consolidation | Project paths pinned in `project.schema.json`; provenance IDs resolve to real records through locked Idea Promotions. | None. | Keep project, queue, and research validation green. |
 | Memory tiers | Tier 0 rules defined (`docs/creator-workspace-structure.md`); writers built (`memory-write`, `log-learning`). | Operational creator usage begins with Phase 1 creator work. | Use the writers in Phase 1 workflows. |
 | Semantic recall | Contracted. | Not implemented. | Defer until Tier 0 usage and project layout are proven in Phase 1-2. |
 | Cron/scheduled workflows | Deferred. | Need job-definition pattern later. | Copy markdown job pattern in Automation OS phase. |

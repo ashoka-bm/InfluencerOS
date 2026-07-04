@@ -51,7 +51,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |
-| `influencer_os/research.py` | Research-module validation: JSONL records, findings frontmatter (scoped YAML subset), queue consistency, and the idea-promotion gate. |
+| `influencer_os/research.py` | Research-module validation: search plans, JSONL evidence and metrics, source-yield ledgers, findings frontmatter (scoped YAML subset), queue consistency, and the idea-promotion gate. |
 | `influencer_os/recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. |
 | `influencer_os/boards.py` | Content Board projection: `rebuild-board` derives cards from canonical records (columns/manual order preserved); `validate board` agreement check. |
 | `influencer_os/prune.py` | Research retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + its snapshots, removals recorded as run-manifest pruned ids. |

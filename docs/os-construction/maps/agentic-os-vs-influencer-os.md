@@ -102,7 +102,7 @@ The main adaptation is domain: Agentic OS is a general business assistant with m
 - General brand/business context becomes Creator Profile plus creator `brand_context/`.
 - Generic outputs become schema-backed records and Output Packages.
 - Broad session memory becomes creator-scoped memory with provenance.
-- Research becomes dated, sourced, platform-scoped research per ADR 0020 (Research Runs, Evidence, Findings, Idea Queue), with Social Research Packs and Video Understanding Packs as the transitional records until the Phase 1 research slice lands.
+- Research becomes dated, sourced, platform-scoped research per ADR 0020 (Research Runs, Search Plans, Evidence, Source Yield, Findings, Idea Queue), with Social Research Packs retained only as compatibility records and Video Understanding Packs used when real videos are analyzed.
 - Provider integrations become explicit approval gates.
 - Skill routing becomes conductor skills tied to workflow records.
 - Agentic OS flywheel becomes InfluencerOS planning and learning loops.

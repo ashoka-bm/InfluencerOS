@@ -1,6 +1,6 @@
 # InfluencerOS Architecture Map
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 This is the whole-system blueprint at file granularity: where every file lives, what it owns, and which function or skill calls which other function or skill. It records **structure and call flow, not file internals**. Internals (schema fields, skill prose, function bodies) are defined in the files themselves and built in dedicated TDD passes.
 
@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (40) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (42) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
@@ -66,14 +66,14 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
 | `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
 | `maps/` | Excalidraw map records. | [BUILT] |
-| `docs/adr/0001–0020` | Architectural decisions (0020 defined the research module). | [BUILT] |
+| `docs/adr/0001–0021` | Architectural decisions (0020 defined the research module; 0021 hardens research planning and source-yield learning). | [BUILT] |
 
 ### Workflow contracts
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (40) | JSON Schema contract per durable record. | [BUILT] |
-| `examples/*.example.json` (40) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (42) | JSON Schema contract per durable record. | [BUILT] |
+| `examples/*.example.json` (42) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary. | [BUILT] |
 | `docs/creator-workspace-structure.md` | Workspace layout + local-state policy. | [BUILT] |
@@ -111,7 +111,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
 | `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
-| `research.py` | JSONL + frontmatter validation, `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A] |
+| `research.py` | Search-plan, JSONL, source-yield, and frontmatter validation; `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A; intelligence hardening 2026-07-04] |
 | `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. | [BUILT — Phase 1 slice 4 batch B] |
 | `boards.py` | Content Board projection: `rebuild-board` (cards derived, columns/manual order preserved) + `validate board` agreement check. | [BUILT — Phase 1 slice 4 batch C] |
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |

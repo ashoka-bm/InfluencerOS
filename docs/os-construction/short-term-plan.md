@@ -329,17 +329,15 @@ Problem: upstream and project boundaries lack schema or resolved provenance.
 Tasks and acceptance criteria (each acceptance item is a test):
 
 - Add required `acceptance_criteria` (plus optional `constraints`, `dependencies`) to `project.schema.json`; a project without it fails validation.
-- Add `applied_social_template_id` and `video_understanding_pack_ids` to `output-package.schema.json` `source_refs`; a package missing a required provenance ref fails validation. Research provenance resolves transitively through the Project's Idea Promotion once the ADR 0020 slice lands in Phase 1.
+- Add `applied_social_template_id` and `video_understanding_pack_ids` to `output-package.schema.json` `source_refs`; a package missing a required provenance ref fails validation. Research provenance resolves transitively through the Project's Idea Promotion.
 - Extend project/workspace validation to resolve provenance IDs to real records; a dangling reference fails validation.
 - Add a generic `validate record <schema> <path>` CLI and validate each mid-pipeline record in the run flow.
 
-Moved to Phase 1 (Planning OS): the full ADR 0020 research schema slice and the
-promotion gate validation (an Idea Promotion must point to a real Idea Queue
+Completed in Phase 1 (Planning OS): the full ADR 0020 research schema slice and
+the promotion gate validation (an Idea Promotion must point to a real Idea Queue
 Entry and resolvable evidence refs; unresolved human-approved refs warn, while
 future automated promotion paths fail). See
-`docs/workflows/research-and-ideas-implementation-plan.md`. Keeping the research
-module out of 0C keeps parity hardening finishable and keeps the module one
-coherent slice.
+`docs/workflows/research-and-ideas-implementation-plan.md`.
 
 ## Workstream 13: Validator And Coverage Hardening
 

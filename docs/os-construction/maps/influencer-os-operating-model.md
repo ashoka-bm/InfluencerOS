@@ -175,8 +175,8 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- |
 | OS Kernel | Shared operating rules, architecture governance, skill source, schemas, examples, tests, public docs. | Agent runtime starts, architecture work, implementation work. | Canonical instructions, skill source, schema contracts, validation checks. | Real creator identity, private references, generated assets, analytics, secrets. | `AGENTS.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `docs/os-construction/`, `schemas/`, `examples/`, `tests/`, `skills/` |
 | Creator Foundation | One creator's local operating root, typed profile, rich identity, brand context, reference library, readiness state. | Intake, interviews, files, reference notes, generated-persona request after review. | Creator Workspace, Creator Profile, runtime context files, Reference Library, setup checklist. | Research findings, idea queue scoring, production plan internals, provider calls. | `workspace-library/creators/<slug>/creator-workspace.json`, `creator-profile.json`, `context/`, `brand_context/`, `references/` |
-| Research and Ideas | Platform-scoped research, evidence, metric snapshots, rolling findings, research intelligence, scored idea queue. | Creator Profile, schedule, references, public sources, Video Understanding Pack when real videos are analyzed. | Research Findings, Idea Queue entries, queue updates, warnings, promotion candidates. | Creating projects without approval, calling generation providers, burying raw evidence in memory. | `research/`, ADR 0020 planned schemas, `social-research-pack`, `video-understanding-pack` compatibility records |
-| Idea Promotion | The human-approved boundary between research and production. | Queue entry, evidence refs, findings refs, schedule fit, recommended formats/templates. | Idea Promotion record and one or more Project manifests. | Ranking all ideas forever, changing evidence after approval, silent production work. | Planned `idea-promotion` schema; project `source_refs`; `projects/<project-id>/project.json` |
+| Research and Ideas | Platform-scoped research, search planning, evidence, metric snapshots, source-yield learning, rolling findings, research intelligence, scored idea queue. | Creator Profile, schedule, references, public sources, Video Understanding Pack when real videos are analyzed. | Research Findings, Idea Queue entries, queue updates, warnings, promotion candidates. | Creating projects without approval, calling generation providers, burying raw evidence in memory. | `research/`, ADR 0020/0021 schemas, `social-research-pack` compatibility records, `video-understanding-pack` when real videos are analyzed |
+| Idea Promotion | The human-approved boundary between research and production. | Queue entry, evidence refs, findings refs, schedule fit, recommended formats/templates. | Idea Promotion record and one or more Project manifests. | Ranking all ideas forever, changing evidence after approval, silent production work. | `schemas/idea-promotion.schema.json`; project `source_refs`; `projects/<project-id>/project.json` |
 | Production Planning | Turning an approved idea into a format-specific production plan. | Project, Idea Promotion, creator references, template/structure choice, target format. | Applied Social Template, Micro-Journey/Carousel/Single Image/Story Sequence/Article/Thread plan, Base Video Generation Plan when short-form video needs it. | Provider execution, publishing, analytics interpretation, creator identity changes. | `projects/<project-id>/plan/`, format schemas, `base-video-generation-plan` |
 | Output Package | Packaging generated or imported artifacts with provenance and upload-ready materials. | Production plan, approved/imported assets, source refs, packaging decisions. | Output Package, platform adaptations, asset manifest, Creative Performance Map. | Publishing, analytics ingestion, future memory distillation. | `projects/<project-id>/output-package/`, `schemas/output-package.schema.json` |
 | Publication Evidence | Registering where an output was published and what measured results exist. | Output Package, platform publication details, API/CSV/manual metric input. | Published Post Record, Analytics Snapshot, raw safe exports. | Inferring missing metrics, semantic memory writes, cross-creator aggregation. | `projects/<project-id>/published/`, `analytics/`, published/analytics schemas |
@@ -227,8 +227,9 @@ split between orchestration and mechanics.
 
 - Build around records, not screen flows. Each module boundary should accept named
   input records and emit one named output record or review artifact.
-- Prefer one schema slice per module. ADR 0020 should land Research and Ideas as
-  a coherent module, not as isolated records that cannot validate together.
+- Prefer one schema slice per module. ADR 0020 landed Research and Ideas as a
+  coherent module, and ADR 0021 added research planning/yield without splitting
+  the validation boundary.
 - Keep producers narrow. `create-research-findings`, `manage-idea-queue`,
   `promote-idea`, `apply-social-template`, `create-production-plan`, and
   `create-output-package` are better deep modules than one expanded
@@ -246,10 +247,10 @@ split between orchestration and mechanics.
 
 | Gap | Risk | Boundary-safe next move |
 | --- | --- | --- |
-| Research and Ideas target schemas from ADR 0020 are not built yet. | Agents may keep designing around deprecated Content Idea Set and Selected Content Idea. | Add the ADR 0020 schema slice before Planning OS behavior. |
-| `projects.py` still validates `selected-content-idea` as the project entry record. | Project provenance will not match the approved Idea Promotion boundary. | Change project validation only when the Idea Promotion schema and examples exist. |
+| Research Intelligence planning/yield records are new. | Agents may browse opportunistically without preserving failed or low-yield attempts. | Keep completed runs blocked on `search-plan.json`, `source-yield.jsonl`, and `sources.json` yield stats. |
+| Idea Promotion is now the project entry record. | Future changes could reintroduce deprecated Content Idea Set or Selected Content Idea routing. | Keep project provenance anchored on locked Idea Promotions. |
 | `validation.py` uses a hand-rolled JSON Schema subset and hardcoded example list. | Later `$ref`, `oneOf`, and new schema coverage can silently fail. | Complete validator hardening before complex research schemas rely on composition. |
-| Producer skills and system self-learning skills are planned but absent. | The conductor can imply work that no skill owns. | Add machine-actionable dependencies and halt behavior for missing skills. |
+| Learning producer remains planned. | The conductor can imply work that no built skill owns. | Keep machine-actionable dependencies and halt behavior for missing skills. |
 | SQL and semantic lookup have accepted ADRs but no DDL/indexer. | Agents may assume recall exists when only files exist. | Sequence exact SQL index before semantic lookup; keep both projections creator-scoped. |
 | Excalidraw scene for this model is pending. | Visual consumers may miss the boundary-first map. | Convert this Mermaid draft into an editable scene after review. |
 
@@ -261,13 +262,11 @@ Agentic OS divergence test:
 - Agentic OS reference: Agentic OS operating model and visual architecture map pattern.
 - InfluencerOS decision: adapt the operating model to creator workspaces, schema-backed records, provider gates, and deferred Command Centre.
 - Classification: adaptation.
-- Decision record: agentic-os-alignment.md, agentic-os-copy-plan.md, visual-architecture-maps.md, ADRs 0010-0020.
+- Decision record: agentic-os-alignment.md, agentic-os-copy-plan.md, visual-architecture-maps.md, ADRs 0010-0021.
 - Status: pass.
 ```
 
 ## Open Questions
 
-- Should the project folder model use `idea/idea-promotion.json` immediately, or
-  wait until the full ADR 0020 schema slice is implemented?
 - Should the first dedicated follow-up map be Research and Ideas, Production
   Planning, or Creator Workspace boundaries?

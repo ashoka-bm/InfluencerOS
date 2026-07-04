@@ -9,7 +9,7 @@ The v1 flow (ADR 0020):
 ```text
 Choose Creator
   -> optionally understand real videos from frames and transcripts
-  -> run platform-scoped research into dated evidence and concise Research Findings
+  -> plan platform-scoped public research, then capture dated evidence and concise Research Findings
   -> maintain a scored Idea Queue from findings and evidence
   -> human-approve an Idea Promotion for one queue idea
   -> create Projects from the locked promotion
@@ -63,7 +63,7 @@ Creator setup can capture broader creator strategy inputs, including written sur
 - Social Research Pack schema
 - Video Understanding Pack schema
 - Social Post Format schema
-- the ADR 0020 research module schemas (Creator Content Schedule, Research Run, Research Evidence, Metric Snapshot, Research Findings, Stable Finding, five research intelligence files, Idea Queue Entry and Manifest, Idea Promotion, Project Warning, Content Board, Automation Run, System Event)
+- the ADR 0020 research module schemas (Creator Content Schedule, Research Run, Research Search Plan, Research Evidence, Metric Snapshot, Research Source Yield, Research Findings, Stable Finding, five research intelligence files, Idea Queue Entry and Manifest, Idea Promotion, Project Warning, Content Board, Automation Run, System Event)
 - Content Idea Set and Selected Content Idea schemas (deprecated ADR 0020 compatibility artifacts, out of the intended pipeline)
 - Social Template and Applied Social Template schemas
 - Micro-Journey Video Plan schema

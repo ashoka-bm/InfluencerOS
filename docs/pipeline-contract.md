@@ -169,8 +169,10 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Base Video Generation Plan | `schemas/base-video-generation-plan.schema.json` | `examples/base-video-generation-plan.example.json` |
 | Creator Content Schedule | `schemas/creator-content-schedule.schema.json` | `examples/creator-content-schedule.example.json` |
 | Research Run | `schemas/research-run.schema.json` | `examples/research-run.example.json` |
+| Research Search Plan | `schemas/research-search-plan.schema.json` | `examples/research-search-plan.example.json` |
 | Research Evidence (JSONL) | `schemas/research-evidence.schema.json` | `examples/research-evidence.example.json` |
 | Metric Snapshot (JSONL) | `schemas/metric-snapshot.schema.json` | `examples/metric-snapshot.example.json` |
+| Research Source Yield (JSONL) | `schemas/research-source-yield.schema.json` | `examples/research-source-yield.example.json` |
 | Research Findings (frontmatter) | `schemas/research-findings.schema.json` | `examples/research-findings.example.json` |
 | Stable Finding (frontmatter) | `schemas/stable-finding.schema.json` | `examples/stable-finding.example.json` |
 | Research Sources | `schemas/research-sources.schema.json` | `examples/research-sources.example.json` |
@@ -186,7 +188,7 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Automation Run | `schemas/automation-run.schema.json` | `examples/automation-run.example.json` |
 | System Event | `schemas/system-event.schema.json` | `examples/system-event.example.json` |
 
-The implemented record chain now covers creator setup, the ADR 0020 research module (schedule, runs, evidence, findings, intelligence, idea queue, promotions, warnings, board, automation-run and system-event record shapes), project planning anchored on locked Idea Promotions, output packaging, publication records, analytics snapshots, and performance summaries.
+The implemented record chain now covers creator setup, the ADR 0020 research module (schedule, runs, search plans, evidence, metric snapshots, source-yield ledgers, findings, intelligence, idea queue, promotions, warnings, board, automation-run and system-event record shapes), project planning anchored on locked Idea Promotions, output packaging, publication records, analytics snapshots, and performance summaries.
 
 The deprecated Content Idea Set and Selected Content Idea records are out of the
 intended pipeline (ADR 0020); their schemas remain only as compatibility
@@ -224,9 +226,11 @@ Each research run should record:
 
 - run date and time,
 - research mode and scope,
+- pre-browse search plan with query intent, candidate sources, and allowed access method,
 - platform and platform content type,
 - sources and public URLs,
 - visible metrics captured at research time,
+- source-yield outcomes for checked sources and queries,
 - observed patterns,
 - evidence strength and limitations,
 - fit notes for the Creator Profile,
