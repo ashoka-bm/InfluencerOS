@@ -10,7 +10,13 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from influencer_os.validation import ValidationError, load_json, validate_file, validate_record
+from influencer_os.validation import (
+    GATED_RESEARCH_ACCESS_METHODS,
+    ValidationError,
+    load_json,
+    validate_file,
+    validate_record,
+)
 
 
 RESEARCH_INTELLIGENCE_FILES = {
@@ -537,12 +543,37 @@ def validate_research(workspace_path):
                 source_yield_records = validate_jsonl_file(
                     "research-source-yield", source_yield_path, record_check=run_scoped
                 )
+                yield_id_counts = Counter(
+                    record["research_source_yield_id"]
+                    for record in source_yield_records
+                )
+                duplicate_yield_ids = sorted(
+                    yield_id for yield_id, count in yield_id_counts.items() if count > 1
+                )
+                if duplicate_yield_ids:
+                    # A duplicated id makes every ref to it ambiguous and
+                    # double-counts into yield_stats — the same guard the
+                    # evidence and metric ledgers already carry.
+                    raise ValidationError(
+                        f"{source_yield_path}: duplicate research_source_yield_id "
+                        f"values within the run: {duplicate_yield_ids}"
+                    )
                 plan_platforms = set(search_plan["platforms"]) if search_plan else set()
                 run_metric_ids = {
                     record["metric_snapshot_id"]
                     for record in run_records["metric-snapshots.jsonl"]
                 }
                 for record in source_yield_records:
+                    if record["access_method"] in GATED_RESEARCH_ACCESS_METHODS:
+                        # The yield ledger records what the run actually did;
+                        # a gated method here attests the run executed something
+                        # the slice forbids, so the plan-side gate is not enough.
+                        raise ValidationError(
+                            f"{source_yield_path}: source yield "
+                            f"{record['research_source_yield_id']} used gated "
+                            f"access method {record['access_method']!r}, which is "
+                            "not permitted in this slice"
+                        )
                     if plan_platforms and record["platform"] not in plan_platforms:
                         raise ValidationError(
                             f"{source_yield_path}: source yield "
@@ -594,16 +625,28 @@ def validate_research(workspace_path):
         raise ValidationError(
             f"source-yield references saved source ids, but {sources_path} is missing"
         )
-    if sources_path.exists() and source_yield_stats:
+    if sources_path.exists():
         sources = load_json(sources_path)
         sources_by_id = {item["source_intel_id"]: item for item in sources["items"]}
-        for source_id, expected_stats in sorted(source_yield_stats.items()):
+        zero_stats = {
+            "checked_count": 0,
+            "promoted_to_evidence_count": 0,
+            "background_use_count": 0,
+            "low_yield_count": 0,
+        }
+        # records -> sources: every source a yield record credited must be saved.
+        for source_id in sorted(source_yield_stats):
             if source_id not in sources_by_id:
                 raise ValidationError(
                     f"{sources_path}: source-yield references {source_id!r}, "
                     "but sources.json has no matching item"
                 )
-            actual_stats = sources_by_id[source_id].get("yield_stats", {})
+        # sources -> records: every saved source's counts must equal the
+        # aggregate of its yield records — all zeros when it has none — so a
+        # hand-edited source cannot advertise an invented usefulness history.
+        for source_id, item in sorted(sources_by_id.items()):
+            expected_stats = source_yield_stats.get(source_id, zero_stats)
+            actual_stats = item.get("yield_stats", {})
             for field, expected_value in expected_stats.items():
                 actual_value = actual_stats.get(field)
                 if actual_value != expected_value:

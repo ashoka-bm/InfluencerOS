@@ -232,6 +232,61 @@ class ResearchStateValidationTests(unittest.TestCase):
                 validate_research(workspace_dir)
             self.assertIn("yield_stats.checked_count", str(ctx.exception))
 
+    def test_source_yield_stats_cannot_be_fabricated_without_records(self):
+        # A saved source that no source-yield record ever produced must not be
+        # able to advertise a non-zero usefulness history. The reconciliation
+        # runs sources->records, not only records->sources, so an item with
+        # zero backing records must carry all-zero counts.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            sources_path = workspace_dir / "research" / "intelligence" / "sources.json"
+            sources = json.loads(sources_path.read_text())
+            fabricated = json.loads(json.dumps(sources["items"][0]))
+            fabricated["source_intel_id"] = "source_intel_luna_fit_999"
+            fabricated["yield_stats"] = {
+                "checked_count": 999,
+                "promoted_to_evidence_count": 999,
+                "background_use_count": 0,
+                "low_yield_count": 0,
+                "usefulness_basis": "Invented history with no backing records.",
+            }
+            sources["items"].append(fabricated)
+            write_json(sources_path, sources)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("source_intel_luna_fit_999", str(ctx.exception))
+            self.assertIn("yield_stats", str(ctx.exception))
+
+    def test_duplicate_source_yield_id_within_run_fails(self):
+        # source-yield ids are first-class refs; a duplicate makes every
+        # reference ambiguous and double-counts into yield_stats, exactly like
+        # the guard already enforced for evidence and metric snapshots.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            write_jsonl(yield_path, [record, json.loads(json.dumps(record))])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("duplicate research_source_yield_id", str(ctx.exception))
+
+    def test_source_yield_cannot_use_gated_access_method(self):
+        # The yield ledger records what the run actually did; a gated method
+        # here attests the run executed something the slice forbids, so the
+        # prohibition must be enforced on the yield, not only on the plan.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["access_method"] = "logged_in_browser"
+            write_jsonl(yield_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("gated access method", str(ctx.exception))
+
     def test_invalid_jsonl_line_reports_line_number(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
