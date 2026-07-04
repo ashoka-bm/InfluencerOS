@@ -51,6 +51,14 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
     "format_thread",
 })
 
+# A completed run that changed the rolling findings but grounded them in few
+# promoted-to-evidence sources is a thin-evidence run. This is an advisory WARN,
+# never a failure: thin research is allowed (local-first posture), it just must
+# not read as well-corroborated. Runs that checked fewer than the minimum are
+# too small for the promotion rate to mean anything, so they are not evaluated.
+THIN_EVIDENCE_MIN_CHECKED = 3
+THIN_EVIDENCE_PROMOTION_RATE = 0.34
+
 
 def _iter_jsonl_lines(path):
     # Split on newlines only: splitlines() would also break on U+2028/U+2029,
@@ -377,6 +385,7 @@ def validate_research(workspace_path):
 
     checked = []
     source_yield_stats = {}
+    run_warnings = []
 
     schedule_path = workspace_dir / "content-schedule.json"
     if schedule_path.exists():
@@ -611,6 +620,23 @@ def validate_research(workspace_path):
                             stats["background_use_count"] += 1
                         else:
                             stats["low_yield_count"] += 1
+                checked_sources = len(source_yield_records)
+                promoted_sources = sum(
+                    1 for record in source_yield_records
+                    if record["outcome"] == "promoted_to_evidence"
+                )
+                if (
+                    run_record["material_update"]
+                    and checked_sources >= THIN_EVIDENCE_MIN_CHECKED
+                    and promoted_sources
+                    < THIN_EVIDENCE_PROMOTION_RATE * checked_sources
+                ):
+                    run_warnings.append(
+                        f"{run_manifest}: run declares a material update but only "
+                        f"{promoted_sources} of {checked_sources} checked sources "
+                        "produced evidence; treat its findings as thin-evidence, "
+                        "not well-corroborated"
+                    )
                 checked.append(str(source_yield_path.relative_to(workspace_dir)))
 
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():
@@ -679,6 +705,7 @@ def validate_research(workspace_path):
         workspace_dir, scope=scope
     )
     checked.extend(promotion_paths)
+    warnings = run_warnings + warnings
 
     # Promotion checks run identically on the research and queue paths: when
     # the queue exists, the research path also verifies the entry-side

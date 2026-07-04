@@ -52,6 +52,29 @@ def write_jsonl(path, records):
     path.write_text("".join(json.dumps(record) + "\n" for record in records))
 
 
+def background_yield(idx):
+    # A schema-valid low-yield source-yield record on an ad-hoc key, so it does
+    # not feed the source_intel_* yield_stats reconciliation.
+    record = load_example("research-source-yield")
+    record["research_source_yield_id"] = f"research_source_yield_luna_fit_bg_{idx}"
+    record["source_key"] = f"ad_hoc_thin_source_{idx}"
+    record["source_kind"] = "search_result"
+    record["outcome"] = "background_only"
+    record["evidence_ids"] = []
+    record["metric_snapshot_ids"] = []
+    record["finding_ids"] = []
+    record["idea_queue_entry_ids"] = []
+    record["engagement_basis"] = {
+        "visible_metric_signal": "weak",
+        "cross_platform_validation": False,
+        "creator_fit": "low",
+        "notes": "Background context only; no promotable signal.",
+    }
+    record["recommended_intelligence_action"] = "none"
+    record.pop("source_plan_id", None)
+    return record
+
+
 def scaffold_research_workspace(temp_dir):
     workspace_dir = Path(temp_dir) / "luna-fit"
     research = workspace_dir / "research"
@@ -286,6 +309,53 @@ class ResearchStateValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             self.assertIn("gated access method", str(ctx.exception))
+
+    def test_thin_evidence_material_run_warns(self):
+        # A run that declares a material update but grounds it in a low share of
+        # promoted-to-evidence sources gets an advisory (non-failing) WARN.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_dir = workspace_dir / "research" / "runs" / RUN_ID
+            manifest_path = run_dir / "research-run.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["material_update"] = True
+            write_json(manifest_path, manifest)
+            promoted = load_example("research-source-yield")
+            write_jsonl(
+                run_dir / "source-yield.jsonl",
+                [promoted, background_yield(1), background_yield(2), background_yield(3)],
+            )
+
+            result = validate_research(workspace_dir)
+            self.assertTrue(
+                any("thin-evidence" in warning for warning in result["warnings"]),
+                result["warnings"],
+            )
+
+    def test_material_run_with_enough_evidence_does_not_warn(self):
+        # Same size run, but a healthy promotion rate must not trip the gate.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_dir = workspace_dir / "research" / "runs" / RUN_ID
+            manifest_path = run_dir / "research-run.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["material_update"] = True
+            write_json(manifest_path, manifest)
+            promoted = load_example("research-source-yield")
+            promoted_2 = load_example("research-source-yield")
+            promoted_2["research_source_yield_id"] = "research_source_yield_luna_fit_p2"
+            promoted_2["source_key"] = "ad_hoc_second_promoted"
+            promoted_2["source_kind"] = "search_result"
+            write_jsonl(
+                run_dir / "source-yield.jsonl",
+                [promoted, promoted_2, background_yield(1)],
+            )
+
+            result = validate_research(workspace_dir)
+            self.assertFalse(
+                any("thin-evidence" in warning for warning in result["warnings"]),
+                result["warnings"],
+            )
 
     def test_invalid_jsonl_line_reports_line_number(self):
         with tempfile.TemporaryDirectory() as temp_dir:

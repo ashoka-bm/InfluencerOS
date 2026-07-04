@@ -207,6 +207,15 @@ A research run should generally follow this sequence:
     material finding or source-yield learning.
 12. Present findings first, then recommended ideas by goal.
 
+Query formulation must stay grounded in creator context. Each planned query's
+terms derive from the Creator Profile, schedule signal, rolling findings,
+research intelligence, or prior queue entries — the search plan's
+`decision_basis` and each query's `routing_basis` record which. Do not seed
+queries with tool, brand, product, or trend names pulled from the agent's own
+training knowledge that are absent from creator context: that knowledge may be
+stale, and research is time-sensitive. When a term is a hypothesis rather than
+creator-derived, mark it as such in the plan so its yield is judged honestly.
+
 Research modes should be separable so they can run independently:
 
 - scheduled needs research,
@@ -945,7 +954,11 @@ Candidate scores:
 - measurement clarity: how clearly success can be judged after publication.
 
 The workflow should explicitly flag thin research rather than hiding weak
-evidence behind confident ideas.
+evidence behind confident ideas. `validate research` backs this with an
+advisory warning: when a completed run declares a material update but only a
+small share of its checked sources produced evidence, it emits a
+thin-evidence WARN (never a failure — thin research is allowed, it just must
+not read as well-corroborated).
 
 Ideas may become stale automatically when newer research shows that the
 supporting pattern is no longer performing. Stale ideas should remain auditable
