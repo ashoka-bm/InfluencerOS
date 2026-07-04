@@ -78,7 +78,10 @@ If the files are already staged inside the Project at those exact paths, omit
 The command refuses to overwrite an existing package, copies upload-ready
 files, writes `output-package/output-package.json`, sets the Project status to
 `packaged`, and runs `validate project`. If validation fails, it restores the
-previous Project status and removes the package files it wrote.
+previous Project status and removes the package files it wrote. At rest,
+`validate project` must keep passing for a packaged Project; it checks the
+Output Package format against the Project content unit and requires every
+`upload_ready[].path` to exist locally.
 
 ## Validation
 

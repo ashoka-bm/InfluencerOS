@@ -132,6 +132,8 @@ Completed:
 
 - Slice 7 (2026-07-04), Output Package registration: `register-output-package <output-package.json> --project <project-dir> [--asset-root <dir>]` landed as the local file-first write gate. It validates the Project and Output Package, requires package/project creator and promotion refs to match, copies `upload_ready` files from a mirrored asset root into `projects/<project-slug>/output-package/upload-ready/`, writes `output-package/output-package.json`, advances the Project to `packaged`, and rolls back the package/status/asset writes if final `validate project` fails. Output Package semantics now require upload asset refs to resolve, keep visual package thumbnail/first-frame refs mandatory, and allow `thumbnail_or_first_frame_asset_id: null` for article/thread text packages. The `create-output-package` producer skill landed under `skills/`, moved from Missing Future Skills into the Core Workflow Skills registry, gained Output packaging context coverage, and the conductor/architecture/repository docs flipped it to [BUILT].
 
+- Addressed the slice 7 adversarial review (2026-07-04; one medium, one low, and one nit, all confirmed by reproduction): packaged project validation now re-checks the Output Package `universal_core.format_id` against the Project `content_unit_type`, so hand-edited packages cannot contradict the Project format at rest; `validate project` enforces that every packaged `upload_ready[].path` resolves to an existing local file, making `packaged` mean upload-ready deliverables exist; and registration rollback removes empty nested upload-ready directories created during a failed package write.
+
 Remaining:
 
 - Research-intelligence hardening after slices 6-7, before scheduled research automation: combine `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing, and engagement-weighted source evaluation. Pull this forward only if repeated live research evals show material source-search waste before slice 7 closes.
@@ -433,10 +435,12 @@ fixture workspaces with zero overrides lost. Full workflow verification
 re-run in `.tmp/slice6-verify`: workspace, research, queue, project,
 output-package record, board, recall index (8 records), prune dry-run,
 and copied-runtime sync all pass.
-Slice 7 (2026-07-04): 300 tests pass (8 added for output-package
+Slice 7 (2026-07-04): 303 tests pass (11 added for output-package
 registration, rollback on package/project mismatch, text-package
 registration without a generation plan, nullable text thumbnails, and
-upload asset-ref and adaptation-format semantics); drift checks pass (22 tests); 40 example
+upload asset-ref, adaptation-format, at-rest package/project format,
+at-rest upload-ready file presence, and rollback directory cleanup
+semantics); drift checks pass (22 tests); 40 example
 records validate. Full workflow verification re-run in
 `.tmp/slice7-verify`: workspace, research, queue, project,
 `register-output-package`, packaged project validation, rebuild-board,

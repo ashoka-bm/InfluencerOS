@@ -164,6 +164,11 @@ def register_output_package(project_path, output_package_path, asset_root=None):
         for target in copied_targets:
             if target.exists():
                 target.unlink()
+        for target in copied_targets:
+            _remove_empty_parents(
+                target.parent,
+                stop=project_dir / "output-package" / "upload-ready",
+            )
         raise
 
     return {
@@ -553,6 +558,7 @@ def _validate_project_records(project_dir, project, workspace_dir):
             project_dir / "output-package" / "output-package.json",
             "output-package",
         )
+        _validate_output_package_matches_project(output_package, project)
         if output_package["project_id"] != project["project_id"]:
             raise ValueError(
                 "Output package project_id does not match project: "
@@ -592,6 +598,7 @@ def _validate_project_records(project_dir, project, workspace_dir):
                 "Output package production_plan_ids omit project plan records "
                 f"(the provenance chain must be complete): {missing_plan_ids}"
             )
+        _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
 
@@ -601,6 +608,25 @@ def _validate_project_record(record_path, schema_name):
     except ValidationError as exc:
         raise ValidationError(f"Invalid project record {record_path}: {exc}") from exc
     return load_json(record_path)
+
+
+def _validate_upload_ready_files(project_dir, output_package):
+    for relative_path in _upload_ready_relative_paths(output_package):
+        path = Path(project_dir) / relative_path
+        if not path.exists():
+            raise FileNotFoundError(f"Missing upload-ready asset: {path}")
+        _ensure_contained_file(path, project_dir, "upload-ready asset")
+
+
+def _remove_empty_parents(path, stop):
+    path = Path(path)
+    stop = Path(stop)
+    while path != stop and path.is_relative_to(stop):
+        try:
+            path.rmdir()
+        except OSError:
+            return
+        path = path.parent
 
 
 def _production_plan_schema(project):

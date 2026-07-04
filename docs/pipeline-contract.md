@@ -100,7 +100,9 @@ upload-ready files from a mirrored asset root into the Project, writes
 runs project validation; failed validation rolls back the package write and
 status change. Text packages (`format_article`, `format_thread`) may record
 `thumbnail_or_first_frame_asset_id: null`; visual packages must point that
-field to an upload-ready asset.
+field to an upload-ready asset. Once a Project is `packaged`, `validate
+project` re-checks that the package format matches the Project content unit
+and that every `upload_ready[].path` resolves to an existing local file.
 
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 

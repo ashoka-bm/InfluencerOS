@@ -41,3 +41,4 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### create-output-package
 - 2026-07-04: Use register-output-package as the only Output Package write gate; it copies upload-ready files, advances the Project to packaged, and relies on validate project for provenance closure.
+- 2026-07-04: Keep Output Package writer checks mirrored in validate project so packaged records remain auditable after hand edits.

@@ -1100,6 +1100,50 @@ class ProvenanceResolutionTests(unittest.TestCase):
     def test_validate_project_accepts_packaged_project_with_matching_output_package(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
+            package = json.loads((ROOT / "examples" / "output-package.example.json").read_text())
+            copy_example_record(
+                "output-package.example.json",
+                project_dir / "output-package" / "output-package.json",
+            )
+            write_upload_ready_assets(project_dir, package)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            result = validate_project(project_dir)
+            self.assertEqual(result["project_id"], "project_luna_tiny_reset_001")
+
+    def test_validate_project_rejects_output_package_format_mismatch_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = project_dir / "output-package" / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            write_upload_ready_assets(project_dir, package)
+            rewrite_json(
+                package_path,
+                lambda package: (
+                    package["universal_core"].update(format_id="format_carousel"),
+                    [
+                        adaptation.update(format_id="format_carousel")
+                        for adaptation in package["platform_adaptations"]
+                    ],
+                ),
+            )
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="packaged"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("universal_core.format_id", str(ctx.exception))
+            self.assertIn("content_unit_type", str(ctx.exception))
+
+    def test_validate_project_rejects_packaged_project_missing_upload_ready_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
             copy_example_record(
                 "output-package.example.json",
                 project_dir / "output-package" / "output-package.json",
@@ -1109,8 +1153,9 @@ class ProvenanceResolutionTests(unittest.TestCase):
                 lambda project: project.update(status="packaged"),
             )
 
-            result = validate_project(project_dir)
-            self.assertEqual(result["project_id"], "project_luna_tiny_reset_001")
+            with self.assertRaises(FileNotFoundError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("Missing upload-ready asset", str(ctx.exception))
 
     def test_validate_project_rejects_output_package_creator_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1187,6 +1232,23 @@ class ProvenanceResolutionTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 validate_project(project_dir)
+
+    def test_register_output_package_rollback_removes_empty_nested_asset_directories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            package = json.loads((ROOT / "examples" / "output-package.example.json").read_text())
+            package["upload_ready"][0]["path"] = "output-package/upload-ready/nested/final-video.mp4"
+            package["source_refs"]["applied_social_template_id"] = "applied_template_other_001"
+            package_path.write_text(json.dumps(package, indent=2) + "\n")
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            with self.assertRaises(ValueError):
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+
+            self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
+            self.assertFalse((project_dir / "output-package" / "upload-ready" / "nested").exists())
 
     def test_register_output_package_accepts_text_project_without_generation_plan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
