@@ -531,6 +531,12 @@ anchoring visible_metric_signal/confidence and a Synthesis Discipline
 agentic-os-alignment.md. Batch C added an advisory thin-evidence WARN in
 validate research and an anti-contamination query-grounding rule. 327 tests
 pass; drift checks and example validation clean.
+Review follow-ups (2026-07-04): closed two P2 findings on the above work —
+the thin-evidence WARN now derives "material" from run outputs (not only the
+mutable material_update flag), the example search-plan routing_basis is
+creator-grounded, and a required per-query term_basis enum makes query-term
+provenance auditable at rest. 330 tests pass; drift checks and example
+validation clean.
 ```
 
 ## Next Work Queue
