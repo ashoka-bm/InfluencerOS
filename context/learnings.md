@@ -28,3 +28,12 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.
+
+### create-research-findings
+- 2026-07-03: Live research eval showed a need for source-yield learning: after Phase 1 slices 6-7, add the merged research-intelligence hardening slice that tracks searched-but-unused sources, downgrades repeated background-only/low-yield sources in research intelligence, and lands before scheduled research automation.
+
+### create-production-plan
+- 2026-07-04: Phase 1 slice 6 established one Project per content unit: content_unit_type must map to exactly one target format, and article/thread plans do not require Base Video Generation Plans.
+
+### apply-social-template
+- 2026-07-04: Text formats can use social templates as reader-progression structures; applied beats should answer reader questions rather than describe shots or slides.

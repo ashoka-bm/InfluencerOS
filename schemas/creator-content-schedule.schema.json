@@ -81,7 +81,9 @@
                 "format_short_form_video",
                 "format_carousel",
                 "format_single_image_post",
-                "format_story_sequence"
+                "format_story_sequence",
+                "format_article",
+                "format_thread"
               ]
             }
           }

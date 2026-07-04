@@ -50,14 +50,14 @@ class SchemaValidationTests(unittest.TestCase):
         # The format vocabulary is a closed enum (approval-surface decisions);
         # a typo like format_shortform_video must fail, not silently never match.
         cases = (
-            ("idea-promotion", lambda r: r["approved_formats"].append("format_article")),
-            ("idea-queue-entry", lambda r: r["format_recommendations"].append("format_article")),
-            ("project", lambda r: r["target_formats"].append("format_article")),
+            ("idea-promotion", lambda r: r["approved_formats"].append("format_interpretive_dance")),
+            ("idea-queue-entry", lambda r: r["format_recommendations"].append("format_interpretive_dance")),
+            ("project", lambda r: r["target_formats"].append("format_interpretive_dance")),
             (
                 "creator-content-schedule",
-                lambda r: r["content_goals"][0]["preferred_formats"].append("format_article"),
+                lambda r: r["content_goals"][0]["preferred_formats"].append("format_interpretive_dance"),
             ),
-            ("output-package", lambda r: r["universal_core"].update(format_id="format_article")),
+            ("output-package", lambda r: r["universal_core"].update(format_id="format_interpretive_dance")),
         )
         for schema_name, mutate in cases:
             invalid = deepcopy(load_json(f"examples/{schema_name}.example.json"))
@@ -66,15 +66,44 @@ class SchemaValidationTests(unittest.TestCase):
                 with self.assertRaises(ValidationError):
                     validate_record(schema_name, invalid)
 
+    def test_text_formats_are_supported_vocabulary(self):
+        cases = (
+            ("idea-promotion", lambda r: r["approved_formats"].extend(["format_article", "format_thread"])),
+            ("idea-queue-entry", lambda r: r["format_recommendations"].extend(["format_article", "format_thread"])),
+            ("project", lambda r: r["target_formats"].extend(["format_article", "format_thread"])),
+            (
+                "creator-content-schedule",
+                lambda r: r["content_goals"][0]["preferred_formats"].extend(["format_article", "format_thread"]),
+            ),
+            ("output-package", lambda r: r["universal_core"].update(format_id="format_article")),
+            ("applied-social-template", lambda r: r.update(target_format_id="format_thread")),
+        )
+        for schema_name, mutate in cases:
+            valid = deepcopy(load_json(f"examples/{schema_name}.example.json"))
+            mutate(valid)
+            with self.subTest(schema=schema_name):
+                validate_record(schema_name, valid)
+
     def test_project_rejects_production_unsupported_unit_type(self):
-        # multi_platform_package has no production plan schema yet; it joins
-        # the enum with the production build-out that adds one.
+        # multi_platform_package has no production plan schema yet.
         example = load_json("examples/project.example.json")
         invalid = deepcopy(example)
         invalid["content_unit_type"] = "multi_platform_package"
 
         with self.assertRaises(ValidationError):
             validate_record("project", invalid)
+
+    def test_project_accepts_text_unit_types(self):
+        example = load_json("examples/project.example.json")
+        for unit_type, format_id in (
+            ("article", "format_article"),
+            ("thread", "format_thread"),
+        ):
+            project = deepcopy(example)
+            project["content_unit_type"] = unit_type
+            project["target_formats"] = [format_id]
+            with self.subTest(unit_type=unit_type):
+                validate_record("project", project)
 
     def test_project_requires_acceptance_criteria(self):
         example = load_json("examples/project.example.json")

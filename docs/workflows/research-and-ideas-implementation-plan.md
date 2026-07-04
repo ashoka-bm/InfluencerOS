@@ -1,6 +1,6 @@
 # Research And Ideas Implementation Plan
 
-Status: **Slices 3, 4, and 5 complete (2026-07-03).** The schema surface of
+Status: **Slices 3, 4, 5, and 6 complete (slice 6 on 2026-07-04).** The schema surface of
 this plan (implementation-sequence steps 1-6, 11, 12 plus the promotion
 gate) landed via the user-approved Execution Decisions below; slice 4
 (the Research Findings and Idea Queue workflow — run-scoped consistency
@@ -9,12 +9,14 @@ checks, recall index, content board, retention prune, and the
 the Slice 4 Execution Decisions at the end of this plan, batches A-E; and
 slice 5 (the Idea Promotion to Project workflow — promotion link
 consistency and the `promote-idea` producer skill) landed via the Slice 5
-Execution Decisions at the end of this plan, batches A-C. The
-verification records live in `docs/os-construction/progress.md`. A
-post-landing review hardening batch closed the findings recorded in
-Post-Review Hardening below (same day). Next: slice 6, format-specific
-production planning per the roadmap.
-Last updated: 2026-07-03
+Execution Decisions at the end of this plan, batches A-C. Slice 6
+(format-specific production planning) added article/thread production
+contracts and the `apply-social-template`/`create-production-plan`
+producer skills. The verification records live in
+`docs/os-construction/progress.md`. A post-landing review hardening batch
+closed the findings recorded in Post-Review Hardening below (same day).
+Next: slice 7, Output Package registration per the roadmap.
+Last updated: 2026-07-04
 
 ## Goal
 
@@ -91,6 +93,55 @@ Do not vendor the upstream scripts, hooks, or command launchers in this slice.
 If repeated slice 4 usage shows that output import needs to be mechanized, add a
 small local import command that maps watched-video reports into
 `VideoUnderstandingPack` records instead of copying the whole external plugin.
+
+## Post-Slice-7 Follow-Up: Research Intelligence Hardening
+
+Captured from the 2026-07-03 live research runtime eval: research agents need a
+durable way to remember sources that were checked but did not produce actionable
+evidence, findings, or queue ideas.
+
+Current `research/intelligence/sources.json` and `watchlist.json` can store the
+summary conclusion through `usefulness_score`, `status`,
+`last_evaluated_on`, and `rationale`, but they do not yet preserve a per-run
+yield ledger. Do not implement this as a standalone planning-only slice. Ship it
+after slices 6 and 7 as one research-intelligence hardening pass, unless
+repeated live research evals show material source-search waste before then.
+
+Future implementation should add a combined search-planning and source-yield
+loop:
+
+- Before browsing, each completed research run writes `search-plan.json`
+  (`ResearchSearchPlan`) with planned platforms, query intent, adapters,
+  planned sources, skipped sources, approval gates, and future connector notes.
+- Each research run records checked-but-unused sources in the run summary or a
+  dedicated source-yield record, with reason categories such as
+  `background_only`, `no_platform_signal`, `no_visible_metrics`,
+  `not_creator_fit`, `not_current`, or `not_accessible`.
+- Research intelligence aggregates repeated attempts into per-source counters:
+  checked count, promoted-to-evidence count, used-as-background count,
+  finding/queue/promotion contribution count, last useful date, and current
+  usefulness score.
+- Repeated low-yield sources are downgraded in
+  `research/intelligence/sources.json` or `watchlist.json`; consistently
+  unproductive sources become `flagged_for_removal` or `retired`.
+- `create-research-findings` should prefer sources that historically produce
+  usable evidence for the creator and deprioritize generic background sources
+  that rarely change findings or ideas.
+- The slice should adapt Agentic OS query-intent routing and engagement-weighted
+  source evaluation while keeping API-backed, logged-in, scraping, scheduled,
+  notification, and YouTube platform work deferred.
+
+Execution order:
+
+1. Finish slice 6: format-specific production planning.
+2. Finish slice 7: Output Package registration.
+3. Implement this research-intelligence hardening slice.
+4. Build scheduled research automation only after this loop exists.
+
+Timing: implement this as a Phase 1 hardening follow-up after slices 6-7 unless
+live research runs show it is already creating meaningful friction. It must land
+before scheduled research automation, because automation would otherwise repeat
+low-yield searches at scale.
 
 ## Implementation Sequence
 
@@ -705,10 +756,10 @@ Project path changes:
 
 Content unit types:
 
-- `content_unit_type` keeps the visual-first enum in this slice. Text unit
-  types (`article`, `thread`) land in the production build-out step, together
-  with their format routing. Until then the promotion gate blocks Projects for
-  unsupported formats.
+- `content_unit_type` keeps production-supported unit types only. Slice 6 adds
+  text unit types (`article`, `thread`) together with their plan schemas and
+  routing. `multi_platform_package` remains deferred until it has a production
+  plan contract.
 
 ## Validation And CLI Draft
 
@@ -809,8 +860,8 @@ platform set. `x_thread` is added alongside `x_post`.
    command) defer to slice 4, where the Research Findings and Idea Queue
    workflow first exercises them. AutomationRun and SystemEvent land as
    record shapes only, per ADR 0020.
-2. Downstream provenance swap: `applied-social-template`, the four
-   format-specific production plans, and `output-package` replace
+2. Downstream provenance swap: `applied-social-template`, the
+   format-specific production plan records, and `output-package` replace
    `selected_content_idea_id` with `idea_promotion_id` in the same slice, and
    the project cross-record checks compare that field against
    `project.source_refs.idea_promotion_id`. Leaving the old field in
@@ -914,12 +965,13 @@ landed as one batch before slice 4:
 1. Format vocabulary is a closed enum. `approved_formats`,
    `format_recommendations`, `target_formats`, `preferred_formats`, and
    `format_id` all pin to the canonical v1 list (`format_short_form_video`,
-   `format_carousel`, `format_single_image_post`, `format_story_sequence`)
-   with drift-test enforcement, following the platform-enum precedent. The
-   enum is the full known vocabulary, not just production-supported formats:
-   the plan explicitly lets a promotion record not-yet-supported approved
-   formats as long as one is supported, so text formats join the enum (not a
-   separate list) at the production build-out. A code drift check ties
+   `format_carousel`, `format_single_image_post`, `format_story_sequence`,
+   `format_article`, `format_thread`) with drift-test enforcement, following
+   the platform-enum precedent. The enum is the full known vocabulary, not
+   just production-supported formats: the plan explicitly lets a promotion
+   record not-yet-supported approved formats as long as one is supported.
+   Slice 6 adds article/thread to both the enum and production-supported set.
+   A code drift check ties
    `PRODUCTION_SUPPORTED_FORMATS` to `PRODUCTION_PLAN_SCHEMAS` and the
    canonical enum.
 2. The promotion gate mechanically enforces the success condition: a

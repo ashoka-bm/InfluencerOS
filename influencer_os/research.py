@@ -41,6 +41,8 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
     "format_carousel",
     "format_single_image_post",
     "format_story_sequence",
+    "format_article",
+    "format_thread",
 })
 
 

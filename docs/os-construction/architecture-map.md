@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (38) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (40) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
@@ -72,15 +72,15 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (38) | JSON Schema contract per durable record. | [BUILT] |
-| `examples/*.example.json` (38) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (40) | JSON Schema contract per durable record. | [BUILT] |
+| `examples/*.example.json` (40) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary. | [BUILT] |
 | `docs/creator-workspace-structure.md` | Workspace layout + local-state policy. | [BUILT] |
 
 ### Skills (`skills/<skill-name>/`)
 
-Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skill status is per-row below: the research, queue, and promotion producers landed in Phase 1 slices 4–5; the remaining [PLANNED] producers belong to Phase 1 slices 6–7 and Phase 2.
+Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skill status is per-row below: the research, queue, promotion, template, and production-plan producers landed in Phase 1 slices 4–6; the remaining [PLANNED] producers belong to Phase 1 slice 7 and Phase 2.
 
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
@@ -96,8 +96,8 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
 | `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
 | `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [BUILT — Phase 1 slice 5] |
-| `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [PLANNED — Phase 1] |
-| `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [PLANNED — Phase 1] |
+| `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [BUILT — Phase 1 slice 6] |
+| `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [BUILT — Phase 1 slice 6] |
 | `create-output-package` | planning | Output Package + provenance. | [PLANNED — Phase 1] |
 | `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
@@ -161,13 +161,15 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [BUILT]
   Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [BUILT]
   Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [BUILT]
-  Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [PLANNED]
+  Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [BUILT]
   Phase 8  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
              format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)
              format_carousel         -> CarouselPlan
              format_single_image_post-> SingleImagePostPlan
-             format_story_sequence   -> StorySequencePlan                                         [PLANNED]
-  Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [PLANNED]
+             format_story_sequence   -> StorySequencePlan
+             format_article          -> ArticlePlan
+             format_thread           -> ThreadPlan                                                [BUILT]
+  Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [BUILT]
   Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
   (post)   Output Package             -> Skill(create-output-package)                             [PLANNED]
   (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2]
@@ -251,8 +253,8 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 | Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | `validate queue`: manifest/entry consistency + evidence ref resolution [BUILT — Phase 1 slice 3] | none |
 | Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | promotion gate: real queue entry required; unresolved evidence warns (human-approved) / fails (automated) [BUILT — Phase 1 slice 3] | user approves |
 | Applied template | promoted idea | `applied-social-template` | beats map to idea | `validate record applied-social-template` [BUILT — WS12] | template gate |
-| Production plan | applied template | format plan (4 schemas) | routed by `target_format_id` | schema + routing check | none |
-| Base generation plan | video plan | `base-video-generation-plan` | provider-neutral | schema | none |
+| Production plan | applied template | format plan (6 schemas) | routed by `target_format_id` and one content unit per Project | schema + routing check [BUILT — Phase 1 slice 6] | none |
+| Base generation plan | video plan | `base-video-generation-plan` | provider-neutral; required for short-form video only | schema + project requirement check [BUILT — Phase 1 slice 6] | none |
 | Output package | plan + artifact | `output-package` | full provenance chain enforced by schema (template + VUP ids required); IDs resolve to records; packaged projects cross-check project, creator, idea, template, and plan IDs | schema + provenance resolver [BUILT — WS12 + re-review fixes] | generation approval |
 
 ## Subagent Decision (open)

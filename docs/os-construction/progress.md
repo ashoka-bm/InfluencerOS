@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; the next slice is format-specific production planning (slice 6).
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slice 6 (format-specific production planning) landed 2026-07-04; the next slice is Output Package registration (slice 7).
 
 Completed:
 
@@ -126,9 +126,12 @@ Completed:
 
 - Addressed the five-slice review (2026-07-03; a whole-of-Phase-1 audit of slices 1-5 run after slice 5 closed, with every finding reproduced before its fix; records in the three slice plan docs): `import-intake` refuses symlinked destinations and escaping resolved paths before any write (a pre-planted broken symlink wrote through to a file outside the workspace); `validate workspace` fails duplicate intake ids/paths and duplicate reference-library asset ids at every status; fully anchored `^...$` schema patterns validate whole-string (closing the trailing-newline tolerance) and the intake/reference path pins reject dot segments; promotion checks were unified across the validator paths — `validate queue` now runs the full gate set (creator scope, filename==id, slot claims, warnings channel) and `validate research` runs the entry-side queue consistency, closing four reproduced queue-path bypasses and putting the slice 5 closure on the research path that `prune --apply` actually re-runs; `applied-social-template.target_format_id` joined the closed format enum with a plan-layer surface check (`format_interpretive_dance` previously passed `validate project`); within-run duplicate JSONL ids fail closed (they validated green but bricked `rebuild-index`); metric snapshots must snapshot evidence in their own run and evidence refs must cite snapshots of their own evidence; promotions require at least one evidence ref (Product Invariant trace); `prune --apply` pre-flights `validate research` before mutating; slot claims schema-validate the schedule (clean error instead of a `KeyError` from the `validate project` path); video pack refs resolve by the record's own id; stable findings follow filename==id with recall-index uniqueness; `validate project` pins the chain to the workspace creator; the approved-visual gate test isolates the gate; and the stale docs were refreshed (this file's verification script ran `validate queue` before the project existed, the architecture map's counts/ADR range/producer-status prose, and the slice 1 merged test names).
 
+- Slice 6 (2026-07-04), format-specific production planning: `article-plan` and `thread-plan` schemas and examples landed; the closed format vocabulary now includes `format_article` and `format_thread`; `project.schema.json` accepts `article` and `thread` content unit types while keeping `multi_platform_package` deferred; `PRODUCTION_PLAN_SCHEMAS`, `PRODUCTION_PLAN_ID_FIELDS`, and `PRODUCTION_SUPPORTED_FORMATS` route article/thread projects as production-supported; project validation requires each Project's `content_unit_type` to map to exactly one matching target format; text Projects validate without `plan/generation-plan.json`; `apply-social-template` and `create-production-plan` producer skills landed and were wired through the conductor, registry, context matrix, architecture map, repository map, README, and pipeline contract.
+
 Remaining:
 
-- Format-specific production planning (slice 6, including text-format routing per ADR 0020), then Output Package registration (slice 7).
+- Output Package registration (slice 7).
+- Research-intelligence hardening after slices 6-7, before scheduled research automation: combine `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing, and engagement-weighted source evaluation. Pull this forward only if repeated live research evals show material source-search waste before slice 7 closes.
 
 ### Phase 2: Learning OS
 
@@ -199,7 +202,10 @@ Remaining:
 - `published-post-record.schema.json`
 - `analytics-snapshot.schema.json`
 - `performance-summary.schema.json`
-- Existing planning records for research, ideas, templates, and format-specific plans.
+- Research, idea, template, and format-specific production records, including
+  `micro-journey-video-plan.schema.json`, `carousel-plan.schema.json`,
+  `single-image-post-plan.schema.json`, `story-sequence-plan.schema.json`,
+  `article-plan.schema.json`, and `thread-plan.schema.json`.
 
 ## Current Verification
 
@@ -410,11 +416,21 @@ and `validate research`; the reordered full workflow verification above
 re-run end to end, now covering rebuild-board, validate board,
 rebuild-index (8 records), and prune dry-run alongside the original
 commands (14 skills synced).
+Slice 6 (2026-07-04): 292 tests pass (5 added for text format schema
+support, promotion-gate support, article/thread project validation
+without generation plans, and the unit-type/target-format mismatch);
+drift checks pass (22 tests); 40 example records validate; the three
+live fixture workspaces pass `validate workspace` and `validate
+research`; `update-creators` synced 16 runtime skills into all three
+fixture workspaces with zero overrides lost. Full workflow verification
+re-run in `.tmp/slice6-verify`: workspace, research, queue, project,
+output-package record, board, recall index (8 records), prune dry-run,
+and copied-runtime sync all pass.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), and 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate) are complete (2026-07-03; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: format-specific production planning next (slice 6 — extends content unit types and format routing to text formats per ADR 0020; until it lands, promotion may only create Projects for supported formats).
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), and 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills) are complete (slices 1-5 on 2026-07-03, slice 6 on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: Output Package registration (slice 7), then research-intelligence hardening before scheduled research automation.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

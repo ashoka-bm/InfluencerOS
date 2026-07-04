@@ -312,10 +312,11 @@ One queue idea may promote into multiple Projects when the idea can support more
 than one content unit, such as a short-form video plus a carousel.
 
 Promotion may only create Projects for content unit types and formats that
-production currently supports. An idea approved for a not-yet-supported format,
-such as a Substack article before the text-format production build-out, stays
-in the queue with its approval intent recorded, and the agent must surface that
-production support is pending rather than silently creating an invalid Project.
+production currently supports. An idea approved for a not-yet-supported format
+stays in the queue with its approval intent recorded, and the agent must
+surface that production support is pending rather than silently creating an
+invalid Project. Article and thread Projects are production-supported as of
+Phase 1 slice 6.
 
 Promoted Projects should preserve traceability to the research that sparked
 them. The project should keep:

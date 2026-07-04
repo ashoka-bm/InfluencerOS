@@ -2,7 +2,7 @@
 
 Researched on: 2026-06-28.
 
-InfluencerOS v1 should start with a small platform-agnostic visual format set. The goal is not to model every platform feature. The goal is to pick enough common containers that creator-fit ideas are not forced into video when a carousel or still visual would be stronger.
+InfluencerOS v1 should use a small platform-agnostic format set. The goal is not to model every platform feature. The goal is to pick enough common containers that creator-fit ideas are not forced into video when a carousel, still visual, article, or thread would be stronger.
 
 ## V1 Formats
 
@@ -12,11 +12,13 @@ InfluencerOS v1 should start with a small platform-agnostic visual format set. T
 | Carousel | `format_carousel` | The idea needs steps, comparison, a mini story, a list, or multiple visual panels. |
 | Single image post | `format_single_image_post` | The idea is one strong generated still, graphic, quote visual, announcement, or identity signal. |
 | Story sequence | `format_story_sequence` | The idea is a quick sequence of vertical moments, behind-the-scenes fragments, or lightweight daily presence. |
+| Article | `format_article` | The idea needs depth, trust building, explanation, or a newsletter-style written artifact. |
+| Thread | `format_thread` | The idea works as an ordered sequence of compact text posts with a clear throughline. |
 
 ## Deferred Formats
 
 - Live stream: useful for trust and community, but not part of generated base asset planning yet.
-- Community / poll post: useful for engagement, but can become text-first and platform-specific.
+- Community / poll post: useful for engagement, but platform-specific.
 - Platform-specific variants: deferred until post-production or publishing modules exist.
 
 ## Research Notes

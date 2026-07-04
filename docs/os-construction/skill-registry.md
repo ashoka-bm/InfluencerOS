@@ -32,6 +32,8 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-research-findings` | research run requests, refresh findings, trend/watchlist/hashtag checks | Creator Profile, content schedule, findings, research intelligence | `research/runs/`, `research/findings.md`, `research/stable-findings/`, `research/intelligence/` | yes |
 | `manage-idea-queue` | add/update/score queue ideas, queue refresh, staleness review | findings, evidence refs, Creator Profile, content schedule | `research/idea-queue/`, queue-level `system/project-warnings.jsonl`, board/index via CLI | yes |
 | `promote-idea` | promote idea, approve idea into production, create project from idea | queue entry, findings, evidence refs, Creator Profile, content schedule | `research/idea-promotions/`, `projects/<project-slug>/` via `init-project`, promoted entry and manifest, schedule slot statuses, board/index via CLI | yes |
+| `apply-social-template` | apply template, choose production structure, adapt promoted idea beats | Project, locked promotion, queue entry, evidence brief, Creator Profile, template library | `projects/<project-slug>/plan/applied-template.json` | yes |
+| `create-production-plan` | create production plan, route project by format, draft generation plan | Project, applied template, locked promotion, evidence brief, Creator Profile, references, research evidence | `projects/<project-slug>/plan/production-plan.json`; `plan/generation-plan.json` for short-form video | yes |
 
 ## Creator Setup Subskills
 
@@ -65,8 +67,6 @@ These are not repo-owned skills and must not be added to conductor
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `apply-social-template` | adapt a selected template to an idea | Planning OS |
-| `create-production-plan` | route promoted idea to format-specific plan | Planning OS |
 | `create-output-package` | register package and provenance | Planning OS |
 | `distill-creator-learning` | convert performance evidence into creator memory | Learning OS |
 

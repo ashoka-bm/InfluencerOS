@@ -154,6 +154,8 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Carousel Plan | `schemas/carousel-plan.schema.json` | `examples/carousel-plan.example.json` |
 | Single Image Post Plan | `schemas/single-image-post-plan.schema.json` | `examples/single-image-post-plan.example.json` |
 | Story Sequence Plan | `schemas/story-sequence-plan.schema.json` | `examples/story-sequence-plan.example.json` |
+| Article Plan | `schemas/article-plan.schema.json` | `examples/article-plan.example.json` |
+| Thread Plan | `schemas/thread-plan.schema.json` | `examples/thread-plan.example.json` |
 | Base Video Generation Plan | `schemas/base-video-generation-plan.schema.json` | `examples/base-video-generation-plan.example.json` |
 | Creator Content Schedule | `schemas/creator-content-schedule.schema.json` | `examples/creator-content-schedule.example.json` |
 | Research Run | `schemas/research-run.schema.json` | `examples/research-run.example.json` |
@@ -189,6 +191,8 @@ After `AppliedSocialTemplate`, route by `target_format_id`:
 - `format_carousel` -> `CarouselPlan`.
 - `format_single_image_post` -> `SingleImagePostPlan`.
 - `format_story_sequence` -> `StorySequencePlan`.
+- `format_article` -> `ArticlePlan`.
+- `format_thread` -> `ThreadPlan`.
 
 ## Gate Rules
 

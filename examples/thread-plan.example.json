@@ -1,0 +1,38 @@
+{
+  "thread_plan_id": "thread_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "applied_social_template_id": "applied_template_luna_001",
+  "target_format_id": "format_thread",
+  "platform_style": "x_thread",
+  "opening_post": "Your laptop day does not need a full workout. It needs a two-minute reset.",
+  "throughline": "Show a desk-bound reader how one tiny sequence turns stress into a doable next action.",
+  "posts": [
+    {
+      "post_id": "post_01",
+      "post_role": "hook",
+      "copy": "The fastest reset is the one you can do before the next calendar alert.",
+      "evidence_to_use": [
+        "evidence_luna_fit_001"
+      ],
+      "reader_job": "Opt into the thread."
+    },
+    {
+      "post_id": "post_02",
+      "post_role": "steps",
+      "copy": "Stand, roll your shoulders, breathe low, then reset your screen height before sitting.",
+      "evidence_to_use": [
+        "finding_luna_fit_desk_reset_lunch"
+      ],
+      "reader_job": "Understand the routine."
+    }
+  ],
+  "voice_and_style_constraints": [
+    "Keep posts compact.",
+    "Do not overstate health outcomes."
+  ],
+  "cta": "Try it once before tomorrow's first meeting.",
+  "review_notes": [
+    "Keep each post standalone enough for skim reading."
+  ]
+}

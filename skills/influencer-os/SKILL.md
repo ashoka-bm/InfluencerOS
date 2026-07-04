@@ -26,7 +26,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 3. **Research Findings**: synthesize current public platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding.
 4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
 5. **Idea Promotion Gate**: ask the user to approve the full promotion package before creating production work. Recommend options if useful, but do not silently promote an idea.
-6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported (for example text formats before the production build-out), record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
+6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported, record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
 7. **Applied Social Template or Production Structure**: choose the format-compatible structure that best pulls the viewer through the promoted idea.
 8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.
 9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
@@ -41,8 +41,8 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `create-research-findings` | Research Findings backed by dated evidence | [BUILT — Phase 1 slice 4] |
 | `manage-idea-queue` | Scored Idea Queue entries | [BUILT — Phase 1 slice 4] |
 | `promote-idea` | Human-approved Idea Promotion + Projects | [BUILT — Phase 1 slice 5] |
-| `apply-social-template` | Applied Social Template | [PLANNED — Phase 1] |
-| `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [PLANNED — Phase 1] |
+| `apply-social-template` | Applied Social Template | [BUILT — Phase 1 slice 6] |
+| `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [BUILT — Phase 1 slice 6] |
 | `create-output-package` | Output Package + provenance | [PLANNED — Phase 1] |
 | `distill-creator-learning` | Creator Memory lessons from performance evidence | [PLANNED — Phase 2] |
 
@@ -58,9 +58,9 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` | [BUILT] |
 | 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` | [BUILT] |
 | 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` | [BUILT] |
-| 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [PLANNED] |
-| 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [PLANNED] |
-| 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [PLANNED] |
+| 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [BUILT] |
+| 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [BUILT] |
+| 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [BUILT] |
 | 10. Generation Approval Gate | user (exact-call approval) | — | [BUILT gate] |
 | Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [PLANNED] |
 | Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [PLANNED — Phase 2] |
@@ -131,6 +131,8 @@ Each queue idea must include:
 - `format_carousel`: swipeable visual sequence.
 - `format_single_image_post`: one strong still, graphic, or generated image.
 - `format_story_sequence`: short vertical visual sequence with an ephemeral/story feel.
+- `format_article`: long-form text article or newsletter-style post.
+- `format_thread`: ordered short-form text thread.
 
 ## Social Template Requirements
 
@@ -169,6 +171,12 @@ Carousel plans should define slide-level visual beats, a first-slide hook, creat
 Single image post plans should define the central visual idea, composition, avatar or scene requirements, text overlay policy, and generation prompt.
 
 Story sequence plans should define frame-level moments, sequence arc, lightweight text or sticker notes, creator continuity, and generation notes.
+
+Article plans should define the title, deck, thesis, section outline, evidence
+to use, voice/style constraints, CTA, and review notes.
+
+Thread plans should define the opening post, throughline, ordered posts,
+evidence to use, voice/style constraints, CTA, and review notes.
 
 ## Provider Boundary
 

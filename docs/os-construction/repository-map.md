@@ -79,6 +79,11 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/create-voice-samples/SKILL.md` | Voice sample extraction and curation. |
 | `skills/create-reference-library/SKILL.md` | Reference Library planning. |
 | `skills/create-runtime-context/SKILL.md` | Tiny always-loaded creator context files. |
+| `skills/create-research-findings/SKILL.md` | Research run and Research Findings producer. |
+| `skills/manage-idea-queue/SKILL.md` | Idea Queue producer. |
+| `skills/promote-idea/SKILL.md` | Idea Promotion and Project creation gate. |
+| `skills/apply-social-template/SKILL.md` | Applied Social Template or production structure producer. |
+| `skills/create-production-plan/SKILL.md` | Format-specific production plan producer. |
 
 Baseline source skills live under repo `skills/<skill-name>/SKILL.md` (kebab-case, no category prefix, optional per-skill `references/` and `SKILL.local.md` per ADR 0017). `init-creator` copies those skills into each Creator Workspace under `.claude/skills/<skill-name>/SKILL.md`; `sync-creator-runtime` refreshes copied runtime skills while preserving creator `SKILL.local.md` files and creator-only skill folders; `update-creators` runs a backup-protected batch refresh (ADR 0018). The full skill roster, including planned producer skills and the `wrap-up`/`memory-write` system skills, is in `architecture-map.md`.
 
@@ -134,6 +139,8 @@ skills/influencer-os/SKILL.md
       -> Carousel Plan
       -> Single Image Post Plan
       -> Story Sequence Plan
+      -> Article Plan
+      -> Thread Plan
   -> create Base Video Generation Plan when generation is planned
   -> stop at Generation Approval Gate
   -> create Output Package when an artifact exists

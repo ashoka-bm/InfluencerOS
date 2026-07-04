@@ -89,6 +89,122 @@ def populate_project_records(project_dir):
     copy_example_record("base-video-generation-plan.example.json", project_dir / "plan" / "generation-plan.json")
 
 
+def text_production_plan(unit_type):
+    if unit_type == "article":
+        return {
+            "article_plan_id": "article_luna_tiny_reset_001",
+            "creator_profile_id": "creator_luna_fit",
+            "idea_promotion_id": "idea_promotion_luna_fit_001",
+            "applied_social_template_id": "applied_template_luna_001",
+            "target_format_id": "format_article",
+            "working_title": "A two-minute reset for the moment your laptop wins",
+            "deck": "A concise article plan translating Luna's desk reset into a deeper habit-building read.",
+            "thesis": "Small posture resets work because they lower friction before stress becomes the default.",
+            "sections": [
+                {
+                    "section_id": "section_opening",
+                    "section_role": "hook",
+                    "headline": "The laptop-day reset",
+                    "key_points": [
+                        "Name the tense desk-worker moment.",
+                        "Promise a routine that fits between meetings."
+                    ],
+                    "evidence_to_use": [
+                        "evidence_luna_fit_001"
+                    ],
+                    "reader_job": "Recognize the problem and trust the practical scope."
+                },
+                {
+                    "section_id": "section_steps",
+                    "section_role": "process",
+                    "headline": "Three moves, no setup",
+                    "key_points": [
+                        "Explain the three-move sequence.",
+                        "Tie each movement to the target feeling."
+                    ],
+                    "evidence_to_use": [
+                        "finding_luna_fit_desk_reset_lunch"
+                    ],
+                    "reader_job": "Know exactly what to try."
+                }
+            ],
+            "voice_and_style_constraints": [
+                "Keep Luna's calm, practical voice.",
+                "Avoid clinical medical claims."
+            ],
+            "cta": "Save this for tomorrow's first tense meeting.",
+            "review_notes": [
+                "Check that every claim stays within the creator boundaries."
+            ]
+        }
+    return {
+        "thread_plan_id": "thread_luna_tiny_reset_001",
+        "creator_profile_id": "creator_luna_fit",
+        "idea_promotion_id": "idea_promotion_luna_fit_001",
+        "applied_social_template_id": "applied_template_luna_001",
+        "target_format_id": "format_thread",
+        "platform_style": "x_thread",
+        "opening_post": "Your laptop day does not need a full workout. It needs a two-minute reset.",
+        "throughline": "Show a desk-bound reader how one tiny sequence turns stress into a doable next action.",
+        "posts": [
+            {
+                "post_id": "post_01",
+                "post_role": "hook",
+                "copy": "The fastest reset is the one you can do before the next calendar alert.",
+                "evidence_to_use": [
+                    "evidence_luna_fit_001"
+                ],
+                "reader_job": "Opt into the thread."
+            },
+            {
+                "post_id": "post_02",
+                "post_role": "steps",
+                "copy": "Stand, roll your shoulders, breathe low, then reset your screen height before sitting.",
+                "evidence_to_use": [
+                    "finding_luna_fit_desk_reset_lunch"
+                ],
+                "reader_job": "Understand the routine."
+            }
+        ],
+        "voice_and_style_constraints": [
+            "Keep posts compact.",
+            "Do not overstate health outcomes."
+        ],
+        "cta": "Try it once before tomorrow's first meeting.",
+        "review_notes": [
+            "Keep each post standalone enough for skim reading."
+        ]
+    }
+
+
+def switch_project_to_text_format(workspace_dir, project_dir, unit_type):
+    format_id = f"format_{unit_type}"
+    platform = "substack" if unit_type == "article" else "x"
+    rewrite_json(
+        project_dir / "project.json",
+        lambda project: project.update(
+            content_unit_type=unit_type,
+            target_formats=[format_id],
+            platform_targets=[platform],
+        ),
+    )
+    rewrite_json(
+        workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+        lambda promotion: promotion.update(
+            approved_formats=[format_id],
+            approved_platforms=[platform],
+        ),
+    )
+    rewrite_json(
+        project_dir / "plan" / "applied-template.json",
+        lambda template: template.update(target_format_id=format_id),
+    )
+    (project_dir / "plan" / "production-plan.json").write_text(
+        json.dumps(text_production_plan(unit_type), indent=2) + "\n"
+    )
+    (project_dir / "plan" / "generation-plan.json").unlink()
+
+
 class CliTests(unittest.TestCase):
     def test_validate_examples_command(self):
         result = subprocess.run(
@@ -749,8 +865,20 @@ class ProvenanceResolutionTests(unittest.TestCase):
             _, project_dir = scaffold_project_workspace(temp_dir)
             rewrite_json(
                 project_dir / "project.json",
-                lambda project: project["target_formats"].append("format_carousel"),
+                lambda project: project.update(
+                    content_unit_type="carousel",
+                    target_formats=["format_carousel"],
+                ),
             )
+            rewrite_json(
+                project_dir / "plan" / "applied-template.json",
+                lambda template: template.update(target_format_id="format_carousel"),
+            )
+            copy_example_record(
+                "carousel-plan.example.json",
+                project_dir / "plan" / "production-plan.json",
+            )
+            (project_dir / "plan" / "generation-plan.json").unlink()
 
             with self.assertRaises(ValueError) as ctx:
                 validate_project(project_dir)
@@ -802,6 +930,40 @@ class ProvenanceResolutionTests(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 validate_project(project_dir)
             self.assertIn("format_carousel", str(ctx.exception))
+            self.assertIn("target_formats", str(ctx.exception))
+
+    def test_validate_project_accepts_text_plan_without_generation_plan(self):
+        for unit_type in ("article", "thread"):
+            with self.subTest(unit_type=unit_type):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+                    switch_project_to_text_format(workspace_dir, project_dir, unit_type)
+
+                    result = validate_project(project_dir)
+
+                    self.assertEqual(result["project_id"], "project_luna_tiny_reset_001")
+                    self.assertNotIn("plan/generation-plan.json", result["checked_paths"])
+
+    def test_validate_project_rejects_unit_type_without_matching_target_format(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            switch_project_to_text_format(workspace_dir, project_dir, "article")
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(target_formats=["format_thread"]),
+            )
+            rewrite_json(
+                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+                lambda promotion: promotion.update(approved_formats=["format_thread"]),
+            )
+            rewrite_json(
+                project_dir / "plan" / "applied-template.json",
+                lambda template: template.update(target_format_id="format_thread"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+            self.assertIn("content_unit_type", str(ctx.exception))
             self.assertIn("target_formats", str(ctx.exception))
 
     def test_validate_project_rejects_cached_queue_entry_mismatch(self):

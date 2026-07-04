@@ -1,6 +1,6 @@
 # InfluencerOS Roadmap
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 This roadmap defines phase order, exit criteria, and implementation priorities. Progress status lives in `docs/os-construction/progress.md`.
 
@@ -118,7 +118,8 @@ Exit criteria:
 - Output Package records validate and preserve provenance.
 
 Likely implementation slices, in the agreed build order (creators first, then
-research, then production):
+research, then production). Status through 2026-07-04: slices 1-6 are
+complete; slice 7 is next.
 
 1. Master intake import workflow.
 2. Creator readiness validation.
@@ -127,9 +128,23 @@ research, then production):
 4. Research Findings and Idea Queue workflow.
 5. Idea Promotion to Project workflow.
 6. Format-specific production planning, including extending content unit types
-   and format routing to text formats (article, thread) per ADR 0020. Until
-   this slice lands, promotion may only create Projects for supported formats.
+   and format routing to text formats (article, thread) per ADR 0020.
 7. Output Package registration.
+
+Phase 1 hardening follow-up after slices 6-7, captured from the 2026-07-03
+live research runtime eval:
+
+- Add the merged research-intelligence hardening slice after format-specific
+  production planning and Output Package registration. This slice should combine
+  `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing,
+  and engagement-weighted source evaluation. Research runs should record planned
+  sources before browsing, then record sources searched but not promoted to
+  evidence, why they were low yield, and whether they were useful only as
+  background context. Repeated low-yield sources should lower
+  `research/intelligence/sources.json` usefulness scores and eventually move to
+  `flagged_for_removal` or `retired`. Pull this slice forward only if repeated
+  live research evals show material source-search waste; complete it before
+  scheduled research automation.
 
 ## Phase 2: Learning OS
 

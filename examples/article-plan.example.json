@@ -1,0 +1,46 @@
+{
+  "article_plan_id": "article_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "applied_social_template_id": "applied_template_luna_001",
+  "target_format_id": "format_article",
+  "working_title": "A two-minute reset for the moment your laptop wins",
+  "deck": "A concise article plan translating Luna's desk reset into a deeper habit-building read.",
+  "thesis": "Small posture resets work because they lower friction before stress becomes the default.",
+  "sections": [
+    {
+      "section_id": "section_opening",
+      "section_role": "hook",
+      "headline": "The laptop-day reset",
+      "key_points": [
+        "Name the tense desk-worker moment.",
+        "Promise a routine that fits between meetings."
+      ],
+      "evidence_to_use": [
+        "evidence_luna_fit_001"
+      ],
+      "reader_job": "Recognize the problem and trust the practical scope."
+    },
+    {
+      "section_id": "section_steps",
+      "section_role": "process",
+      "headline": "Three moves, no setup",
+      "key_points": [
+        "Explain the three-move sequence.",
+        "Tie each movement to the target feeling."
+      ],
+      "evidence_to_use": [
+        "finding_luna_fit_desk_reset_lunch"
+      ],
+      "reader_job": "Know exactly what to try."
+    }
+  ],
+  "voice_and_style_constraints": [
+    "Keep Luna's calm, practical voice.",
+    "Avoid clinical medical claims."
+  ],
+  "cta": "Save this for tomorrow's first tense meeting.",
+  "review_notes": [
+    "Check that every claim stays within the creator boundaries."
+  ]
+}

@@ -722,13 +722,28 @@ class PromotionGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             promotion = load_example("idea-promotion")
-            # The schema enum currently equals the supported set, so simulate
-            # a future text format past the schema, like the automation case.
-            promotion["approved_formats"] = ["format_article"]
+            # Simulate a future format past the schema, like the automation case.
+            promotion["approved_formats"] = ["format_podcast"]
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_promotion_gate(workspace_dir, promotion)
             self.assertIn("no production-supported format", str(ctx.exception))
+
+    def test_text_formats_are_production_supported(self):
+        for format_id, platform in (
+            ("format_article", "substack"),
+            ("format_thread", "x"),
+        ):
+            with self.subTest(format_id=format_id):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace_dir = scaffold_research_workspace(temp_dir)
+                    promotion = load_example("idea-promotion")
+                    promotion["approved_formats"] = [format_id]
+                    promotion["approved_platforms"] = [platform]
+
+                    result = validate_promotion_gate(workspace_dir, promotion)
+
+                    self.assertEqual(result, [])
 
     def test_unresolved_evidence_fails_for_automated_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:

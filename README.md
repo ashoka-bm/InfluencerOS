@@ -1,6 +1,6 @@
 # InfluencerOS
 
-InfluencerOS creates universal short-form video ideas and base generation plans for avatar-led social media creators.
+InfluencerOS creates researched content ideas and production plans for avatar-led social media creators, starting with universal short-form video and now including article and thread plans.
 
 InfluencerOS is also being structured as a local-first Agentic OS adaptation. Root adapter files load the same durable project context for Codex, Claude, OpenClaw/Hermes-style agents, and compatible tools.
 
@@ -18,7 +18,7 @@ Choose Creator
   -> create a base generation plan when needed
 ```
 
-InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. Production stays format-first: it targets universal short-form vertical video that works across Instagram Reels, TikTok, and YouTube Shorts without a platform adapter.
+InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. Production stays format-first: it supports universal short-form vertical video, carousel, single-image, story-sequence, article, and thread plans without platform adapters.
 
 See [docs/os-construction/progress.md](docs/os-construction/progress.md) for the current phase map and build status.
 
@@ -44,7 +44,7 @@ The durable work is the operating system itself: docs, schemas, tests, CLI behav
 - [docs/os-construction/skill-registry.md](docs/os-construction/skill-registry.md): skill triggers, writes, and override policy.
 - [ARCHITECTURE.md](ARCHITECTURE.md): durable architecture direction.
 
-Creator setup can capture broader creator strategy inputs, including written surfaces such as Substack, LinkedIn, X, blogs, and newsletters. The current production pipeline still starts with the format-first visual social formats documented in the schemas and workflow docs.
+Creator setup can capture broader creator strategy inputs, including written surfaces such as Substack, LinkedIn, X, blogs, and newsletters. The current production pipeline is format-first and includes text production routes for article and thread projects.
 
 ## What V1 Includes
 
@@ -70,8 +70,10 @@ Creator setup can capture broader creator strategy inputs, including written sur
 - Carousel Plan schema
 - Single Image Post Plan schema
 - Story Sequence Plan schema
+- Article Plan schema
+- Thread Plan schema
 - Base Video Generation Plan schema
-- conductor skill for the first slice
+- conductor and producer skills through format-specific production planning
 
 ## What V1 Defers
 
@@ -149,7 +151,7 @@ After adding the plan records, validate the project with:
 python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
 ```
 
-Project validation anchors on the locked Idea Promotion: `source_refs.idea_promotion_id` must resolve to `research/idea-promotions/<id>.json` in the owning workspace, the promotion must list the project and point to a real idea queue entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, and a packaged project's output package must match the project, applied template, and plan records.
+Project validation anchors on the locked Idea Promotion: `source_refs.idea_promotion_id` must resolve to `research/idea-promotions/<id>.json` in the owning workspace, the promotion must list the project and point to a real idea queue entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, the project content unit must map to exactly one matching target format, text projects validate against article/thread plan schemas without a generation plan, and a packaged project's output package must match the project, applied template, and plan records.
 
 ## Validate Research State
 

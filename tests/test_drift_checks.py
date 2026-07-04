@@ -29,10 +29,12 @@ RESEARCH_MODULE_SCHEMAS = (
     "content-board", "automation-run", "system-event",
 )
 # The closed v1 format vocabulary (approval-surface decisions, 2026-07-03).
-# Text formats and multi-platform packaging join with the production build-out.
+# Text formats joined in Phase 1 slice 6; multi-platform packaging is still
+# deferred until it has a production plan contract.
 RESEARCH_FORMATS = [
     "format_short_form_video", "format_carousel",
     "format_single_image_post", "format_story_sequence",
+    "format_article", "format_thread",
 ]
 # project.schema.json caches both enums in source_refs (source_platforms /
 # source_platform_content_types), output-package embeds format_id twice, and

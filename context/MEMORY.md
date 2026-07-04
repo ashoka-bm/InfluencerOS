@@ -10,7 +10,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 
 - Phase 0C parity hardening is complete: batches A-G all landed 2026-07-03 and every roadmap exit criterion passes.
 - Phase 1 starts after 0C exits, slice order: intake import, readiness validation, ADR 0020 research module, research/queue workflow, promotion, production planning, output packaging.
-- Phase 1 slices 1-5 complete (2026-07-03), each hardened through post-landing reviews; `promote-idea` now owns the human-approval gate with promotion link consistency enforced at rest. Next: slice 6, format-specific production planning (adds text formats per ADR 0020; until then promotion creates Projects only for supported formats).
+- Phase 1 slices 1-6 complete (2026-07-03): intake, readiness, ADR 0020 research, research/queue, promotion, and format-specific production planning with article/thread routing. Next: slice 7, Output Package registration.
 
 ## Environment Notes
 
@@ -21,4 +21,3 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 ## Pending Decisions
 
 - None. Phase 0C execution decisions are recorded in the short-term plan; do not reopen without user approval.
-

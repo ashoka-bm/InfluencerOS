@@ -46,6 +46,8 @@ PRODUCTION_PLAN_SCHEMAS = {
     "carousel": "carousel-plan",
     "single_image_post": "single-image-post-plan",
     "story_sequence": "story-sequence-plan",
+    "article": "article-plan",
+    "thread": "thread-plan",
 }
 
 PRODUCTION_PLAN_ID_FIELDS = {
@@ -53,6 +55,8 @@ PRODUCTION_PLAN_ID_FIELDS = {
     "carousel-plan": "carousel_plan_id",
     "single-image-post-plan": "single_image_post_plan_id",
     "story-sequence-plan": "story_sequence_plan_id",
+    "article-plan": "article_plan_id",
+    "thread-plan": "thread_plan_id",
 }
 
 # Research pack ids resolve to <workspace>/<directory>/<pack-id>.json records.
@@ -73,6 +77,7 @@ def init_project(project_manifest_path, creator_workspace):
     creator_workspace = Path(creator_workspace)
     project = load_json(project_manifest_path)
     validate_record("project", project)
+    _validate_content_unit_target_format(project)
 
     _validate_creator_match(project, creator_workspace)
     _resolve_promotion(project, creator_workspace)
@@ -102,6 +107,7 @@ def validate_project(project_path):
 
     project = load_json(project_manifest_path)
     validate_record("project", project)
+    _validate_content_unit_target_format(project)
 
     expected_root = f"projects/{project['project_slug']}/"
     if project["project_paths"]["root"] != expected_root:
@@ -271,6 +277,21 @@ def _requires_generation_plan(project):
         project["content_unit_type"] == "short_form_video"
         or "format_short_form_video" in project.get("target_formats", [])
     )
+
+
+def _format_id_for_content_unit(content_unit_type):
+    return f"format_{content_unit_type}"
+
+
+def _validate_content_unit_target_format(project):
+    expected = _format_id_for_content_unit(project["content_unit_type"])
+    target_formats = set(project["target_formats"])
+    if target_formats != {expected}:
+        raise ValueError(
+            "Project content_unit_type must map to exactly one matching "
+            f"target format: {project['content_unit_type']!r} requires "
+            f"target_formats [{expected!r}], got {sorted(target_formats)}"
+        )
 
 
 def _locate_workspace(project_dir):

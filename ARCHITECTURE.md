@@ -1,6 +1,6 @@
 # Architecture
 
-InfluencerOS v1 is a dry-run-first planning system for universal short-form creator videos.
+InfluencerOS v1 is a dry-run-first planning system for researched creator content plans, starting with universal short-form video and now including article and thread production plans.
 
 ## Architectural Direction
 
@@ -144,19 +144,18 @@ Write boundaries:
 
 ## V1 Format Shortlist
 
-InfluencerOS v1 starts with four visual-first social post formats:
+InfluencerOS v1 supports six platform-agnostic production formats:
 
 - `short_form_video`: a vertical hook-to-payoff video.
 - `carousel`: a swipeable image sequence, including Instagram carousels and TikTok Photo Mode style posts.
 - `single_image_post`: one strong still, graphic, or generated image.
 - `story_sequence`: a short ephemeral-feeling sequence of vertical visuals.
+- `article`: a long-form written article or newsletter-style post.
+- `thread`: an ordered short-form text thread.
 
-Live streams, community posts, polls, and platform-specific variants are deferred until the first visual production loop is proven.
+Live streams, community posts, polls, and platform-specific variants are deferred until the file-first production loop is proven.
 
-Research and the Idea Queue are platform-scoped from day one (ADR 0020) and may
-recommend text formats such as articles and threads. Promotion may only create
-Projects for formats production supports; text content unit types and routing
-join in the production build-out step of Phase 1.
+Research and the Idea Queue are platform-scoped from day one (ADR 0020). Promotion may only create Projects for formats production supports; text content unit types and routing joined in Phase 1 slice 6.
 
 ## Default Video Envelope
 
