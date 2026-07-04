@@ -107,7 +107,7 @@ def register_output_package(project_path, output_package_path, asset_root=None):
     project_manifest_path = project_dir / "project.json"
     package_destination = project_dir / "output-package" / "output-package.json"
 
-    if package_destination.exists():
+    if package_destination.exists() or package_destination.is_symlink():
         raise FileExistsError(f"Output package already registered: {package_destination}")
     if not project_manifest_path.exists():
         raise FileNotFoundError(f"Missing project manifest: {project_manifest_path}")
@@ -130,6 +130,11 @@ def register_output_package(project_path, output_package_path, asset_root=None):
     output_package = load_json(output_package_path)
     validate_record("output-package", output_package)
     _validate_output_package_matches_project(output_package, project)
+    if output_package["status"] != "upload_ready":
+        raise ValueError(
+            "Output package must have status 'upload_ready' before registration; "
+            f"got {output_package['status']!r}"
+        )
     upload_asset_paths = _upload_ready_relative_paths(output_package)
 
     original_project_text = project_manifest_path.read_text()
@@ -144,7 +149,7 @@ def register_output_package(project_path, output_package_path, asset_root=None):
             _ensure_contained_target(target, project_dir, "upload-ready asset destination")
             if source.resolve() == target.resolve():
                 continue
-            if target.exists():
+            if target.exists() or target.is_symlink():
                 raise FileExistsError(f"Upload-ready asset already exists: {target}")
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
@@ -252,6 +257,11 @@ def _validate_output_package_matches_project(output_package, project):
             "Output package idea_promotion_id does not match project source_refs: "
             f"{output_package['source_refs']['idea_promotion_id']!r} != "
             f"{project['source_refs']['idea_promotion_id']!r}"
+        )
+    if project.get("status") == "packaged" and output_package["status"] != "upload_ready":
+        raise ValueError(
+            "Packaged projects must carry an upload-ready Output Package: "
+            f"{output_package['status']!r}"
         )
 
 

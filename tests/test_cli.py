@@ -788,6 +788,94 @@ class CliTests(unittest.TestCase):
             project = json.loads((project_dir / "project.json").read_text())
             self.assertEqual(project["status"], "planning")
 
+    def test_register_output_package_rejects_draft_package_without_packaging_project(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(package_path, lambda package: package.update(status="draft"))
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            with self.assertRaises(ValueError) as ctx:
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+
+            self.assertIn("upload_ready", str(ctx.exception))
+            self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "planning")
+
+    def test_register_output_package_rejects_symlinked_package_destination(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+            package_destination = project_dir / "output-package" / "output-package.json"
+            outside_target = Path(temp_dir) / "outside-package.json"
+            package_destination.symlink_to(outside_target)
+
+            with self.assertRaises(FileExistsError) as ctx:
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+
+            self.assertIn("already registered", str(ctx.exception))
+            self.assertFalse(outside_target.exists())
+            self.assertTrue(package_destination.is_symlink())
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "planning")
+
+    def test_register_output_package_rejects_symlinked_upload_ready_destination_before_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+            target = project_dir / package["upload_ready"][0]["path"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            outside_target = Path(temp_dir) / "outside-upload-ready.mp4"
+            target.symlink_to(outside_target)
+
+            caught = None
+            try:
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+            except Exception as exc:
+                caught = exc
+
+            self.assertIsNotNone(caught)
+            self.assertFalse(outside_target.exists())
+            self.assertIsInstance(caught, FileExistsError)
+            self.assertIn("already exists", str(caught))
+            self.assertTrue(target.is_symlink())
+            self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "planning")
+
+    def test_register_output_package_rejects_unlisted_platform_adaptation_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(
+                package_path,
+                lambda package: package["platform_adaptations"][0].update(
+                    caption_or_description_path="output-package/upload-ready/missing-description.md"
+                ),
+            )
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            with self.assertRaises(ValidationError) as ctx:
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+
+            self.assertIn("caption_or_description_path", str(ctx.exception))
+            self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
+
 
 class PropagationTests(unittest.TestCase):
     def make_second_manifest(self, temp_dir):

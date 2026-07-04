@@ -446,6 +446,14 @@ records validate. Full workflow verification re-run in
 `register-output-package`, packaged project validation, rebuild-board,
 and validate-board all pass. `update-creators` synced 17 runtime skills
 into all three fixture workspaces with zero overrides lost.
+Slice 7 review fixes (2026-07-04): 307 tests pass (4 added for
+output-package registration hardening); 40 example records validate.
+`register-output-package` now rejects symlinked package and upload-ready
+write targets before writing outside the project, rejects `draft` packages
+without marking the Project `packaged`, and requires platform adaptation
+caption/description paths to resolve to declared `upload_ready` files. The
+example output package now declares the YouTube description file it
+references.
 ```
 
 ## Next Work Queue

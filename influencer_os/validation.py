@@ -414,6 +414,16 @@ def validate_output_package_assets(record):
         )
 
     known_asset_ids = set(upload_asset_ids)
+    upload_paths = [asset["path"] for asset in record.get("upload_ready", [])]
+    known_upload_paths = set(upload_paths)
+    duplicate_upload_paths = sorted(
+        path for path in known_upload_paths if upload_paths.count(path) > 1
+    )
+    if duplicate_upload_paths:
+        raise ValidationError(
+            f"OutputPackage.upload_ready: duplicate path values {duplicate_upload_paths!r}"
+        )
+
     primary_refs = set(record.get("universal_core", {}).get("primary_asset_refs", []))
     missing_primary_refs = sorted(primary_refs - known_asset_ids)
     if missing_primary_refs:
@@ -430,6 +440,13 @@ def validate_output_package_assets(record):
                 "OutputPackage.platform_adaptations"
                 f"[{index}].format_id does not match universal_core.format_id: "
                 f"{format_id!r} != {universal_format_id!r}"
+            )
+        caption_path = adaptation.get("caption_or_description_path")
+        if caption_path not in known_upload_paths:
+            raise ValidationError(
+                "OutputPackage.platform_adaptations"
+                f"[{index}].caption_or_description_path does not resolve to "
+                f"an upload_ready path: {caption_path!r}"
             )
         asset_id = adaptation.get("thumbnail_or_first_frame_asset_id")
         if asset_id is None:

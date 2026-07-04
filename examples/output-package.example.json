@@ -50,6 +50,13 @@
       "path": "output-package/upload-ready/instagram-caption.md",
       "media_type": "text/markdown",
       "notes": "Caption text for Instagram adaptation."
+    },
+    {
+      "upload_asset_id": "upload_asset_luna_tiny_reset_youtube_description",
+      "asset_role": "description",
+      "path": "output-package/upload-ready/youtube-description.md",
+      "media_type": "text/markdown",
+      "notes": "Description text for YouTube Shorts adaptation."
     }
   ],
   "platform_adaptations": [
