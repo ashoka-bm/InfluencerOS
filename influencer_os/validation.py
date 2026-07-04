@@ -70,6 +70,23 @@ REQUIRED_CREATIVE_STAGES = {
     "cta",
 }
 
+GATED_RESEARCH_ACCESS_METHODS = {
+    "api_backed",
+    "scraping_api",
+    "logged_in_browser",
+    "scheduled_job",
+}
+
+LOW_YIELD_OUTCOMES = {
+    "background_only",
+    "no_platform_signal",
+    "no_visible_metrics",
+    "not_creator_fit",
+    "not_current",
+    "not_accessible",
+    "skipped_approval_required",
+}
+
 
 class ValidationError(AssertionError):
     pass
@@ -385,6 +402,10 @@ def validate_record_semantics(schema_name, record):
         validate_output_package_assets(record)
     if schema_name == "performance-summary":
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
+    if schema_name == "research-search-plan":
+        validate_research_search_plan_semantics(record)
+    if schema_name == "research-source-yield":
+        validate_research_source_yield_semantics(record)
 
 
 def validate_required_stages(record, field_name, record_name):
@@ -397,6 +418,59 @@ def validate_required_stages(record, field_name, record_name):
     if missing:
         raise ValidationError(
             f"{record_name}.{field_name}: missing required stages {sorted(missing)!r}"
+        )
+
+
+def validate_research_search_plan_semantics(record):
+    planned_platforms = set(record.get("platforms", []))
+    for adapter in record.get("adapters_considered", []):
+        if adapter.get("decision") == "use_now" and adapter.get("adapter_status") != "active":
+            raise ValidationError(
+                "ResearchSearchPlan.adapters_considered: only active adapters "
+                "may have decision 'use_now'"
+            )
+        if adapter.get("access_method") in GATED_RESEARCH_ACCESS_METHODS:
+            if adapter.get("decision") == "use_now":
+                raise ValidationError(
+                    "ResearchSearchPlan.adapters_considered: gated access "
+                    "methods cannot be used in this slice"
+                )
+            if adapter.get("approval_required") is not True:
+                raise ValidationError(
+                    "ResearchSearchPlan.adapters_considered: gated access "
+                    "methods must require approval"
+                )
+
+    for query in record.get("planned_queries", []):
+        if query.get("platform") not in planned_platforms:
+            raise ValidationError(
+                "ResearchSearchPlan.planned_queries: query platform must be "
+                "listed in top-level platforms"
+            )
+
+    for source in record.get("planned_sources", []):
+        if source.get("platform") not in planned_platforms:
+            raise ValidationError(
+                "ResearchSearchPlan.planned_sources: source platform must be "
+                "listed in top-level platforms"
+            )
+        if not (source.get("url") or source.get("source_ref")):
+            raise ValidationError(
+                "ResearchSearchPlan.planned_sources: each source needs url "
+                "or source_ref"
+            )
+
+
+def validate_research_source_yield_semantics(record):
+    outcome = record.get("outcome")
+    evidence_ids = record.get("evidence_ids", [])
+    if outcome == "promoted_to_evidence" and not evidence_ids:
+        raise ValidationError(
+            "ResearchSourceYield: promoted_to_evidence requires evidence_ids"
+        )
+    if outcome in LOW_YIELD_OUTCOMES and evidence_ids:
+        raise ValidationError(
+            "ResearchSourceYield: low-yield outcomes must not reference evidence_ids"
         )
 
 

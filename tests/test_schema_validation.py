@@ -296,6 +296,47 @@ class SchemaValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 validate_examples(root=temp_root)
 
+    def test_search_plan_rejects_planned_adapter_used_now(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["adapters_considered"][3]["decision"] = "use_now"
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
+    def test_search_plan_rejects_query_outside_planned_platforms(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["platforms"] = ["instagram", "tiktok"]
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
+    def test_search_plan_requires_planned_source_url_or_ref(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["planned_sources"][0].pop("url")
+        invalid["planned_sources"][0].pop("source_ref")
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
+    def test_source_yield_promoted_outcome_requires_evidence(self):
+        example = load_json("examples/research-source-yield.example.json")
+        invalid = deepcopy(example)
+        invalid["evidence_ids"] = []
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-source-yield", invalid)
+
+    def test_source_yield_low_yield_outcome_rejects_evidence(self):
+        example = load_json("examples/research-source-yield.example.json")
+        invalid = deepcopy(example)
+        invalid["outcome"] = "not_creator_fit"
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-source-yield", invalid)
+
 
 class ExampleCoverageDiscoveryTests(unittest.TestCase):
     PROBE_SCHEMA = {
