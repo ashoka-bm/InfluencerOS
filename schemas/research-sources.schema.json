@@ -80,6 +80,47 @@
             "type": "string",
             "format": "date"
           },
+          "yield_stats": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "checked_count",
+              "promoted_to_evidence_count",
+              "background_use_count",
+              "low_yield_count",
+              "usefulness_basis"
+            ],
+            "properties": {
+              "checked_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "promoted_to_evidence_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "background_use_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "low_yield_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "last_checked_on": {
+                "type": "string",
+                "format": "date"
+              },
+              "last_useful_on": {
+                "type": "string",
+                "format": "date"
+              },
+              "usefulness_basis": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
           "rationale": {
             "type": "string",
             "minLength": 1
@@ -94,6 +135,7 @@
           "added_on",
           "updated_on",
           "last_evaluated_on",
+          "yield_stats",
           "rationale"
         ]
       }

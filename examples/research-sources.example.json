@@ -13,6 +13,15 @@
       "added_on": "2026-07-03",
       "updated_on": "2026-07-03",
       "last_evaluated_on": "2026-07-03",
+      "yield_stats": {
+        "checked_count": 1,
+        "promoted_to_evidence_count": 1,
+        "background_use_count": 0,
+        "low_yield_count": 0,
+        "last_checked_on": "2026-07-03",
+        "last_useful_on": "2026-07-03",
+        "usefulness_basis": "One checked run produced evidence, a metric snapshot, a finding, and an idea queue entry."
+      },
       "rationale": "Surfaced two adjacent-creator desk-reset trends in the last run."
     }
   ]

@@ -1,0 +1,133 @@
+{
+  "research_search_plan_id": "research_search_plan_luna_fit_2026_07_03_001",
+  "research_run_id": "research_run_luna_fit_2026_07_03_001",
+  "creator_profile_id": "creator_luna_fit",
+  "created_on": "2026-07-03T08:55:00",
+  "mode": "scheduled_needs",
+  "scope": "Find current lunch-break desk-reset patterns for Luna's next open schedule slot.",
+  "platforms": [
+    "instagram",
+    "tiktok",
+    "reddit"
+  ],
+  "decision_basis": {
+    "creator_fit_summary": "Luna serves office workers who need practical, low-friction movement ideas that stay gentle and non-shaming.",
+    "schedule_signal": "The open content slot needs a short-form movement idea tied to desk work recovery.",
+    "intelligence_refs": [
+      "source_intel_luna_fit_001",
+      "search_term_luna_fit_001",
+      "watchlist_luna_fit_001",
+      "reference_creator_luna_fit_001"
+    ],
+    "prior_queue_refs": [
+      "idea_queue_entry_luna_fit_001"
+    ]
+  },
+  "adapters_considered": [
+    {
+      "adapter_id": "instagram_public_browser",
+      "access_method": "browser_visible",
+      "adapter_status": "active",
+      "auth_required": false,
+      "approval_required": false,
+      "decision": "use_now",
+      "reason": "The saved adjacent creator source is public and directly relevant to the desk-reset cluster."
+    },
+    {
+      "adapter_id": "tiktok_public_browser",
+      "access_method": "browser_visible",
+      "adapter_status": "active",
+      "auth_required": false,
+      "approval_required": false,
+      "decision": "use_now",
+      "reason": "The watchlist topic names TikTok walking-pad desk setups as a current signal."
+    },
+    {
+      "adapter_id": "reddit_public_web",
+      "access_method": "public_web",
+      "adapter_status": "active",
+      "auth_required": false,
+      "approval_required": false,
+      "decision": "use_now",
+      "reason": "Reddit can surface practical objections and language around desk setups without API access."
+    },
+    {
+      "adapter_id": "youtube_data_api",
+      "access_method": "api_backed",
+      "adapter_status": "planned",
+      "auth_required": true,
+      "approval_required": true,
+      "decision": "future_connector",
+      "reason": "YouTube is useful before go-live but is not in the ADR 0020 research platform set yet."
+    },
+    {
+      "adapter_id": "instagram_logged_in_browser",
+      "access_method": "logged_in_browser",
+      "adapter_status": "deferred",
+      "auth_required": true,
+      "approval_required": true,
+      "decision": "future_connector",
+      "reason": "Logged-in platform access needs explicit auth, privacy, and retention decisions."
+    }
+  ],
+  "planned_queries": [
+    {
+      "query_id": "query_luna_fit_001",
+      "platform": "tiktok",
+      "query_intent": "trend_scan",
+      "query": "lunch break stretch routine",
+      "source_type": "search_term",
+      "purpose": "Check whether quick desk-reset movement hooks are currently visible.",
+      "expected_signal": "Recent short videos with visible engagement and reusable first-frame or hook patterns.",
+      "routing_basis": "Agentic OS trend scan pattern: search public social surfaces first, then weigh engagement and creator fit."
+    },
+    {
+      "query_id": "query_luna_fit_002",
+      "platform": "reddit",
+      "query_intent": "general_discussion",
+      "query": "walking pad desk setups",
+      "source_type": "watchlist_topic",
+      "purpose": "Check discussion language and practical objections from office workers.",
+      "expected_signal": "Pain points, objections, and language that can shape the payoff.",
+      "routing_basis": "Agentic OS discussion pattern: use Reddit for practical objections and community phrasing."
+    }
+  ],
+  "planned_sources": [
+    {
+      "source_plan_id": "source_plan_luna_fit_001",
+      "platform": "instagram",
+      "url": "https://www.instagram.com/deskwellnessdaily",
+      "source_ref": "source_intel_luna_fit_001",
+      "source_type": "saved_source",
+      "reason": "Adjacent creator source previously surfaced two relevant desk-reset trends."
+    }
+  ],
+  "skipped_sources": [
+    {
+      "name": "youtube_data_api",
+      "reason": "Planned pre-go-live connector; not active in the ADR 0020 research platform set."
+    },
+    {
+      "name": "instagram_logged_in_browser",
+      "platform": "instagram",
+      "reason": "Logged-in access needs an explicit future approval and credential policy."
+    }
+  ],
+  "approval_gates": [
+    {
+      "gate_id": "approval_gate_luna_fit_001",
+      "required_before": "logged_in_access",
+      "reason": "Using a logged-in social account can expose private/session-bound data."
+    },
+    {
+      "gate_id": "approval_gate_luna_fit_002",
+      "required_before": "api_backed_search",
+      "reason": "API-backed search may require keys, cost controls, and provider-specific retention rules."
+    }
+  ],
+  "future_connector_notes": [
+    "Before go-live, revisit YouTube as a first-class platform or a video-source adapter with an ADR 0020 update.",
+    "Before go-live, decide whether logged-in Instagram and TikTok are allowed, which accounts they use, and what data may be stored.",
+    "Scheduled research should consume this search-plan and source-yield shape instead of inventing a separate planning contract."
+  ]
+}

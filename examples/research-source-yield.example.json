@@ -1,0 +1,34 @@
+{
+  "research_source_yield_id": "research_source_yield_luna_fit_001",
+  "research_run_id": "research_run_luna_fit_2026_07_03_001",
+  "creator_profile_id": "creator_luna_fit",
+  "checked_on": "2026-07-03T09:12:00",
+  "source_key": "source_intel_luna_fit_001",
+  "source_kind": "saved_source",
+  "platform": "instagram",
+  "adapter_id": "instagram_public_browser",
+  "access_method": "browser_visible",
+  "source_plan_id": "source_plan_luna_fit_001",
+  "url": "https://www.instagram.com/deskwellnessdaily",
+  "outcome": "promoted_to_evidence",
+  "yield_reason": "Produced a current desk-reset reel with visible metrics, reusable hook structure, and clear creator fit.",
+  "evidence_ids": [
+    "evidence_luna_fit_001"
+  ],
+  "metric_snapshot_ids": [
+    "metric_snapshot_luna_fit_001"
+  ],
+  "finding_ids": [
+    "finding_luna_fit_desk_reset_lunch"
+  ],
+  "idea_queue_entry_ids": [
+    "idea_queue_entry_luna_fit_001"
+  ],
+  "engagement_basis": {
+    "visible_metric_signal": "strong",
+    "cross_platform_validation": false,
+    "creator_fit": "high",
+    "notes": "Visible metrics were above the account baseline and the pattern fit Luna's non-shaming desk reset lane."
+  },
+  "recommended_intelligence_action": "raise_usefulness"
+}

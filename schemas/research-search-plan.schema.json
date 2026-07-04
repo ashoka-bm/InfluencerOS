@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-search-plan.schema.json",
+  "title": "ResearchSearchPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_search_plan_id",
+    "research_run_id",
+    "creator_profile_id",
+    "created_on",
+    "mode",
+    "scope",
+    "platforms",
+    "decision_basis",
+    "adapters_considered",
+    "planned_queries",
+    "planned_sources",
+    "skipped_sources",
+    "approval_gates",
+    "future_connector_notes"
+  ],
+  "properties": {
+    "research_search_plan_id": {
+      "type": "string",
+      "pattern": "^research_search_plan_[a-zA-Z0-9_-]+$"
+    },
+    "research_run_id": {
+      "type": "string",
+      "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "scheduled_needs",
+        "wildcard_discovery",
+        "reference_creator_watchlist",
+        "topic_overlap_scan",
+        "urgent_trend_check",
+        "queue_refresh",
+        "hashtag_search_term_check"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "x",
+          "instagram",
+          "tiktok",
+          "substack",
+          "medium",
+          "reddit",
+          "facebook",
+          "linkedin"
+        ]
+      },
+      "minItems": 1
+    },
+    "decision_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "creator_fit_summary",
+        "schedule_signal",
+        "intelligence_refs",
+        "prior_queue_refs"
+      ],
+      "properties": {
+        "creator_fit_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schedule_signal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intelligence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prior_queue_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+          }
+        }
+      }
+    },
+    "adapters_considered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "adapter_id",
+          "access_method",
+          "adapter_status",
+          "auth_required",
+          "approval_required",
+          "decision",
+          "reason"
+        ],
+        "properties": {
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_:-]*$"
+          },
+          "access_method": {
+            "type": "string",
+            "enum": [
+              "public_web",
+              "browser_visible",
+              "external_video_understanding",
+              "user_provided_local",
+              "manual_paste",
+              "api_backed",
+              "scraping_api",
+              "logged_in_browser",
+              "scheduled_job"
+            ]
+          },
+          "adapter_status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "planned",
+              "deferred",
+              "unavailable"
+            ]
+          },
+          "auth_required": {
+            "type": "boolean"
+          },
+          "approval_required": {
+            "type": "boolean"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "use_now",
+              "skip_this_run",
+              "future_connector"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "planned_queries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query_id",
+          "platform",
+          "query_intent",
+          "query",
+          "source_type",
+          "purpose",
+          "expected_signal",
+          "routing_basis"
+        ],
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "pattern": "^query_[a-zA-Z0-9_-]+$"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "x",
+              "instagram",
+              "tiktok",
+              "substack",
+              "medium",
+              "reddit",
+              "facebook",
+              "linkedin"
+            ]
+          },
+          "query_intent": {
+            "type": "string",
+            "enum": [
+              "recommendations",
+              "news",
+              "how_to",
+              "general_discussion",
+              "trend_scan",
+              "creator_watchlist",
+              "hashtag_check",
+              "queue_refresh"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "saved_source",
+              "search_term",
+              "hashtag",
+              "reference_creator",
+              "watchlist_topic",
+              "ad_hoc"
+            ]
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_signal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "routing_basis": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "planned_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_plan_id",
+          "platform",
+          "source_type",
+          "reason"
+        ],
+        "properties": {
+          "source_plan_id": {
+            "type": "string",
+            "pattern": "^source_plan_[a-zA-Z0-9_-]+$"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "x",
+              "instagram",
+              "tiktok",
+              "substack",
+              "medium",
+              "reddit",
+              "facebook",
+              "linkedin"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https?://"
+          },
+          "source_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "saved_source",
+              "search_result",
+              "hashtag_page",
+              "creator_profile",
+              "watchlist_item",
+              "direct_url"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "skipped_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "reason"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "x",
+              "instagram",
+              "tiktok",
+              "substack",
+              "medium",
+              "reddit",
+              "facebook",
+              "linkedin"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "approval_gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate_id",
+          "required_before",
+          "reason"
+        ],
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "pattern": "^approval_gate_[a-zA-Z0-9_-]+$"
+          },
+          "required_before": {
+            "type": "string",
+            "enum": [
+              "api_backed_search",
+              "scraping_api",
+              "logged_in_access",
+              "provider_transcription",
+              "batch_video_understanding",
+              "scheduled_execution",
+              "external_notification"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "future_connector_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

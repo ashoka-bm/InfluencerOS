@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-source-yield.schema.json",
+  "title": "ResearchSourceYield",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_source_yield_id",
+    "research_run_id",
+    "creator_profile_id",
+    "checked_on",
+    "source_key",
+    "source_kind",
+    "platform",
+    "adapter_id",
+    "access_method",
+    "outcome",
+    "yield_reason",
+    "evidence_ids",
+    "metric_snapshot_ids",
+    "finding_ids",
+    "idea_queue_entry_ids",
+    "engagement_basis",
+    "recommended_intelligence_action"
+  ],
+  "properties": {
+    "research_source_yield_id": {
+      "type": "string",
+      "pattern": "^research_source_yield_[a-zA-Z0-9_-]+$"
+    },
+    "research_run_id": {
+      "type": "string",
+      "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "checked_on": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "saved_source",
+        "search_result",
+        "hashtag_page",
+        "creator_profile",
+        "watchlist_item",
+        "direct_url",
+        "search_term"
+      ]
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "x",
+        "instagram",
+        "tiktok",
+        "substack",
+        "medium",
+        "reddit",
+        "facebook",
+        "linkedin"
+      ]
+    },
+    "adapter_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]*$"
+    },
+    "access_method": {
+      "type": "string",
+      "enum": [
+        "public_web",
+        "browser_visible",
+        "external_video_understanding",
+        "user_provided_local",
+        "manual_paste",
+        "api_backed",
+        "scraping_api",
+        "logged_in_browser",
+        "scheduled_job"
+      ]
+    },
+    "query_id": {
+      "type": "string",
+      "pattern": "^query_[a-zA-Z0-9_-]+$"
+    },
+    "source_plan_id": {
+      "type": "string",
+      "pattern": "^source_plan_[a-zA-Z0-9_-]+$"
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https?://"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "promoted_to_evidence",
+        "used_as_background",
+        "background_only",
+        "no_platform_signal",
+        "no_visible_metrics",
+        "not_creator_fit",
+        "not_current",
+        "not_accessible",
+        "skipped_approval_required"
+      ]
+    },
+    "yield_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "metric_snapshot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^metric_snapshot_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^finding_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "idea_queue_entry_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "engagement_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visible_metric_signal",
+        "cross_platform_validation",
+        "creator_fit",
+        "notes"
+      ],
+      "properties": {
+        "visible_metric_signal": {
+          "type": "string",
+          "enum": [
+            "none",
+            "weak",
+            "moderate",
+            "strong",
+            "unknown"
+          ]
+        },
+        "cross_platform_validation": {
+          "type": "boolean"
+        },
+        "creator_fit": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "recommended_intelligence_action": {
+      "type": "string",
+      "enum": [
+        "none",
+        "raise_usefulness",
+        "lower_usefulness",
+        "flag_for_removal",
+        "retire",
+        "add_candidate"
+      ]
+    }
+  }
+}
