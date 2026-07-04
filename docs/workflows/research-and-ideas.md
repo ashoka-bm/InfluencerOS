@@ -630,6 +630,54 @@ those examples are central to the finding. Competitor/reference tracking is in
 scope when it is grounded in public evidence and used to learn from patterns,
 not to copy exact creative expression.
 
+### Signal Tier Rubric
+
+`visible_metric_signal` (on each source-yield record) and `confidence` (on each
+evidence record) are the two quality dials the workflow leaves to agent
+judgment. They must be assigned the same way across runs, so anchor them to this
+rubric rather than to raw numbers. The rubric is heuristic on purpose: the eight
+platforms differ too much for fixed thresholds, and creator-relative
+outperformance is a stronger signal than any absolute count.
+
+Read `visible_metric_signal` as the engagement of the observed post in context:
+
+- `strong` — clearly beats the source account's or reference creator's own
+  baseline, or is unmistakably high for the platform and format, and the lift
+  shows in active engagement (saves, shares, comments), not views alone.
+- `moderate` — above baseline or solidly mid-pack; real interest, not a
+  standout.
+- `weak` — at or below baseline, or low for the platform and format.
+- `none` — negligible traction, or an old post with no live interest.
+- `unknown` — metrics are not visible; record this honestly, never guess.
+
+Prefer active signals over passive reach: a high view count with near-zero
+saves, shares, or comments is at most `moderate`. When no baseline can be
+established, say so in the record and cap the tier at `moderate` unless the
+absolute number is unmistakable for that platform. A post outside the run's
+recency window drops one tier unless it is evidence of a durable pattern, in
+which case it belongs in a stable finding, not a trend.
+
+Read `confidence` (evidence-level trust) as that metric signal tempered by
+corroboration, recency, creator fit, and stated limitations:
+
+- `high` — a `moderate`-or-better signal that is current, on the creator's
+  plausible topic range, and either corroborated across at least two independent
+  sources or creators or a clear creator-relative outperformer with visible
+  active engagement. A single isolated example, or a `farther_field` source,
+  does not reach `high` on metrics alone — virality is not credibility.
+- `medium` — a real but thin signal: one solid source, weaker corroborated
+  metrics, or a slightly off-domain fit. Open-web or trend-article claims cap at
+  `medium` unless they resolve to an actual primary post.
+- `low` — weak or absent metrics, a lone anecdote, an unverified claim, stale
+  material, or a pattern off the creator's lane. Flag it; never hide it behind a
+  confident finding.
+
+This rubric adapts the Agentic OS `str-trending-research` engagement-weighting
+tiers into InfluencerOS's agent-authored, creator-relative form. It deliberately
+does not import that skill's weighted-sum score or batch normalization: a
+creator-relative baseline plus the source-yield learning loop is the chosen
+model (ADR 0021), and this rubric only makes the existing enums repeatable.
+
 ## Finding Organization
 
 Research findings should be organized primarily by topic and topic overlap. Each
@@ -656,6 +704,35 @@ Candidate finding statuses:
 - `declining`,
 - `stale`,
 - `thin_evidence`.
+
+## Synthesis Discipline
+
+Findings are synthesized from captured evidence, not from prior knowledge. Every
+claim in a finding must trace to an evidence line captured in this or an earlier
+run; a claim that cannot be attributed is not a finding yet.
+
+State corroboration breadth explicitly. Each material finding records how many
+independent sources, creators, and platforms carry the pattern. A pattern seen
+across two or more independent creators or platforms is a stronger, higher-
+confidence finding than a single post: set
+`engagement_basis.cross_platform_validation` on the source-yield records that
+show it, and note the breadth in the finding itself ("seen across 3 sources /
+2 platforms").
+
+Mine for contradictions. Actively look for sources that disagree or where the
+pattern underperforms, and record the counter-signal. If real searching turns up
+none, say so; if everything agrees perfectly, suspect that the synthesis is
+over-simplified rather than that consensus is total. Contradictions are
+high-value — they are often the most interesting finding and a content angle in
+their own right. Make it explicit in the finding's prose whether a pattern is
+broadly corroborated, a single-source signal, or contested, so the creator can
+weight it.
+
+This synthesis discipline adapts the Agentic OS `str-trending-research`
+`synthesis-guide.md` (engagement-weighted, cross-validated synthesis with a
+consensus/contradiction pass and an attribute-to-source self-check) into
+InfluencerOS's schema-backed findings. It stays agent-authored — no score term
+is computed for corroboration — consistent with the ADR 0021 no-formula stance.
 
 ## Storage Format Decision
 

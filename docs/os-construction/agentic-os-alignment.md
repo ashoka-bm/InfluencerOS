@@ -34,6 +34,7 @@ The note must include:
 | System skills improve themselves from feedback. | `wrap-up` and `memory-write` system skills write `context/learnings.md`, `process-learnings.md`, `SKILL.local.md`, and `context/MEMORY.md`; behavior skills carry `## Rules`/`## Self-Update`. | Accepted in ADR 0016 |
 | External tools plug in through explicit skill/tool boundaries without vendoring. | `bradautomates/claude-video` `/watch` is an optional external acquisition tool for Video Understanding Packs; it stays outside the repo, out of conductor `dependencies`, and inside the provider boundary (decision record in `docs/video-understanding-research.md`, tracked in the skill-registry External Tool Integrations table). | Adopted (2026-07-03) |
 | Creator performance learning feeds future ideas. | Learning OS records analytics, performance summaries, and distilled creator memory (`distill-creator-learning`) before future ideas use those lessons. | Contracted (Phase 2) |
+| Engagement-weighted, cross-validated synthesis judges what is worth using. | The Signal Tier Rubric anchors `visible_metric_signal` and `confidence`, and the Synthesis Discipline requires corroboration breadth plus a contradiction pass (`docs/workflows/research-and-ideas.md`); both adapt `str-trending-research`'s `synthesis-guide.md` and `score.py` into agent-authored, creator-relative, no-formula guidance over the ADR 0021 schemas. The weighted-sum score and batch normalization are deliberately not imported. | Adopted (2026-07-04); adapts ADR 0021 |
 
 ## Accepted Divergences
 

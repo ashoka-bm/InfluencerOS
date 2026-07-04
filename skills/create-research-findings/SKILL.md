@@ -72,6 +72,13 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
   visible metrics, and creator-relative outperformance over trend articles.
 - Store summaries and short quoted snippets (hooks), never full captions or
   transcripts by default.
+- Assign `visible_metric_signal` (source-yield) and `confidence` (evidence)
+  from the Signal Tier Rubric in `docs/workflows/research-and-ideas.md`, not
+  from raw numbers, so two runs judge the same post the same way. Prefer
+  active engagement (saves/shares/comments) over passive reach; virality is
+  not credibility, so an isolated or `farther_field` hit does not earn
+  `high` on metrics alone, and open-web/trend claims cap at `medium` until
+  they resolve to a primary post.
 - Mark `confidence` and `limitations` honestly; flag thin evidence instead
   of hiding it behind confident findings.
 
@@ -88,6 +95,12 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
 - Every material finding gets a stable `finding_id` listed in the
   frontmatter. Stale or declining material moves out of the rolling summary
   unless strategically important.
+- Synthesize from captured evidence, not prior knowledge: every claim traces
+  to an evidence line. State corroboration breadth (how many independent
+  sources, creators, and platforms carry the pattern) and record any
+  counter-signal — see the Synthesis Discipline in
+  `docs/workflows/research-and-ideas.md`. If everything agrees perfectly,
+  suspect over-simplification rather than total consensus.
 - Promote a finding to `research/stable-findings/<stable-finding-id>.md`
   (`schemas/stable-finding.schema.json`) only when repeated research proves
   it durable.
