@@ -9,8 +9,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 ## Active Threads
 
 - Phase 0C parity hardening is complete: batches A-G all landed 2026-07-03 and every roadmap exit criterion passes.
-- Phase 1 starts after 0C exits, slice order: intake import, readiness validation, ADR 0020 research module, research/queue workflow, promotion, production planning, output packaging.
-- Phase 1 slices 1-6 complete (2026-07-03): intake, readiness, ADR 0020 research, research/queue, promotion, and format-specific production planning with article/thread routing. Next: slice 7, Output Package registration.
+- Phase 1 slices 1-7 plus research-intelligence hardening are complete as of 2026-07-04; next exercise the manual research-intelligence loop before scheduled automation.
 
 ## Environment Notes
 
