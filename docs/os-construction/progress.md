@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slice 6 (format-specific production planning) landed 2026-07-04; the next slice is Output Package registration (slice 7).
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slices 6 (format-specific production planning) and 7 (Output Package registration) landed 2026-07-04. The next Phase 1 work is the research-intelligence hardening follow-up before scheduled research automation.
 
 Completed:
 
@@ -130,9 +130,10 @@ Completed:
 
 - Addressed the slice 6 review follow-up (2026-07-04): `project.schema.json` now declares `target_formats.maxItems: 1` and documents the content-unit pairing invariant, so `validate record project` no longer gives a false green for multi-format project manifests; `_requires_generation_plan` keys off `content_unit_type` only, relying on the project invariant to keep target formats paired; and `AGENTS.md` now reflects that article/thread text formats are production-supported.
 
+- Slice 7 (2026-07-04), Output Package registration: `register-output-package <output-package.json> --project <project-dir> [--asset-root <dir>]` landed as the local file-first write gate. It validates the Project and Output Package, requires package/project creator and promotion refs to match, copies `upload_ready` files from a mirrored asset root into `projects/<project-slug>/output-package/upload-ready/`, writes `output-package/output-package.json`, advances the Project to `packaged`, and rolls back the package/status/asset writes if final `validate project` fails. Output Package semantics now require upload asset refs to resolve, keep visual package thumbnail/first-frame refs mandatory, and allow `thumbnail_or_first_frame_asset_id: null` for article/thread text packages. The `create-output-package` producer skill landed under `skills/`, moved from Missing Future Skills into the Core Workflow Skills registry, gained Output packaging context coverage, and the conductor/architecture/repository docs flipped it to [BUILT].
+
 Remaining:
 
-- Output Package registration (slice 7).
 - Research-intelligence hardening after slices 6-7, before scheduled research automation: combine `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing, and engagement-weighted source evaluation. Pull this forward only if repeated live research evals show material source-search waste before slice 7 closes.
 
 ### Phase 2: Learning OS
@@ -256,6 +257,10 @@ python3 -m influencer_os validate research .tmp/creators/luna-fit
 python3 -m influencer_os validate queue .tmp/creators/luna-fit
 python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day
 python3 -m influencer_os validate record output-package examples/output-package.example.json
+mkdir -p .tmp/package-assets/output-package/upload-ready
+python3 -c "import json, pathlib; package=json.load(open('examples/output-package.example.json')); root=pathlib.Path('.tmp/package-assets'); [((root / asset['path']).parent.mkdir(parents=True, exist_ok=True), (root / asset['path']).write_text(asset['upload_asset_id'] + '\n')) for asset in package['upload_ready']]"
+python3 -m influencer_os register-output-package examples/output-package.example.json --project .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day --asset-root .tmp/package-assets
+python3 -m influencer_os validate project .tmp/creators/luna-fit/projects/tiny-reset-after-laptop-day
 python3 -m influencer_os rebuild-board .tmp/creators/luna-fit
 python3 -m influencer_os validate board .tmp/creators/luna-fit
 python3 -m influencer_os rebuild-index .tmp/creators/luna-fit --db .tmp/creators/index.sqlite
@@ -428,11 +433,20 @@ fixture workspaces with zero overrides lost. Full workflow verification
 re-run in `.tmp/slice6-verify`: workspace, research, queue, project,
 output-package record, board, recall index (8 records), prune dry-run,
 and copied-runtime sync all pass.
+Slice 7 (2026-07-04): 300 tests pass (8 added for output-package
+registration, rollback on package/project mismatch, text-package
+registration without a generation plan, nullable text thumbnails, and
+upload asset-ref and adaptation-format semantics); drift checks pass (22 tests); 40 example
+records validate. Full workflow verification re-run in
+`.tmp/slice7-verify`: workspace, research, queue, project,
+`register-output-package`, packaged project validation, rebuild-board,
+and validate-board all pass. `update-creators` synced 17 runtime skills
+into all three fixture workspaces with zero overrides lost.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), and 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills) are complete (slices 1-5 on 2026-07-03, slice 6 on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 in the roadmap's slice order: Output Package registration (slice 7), then research-intelligence hardening before scheduled research automation.
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills), and 7 (Output Package registration with `create-output-package` and `register-output-package`) are complete (slices 1-5 on 2026-07-03, slices 6-7 on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 with research-intelligence hardening before scheduled research automation.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

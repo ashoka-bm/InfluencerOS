@@ -258,7 +258,7 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `projects/<project-id>/plan/` stores Applied Social Templates, format-specific production plans, and provider-neutral generation plans.
 
-`projects/<project-id>/output-package/` stores one upload-ready Output Package. `output-package.json` contains the universal core, platform adaptations, source refs, and required Creative Performance Map. `assets/` holds local materials. `upload-ready/` holds the exact files and text a person needs to upload. `source-refs/` may hold copies or pointers needed to audit how the package was created.
+`projects/<project-id>/output-package/` stores one upload-ready Output Package. `output-package.json` contains the universal core, platform adaptations, source refs, and required Creative Performance Map. `assets/` holds local materials. `upload-ready/` holds the exact files and text a person needs to upload. `source-refs/` may hold copies or pointers needed to audit how the package was created. `python3 -m influencer_os register-output-package` is the write gate for this folder: it copies upload-ready files, writes the package record, marks the Project `packaged`, validates, and rolls back its writes on failure.
 
 `projects/<project-id>/published/` stores Published Post Records that link the Output Package to real platform publications.
 

@@ -34,6 +34,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `promote-idea` | promote idea, approve idea into production, create project from idea | queue entry, findings, evidence refs, Creator Profile, content schedule | `research/idea-promotions/`, `projects/<project-slug>/` via `init-project`, promoted entry and manifest, schedule slot statuses, board/index via CLI | yes |
 | `apply-social-template` | apply template, choose production structure, adapt promoted idea beats | Project, locked promotion, queue entry, evidence brief, Creator Profile, template library | `projects/<project-slug>/plan/applied-template.json` | yes |
 | `create-production-plan` | create production plan, route project by format, draft generation plan | Project, applied template, locked promotion, evidence brief, Creator Profile, references, research evidence | `projects/<project-slug>/plan/production-plan.json`; `plan/generation-plan.json` for short-form video | yes |
+| `create-output-package` | register output package, package upload-ready assets, mark project packaged | Project, applied template, production plan, generation plan when present, locked promotion, Reference Library | `projects/<project-slug>/output-package/`, Project status via `register-output-package` | yes |
 
 ## Creator Setup Subskills
 
@@ -67,7 +68,6 @@ These are not repo-owned skills and must not be added to conductor
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `create-output-package` | register package and provenance | Planning OS |
 | `distill-creator-learning` | convert performance evidence into creator memory | Learning OS |
 
-Coverage for these planned skills is deferred per the Context Coverage Rule until they are built; the producer skills are built in their Phase 1 slices — the workstream-10 conductor call graph marks them `[PLANNED]` with a halt rule, and each marker is an open build obligation. Per ADR 0017 the machine-actionable source for skill dependencies is each skill's `dependencies` frontmatter (enforced against `docs/os-construction/architecture-map.md` by the call-graph drift check), not a duplicated registry column; skill categories are expressed by this registry's section tables (core workflow, creator setup, system, future).
+Coverage for this planned skill is deferred per the Context Coverage Rule until it is built in Phase 2; the conductor call graph marks it `[PLANNED]` with a halt rule. Per ADR 0017 the machine-actionable source for skill dependencies is each skill's `dependencies` frontmatter (enforced against `docs/os-construction/architecture-map.md` by the call-graph drift check), not a duplicated registry column; skill categories are expressed by this registry's section tables (core workflow, creator setup, system, future).

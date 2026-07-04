@@ -47,7 +47,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 
 | Path | Role |
 | --- | --- |
-| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `init-run`, `rebuild-index`, `rebuild-board`, `prune`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `init-run`, `rebuild-index`, `rebuild-board`, `prune`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |
@@ -84,6 +84,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/promote-idea/SKILL.md` | Idea Promotion and Project creation gate. |
 | `skills/apply-social-template/SKILL.md` | Applied Social Template or production structure producer. |
 | `skills/create-production-plan/SKILL.md` | Format-specific production plan producer. |
+| `skills/create-output-package/SKILL.md` | Output Package registration producer. |
 
 Baseline source skills live under repo `skills/<skill-name>/SKILL.md` (kebab-case, no category prefix, optional per-skill `references/` and `SKILL.local.md` per ADR 0017). `init-creator` copies those skills into each Creator Workspace under `.claude/skills/<skill-name>/SKILL.md`; `sync-creator-runtime` refreshes copied runtime skills while preserving creator `SKILL.local.md` files and creator-only skill folders; `update-creators` runs a backup-protected batch refresh (ADR 0018). The full skill roster, including planned producer skills and the `wrap-up`/`memory-write` system skills, is in `architecture-map.md`.
 

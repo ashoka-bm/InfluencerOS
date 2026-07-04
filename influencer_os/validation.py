@@ -382,6 +382,7 @@ def _matches_type(value, type_name):
 def validate_record_semantics(schema_name, record):
     if schema_name == "output-package":
         validate_required_stages(record, "creative_performance_map", "OutputPackage")
+        validate_output_package_assets(record)
     if schema_name == "performance-summary":
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
 
@@ -397,3 +398,50 @@ def validate_required_stages(record, field_name, record_name):
         raise ValidationError(
             f"{record_name}.{field_name}: missing required stages {sorted(missing)!r}"
         )
+
+
+TEXT_FORMAT_IDS = {"format_article", "format_thread"}
+
+
+def validate_output_package_assets(record):
+    upload_asset_ids = [asset["upload_asset_id"] for asset in record.get("upload_ready", [])]
+    duplicate_asset_ids = sorted(
+        asset_id for asset_id in set(upload_asset_ids) if upload_asset_ids.count(asset_id) > 1
+    )
+    if duplicate_asset_ids:
+        raise ValidationError(
+            f"OutputPackage.upload_ready: duplicate upload_asset_id values {duplicate_asset_ids!r}"
+        )
+
+    known_asset_ids = set(upload_asset_ids)
+    primary_refs = set(record.get("universal_core", {}).get("primary_asset_refs", []))
+    missing_primary_refs = sorted(primary_refs - known_asset_ids)
+    if missing_primary_refs:
+        raise ValidationError(
+            "OutputPackage.universal_core.primary_asset_refs do not resolve to "
+            f"upload_ready assets: {missing_primary_refs!r}"
+        )
+
+    for index, adaptation in enumerate(record.get("platform_adaptations", [])):
+        universal_format_id = record.get("universal_core", {}).get("format_id")
+        format_id = adaptation.get("format_id")
+        if format_id != universal_format_id:
+            raise ValidationError(
+                "OutputPackage.platform_adaptations"
+                f"[{index}].format_id does not match universal_core.format_id: "
+                f"{format_id!r} != {universal_format_id!r}"
+            )
+        asset_id = adaptation.get("thumbnail_or_first_frame_asset_id")
+        if asset_id is None:
+            if format_id not in TEXT_FORMAT_IDS:
+                raise ValidationError(
+                    "OutputPackage.platform_adaptations"
+                    f"[{index}].thumbnail_or_first_frame_asset_id is required for {format_id!r}"
+                )
+            continue
+        if asset_id not in known_asset_ids:
+            raise ValidationError(
+                "OutputPackage.platform_adaptations"
+                f"[{index}].thumbnail_or_first_frame_asset_id does not resolve to "
+                f"an upload_ready asset: {asset_id!r}"
+            )

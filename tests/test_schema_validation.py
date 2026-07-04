@@ -19,6 +19,14 @@ from influencer_os.validation import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def set_output_package_format(record, format_id):
+    record["universal_core"].update(format_id=format_id)
+    for adaptation in record["platform_adaptations"]:
+        adaptation.update(format_id=format_id)
+        if format_id in {"format_article", "format_thread"}:
+            adaptation["thumbnail_or_first_frame_asset_id"] = None
+
+
 class SchemaValidationTests(unittest.TestCase):
     def test_examples_validate_against_schemas(self):
         results = validate_examples()
@@ -75,7 +83,7 @@ class SchemaValidationTests(unittest.TestCase):
                 "creator-content-schedule",
                 lambda r: r["content_goals"][0]["preferred_formats"].extend(["format_article", "format_thread"]),
             ),
-            ("output-package", lambda r: r["universal_core"].update(format_id="format_article")),
+            ("output-package", lambda r: set_output_package_format(r, "format_article")),
             ("applied-social-template", lambda r: r.update(target_format_id="format_thread")),
         )
         for schema_name, mutate in cases:
@@ -83,6 +91,38 @@ class SchemaValidationTests(unittest.TestCase):
             mutate(valid)
             with self.subTest(schema=schema_name):
                 validate_record(schema_name, valid)
+
+    def test_text_output_package_allows_null_thumbnail_or_first_frame(self):
+        package = deepcopy(load_json("examples/output-package.example.json"))
+        package["universal_core"].update(format_id="format_article")
+        for adaptation in package["platform_adaptations"]:
+            adaptation.update(
+                format_id="format_article",
+                thumbnail_or_first_frame_asset_id=None,
+            )
+
+        validate_record("output-package", package)
+
+    def test_visual_output_package_requires_thumbnail_or_first_frame(self):
+        package = deepcopy(load_json("examples/output-package.example.json"))
+        package["platform_adaptations"][0]["thumbnail_or_first_frame_asset_id"] = None
+
+        with self.assertRaises(ValidationError):
+            validate_record("output-package", package)
+
+    def test_output_package_asset_refs_must_resolve_to_upload_ready_assets(self):
+        package = deepcopy(load_json("examples/output-package.example.json"))
+        package["universal_core"]["primary_asset_refs"] = ["upload_asset_missing"]
+
+        with self.assertRaises(ValidationError):
+            validate_record("output-package", package)
+
+    def test_output_package_platform_adaptations_match_universal_format(self):
+        package = deepcopy(load_json("examples/output-package.example.json"))
+        package["platform_adaptations"][0]["format_id"] = "format_article"
+
+        with self.assertRaises(ValidationError):
+            validate_record("output-package", package)
 
     def test_project_rejects_production_unsupported_unit_type(self):
         # multi_platform_package has no production plan schema yet.

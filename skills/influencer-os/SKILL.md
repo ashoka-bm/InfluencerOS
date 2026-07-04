@@ -1,6 +1,6 @@
 ---
 name: influencer-os
-description: Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, and creating provider-neutral generation plans.
+description: Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, creating provider-neutral generation plans, and registering output packages.
 dependencies:
   - create-research-findings
   - manage-idea-queue
@@ -43,7 +43,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `promote-idea` | Human-approved Idea Promotion + Projects | [BUILT — Phase 1 slice 5] |
 | `apply-social-template` | Applied Social Template | [BUILT — Phase 1 slice 6] |
 | `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [BUILT — Phase 1 slice 6] |
-| `create-output-package` | Output Package + provenance | [PLANNED — Phase 1] |
+| `create-output-package` | Output Package + provenance | [BUILT — Phase 1 slice 7] |
 | `distill-creator-learning` | Creator Memory lessons from performance evidence | [PLANNED — Phase 2] |
 
 **Halt rule (ADR 0016/0017):** when a phase's owner skill is marked `[PLANNED]` and its folder does not exist under `skills/`, halt at that phase, tell the user which skill is missing and which Phase 1 slice builds it, and stop. Never improvise the phase from base knowledge and never pretend the skill ran. Each `[PLANNED]` marker is an open build obligation tracked in `docs/os-construction/skill-registry.md` (Missing Future Skills) and the roadmap Phase 1 slice list.
@@ -62,7 +62,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [BUILT] |
 | 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [BUILT] |
 | 10. Generation Approval Gate | user (exact-call approval) | — | [BUILT gate] |
-| Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [PLANNED] |
+| Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [BUILT] |
 | Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [PLANNED — Phase 2] |
 
 ## Video Understanding Requirements

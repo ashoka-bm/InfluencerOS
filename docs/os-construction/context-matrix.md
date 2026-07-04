@@ -57,6 +57,7 @@ Current workflow coverage:
 | `promote-idea` | Idea promotion |
 | `apply-social-template` | Template application |
 | `create-production-plan` | Production planning, generation planning |
+| `create-output-package` | Output packaging |
 | `create-creator-profile` | Creator setup |
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |

@@ -12,6 +12,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.projects import init_project, validate_project
+from influencer_os.projects import register_output_package
 from influencer_os.validation import ValidationError
 from tests.test_readiness_validation import place_asset_files, populate_foundation
 
@@ -81,6 +82,13 @@ def rewrite_json(path, mutate):
     record = json.loads(path.read_text())
     mutate(record)
     path.write_text(json.dumps(record, indent=2) + "\n")
+
+
+def write_upload_ready_assets(asset_root, package):
+    for asset in package["upload_ready"]:
+        asset_path = asset_root / asset["path"]
+        asset_path.parent.mkdir(parents=True, exist_ok=True)
+        asset_path.write_text(f"{asset['upload_asset_id']}\n")
 
 
 def populate_project_records(project_dir):
@@ -709,6 +717,77 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("does not match creator workspace", result.stderr)
 
+    def test_register_output_package_command_copies_assets_and_marks_project_packaged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "register-output-package",
+                    str(package_path),
+                    "--project",
+                    str(project_dir),
+                    "--asset-root",
+                    str(asset_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Registered output package", result.stdout)
+            self.assertTrue((project_dir / "output-package" / "output-package.json").exists())
+            for asset in package["upload_ready"]:
+                copied = project_dir / asset["path"]
+                self.assertEqual(copied.read_text(), f"{asset['upload_asset_id']}\n")
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "packaged")
+            validate_project(project_dir)
+
+    def test_register_output_package_rejects_mismatch_without_partial_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            rewrite_json(package_path, lambda package: package.update(project_id="project_other_001"))
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "register-output-package",
+                    str(package_path),
+                    "--project",
+                    str(project_dir),
+                    "--asset-root",
+                    str(asset_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("does not match project", result.stderr)
+            self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "planning")
+
 
 class PropagationTests(unittest.TestCase):
     def make_second_manifest(self, temp_dir):
@@ -1108,6 +1187,59 @@ class ProvenanceResolutionTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 validate_project(project_dir)
+
+    def test_register_output_package_accepts_text_project_without_generation_plan(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            switch_project_to_text_format(workspace_dir, project_dir, "article")
+            package = json.loads((ROOT / "examples" / "output-package.example.json").read_text())
+            package.update(
+                output_package_id="output_package_luna_article_001",
+                status="upload_ready",
+            )
+            package["universal_core"].update(
+                format_id="format_article",
+                title_base="The two-minute laptop-day reset",
+                caption_base="A practical article for easing out of desk tension.",
+                description_base="Long-form article package for Substack.",
+                primary_asset_refs=["upload_asset_luna_article_markdown"],
+            )
+            package["source_refs"]["production_plan_ids"] = ["article_luna_tiny_reset_001"]
+            package["upload_ready"] = [
+                {
+                    "upload_asset_id": "upload_asset_luna_article_markdown",
+                    "asset_role": "description",
+                    "path": "output-package/upload-ready/luna-article.md",
+                    "media_type": "text/markdown",
+                    "notes": "Upload-ready article body.",
+                }
+            ]
+            package["platform_adaptations"] = [
+                {
+                    "platform": "substack",
+                    "format_id": "format_article",
+                    "title": "The two-minute laptop-day reset",
+                    "caption_or_description_path": "output-package/upload-ready/luna-article.md",
+                    "thumbnail_or_first_frame_asset_id": None,
+                    "cta": "Save this reset for your next laptop-heavy day.",
+                    "posting_time_recommendation": "Use creator learning defaults until analytics exist.",
+                    "creative_performance_variant_notes": "Substack adaptation has no thumbnail or first-frame requirement.",
+                }
+            ]
+            package_path = Path(temp_dir) / "article-output-package.json"
+            package_path.write_text(json.dumps(package, indent=2) + "\n")
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+
+            result = register_output_package(
+                project_dir,
+                package_path,
+                asset_root=asset_root,
+            )
+
+            self.assertEqual(result["output_package_id"], "output_package_luna_article_001")
+            self.assertEqual(json.loads((project_dir / "project.json").read_text())["status"], "packaged")
+            validate_project(project_dir)
 
 
 class ReadinessGateTests(unittest.TestCase):

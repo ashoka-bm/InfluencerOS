@@ -38,3 +38,6 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### apply-social-template
 - 2026-07-04: Text formats can use social templates as reader-progression structures; applied beats should answer reader questions rather than describe shots or slides.
+
+### create-output-package
+- 2026-07-04: Use register-output-package as the only Output Package write gate; it copies upload-ready files, advances the Project to packaged, and relies on validate project for provenance closure.

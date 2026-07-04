@@ -16,6 +16,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.projects import init_project, validate_project
+from influencer_os.projects import register_output_package
 from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
@@ -63,6 +64,11 @@ def main(argv=None):
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
     project_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    package_parser = subparsers.add_parser("register-output-package", help="Register an Output Package inside a project and mark it packaged.")
+    package_parser.add_argument("output_package", help="Path to an Output Package JSON record.")
+    package_parser.add_argument("--project", required=True, help="Path to the project directory.")
+    package_parser.add_argument("--asset-root", help="Directory containing upload-ready files at the paths named in the package record.")
 
     index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
     index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
@@ -198,6 +204,17 @@ def main(argv=None):
             )
             print(f"Initialized project: {project_dir}")
             print("Next phase: add selected idea and production plan")
+            return 0
+
+        if args.command == "register-output-package":
+            result = register_output_package(
+                args.project,
+                args.output_package,
+                asset_root=args.asset_root,
+            )
+            print(f"Registered output package: {result['output_package_path']}")
+            print(f"Copied {len(result['copied_assets'])} upload-ready assets.")
+            print("Next phase: manual publication record when published.")
             return 0
 
         if args.command == "update-creators":

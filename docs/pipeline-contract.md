@@ -94,6 +94,14 @@ Every Output Package must include a Creative Performance Map. It maps packaging,
 
 Output Packages use a universal core with optional platform adaptations. Platform adaptations may specify platform, format, title, caption or description, thumbnail or first-frame asset, hashtags or tags, posting-time recommendation, platform-specific CTA, crop, duration, and Creative Performance Map variants.
 
+`register-output-package` is the local file-first registration gate. It copies
+upload-ready files from a mirrored asset root into the Project, writes
+`output-package/output-package.json`, marks the Project `packaged`, and then
+runs project validation; failed validation rolls back the package write and
+status change. Text packages (`format_article`, `format_thread`) may record
+`thumbnail_or_first_frame_asset_id: null`; visual packages must point that
+field to an upload-ready asset.
+
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 
 Analytics Snapshots must preserve enough dimensions for performance attribution:

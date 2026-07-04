@@ -216,7 +216,10 @@
             "minLength": 1
           },
           "thumbnail_or_first_frame_asset_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^upload_asset_[a-zA-Z0-9_-]+$"
           },
           "cta": {

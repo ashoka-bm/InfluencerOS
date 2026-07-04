@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -99,6 +100,81 @@ def init_project(project_manifest_path, creator_workspace):
     return project_dir
 
 
+def register_output_package(project_path, output_package_path, asset_root=None):
+    project_dir = Path(project_path)
+    output_package_path = Path(output_package_path)
+    asset_root = Path(asset_root) if asset_root is not None else None
+    project_manifest_path = project_dir / "project.json"
+    package_destination = project_dir / "output-package" / "output-package.json"
+
+    if package_destination.exists():
+        raise FileExistsError(f"Output package already registered: {package_destination}")
+    if not project_manifest_path.exists():
+        raise FileNotFoundError(f"Missing project manifest: {project_manifest_path}")
+    if not output_package_path.exists():
+        raise FileNotFoundError(f"Missing output package record: {output_package_path}")
+    if asset_root is not None and not asset_root.exists():
+        raise FileNotFoundError(f"Missing asset root: {asset_root}")
+
+    project = load_json(project_manifest_path)
+    validate_record("project", project)
+    _validate_content_unit_target_format(project)
+    if _status_at_least(project, "packaged"):
+        raise FileExistsError(f"Project is already packaged: {project_dir}")
+
+    # Preflight the current project before mutating it; this checks promotion,
+    # creator, template, plan, and generation-plan requirements for the
+    # project's current planning status.
+    validate_project(project_dir)
+
+    output_package = load_json(output_package_path)
+    validate_record("output-package", output_package)
+    _validate_output_package_matches_project(output_package, project)
+    upload_asset_paths = _upload_ready_relative_paths(output_package)
+
+    original_project_text = project_manifest_path.read_text()
+    copied_targets = []
+    try:
+        for relative_path in upload_asset_paths:
+            target = project_dir / relative_path
+            source = target if asset_root is None else asset_root / relative_path
+            if not source.exists():
+                raise FileNotFoundError(f"Missing upload-ready asset: {source}")
+            _ensure_contained_file(source, asset_root or project_dir, "upload-ready asset source")
+            _ensure_contained_target(target, project_dir, "upload-ready asset destination")
+            if source.resolve() == target.resolve():
+                continue
+            if target.exists():
+                raise FileExistsError(f"Upload-ready asset already exists: {target}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+            copied_targets.append(target)
+
+        package_destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(output_package_path, package_destination)
+
+        project["status"] = "packaged"
+        _write_json(project_manifest_path, project)
+
+        validate_project(project_dir)
+    except Exception:
+        project_manifest_path.write_text(original_project_text)
+        if package_destination.exists():
+            package_destination.unlink()
+        for target in copied_targets:
+            if target.exists():
+                target.unlink()
+        raise
+
+    return {
+        "output_package_id": output_package["output_package_id"],
+        "project_id": project["project_id"],
+        "project_path": project_dir,
+        "output_package_path": package_destination,
+        "copied_assets": copied_targets,
+    }
+
+
 def validate_project(project_path):
     project_dir = Path(project_path)
     project_manifest_path = project_dir / "project.json"
@@ -142,6 +218,80 @@ def validate_project(project_path):
         "checked_paths": sorted(set(required_paths)),
         "warnings": warnings,
     }
+
+
+def _write_json(path, record):
+    path.write_text(json.dumps(record, indent=2) + "\n")
+
+
+def _validate_output_package_matches_project(output_package, project):
+    if output_package["project_id"] != project["project_id"]:
+        raise ValueError(
+            "Output package project_id does not match project: "
+            f"{output_package['project_id']!r} != {project['project_id']!r}"
+        )
+    if output_package["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValueError(
+            "Output package creator_profile_id does not match project: "
+            f"{output_package['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+        )
+    expected_format_id = _format_id_for_content_unit(project["content_unit_type"])
+    actual_format_id = output_package["universal_core"]["format_id"]
+    if actual_format_id != expected_format_id:
+        raise ValueError(
+            "Output package universal_core.format_id does not match project content_unit_type: "
+            f"{actual_format_id!r} != {expected_format_id!r}"
+        )
+    if output_package["source_refs"]["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
+        raise ValueError(
+            "Output package idea_promotion_id does not match project source_refs: "
+            f"{output_package['source_refs']['idea_promotion_id']!r} != "
+            f"{project['source_refs']['idea_promotion_id']!r}"
+        )
+
+
+def _upload_ready_relative_paths(output_package):
+    paths = []
+    seen = set()
+    for asset in output_package["upload_ready"]:
+        relative_path = _safe_project_relative_path(
+            asset["path"],
+            required_prefix=("output-package", "upload-ready"),
+            context=f"upload_ready path for {asset['upload_asset_id']}",
+        )
+        if relative_path in seen:
+            raise ValueError(f"Duplicate upload-ready path: {asset['path']!r}")
+        seen.add(relative_path)
+        paths.append(relative_path)
+    return paths
+
+
+def _safe_project_relative_path(raw_path, required_prefix, context):
+    relative_path = Path(raw_path)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"{context} must be a relative path inside the project: {raw_path!r}")
+    if tuple(relative_path.parts[: len(required_prefix)]) != tuple(required_prefix):
+        expected = "/".join(required_prefix)
+        raise ValueError(f"{context} must live under {expected}/: {raw_path!r}")
+    if relative_path.name in ("", ".", ".."):
+        raise ValueError(f"{context} must name a file: {raw_path!r}")
+    return relative_path
+
+
+def _ensure_contained_file(path, root, context):
+    root = Path(root).resolve()
+    resolved = Path(path).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError(f"{context} escapes root: {path}")
+    if not resolved.is_file():
+        raise FileNotFoundError(f"{context} is not a file: {path}")
+
+
+def _ensure_contained_target(path, root, context):
+    root = Path(root).resolve()
+    resolved_parent = Path(path).parent.resolve()
+    if not resolved_parent.is_relative_to(root):
+        raise ValueError(f"{context} escapes project: {path}")
 
 
 def _validate_creator_match(project, creator_workspace):

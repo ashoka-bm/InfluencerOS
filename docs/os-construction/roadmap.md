@@ -118,8 +118,8 @@ Exit criteria:
 - Output Package records validate and preserve provenance.
 
 Likely implementation slices, in the agreed build order (creators first, then
-research, then production). Status through 2026-07-04: slices 1-6 are
-complete; slice 7 is next.
+research, then production). Status through 2026-07-04: slices 1-7 are
+complete; the research-intelligence hardening follow-up is next.
 
 1. Master intake import workflow.
 2. Creator readiness validation.

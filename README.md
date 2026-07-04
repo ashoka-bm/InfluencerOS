@@ -153,6 +153,16 @@ python3 -m influencer_os validate project workspace-library/creators/luna-fit/pr
 
 Project validation anchors on the locked Idea Promotion: `source_refs.idea_promotion_id` must resolve to `research/idea-promotions/<id>.json` in the owning workspace, the promotion must list the project and point to a real idea queue entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, the project content unit must map to exactly one matching target format, text projects validate against article/thread plan schemas without a generation plan, and a packaged project's output package must match the project, applied template, and plan records.
 
+## Register An Output Package
+
+Register an upload-ready package after the plan records and final/imported files exist:
+
+```bash
+python3 -m influencer_os register-output-package path/to/output-package.json --project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day --asset-root path/to/staged-assets
+```
+
+`--asset-root` should mirror the package's `upload_ready[].path` values, such as `output-package/upload-ready/final-video.mp4`. Omit it only when those files are already staged inside the project. The command copies upload-ready files, writes `output-package/output-package.json`, marks the project `packaged`, and rolls back those writes if `validate project` fails.
+
 ## Validate Research State
 
 Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:
