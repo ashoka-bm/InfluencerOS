@@ -521,6 +521,16 @@ codifies the normal local-first Planning OS path from new Creator Workspace
 setup through packaged Project output, using CLI gates for user-facing workflow
 boundaries and fixture file writes only for authored artifacts that are
 currently produced by human/agent skills rather than generation providers.
+Research-hardening review (2026-07-04): reviewed 26d52df against the Agentic
+OS reference and landed three follow-up batches. Batch A closed three
+source-yield at-rest validation gaps (bidirectional yield_stats
+reconciliation, source-yield duplicate-id guard, gated access-method
+rejection) and accepted ADR 0021. Batch B added the Signal Tier Rubric
+anchoring visible_metric_signal/confidence and a Synthesis Discipline
+(corroboration breadth plus a contradiction pass), recorded in
+agentic-os-alignment.md. Batch C added an advisory thin-evidence WARN in
+validate research and an anti-contamination query-grounding rule. 327 tests
+pass; drift checks and example validation clean.
 ```
 
 ## Next Work Queue
