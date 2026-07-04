@@ -70,7 +70,7 @@ class SchemaValidationTests(unittest.TestCase):
         cases = (
             ("idea-promotion", lambda r: r["approved_formats"].extend(["format_article", "format_thread"])),
             ("idea-queue-entry", lambda r: r["format_recommendations"].extend(["format_article", "format_thread"])),
-            ("project", lambda r: r["target_formats"].extend(["format_article", "format_thread"])),
+            ("project", lambda r: r.update(target_formats=["format_article"])),
             (
                 "creator-content-schedule",
                 lambda r: r["content_goals"][0]["preferred_formats"].extend(["format_article", "format_thread"]),
@@ -104,6 +104,14 @@ class SchemaValidationTests(unittest.TestCase):
             project["target_formats"] = [format_id]
             with self.subTest(unit_type=unit_type):
                 validate_record("project", project)
+
+    def test_project_rejects_multiple_target_formats_at_record_level(self):
+        example = load_json("examples/project.example.json")
+        invalid = deepcopy(example)
+        invalid["target_formats"].append("format_article")
+
+        with self.assertRaises(ValidationError):
+            validate_record("project", invalid)
 
     def test_project_requires_acceptance_criteria(self):
         example = load_json("examples/project.example.json")

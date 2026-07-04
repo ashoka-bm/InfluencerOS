@@ -78,7 +78,7 @@ Promotion).
 - Treat root `context/` and `brand_context/` as InfluencerOS first-party OS persona context. Treat Creator Workspace context as creator-specific and private.
 - Before adding or changing skills, check `docs/os-construction/skill-registry.md` and `docs/os-construction/context-matrix.md`.
 - Root `skills/<skill-name>/SKILL.md` files are the baseline skill source. Creator Workspaces run copied skills from `.claude/skills/<skill-name>/SKILL.md`; refresh them with `python3 -m influencer_os sync-creator-runtime <creator-workspace>` and preserve creator `SKILL.local.md` files.
-- InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. V1 production targets the visual-first format shortlist (universal short-form vertical video first); text formats join in the production build-out step. Do not add platform-specific adapters, post-production treatments, publishing, scheduling, or analytics unless explicitly requested.
+- InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. V1 production is format-first: visual-first formats remain centered on universal short-form vertical video, and article/thread text formats are now production-supported. Do not add platform-specific adapters, post-production treatments, publishing, scheduling, or analytics unless explicitly requested.
 - Audience and niche are creator-profile inputs. Do not invent or redefine them unless the user asks.
 - Research is time-sensitive. Date the research, cite sources, and keep trend claims tied to evidence.
 - Do not make provider-backed image, video, audio, or render calls without explicit user approval for the exact call or approved batch.

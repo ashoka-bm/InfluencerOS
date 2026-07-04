@@ -34,6 +34,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### create-production-plan
 - 2026-07-04: Phase 1 slice 6 established one Project per content unit: content_unit_type must map to exactly one target format, and article/thread plans do not require Base Video Generation Plans.
+- 2026-07-04: Within-record production-plan constraints should live in schema when possible; keep cross-field/project-chain checks in validate project, but encode cheap cardinality rules for validate record.
 
 ### apply-social-template
 - 2026-07-04: Text formats can use social templates as reader-progression structures; applied beats should answer reader questions rather than describe shots or slides.

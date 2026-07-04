@@ -200,8 +200,10 @@
       }
     },
     "target_formats": {
+      "$comment": "A Project is one content unit. The single target format must match content_unit_type; validate project enforces the cross-field pairing.",
       "type": "array",
       "minItems": 1,
+      "maxItems": 1,
       "items": {
         "type": "string",
         "enum": [

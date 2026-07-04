@@ -128,6 +128,8 @@ Completed:
 
 - Slice 6 (2026-07-04), format-specific production planning: `article-plan` and `thread-plan` schemas and examples landed; the closed format vocabulary now includes `format_article` and `format_thread`; `project.schema.json` accepts `article` and `thread` content unit types while keeping `multi_platform_package` deferred; `PRODUCTION_PLAN_SCHEMAS`, `PRODUCTION_PLAN_ID_FIELDS`, and `PRODUCTION_SUPPORTED_FORMATS` route article/thread projects as production-supported; project validation requires each Project's `content_unit_type` to map to exactly one matching target format; text Projects validate without `plan/generation-plan.json`; `apply-social-template` and `create-production-plan` producer skills landed and were wired through the conductor, registry, context matrix, architecture map, repository map, README, and pipeline contract.
 
+- Addressed the slice 6 review follow-up (2026-07-04): `project.schema.json` now declares `target_formats.maxItems: 1` and documents the content-unit pairing invariant, so `validate record project` no longer gives a false green for multi-format project manifests; `_requires_generation_plan` keys off `content_unit_type` only, relying on the project invariant to keep target formats paired; and `AGENTS.md` now reflects that article/thread text formats are production-supported.
+
 Remaining:
 
 - Output Package registration (slice 7).

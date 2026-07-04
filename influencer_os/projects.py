@@ -273,10 +273,9 @@ def _status_at_least(project, status):
 
 
 def _requires_generation_plan(project):
-    return (
-        project["content_unit_type"] == "short_form_video"
-        or "format_short_form_video" in project.get("target_formats", [])
-    )
+    # content_unit_type is the anchor; _validate_content_unit_target_format()
+    # keeps target_formats paired to it before record requirements are checked.
+    return project["content_unit_type"] == "short_form_video"
 
 
 def _format_id_for_content_unit(content_unit_type):
