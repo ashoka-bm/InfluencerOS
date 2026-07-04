@@ -370,6 +370,7 @@ def validate_research(workspace_path):
         check_creator_scope(record, scope)
 
     checked = []
+    source_yield_stats = {}
 
     schedule_path = workspace_dir / "content-schedule.json"
     if schedule_path.exists():
@@ -414,6 +415,40 @@ def validate_research(workspace_path):
             check_creator_scope(run_record, scope, run_manifest)
             checked.append(str(run_manifest.relative_to(workspace_dir)))
             run_id = run_record["research_run_id"]
+
+            search_plan = None
+            search_plan_path = run_dir / "search-plan.json"
+            completed_run = run_record["run_status"] != "failed"
+            if completed_run and not search_plan_path.exists():
+                raise ValidationError(f"Research run folder has no search-plan.json: {run_dir}")
+            if search_plan_path.exists():
+                try:
+                    validate_file("research-search-plan", search_plan_path)
+                except ValidationError as exc:
+                    raise ValidationError(f"{search_plan_path}: {exc}") from None
+                search_plan = load_json(search_plan_path)
+                if search_plan["research_run_id"] != run_id:
+                    raise ValidationError(
+                        f"{search_plan_path}: research_run_id "
+                        f"{search_plan['research_run_id']!r} does not match "
+                        f"the containing run {run_id!r}"
+                    )
+                if search_plan["mode"] != run_record["mode"]:
+                    raise ValidationError(
+                        f"{search_plan_path}: mode {search_plan['mode']!r} "
+                        f"does not match research-run.json mode {run_record['mode']!r}"
+                    )
+                missing_run_platforms = sorted(
+                    set(run_record["platforms"]) - set(search_plan["platforms"])
+                )
+                if missing_run_platforms:
+                    raise ValidationError(
+                        f"{search_plan_path}: research-run.json platforms "
+                        f"{missing_run_platforms!r} are not present in "
+                        "search-plan.json platforms"
+                    )
+                check_creator_scope(search_plan, scope, search_plan_path)
+                checked.append(str(search_plan_path.relative_to(workspace_dir)))
 
             def run_scoped(record, _run_id=run_id):
                 check_creator_scope(record, scope)
@@ -495,12 +530,88 @@ def validate_research(workspace_path):
                         "run's evidence.jsonl"
                     )
 
+            source_yield_path = run_dir / "source-yield.jsonl"
+            if completed_run and not source_yield_path.exists():
+                raise ValidationError(f"Research run folder has no source-yield.jsonl: {run_dir}")
+            if source_yield_path.exists():
+                source_yield_records = validate_jsonl_file(
+                    "research-source-yield", source_yield_path, record_check=run_scoped
+                )
+                plan_platforms = set(search_plan["platforms"]) if search_plan else set()
+                run_metric_ids = {
+                    record["metric_snapshot_id"]
+                    for record in run_records["metric-snapshots.jsonl"]
+                }
+                for record in source_yield_records:
+                    if plan_platforms and record["platform"] not in plan_platforms:
+                        raise ValidationError(
+                            f"{source_yield_path}: source yield "
+                            f"{record['research_source_yield_id']} platform "
+                            f"{record['platform']!r} is not in search-plan.json platforms"
+                        )
+                    missing_evidence = sorted(set(record["evidence_ids"]) - run_evidence_ids)
+                    if missing_evidence:
+                        raise ValidationError(
+                            f"{source_yield_path}: source yield "
+                            f"{record['research_source_yield_id']} references evidence "
+                            f"not present in this run: {missing_evidence}"
+                        )
+                    missing_metrics = sorted(set(record["metric_snapshot_ids"]) - run_metric_ids)
+                    if missing_metrics:
+                        raise ValidationError(
+                            f"{source_yield_path}: source yield "
+                            f"{record['research_source_yield_id']} references metric "
+                            f"snapshots not present in this run: {missing_metrics}"
+                        )
+                    if record["source_key"].startswith("source_intel_"):
+                        stats = source_yield_stats.setdefault(
+                            record["source_key"],
+                            {
+                                "checked_count": 0,
+                                "promoted_to_evidence_count": 0,
+                                "background_use_count": 0,
+                                "low_yield_count": 0,
+                            },
+                        )
+                        stats["checked_count"] += 1
+                        if record["outcome"] == "promoted_to_evidence":
+                            stats["promoted_to_evidence_count"] += 1
+                        elif record["outcome"] == "used_as_background":
+                            stats["background_use_count"] += 1
+                        else:
+                            stats["low_yield_count"] += 1
+                checked.append(str(source_yield_path.relative_to(workspace_dir)))
+
     for filename, schema_name in RESEARCH_INTELLIGENCE_FILES.items():
         intel_path = research_dir / "intelligence" / filename
         if intel_path.exists():
             validate_file(schema_name, intel_path)
             check_creator_scope(load_json(intel_path), scope, intel_path)
             checked.append(str(intel_path.relative_to(workspace_dir)))
+
+    sources_path = research_dir / "intelligence" / "sources.json"
+    if source_yield_stats and not sources_path.exists():
+        raise ValidationError(
+            f"source-yield references saved source ids, but {sources_path} is missing"
+        )
+    if sources_path.exists() and source_yield_stats:
+        sources = load_json(sources_path)
+        sources_by_id = {item["source_intel_id"]: item for item in sources["items"]}
+        for source_id, expected_stats in sorted(source_yield_stats.items()):
+            if source_id not in sources_by_id:
+                raise ValidationError(
+                    f"{sources_path}: source-yield references {source_id!r}, "
+                    "but sources.json has no matching item"
+                )
+            actual_stats = sources_by_id[source_id].get("yield_stats", {})
+            for field, expected_value in expected_stats.items():
+                actual_value = actual_stats.get(field)
+                if actual_value != expected_value:
+                    raise ValidationError(
+                        f"{sources_path}: {source_id}.yield_stats.{field} "
+                        f"is {actual_value!r}, expected {expected_value!r} "
+                        "from source-yield.jsonl records"
+                    )
 
     board_path = workspace_dir / "boards" / "content-board.json"
     if board_path.exists():

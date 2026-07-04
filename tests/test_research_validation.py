@@ -63,6 +63,8 @@ def scaffold_research_workspace(temp_dir):
 
     run_dir = research / "runs" / RUN_ID
     write_json(run_dir / "research-run.json", load_example("research-run"))
+    write_json(run_dir / "search-plan.json", load_example("research-search-plan"))
+    write_jsonl(run_dir / "source-yield.jsonl", [load_example("research-source-yield")])
     write_jsonl(run_dir / "evidence.jsonl", [load_example("research-evidence")])
     write_jsonl(run_dir / "metric-snapshots.jsonl", [load_example("metric-snapshot")])
 
@@ -126,8 +128,109 @@ class ResearchStateValidationTests(unittest.TestCase):
             checked = set(result["checked_paths"])
             self.assertIn("content-schedule.json", checked)
             self.assertIn("research/findings.md", checked)
+            self.assertIn(f"research/runs/{RUN_ID}/search-plan.json", checked)
+            self.assertIn(f"research/runs/{RUN_ID}/source-yield.jsonl", checked)
             self.assertIn(f"research/runs/{RUN_ID}/evidence.jsonl", checked)
             self.assertIn("boards/content-board.json", checked)
+
+    def test_completed_run_without_search_plan_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("search-plan.json", str(ctx.exception))
+
+    def test_completed_run_without_source_yield_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            (workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("source-yield.jsonl", str(ctx.exception))
+
+    def test_search_plan_may_include_attempted_platform_not_on_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+
+            validate_research(workspace_dir)
+
+    def test_research_run_platform_must_be_planned(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            run = json.loads(run_path.read_text())
+            run["platforms"] = ["linkedin"]
+            write_json(run_path, run)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("not present in search-plan.json platforms", str(ctx.exception))
+
+    def test_search_plan_run_id_must_match_containing_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            plan = json.loads(plan_path.read_text())
+            plan["research_run_id"] = RUN_ID_2
+            write_json(plan_path, plan)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("search-plan.json", str(ctx.exception))
+            self.assertIn("research_run_id", str(ctx.exception))
+
+    def test_search_plan_creator_must_match_workspace_creator(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            plan = json.loads(plan_path.read_text())
+            plan["creator_profile_id"] = "creator_other"
+            write_json(plan_path, plan)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("search-plan.json", str(ctx.exception))
+            self.assertIn("creator_profile_id", str(ctx.exception))
+
+    def test_source_yield_platform_must_be_planned(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["platform"] = "linkedin"
+            write_jsonl(yield_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("source-yield.jsonl", str(ctx.exception))
+            self.assertIn("search-plan.json platforms", str(ctx.exception))
+
+    def test_source_yield_evidence_refs_must_resolve_to_same_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["evidence_ids"] = ["evidence_luna_fit_missing"]
+            write_jsonl(yield_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("evidence_luna_fit_missing", str(ctx.exception))
+
+    def test_source_yield_stats_must_match_sources_intelligence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            sources_path = workspace_dir / "research" / "intelligence" / "sources.json"
+            sources = json.loads(sources_path.read_text())
+            sources["items"][0]["yield_stats"]["checked_count"] = 0
+            write_json(sources_path, sources)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("yield_stats.checked_count", str(ctx.exception))
 
     def test_invalid_jsonl_line_reports_line_number(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -446,6 +549,10 @@ def add_second_run(workspace_dir, evidence_id="evidence_luna_fit_002", metric_id
     evidence["research_run_id"] = RUN_ID_2
     run_dir = Path(workspace_dir) / "research" / "runs" / RUN_ID_2
     write_json(run_dir / "research-run.json", run)
+    plan = load_example("research-search-plan")
+    plan["research_search_plan_id"] = "research_search_plan_luna_fit_2026_07_03_002"
+    plan["research_run_id"] = RUN_ID_2
+    write_json(run_dir / "search-plan.json", plan)
     write_jsonl(run_dir / "evidence.jsonl", [evidence])
     if metric_id:
         metric = load_example("metric-snapshot")
@@ -453,6 +560,14 @@ def add_second_run(workspace_dir, evidence_id="evidence_luna_fit_002", metric_id
         metric["evidence_id"] = evidence_id
         metric["research_run_id"] = RUN_ID_2
         write_jsonl(run_dir / "metric-snapshots.jsonl", [metric])
+    source_yield = load_example("research-source-yield")
+    source_yield["research_source_yield_id"] = "research_source_yield_luna_fit_002"
+    source_yield["research_run_id"] = RUN_ID_2
+    source_yield["source_key"] = "ad_hoc_second_run_source"
+    source_yield["source_kind"] = "direct_url"
+    source_yield["evidence_ids"] = [evidence_id]
+    source_yield["metric_snapshot_ids"] = [metric_id] if metric_id else []
+    write_jsonl(run_dir / "source-yield.jsonl", [source_yield])
     return run_dir
 
 
