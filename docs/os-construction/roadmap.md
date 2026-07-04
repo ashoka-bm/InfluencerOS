@@ -119,7 +119,8 @@ Exit criteria:
 
 Likely implementation slices, in the agreed build order (creators first, then
 research, then production). Status through 2026-07-04: slices 1-7 are
-complete; the research-intelligence hardening follow-up is next.
+complete; the research-intelligence hardening follow-up is the active Phase 1
+hardening pass.
 
 1. Master intake import workflow.
 2. Creator readiness validation.
@@ -135,7 +136,7 @@ Phase 1 hardening follow-up after slices 6-7, captured from the 2026-07-03
 live research runtime eval:
 
 - Add the merged research-intelligence hardening slice after format-specific
-  production planning and Output Package registration. This slice should combine
+  production planning and Output Package registration. This slice combines
   `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing,
   and engagement-weighted source evaluation. Research runs should record planned
   sources before browsing, then record sources searched but not promoted to

@@ -23,7 +23,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 
 1. **Creator Profile, Content Strategy, and Schedule**: identify or create the creator profile and creator content schedule. Audience and niche are inputs, not agent guesses. Use accepted content strategy and schedule state to scope research and medium-specific blockers.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
-3. **Research Findings**: synthesize current public platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding.
+3. **Research Intelligence and Findings**: create a run-local search plan before browsing, capture dated public evidence, record source-yield outcomes after browsing, then synthesize current platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding or source-intelligence learning.
 4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
 5. **Idea Promotion Gate**: ask the user to approve the full promotion package before creating production work. Recommend options if useful, but do not silently promote an idea.
 6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported, record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.

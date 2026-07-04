@@ -102,34 +102,29 @@ evidence, findings, or queue ideas.
 
 Current `research/intelligence/sources.json` and `watchlist.json` can store the
 summary conclusion through `usefulness_score`, `status`,
-`last_evaluated_on`, and `rationale`, but they do not yet preserve a per-run
-yield ledger. Do not implement this as a standalone planning-only slice. Ship it
-after slices 6 and 7 as one research-intelligence hardening pass, unless
-repeated live research evals show material source-search waste before then.
+`last_evaluated_on`, and `rationale`. This hardening pass adds the missing
+per-run yield ledger and implements it together with `ResearchSearchPlan`.
 
-Future implementation should add a combined search-planning and source-yield
-loop:
+Implementation shape:
 
-- Before browsing, each completed research run writes `search-plan.json`
-  (`ResearchSearchPlan`) with planned platforms, query intent, adapters,
-  planned sources, skipped sources, approval gates, and future connector notes.
-- Each research run records checked-but-unused sources in the run summary or a
-  dedicated source-yield record, with reason categories such as
-  `background_only`, `no_platform_signal`, `no_visible_metrics`,
-  `not_creator_fit`, `not_current`, or `not_accessible`.
-- Research intelligence aggregates repeated attempts into per-source counters:
-  checked count, promoted-to-evidence count, used-as-background count,
-  finding/queue/promotion contribution count, last useful date, and current
-  usefulness score.
-- Repeated low-yield sources are downgraded in
-  `research/intelligence/sources.json` or `watchlist.json`; consistently
-  unproductive sources become `flagged_for_removal` or `retired`.
-- `create-research-findings` should prefer sources that historically produce
-  usable evidence for the creator and deprioritize generic background sources
-  that rarely change findings or ideas.
-- The slice should adapt Agentic OS query-intent routing and engagement-weighted
-  source evaluation while keeping API-backed, logged-in, scraping, scheduled,
-  notification, and YouTube platform work deferred.
+- add `ResearchSearchPlan` before browsing,
+- add `ResearchSourceYield` after browsing,
+- adapt Agentic OS query-intent routing and engagement-weighted source scoring,
+- reconcile `research/intelligence/sources.json` aggregate `yield_stats`,
+- keep API-backed, logged-in, scraping, scheduled, notification, and YouTube
+  platform work deferred.
+
+The resulting loop records checked-but-unused sources with reason categories
+such as `background_only`, `no_platform_signal`, `no_visible_metrics`,
+`not_creator_fit`, `not_current`, or `not_accessible`. Research intelligence
+aggregates repeated attempts into per-source counters: checked count,
+promoted-to-evidence count, used-as-background count, low-yield count, last
+useful date, and current usefulness basis. Repeated low-yield sources should
+downgrade usefulness in `research/intelligence/sources.json` or `watchlist.json`;
+consistently unproductive sources become `flagged_for_removal` or `retired`.
+`create-research-findings` should prefer sources that historically produce
+usable evidence for the creator and deprioritize generic background sources that
+rarely change findings or ideas.
 
 Execution order:
 
@@ -138,8 +133,7 @@ Execution order:
 3. Implement this research-intelligence hardening slice.
 4. Build scheduled research automation only after this loop exists.
 
-Timing: implement this as a Phase 1 hardening follow-up after slices 6-7 unless
-live research runs show it is already creating meaningful friction. It must land
+Timing: this is a Phase 1 hardening follow-up after slices 6-7. It must land
 before scheduled research automation, because automation would otherwise repeat
 low-yield searches at scale.
 

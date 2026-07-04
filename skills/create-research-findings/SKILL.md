@@ -34,15 +34,26 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
 2. Create `research/runs/<research-run-id>/` — the folder name must equal
    `research_run_id`. Write `research-run.json`
    (`schemas/research-run.schema.json`) and a short `run-summary.md`.
-3. Start from known high-signal sources (intelligence files), then branch
+3. Before browsing or capturing evidence, write `search-plan.json`
+   (`schemas/research-search-plan.schema.json`). It must state the
+   creator/schedule/intelligence basis, adapters considered, query intent,
+   planned queries, planned sources, skipped sources, approval gates, and
+   future connector notes. Search plans may name planned/deferred adapters, but
+   only active public/manual/local adapters may be used in this slice.
+4. Start from known high-signal sources (intelligence files), then branch
    outward. Browser-visible public data only: no logged-in sessions, private
-   URLs, scraping APIs, cookies, or platform API credentials.
-4. Capture one `evidence.jsonl` line per real post/article/creator inspected
-   (`schemas/research-evidence.schema.json`) and metric snapshots in
-   `metric-snapshots.jsonl` (`schemas/metric-snapshot.schema.json`). Every
-   record carries this run's `research_run_id` and a `platform` +
-   `platform_content_type` from the closed enums.
-5. Declare the run's `outputs` exactly — all five arrays are present and
+   URLs, scraping APIs, cookies, platform API credentials, scheduled jobs, or
+   external notifications.
+5. Capture one `evidence.jsonl` line per real post/article/creator inspected
+   when it produces material evidence (`schemas/research-evidence.schema.json`)
+   and metric snapshots in `metric-snapshots.jsonl`
+   (`schemas/metric-snapshot.schema.json`). Every record carries this run's
+   `research_run_id` and a `platform` + `platform_content_type` from the closed
+   enums.
+6. Write one `source-yield.jsonl` line per checked source or query outcome
+   (`schemas/research-source-yield.schema.json`). Include low-yield and
+   background-only attempts so future runs can avoid repeated source waste.
+7. Declare the run's `outputs` exactly — all five arrays are present and
    precise. `evidence_ids` and `metric_snapshot_ids` list precisely the ids
    written to this run's JSONL files (validation reconciles both
    directions); `finding_ids`, `idea_queue_entry_ids`, and
@@ -50,7 +61,7 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    intelligence file this run created or updated. An empty array is correct
    only when the run truly touched none — leaving one empty after a change
    hides provenance.
-6. When real videos matter, create a Video Understanding Pack before final
+8. When real videos matter, create a Video Understanding Pack before final
    synthesis (see the `influencer-os` Video Understanding Requirements and
    tool boundary; run `/watch` with `--no-whisper` unless the user approved
    the exact transcription fallback).

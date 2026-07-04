@@ -187,17 +187,25 @@ A research run should generally follow this sequence:
    intelligence, recent idea queue entries, recent projects, and performance
    summaries.
 2. Choose a research mode and scope.
-3. Start from known high-signal creators or sources when available, then branch
+3. Create `research/runs/<research-run-id>/search-plan.json` before browsing.
+   The plan records the creator/schedule/intelligence basis, adapters
+   considered, query intent, planned queries, planned sources, skipped sources,
+   approval gates, and future connector notes.
+4. Start from known high-signal creators or sources when available, then branch
    outward into related public sources to understand the current zeitgeist.
-4. Browse browser-visible public posts and sources.
-5. Capture compact evidence records and metric snapshots.
-6. Analyze topic, format, hook, pacing, platform, and performance patterns.
-7. Update existing queue ideas when new evidence changes their scores, urgency,
+5. Browse browser-visible public posts and sources using only adapters marked
+   active in `docs/research-adapter-registry.md`.
+6. Capture compact evidence records and metric snapshots for sources that
+   produce material evidence.
+7. Write `source-yield.jsonl` records for checked sources and queries,
+   including sources that produced only background context or no useful signal.
+8. Analyze topic, format, hook, pacing, platform, and performance patterns.
+9. Update existing queue ideas when new evidence changes their scores, urgency,
    staleness, or rationale.
-8. Add new queue ideas when the evidence supports them.
-9. Update rolling findings and research intelligence only when there is a
-   material finding.
-10. Present findings first, then recommended ideas by goal.
+10. Add new queue ideas when the evidence supports them.
+11. Update rolling findings and research intelligence only when there is a
+    material finding or source-yield learning.
+12. Present findings first, then recommended ideas by goal.
 
 Research modes should be separable so they can run independently:
 
@@ -662,9 +670,11 @@ workspace-library/creators/<creator-slug>/research/
   runs/
     <research-run-id>/
       research-run.json
+      search-plan.json
       run-summary.md
       evidence.jsonl
       metric-snapshots.jsonl
+      source-yield.jsonl
       video-understanding-packs/
   intelligence/
     sources.json
