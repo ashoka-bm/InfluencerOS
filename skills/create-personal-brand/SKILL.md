@@ -52,9 +52,15 @@ Pull from the intake:
 - proof and trust cues
 - content surfaces
 - content mediums
+- platform-to-medium mapping: which selected surfaces require text, image,
+  audio, video, carousel, or story-sequence support
 - content pillars with priorities
 - surface strategy by platform or channel
 - medium strategy by text, image, video, audio, carousel, and story sequence
+- reference-needs signals by medium, including person/avatar reference image
+  availability, recurring locations, recurring collaborators or characters,
+  signature objects, wardrobe constants, voice/sonic needs, and publication
+  style needs
 - voice and editorial rules
 - visual brand
 - monetization and partnership rules
@@ -78,12 +84,17 @@ Ask only for gaps that block strategy:
 
 - Which surfaces matter first?
 - Which content mediums are in scope?
+- Which public platforms imply text, image, audio, video, carousel, or
+  story-sequence content?
 - What exact audience language should shape strategy?
 - Which jobs-to-be-done, tried alternatives, objections, trigger moments, trusted sources, negative audience, and proof and trust cues matter?
 - Which pillars are primary, secondary, or experimental?
 - What should research optimize for?
 - Which partnerships are prohibited?
 - What should the creator not optimize for?
+- If image or video is in scope, does the user have a person/avatar reference
+  image, and which locations, collaborators, objects, or outfits need visual
+  consistency?
 
 ## Completion Criteria
 

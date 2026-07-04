@@ -77,6 +77,8 @@ Define:
 
 - primary surfaces
 - content mediums
+- platform-to-medium mapping: which surfaces need text, image, audio, video,
+  carousel, or story-sequence support
 - in-scope formats
 - out-of-scope formats
 - topic priorities
@@ -131,6 +133,11 @@ For each:
 - required references
 - quality bar
 
+For image or video, explicitly state whether a user-provided person/avatar
+reference image exists, is recommended but missing, or is prohibited. For video,
+also list recurring locations, recurring collaborators or characters, signature
+objects, and wardrobe constants that need reusable references.
+
 ## Voice And Editorial Rules
 
 Define brand-level voice rules.
@@ -154,7 +161,9 @@ Include:
 - color and texture notes
 - typography or layout posture, if known
 - recurring locations
+- recurring collaborators or other characters
 - wardrobe or object motifs
+- signature objects that require consistency
 - image rules
 - video rules
 

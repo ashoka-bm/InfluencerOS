@@ -38,6 +38,26 @@ Select based on content strategy:
 - voice: samples or voice style notes
 - brand: visual system, typography, colors, layout posture
 
+## Platform And Medium Derivation
+
+Before drafting the library, derive required asset families from the accepted
+public platforms and content mediums in `brand_context/personal-brand.md` and
+`creator-profile.json`.
+
+Use this mapping as setup guidance:
+
+| Medium | Required reference material |
+| --- | --- |
+| text | voice samples, editorial rules, publication style, audience language, topic/pillar strategy, disclosure rules |
+| image | person/avatar policy, recommended user person reference image or generated identity prompt, character/headshot assets, image style, brand visual system, recurring outfit/object references when identity-bearing |
+| audio or music | voice sample or accepted synthetic voice style note when spoken identity matters, pronunciation/tone boundaries, sonic identity notes, rights/disclosure constraints |
+| video | image requirements plus default video/photo style, recurring locations, wardrobe/outfit references, recurring collaborators or characters, signature objects, recurring shot-family notes |
+| carousel or story_sequence | brand visual system, slide/frame visual system, text overlay policy, optional character/location references if the creator appears |
+
+Ask for public platforms early because they suggest likely mediums, but let the
+accepted content strategy decide the blockers. Do not create platform-specific
+publishing, scheduling, analytics, or adapter assets during setup.
+
 ## Size Budget
 
 Target sizes:
@@ -91,6 +111,23 @@ When image or video is in scope, plan reference images in this order:
 
 Do not rewrite these standard prompts inside the skill. Copy or adapt only the variable slots into creator-specific `.prompt.md` files while preserving the reference-scope rules.
 
+Strongly recommend a user-provided person reference image for any image or video
+creator. If the user does not provide one, create a planned or prompted
+character identity asset instead and mark it as generated-from-intake or
+system-filled until the user approves a real generated result.
+
+For video creators:
+
+- create one location asset or prompt per recurring filming space, such as a
+  studio, bedroom, kitchen, office, car, gym, or outdoor route;
+- create character assets or prompts for recurring collaborators, foils,
+  partners, family members, or fictional characters who regularly appear;
+- create object assets or prompts only for identity-attached items that need
+  visual consistency across videos, such as a signature microphone, notebook,
+  product, instrument, mug, mascot, tool, or wearable;
+- keep one-off props in downstream project plans instead of the reference
+  library.
+
 ## Character Asset Hard Rules
 
 The first three character assets are identity-locking assets, not lifestyle images.
@@ -123,10 +160,15 @@ Point to the prompt with `prompt_path`.
 
 Ask only for gaps that block the intended medium:
 
+- Which public platforms matter first?
 - Is the creator text-only, image, video, audio, carousel, or story-sequence?
 - Is a real face required, optional, or prohibited?
+- Does the user have a person/avatar reference image they want the creator based
+  on?
 - What visual traits must remain stable?
 - What locations recur?
+- Who else appears regularly with the creator?
+- Which objects are identity-attached enough to require consistency?
 - Is voice continuity required?
 - Which assets can be generated versus user-provided only?
 

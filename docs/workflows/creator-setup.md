@@ -7,6 +7,15 @@ Status: Draft from Grill With Docs session, aligned with ADR 0013
 
 Creator Setup turns a small user request, rich source material, media references, or any combination of those inputs into a strict Creator Workspace foundation.
 
+At the start of setup, explain the job in plain language: onboarding a new
+influencer means building the reusable creator foundation that keeps future
+content consistent. The foundation covers identity, audience, voice, content
+strategy, platform posture, boundaries, reference assets, provider-neutral
+prompts, and readiness status. Setup is allowed to be flexible while collecting
+inputs, but it is only complete when the required files and medium-specific
+reference materials are present, approved, or prompt-staged behind the provider
+approval gate.
+
 The workflow should create or refine:
 
 - `context/SOUL.md`
@@ -35,14 +44,56 @@ Audience and niche remain creator-profile inputs. The system may transform user-
 
 ## Intake Modes
 
-Creator Setup supports all of these entry modes:
+Creator Setup presents three user-facing entry paths:
 
-- Minimal prompt: a display name, niche, short instruction, or request to generate a persona.
-- Guided interview: a Grill With Docs flow that asks questions, gives recommendations, and records decisions.
-- Master breakdown: a pasted or imported long-form creator brief.
-- Source-file import: uploaded or local documents, notes, interviews, or existing brand files.
-- Media-first import: user-provided images, audio, visual references, mood boards, or prior content.
-- Hybrid intake: any combination of the above.
+1. **Load Existing Files**: use a pasted or imported master breakdown, existing
+   brand files, notes, interview transcripts, previous creator files,
+   user-provided media references, mood boards, or prior content. Import source
+   files into `sources/`, extract the foundation, then interview only for
+   missing or ambiguous decisions.
+2. **Guided Interview**: run a Grill With Docs style Decision Interview. Ask one
+   question at a time, include a recommended answer, and record the user answer
+   or system-filled answer.
+3. **Generate From Basic Information**: accept minimal inputs such as display
+   name, niche, audience, target platforms, or a short prompt. The system drafts
+   the missing foundation and reference plan, then asks for whole-foundation
+   acceptance before readiness.
+
+Hybrid intake is normal: the user may load files and still answer interview
+questions, or provide basic information first and then attach references. In all
+paths, the user can ask the system to fill blanks from the available context.
+System-filled answers remain part of the review set and cannot silently satisfy
+accepted niche or audience requirements.
+
+## Decision Interview
+
+The Decision Interview is a bounded question tree used whenever intake is
+incomplete.
+
+Each question should include:
+
+- the question;
+- the recommended answer;
+- why that recommendation fits the current intake;
+- the answer source: `user_provided`, `imported`, `generated_from_intake`, or
+  `system_filled`;
+- the decision status: accepted, revised, skipped, or needs review.
+
+Ask only for decisions that affect foundation quality, content strategy,
+reference requirements, safety boundaries, or readiness. If the user asks the
+system to answer, fill the field and continue. If the user asks for only the
+next question, do not expand into a broad form.
+
+Recommended question order:
+
+- display name, niche, audience, positioning, and creator type;
+- primary public platforms and content mediums;
+- content boundaries, claims rules, disclosure, and privacy constraints;
+- voice, phrases, examples, and publication style;
+- visual identity, reference image availability, and image generation policy;
+- recurring filming locations, collaborators or other characters, signature
+  objects, outfits, and other continuity anchors;
+- cadence or first-use goals when they affect setup readiness.
 
 ## Minimum To Start
 
@@ -56,6 +107,9 @@ Recommended initial questions:
 - Where will the creator publish first?
 - What content forms should the creator make first?
 - Should the creator be synthetic, avatar-led, human-backed, text-first, or mixed?
+- Do you have a reference image for the person/avatar? If image or video is in
+  scope, the system should strongly recommend one while allowing a generated
+  identity prompt instead.
 
 ## Required Foundation Before Readiness
 
@@ -254,6 +308,23 @@ InfluencerOS v1 still prioritizes universal visual-first social posts and univer
 
 Text-first surfaces such as Substack, LinkedIn, X, and blogs are valid creator strategy inputs in v1. They broaden research and planning without requiring provider-backed generation.
 
+### Platform-To-Medium Mapping
+
+The setup flow should ask or recommend public platforms first, then map those
+platforms to the content mediums the creator must support. The accepted mediums
+drive readiness blockers.
+
+| Platform or surface | Likely content mediums | Setup effect |
+|---|---|---|
+| X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | Requires voice, publication style, audience language, topic/pillar strategy, and disclosure rules. |
+| Instagram feed, Pinterest-style surfaces, image-led blog posts | image, text | Requires image style, brand visual system, person/avatar policy, and any recurring outfit/object references. |
+| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | Requires character identity references, video/photo style, location references, wardrobe rules, recurring object policy, and spoken or onscreen voice rules. |
+| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | Requires voice sample or accepted synthetic voice note when spoken identity matters; on-camera video also requires visual references. |
+| Carousels and story sequences on Instagram, LinkedIn, or similar surfaces | image, text, carousel or story_sequence | Requires slide/frame visual system, text overlay policy, brand reference, and optional character/location references. |
+
+Do not add platform-specific publishing adapters during setup. Platform choices
+only determine strategy, research scope, format support, and reference needs.
+
 ## Medium-Based Blockers
 
 Readiness blockers depend on the content strategy.
@@ -333,6 +404,30 @@ For a text-first creator, the minimum may shift to:
 - optional portrait or avatar reference
 
 If the user provides only an interview and one image, the system may extrapolate the missing references as provider-neutral prompts and recommended reference requirements. The missing real assets should remain blockers for provider-backed generation unless the user approves generation or accepts a text-first/non-visual strategy.
+
+The setup checklist should make the reference material requirement explicit by
+medium:
+
+- **Text**: voice examples, editorial rules, publication style, audience
+  language, topic/pillar strategy, and disclosure rules.
+- **Image**: person/avatar reference policy, recommended user-provided reference
+  image or generated identity prompt, character/headshot identity assets, image
+  style, brand visual system, and recurring outfit or object references when
+  they are identity-bearing.
+- **Audio or music**: voice sample or synthetic voice style note when spoken
+  continuity matters, pronunciation/tone boundaries, sonic identity notes, and
+  rights/disclosure constraints.
+- **Video**: all image requirements plus default video/photo style, primary
+  filming locations, recurring shot families, wardrobe/outfit references,
+  recurring collaborators or characters, and signature objects.
+
+For video, each recurring location should have its own reference asset or
+prompt. A bedroom, kitchen, studio, gym, car, office, or outdoor route are
+different continuity spaces, not variants of one generic location. Each
+recurring character or collaborator should have a character reference strategy.
+Each identity-attached object that should appear consistently should have an
+object reference or prompt; casual one-off props should stay in downstream
+project planning.
 
 ## Reference Library Policy
 
@@ -439,6 +534,8 @@ A creator can be marked ready for research and content planning only when all of
 - Niche and target audience are explicit accepted inputs.
 - Content strategy and platform posture are accepted.
 - Required visual or non-visual reference requirements match the content strategy.
+- Every selected content medium has its required reference materials
+  user-provided, approved, or prompt-staged with stable reference asset IDs.
 - Source intake provenance is recorded.
 - Provider-backed generation has not been implied by setup.
 - A human has reviewed or accepted the generated foundation.

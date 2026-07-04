@@ -144,6 +144,16 @@ Completed:
   scheduled research, notifications, and YouTube as a first-class platform
   require separate pre-go-live decisions.
 
+- Creator setup onboarding UX refinement (2026-07-04): `create-influencer`
+  now starts with a plain-language onboarding briefing and exactly three entry
+  paths: load existing files, guided interview, or generate from basic
+  information, while keeping system-filled blanks in the review set. The setup
+  workflow, personal-brand guidance, and reference-library skill now map public
+  platforms to text/image/audio/video/carousel/story-sequence mediums and make
+  medium-specific reference requirements explicit, including person reference
+  image recommendation, recurring video locations, recurring collaborators, and
+  identity-attached objects.
+
 Deferred:
 
 - Scheduled research automation remains deferred until the manual

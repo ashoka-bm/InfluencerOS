@@ -29,7 +29,38 @@ Accept any combination of:
 - user-provided media references
 - request to generate a persona
 
-If the user starts with minimal input, interview them and recommend defaults. If they ask the system to generate the foundation, draft it and require one whole-foundation acceptance before marking it content-ready.
+## Onboarding Briefing
+
+Start every new creator setup with a short briefing before asking for files or
+identity answers:
+
+> Setting up a new influencer means creating the reusable creator foundation:
+> who the creator is, who they serve, where they publish, what kinds of content
+> they make, what voice and visual rules keep them consistent, and which
+> reference assets are required before content generation can be trusted. Setup
+> can begin from existing files, an interview, or a generated first draft, but it
+> is not complete until the required workspace files and medium-specific
+> reference materials are either approved, user-provided, or prompt-staged behind
+> the provider approval gate.
+
+Then present exactly three onboarding paths:
+
+1. **Load Existing Files**: ingest source documents, brand notes, images,
+   transcripts, previous creator files, or media references. Import what the user
+   provides, extract a draft foundation, then run the Decision Interview only for
+   missing or ambiguous material.
+2. **Guided Interview**: ask one Decision Interview question at a time, include a
+   recommended answer, and let the user accept, revise, skip, or ask the system
+   to fill the blank. Persist the question, recommendation, user answer, and fill
+   status in the setup notes or checklist.
+3. **Generate From Basic Information**: accept minimal inputs such as display
+   name, niche, audience, surfaces, or a rough prompt; draft the missing
+   foundation and reference plan automatically; require whole-foundation
+   acceptance before marking the workspace ready.
+
+The system-fill option is always available inside paths 1 and 2. If the user
+says "you decide," "fill it in," or equivalent, draft the missing answer from the
+accepted context, mark it as generated, and keep it in the review set.
 
 ## Output Contract
 
@@ -50,6 +81,72 @@ Produce or update:
 - `progress/setup-checklist.md`
 
 The workflow is complete when the Creator Workspace is `content_ready` or `generation_ready` for the accepted content strategy.
+
+## Decision Interview
+
+Use a Grill With Docs style Decision Interview whenever intake leaves gaps:
+
+- ask one concrete question at a time;
+- show the recommended answer first, with a short reason;
+- allow four responses: accept, revise, skip for now, or system-fill;
+- ask only questions that affect foundation files, content strategy, reference
+  requirements, safety boundaries, or readiness;
+- carry forward the source of each answer: `user_provided`, `imported`,
+  `generated_from_intake`, or `system_filled`;
+- do not redefine audience or niche silently. If they were system-filled, keep
+  them in the review set and require acceptance before readiness.
+
+Priority question order:
+
+1. display name, niche, target audience, and positioning;
+2. primary public platforms and content mediums;
+3. creator type: synthetic, avatar-led, human-backed, text-first, or mixed;
+4. content boundaries, claims/disclosure rules, and private facts to avoid;
+5. voice, recurring phrases, and sample material;
+6. visual identity, reference image availability, and generation policy;
+7. recurring locations, other recurring characters, signature objects, outfits,
+   and other continuity anchors;
+8. content cadence or first-use goals when they affect setup readiness.
+
+For visual creators, strongly recommend a user-provided person reference image:
+it improves identity continuity. The user may decline and allow the system to
+stage a generated identity prompt instead; generation still requires exact
+provider-call approval.
+
+## Platform And Asset Mapping
+
+Before reference planning, ask or recommend the creator's primary public
+platforms. Map those platforms into content mediums and setup blockers:
+
+| Platform or surface | Common setup mediums | Setup implication |
+| --- | --- | --- |
+| X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | voice, editorial rules, topic/pillar strategy, publication style, optional portrait/avatar policy |
+| Instagram feed, Pinterest-style surfaces, image-led blog posts | image, text | person/avatar image policy, image style, brand visual system, optional location/object references |
+| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | character identity assets, video/photo style, primary locations, outfits, recurring objects, spoken/onscreen voice rules |
+| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | voice sample or accepted synthetic voice note, pronunciation/tone boundaries, video references when on-camera |
+| Carousels and story sequences on Instagram, LinkedIn, or similar surfaces | image, text, story_sequence or carousel | slide/frame visual system, text overlay policy, brand reference, optional character/location references |
+
+Use the actual intended mediums as the authority. Platform names inform likely
+needs, but the accepted content strategy decides the blockers.
+
+Reference requirements by medium:
+
+- **Text**: voice samples, editorial rules, publication style, audience language,
+  topic/pillar strategy, and disclosure rules.
+- **Image**: person/avatar policy, recommended user reference image or generated
+  identity prompt, character/headshot identity assets, image style, brand visual
+  system, and any recurring object or outfit references.
+- **Audio or music**: voice sample or synthetic voice style note when spoken
+  identity matters, pronunciation/tone boundaries, sonic identity notes, and
+  rights/disclosure constraints.
+- **Video**: all image requirements plus default video/photo style, primary
+  filming locations, recurring shot families, wardrobe/outfit references,
+  recurring collaborators/characters, and signature objects.
+
+Setup is not generation-ready for a selected medium until every required
+reference material for that medium is user-provided, approved, or prompt-staged
+with a stable reference asset ID. Provider-backed creation of the missing
+materials remains gated by explicit approval for the exact call or batch.
 
 ## Subskills
 

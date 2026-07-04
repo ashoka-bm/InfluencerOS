@@ -20,6 +20,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - Pending repeated feedback.
 - 2026-07-03: Nia Sol run review: stale no-generation notes survived an approved generation call; the skill now requires superseding checklist/MEMORY/daily-note claims in the same run as any generation.
 - 2026-07-03: Nia Sol run review: checklist grouped wording (completed or prompted) hid which assets existed; scaffold and skill now track per-asset lifecycle status, and generated assets record date/tool/deviations in usage_notes.
+- 2026-07-04: Creator setup onboarding should begin with a briefing and three paths: load existing files, guided interview, or generate from basic information; system-filled blanks stay in review.
 
 ### wrap-up
 
@@ -30,6 +31,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.
+- 2026-07-04: Personal-brand setup should capture platform-to-medium mapping and reference-needs signals before reference-library planning.
 
 ### create-research-findings
 - 2026-07-03: Live research eval showed a need for source-yield learning: after Phase 1 slices 6-7, add the merged research-intelligence hardening slice that tracks searched-but-unused sources, downgrades repeated background-only/low-yield sources in research intelligence, and lands before scheduled research automation.
@@ -49,3 +51,6 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### tdd
 - 2026-07-04: Phase 1 user-journey tests should exercise CLI gates end to end and seed only authored artifacts that skills currently produce.
+
+### create-reference-library
+- 2026-07-04: Reference planning should derive required assets from platform-to-medium mapping and explicitly handle person reference images, recurring locations, collaborators, and identity-attached objects.
