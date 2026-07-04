@@ -209,12 +209,16 @@ A research run should generally follow this sequence:
 
 Query formulation must stay grounded in creator context. Each planned query's
 terms derive from the Creator Profile, schedule signal, rolling findings,
-research intelligence, or prior queue entries — the search plan's
-`decision_basis` and each query's `routing_basis` record which. Do not seed
-queries with tool, brand, product, or trend names pulled from the agent's own
-training knowledge that are absent from creator context: that knowledge may be
-stale, and research is time-sensitive. When a term is a hypothesis rather than
-creator-derived, mark it as such in the plan so its yield is judged honestly.
+research intelligence, or prior queue entries. Each query records this in a
+required `term_basis` — a closed set (`creator_profile`, `content_schedule`,
+`rolling_findings`, `research_intelligence`, `prior_queue`, `hypothesis`) that
+makes term provenance auditable — with `routing_basis` prose explaining the
+choice. Do not seed queries with tool, brand, product, or trend names pulled
+from the agent's own training knowledge that are absent from creator context:
+that knowledge may be stale, and research is time-sensitive. A term that is a
+hypothesis rather than creator-derived must carry the `hypothesis` term_basis so
+its yield is judged honestly; the validator enforces the closed set but cannot
+verify a claimed basis is truthful, so the honesty is on the author.
 
 Research modes should be separable so they can run independently:
 

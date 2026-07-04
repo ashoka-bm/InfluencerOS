@@ -321,6 +321,22 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_record("research-search-plan", invalid)
 
+    def test_search_plan_query_requires_term_basis(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["planned_queries"][0].pop("term_basis")
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
+    def test_search_plan_rejects_unknown_term_basis(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["planned_queries"][0]["term_basis"] = ["outside_trend_list"]
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
     def test_source_yield_promoted_outcome_requires_evidence(self):
         example = load_json("examples/research-source-yield.example.json")
         invalid = deepcopy(example)

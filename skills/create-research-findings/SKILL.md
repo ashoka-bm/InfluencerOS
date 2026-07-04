@@ -41,9 +41,11 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    future connector notes. Search plans may name planned/deferred adapters, but
    only active public/manual/local adapters may be used in this slice. Ground
    query terms in creator context (profile, schedule, findings, intelligence,
-   prior queue); do not seed them with tool/brand/trend names from your own
-   training knowledge that are absent from creator context — that knowledge may
-   be stale and research is time-sensitive. Mark any hypothesis term as such.
+   prior queue) and declare it in each query's required `term_basis`; do not
+   seed queries with tool/brand/trend names from your own training knowledge
+   that are absent from creator context — that knowledge may be stale and
+   research is time-sensitive. A term you are testing rather than deriving from
+   creator context must use the `hypothesis` term_basis.
 4. Start from known high-signal sources (intelligence files), then branch
    outward. Browser-visible public data only: no logged-in sessions, private
    URLs, scraping APIs, cookies, platform API credentials, scheduled jobs, or

@@ -79,7 +79,11 @@
       "source_type": "search_term",
       "purpose": "Check whether quick desk-reset movement hooks are currently visible.",
       "expected_signal": "Recent short videos with visible engagement and reusable first-frame or hook patterns.",
-      "routing_basis": "Terms from Luna's 'desk-based wellness' pillar and the open midweek education slot in content-schedule.json; TikTok chosen because short desk-reset movement hooks surface there. Not seeded from outside trend lists."
+      "routing_basis": "Terms from Luna's 'desk-based wellness' pillar and the open midweek education slot in content-schedule.json; TikTok chosen because short desk-reset movement hooks surface there. Not seeded from outside trend lists.",
+      "term_basis": [
+        "creator_profile",
+        "content_schedule"
+      ]
     },
     {
       "query_id": "query_luna_fit_002",
@@ -89,7 +93,11 @@
       "source_type": "watchlist_topic",
       "purpose": "Check discussion language and practical objections from office workers.",
       "expected_signal": "Pain points, objections, and language that can shape the payoff.",
-      "routing_basis": "Terms from Luna's office-worker audience and prior queue entry idea_queue_entry_luna_fit_001; Reddit chosen for practical objections and community phrasing in the creator's niche."
+      "routing_basis": "Terms from Luna's office-worker audience and prior queue entry idea_queue_entry_luna_fit_001; Reddit chosen for practical objections and community phrasing in the creator's niche.",
+      "term_basis": [
+        "creator_profile",
+        "prior_queue"
+      ]
     }
   ],
   "planned_sources": [

@@ -40,7 +40,7 @@ research/runs/<research-run-id>/source-yield.jsonl
 - mode, scope, and planned/attempted platforms,
 - the creator/schedule/intelligence basis for the run,
 - adapters considered,
-- query intent and routing basis,
+- query intent, routing basis, and per-query term basis,
 - planned saved sources,
 - skipped sources and skipped adapters,
 - approval gates,

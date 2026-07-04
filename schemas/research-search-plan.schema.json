@@ -181,7 +181,8 @@
           "source_type",
           "purpose",
           "expected_signal",
-          "routing_basis"
+          "routing_basis",
+          "term_basis"
         ],
         "properties": {
           "query_id": {
@@ -240,6 +241,21 @@
           "routing_basis": {
             "type": "string",
             "minLength": 1
+          },
+          "term_basis": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "creator_profile",
+                "content_schedule",
+                "rolling_findings",
+                "research_intelligence",
+                "prior_queue",
+                "hypothesis"
+              ]
+            },
+            "minItems": 1
           }
         }
       }
