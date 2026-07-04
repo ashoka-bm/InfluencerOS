@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slices 6 (format-specific production planning) and 7 (Output Package registration) landed 2026-07-04; research-intelligence hardening landed 2026-07-04 before scheduled research automation.
+Status: Complete (2026-07-04). Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slices 6 (format-specific production planning) and 7 (Output Package registration) landed 2026-07-04; research-intelligence hardening landed 2026-07-04 before scheduled research automation. The deferred scheduled research automation work belongs to Phase 4 unless explicitly reopened earlier.
 
 Completed:
 
@@ -144,10 +144,11 @@ Completed:
   scheduled research, notifications, and YouTube as a first-class platform
   require separate pre-go-live decisions.
 
-Remaining:
+Deferred:
 
 - Scheduled research automation remains deferred until the manual
-  research-intelligence loop has been exercised against real creator runs.
+  research-intelligence loop has been exercised against real creator runs. This
+  is not a Phase 1 exit blocker.
 
 ### Phase 2: Learning OS
 
@@ -249,14 +250,52 @@ cp examples/video-understanding-pack.example.json .tmp/creators/luna-fit/researc
 cp examples/creator-content-schedule.example.json .tmp/creators/luna-fit/content-schedule.json
 mkdir -p .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001
 cp examples/research-run.example.json .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/research-run.json
+cp examples/research-search-plan.example.json .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/search-plan.json
 python3 -c "import json; print(json.dumps(json.load(open('examples/research-evidence.example.json'))))" > .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl
 python3 -c "import json; print(json.dumps(json.load(open('examples/metric-snapshot.example.json'))))" > .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/metric-snapshots.jsonl
+python3 -c "import json; print(json.dumps(json.load(open('examples/research-source-yield.example.json'))))" > .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001/source-yield.jsonl
+mkdir -p .tmp/creators/luna-fit/research/intelligence .tmp/creators/luna-fit/research/stable-findings .tmp/creators/luna-fit/system
+cp examples/research-sources.example.json .tmp/creators/luna-fit/research/intelligence/sources.json
+cp examples/research-hashtags.example.json .tmp/creators/luna-fit/research/intelligence/hashtags.json
+cp examples/research-search-terms.example.json .tmp/creators/luna-fit/research/intelligence/search-terms.json
+cp examples/reference-creators.example.json .tmp/creators/luna-fit/research/intelligence/reference-creators.json
+cp examples/research-watchlist.example.json .tmp/creators/luna-fit/research/intelligence/watchlist.json
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+def frontmatter(data):
+    lines = ["---"]
+    for key, value in data.items():
+        if isinstance(value, list):
+            lines.append(f"{key}:")
+            lines.extend(f"  - {item}" for item in value)
+        elif isinstance(value, bool):
+            lines.append(f"{key}: {'true' if value else 'false'}")
+        else:
+            lines.append(f"{key}: {value}")
+    lines.append("---")
+    return "\n".join(lines) + "\n"
+
+root = Path(".tmp/creators/luna-fit")
+findings = json.load(open("examples/research-findings.example.json"))
+stable = json.load(open("examples/stable-finding.example.json"))
+(root / "research/findings.md").write_text(
+    frontmatter(findings)
+    + "\n## Desk resets\n\nLunch-break resets are outperforming baselines this week.\n"
+)
+(root / "research/stable-findings/stable_finding_luna_fit_001.md").write_text(
+    frontmatter(stable) + "\nDesk resets are a durable topic cluster for Luna.\n"
+)
+PY
 cp examples/idea-queue.example.json .tmp/creators/luna-fit/research/idea-queue/queue.json
 cp examples/idea-queue-entry.example.json .tmp/creators/luna-fit/research/idea-queue/entries/idea_queue_entry_luna_fit_001.json
 cp examples/idea-promotion.example.json .tmp/creators/luna-fit/research/idea-promotions/idea_promotion_luna_fit_001.json
-cp examples/content-board.example.json .tmp/creators/luna-fit/boards/content-board.json
+python3 -c "import json; print(json.dumps(json.load(open('examples/project-warning.example.json'))))" > .tmp/creators/luna-fit/system/project-warnings.jsonl
+python3 -c "import json; print(json.dumps(json.load(open('examples/system-event.example.json'))))" > .tmp/creators/luna-fit/system/creator-events.jsonl
 echo "# Interview Notes (synthetic)" > .tmp/luna-interview.md
 python3 -m influencer_os import-intake .tmp/luna-interview.md --creator-workspace .tmp/creators/luna-fit --source-type interview --notes "Follow-up interview transcript."
+python3 -m influencer_os set-intake-status .tmp/creators/luna-fit source_luna_fit_interview_001 drafted
 python3 -m influencer_os validate workspace .tmp/creators/luna-fit
 # The project must exist before research/queue validation: the example
 # promotion lists it in project_ids_created, and the slice 5 closure check
@@ -465,12 +504,25 @@ without marking the Project `packaged`, and requires platform adaptation
 caption/description paths to resolve to declared `upload_ready` files. The
 example output package now declares the YouTube description file it
 references.
+Phase 1 closeout verification (2026-07-04): 321 tests pass; 42 example
+records validate; drift checks pass (22 tests); the stale-path check passes.
+The full Planning OS workflow replayed in `.tmp/phase1-verify`: creator
+initialization, intake import/status transition, workspace validation,
+research run with `search-plan.json` and `source-yield.jsonl`, research
+intelligence files, findings/stable findings, idea queue, human-approved
+promotion, project creation, applied template, production plan, provider-neutral
+generation plan, output package registration with upload-ready assets, packaged
+project validation, board rebuild/validation, recall-index rebuild, prune
+dry-run, and copied-runtime sync all pass. The replay checked 27 workspace
+paths, 17 research records, 1 queue entry, 11 packaged project paths, 2 board
+cards, and 11 recall-index records.
 ```
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills), 7 (Output Package registration with `create-output-package` and `register-output-package`), and the research-intelligence hardening follow-up are complete (slices 1-5 on 2026-07-03, slices 6-7 and research-intelligence hardening on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Next Phase 1 work should exercise the manual research-intelligence loop before any scheduled research automation.
-2. Optional: render the comparison map Excalidraw scene.
+1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation.
+2. Begin Phase 2 Learning OS when ready: published-post registration, analytics snapshot ingestion, performance summaries, creator-memory distillation, SQL index rebuilds, and semantic lookup projection.
+3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
 

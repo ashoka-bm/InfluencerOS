@@ -96,6 +96,11 @@ See `docs/os-construction/short-term-plan.md`.
 
 Goal: produce researched, creator-fit content plans and output package specs without provider-backed generation.
 
+Status: complete (2026-07-04). Slices 1-7 and the research-intelligence
+hardening follow-up are complete; scheduled research automation remains
+deferred until the manual research-intelligence loop has been exercised against
+real creator runs.
+
 Entry criteria:
 
 - Phase 0C parity hardening is complete.
@@ -117,10 +122,9 @@ Exit criteria:
 - Base Video Generation Plans are provider-neutral.
 - Output Package records validate and preserve provenance.
 
-Likely implementation slices, in the agreed build order (creators first, then
+Implementation slices, in the agreed build order (creators first, then
 research, then production). Status through 2026-07-04: slices 1-7 are
-complete; the research-intelligence hardening follow-up is the active Phase 1
-hardening pass.
+complete, and the research-intelligence hardening follow-up is complete.
 
 1. Master intake import workflow.
 2. Creator readiness validation.
@@ -133,9 +137,9 @@ hardening pass.
 7. Output Package registration.
 
 Phase 1 hardening follow-up after slices 6-7, captured from the 2026-07-03
-live research runtime eval:
+live research runtime eval and completed 2026-07-04:
 
-- Add the merged research-intelligence hardening slice after format-specific
+- The merged research-intelligence hardening slice after format-specific
   production planning and Output Package registration. This slice combines
   `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing,
   and engagement-weighted source evaluation. Research runs should record planned
@@ -143,9 +147,8 @@ live research runtime eval:
   evidence, why they were low yield, and whether they were useful only as
   background context. Repeated low-yield sources should lower
   `research/intelligence/sources.json` usefulness scores and eventually move to
-  `flagged_for_removal` or `retired`. Pull this slice forward only if repeated
-  live research evals show material source-search waste; complete it before
-  scheduled research automation.
+  `flagged_for_removal` or `retired`. Scheduled research automation remains
+  deferred until this manual loop has been exercised against real creator runs.
 
 ## Phase 2: Learning OS
 

@@ -1,21 +1,22 @@
 # Research And Ideas Implementation Plan
 
-Status: **Slices 3, 4, 5, and 6 complete (slice 6 on 2026-07-04).** The schema surface of
-this plan (implementation-sequence steps 1-6, 11, 12 plus the promotion
-gate) landed via the user-approved Execution Decisions below; slice 4
-(the Research Findings and Idea Queue workflow — run-scoped consistency
-checks, recall index, content board, retention prune, and the
-`create-research-findings`/`manage-idea-queue` producer skills) landed via
-the Slice 4 Execution Decisions at the end of this plan, batches A-E; and
-slice 5 (the Idea Promotion to Project workflow — promotion link
-consistency and the `promote-idea` producer skill) landed via the Slice 5
-Execution Decisions at the end of this plan, batches A-C. Slice 6
-(format-specific production planning) added article/thread production
-contracts and the `apply-social-template`/`create-production-plan`
-producer skills. The verification records live in
-`docs/os-construction/progress.md`. A post-landing review hardening batch
-closed the findings recorded in Post-Review Hardening below (same day).
-Next: slice 7, Output Package registration per the roadmap.
+Status: **Complete for Phase 1 (2026-07-04).** The schema surface of this plan
+(implementation-sequence steps 1-6, 11, 12 plus the promotion gate) landed via
+the user-approved Execution Decisions below; slice 4 (the Research Findings and
+Idea Queue workflow — run-scoped consistency checks, recall index, content
+board, retention prune, and the `create-research-findings`/`manage-idea-queue`
+producer skills) landed via the Slice 4 Execution Decisions at the end of this
+plan, batches A-E; slice 5 (the Idea Promotion to Project workflow — promotion
+link consistency and the `promote-idea` producer skill) landed via the Slice 5
+Execution Decisions at the end of this plan, batches A-C; slice 6
+(format-specific production planning) added article/thread production contracts
+and the `apply-social-template`/`create-production-plan` producer skills; slice
+7 added Output Package registration through `create-output-package` and
+`register-output-package`; and the research-intelligence hardening follow-up
+added `ResearchSearchPlan`, `ResearchSourceYield`, and aggregate source-yield
+learning. The verification records live in `docs/os-construction/progress.md`.
+Scheduled research automation remains deferred until the manual
+research-intelligence loop has been exercised against real creator runs.
 Last updated: 2026-07-04
 
 ## Goal
@@ -96,16 +97,16 @@ small local import command that maps watched-video reports into
 
 ## Post-Slice-7 Follow-Up: Research Intelligence Hardening
 
-Captured from the 2026-07-03 live research runtime eval: research agents need a
-durable way to remember sources that were checked but did not produce actionable
-evidence, findings, or queue ideas.
+Status: **Complete (2026-07-04).** Captured from the 2026-07-03 live research
+runtime eval: research agents need a durable way to remember sources that were
+checked but did not produce actionable evidence, findings, or queue ideas.
 
 Current `research/intelligence/sources.json` and `watchlist.json` can store the
 summary conclusion through `usefulness_score`, `status`,
 `last_evaluated_on`, and `rationale`. This hardening pass adds the missing
 per-run yield ledger and implements it together with `ResearchSearchPlan`.
 
-Implementation shape:
+Implemented shape:
 
 - add `ResearchSearchPlan` before browsing,
 - add `ResearchSourceYield` after browsing,
@@ -128,10 +129,11 @@ rarely change findings or ideas.
 
 Execution order:
 
-1. Finish slice 6: format-specific production planning.
-2. Finish slice 7: Output Package registration.
-3. Implement this research-intelligence hardening slice.
-4. Build scheduled research automation only after this loop exists.
+1. Finish slice 6: format-specific production planning. Complete.
+2. Finish slice 7: Output Package registration. Complete.
+3. Implement this research-intelligence hardening slice. Complete.
+4. Build scheduled research automation only after this loop exists and has been
+   exercised against real creator runs.
 
 Timing: this is a Phase 1 hardening follow-up after slices 6-7. It must land
 before scheduled research automation, because automation would otherwise repeat
