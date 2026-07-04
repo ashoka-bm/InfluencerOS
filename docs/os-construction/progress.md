@@ -516,6 +516,11 @@ project validation, board rebuild/validation, recall-index rebuild, prune
 dry-run, and copied-runtime sync all pass. The replay checked 27 workspace
 paths, 17 research records, 1 queue entry, 11 packaged project paths, 2 board
 cards, and 11 recall-index records.
+Phase 1 user-journey regression (2026-07-04): `tests/test_user_journey.py`
+codifies the normal local-first Planning OS path from new Creator Workspace
+setup through packaged Project output, using CLI gates for user-facing workflow
+boundaries and fixture file writes only for authored artifacts that are
+currently produced by human/agent skills rather than generation providers.
 ```
 
 ## Next Work Queue

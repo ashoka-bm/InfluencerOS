@@ -10,6 +10,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 
 - Phase 0C parity hardening is complete: batches A-G all landed 2026-07-03 and every roadmap exit criterion passes.
 - Phase 1 slices 1-7 plus research-intelligence hardening are complete as of 2026-07-04; next exercise the manual research-intelligence loop before scheduled automation.
+- Phase 1 now has tests/test_user_journey.py covering the local-first user journey from new Creator Workspace setup through packaged Project output.
 
 ## Environment Notes
 
