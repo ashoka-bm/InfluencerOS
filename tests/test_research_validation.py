@@ -332,6 +332,29 @@ class ResearchStateValidationTests(unittest.TestCase):
                 result["warnings"],
             )
 
+    def test_thin_evidence_warns_on_material_outputs_despite_flag(self):
+        # A stale material_update=false must not suppress the warning when the
+        # run's declared outputs (findings/ideas) show it was a material run.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_dir = workspace_dir / "research" / "runs" / RUN_ID
+            manifest_path = run_dir / "research-run.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["material_update"] = False
+            # outputs.finding_ids and idea_queue_entry_ids stay populated.
+            write_json(manifest_path, manifest)
+            promoted = load_example("research-source-yield")
+            write_jsonl(
+                run_dir / "source-yield.jsonl",
+                [promoted, background_yield(1), background_yield(2), background_yield(3)],
+            )
+
+            result = validate_research(workspace_dir)
+            self.assertTrue(
+                any("thin-evidence" in warning for warning in result["warnings"]),
+                result["warnings"],
+            )
+
     def test_material_run_with_enough_evidence_does_not_warn(self):
         # Same size run, but a healthy promotion rate must not trip the gate.
         with tempfile.TemporaryDirectory() as temp_dir:

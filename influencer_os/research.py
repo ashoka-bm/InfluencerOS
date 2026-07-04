@@ -51,11 +51,12 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
     "format_thread",
 })
 
-# A completed run that changed the rolling findings but grounded them in few
-# promoted-to-evidence sources is a thin-evidence run. This is an advisory WARN,
-# never a failure: thin research is allowed (local-first posture), it just must
-# not read as well-corroborated. Runs that checked fewer than the minimum are
-# too small for the promotion rate to mean anything, so they are not evaluated.
+# A material run (one that declares a material update, a finding, or a queue
+# entry) that grounded its output in few promoted-to-evidence sources is a
+# thin-evidence run. This is an advisory WARN, never a failure: thin research is
+# allowed (local-first posture), it just must not read as well-corroborated.
+# Runs that checked fewer than the minimum are too small for the promotion rate
+# to mean anything, so they are not evaluated.
 THIN_EVIDENCE_MIN_CHECKED = 3
 THIN_EVIDENCE_PROMOTION_RATE = 0.34
 
@@ -625,14 +626,23 @@ def validate_research(workspace_path):
                     1 for record in source_yield_records
                     if record["outcome"] == "promoted_to_evidence"
                 )
-                if (
+                # Derive "material" from the run's declared outputs, not only the
+                # material_update flag: a stale or wrong flag must not suppress
+                # the warning when the run actually produced a finding or idea.
+                run_outputs = run_record["outputs"]
+                run_is_material = (
                     run_record["material_update"]
+                    or bool(run_outputs["finding_ids"])
+                    or bool(run_outputs["idea_queue_entry_ids"])
+                )
+                if (
+                    run_is_material
                     and checked_sources >= THIN_EVIDENCE_MIN_CHECKED
                     and promoted_sources
                     < THIN_EVIDENCE_PROMOTION_RATE * checked_sources
                 ):
                     run_warnings.append(
-                        f"{run_manifest}: run declares a material update but only "
+                        f"{run_manifest}: run is a material research update but only "
                         f"{promoted_sources} of {checked_sources} checked sources "
                         "produced evidence; treat its findings as thin-evidence, "
                         "not well-corroborated"
