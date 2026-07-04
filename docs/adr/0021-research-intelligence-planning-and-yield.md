@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -93,4 +93,5 @@ in this slice.
 - Classification: adaptation.
 - Reason: InfluencerOS needs deterministic creator-scoped provenance, source
   learning, and approval gates more than generic research briefs.
-- Status: proposed until implementation lands and tests pass.
+- Status: accepted; implementation landed 2026-07-04 with the research
+  validation suite passing.
