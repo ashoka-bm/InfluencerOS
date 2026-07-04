@@ -66,7 +66,7 @@ Remaining:
 
 Goal: Create stable creator workspaces and produce researched, creator-fit, upload-ready content packages without requiring provider-backed generation.
 
-Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slices 6 (format-specific production planning) and 7 (Output Package registration) landed 2026-07-04. The next Phase 1 work is the research-intelligence hardening follow-up before scheduled research automation.
+Status: In progress. Slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow, batches A-E), and 5 (Idea Promotion to Project workflow, batches A-C) landed 2026-07-03; slices 6 (format-specific production planning) and 7 (Output Package registration) landed 2026-07-04; research-intelligence hardening landed 2026-07-04 before scheduled research automation.
 
 Completed:
 
@@ -134,9 +134,20 @@ Completed:
 
 - Addressed the slice 7 adversarial review (2026-07-04; one medium, one low, and one nit, all confirmed by reproduction): packaged project validation now re-checks the Output Package `universal_core.format_id` against the Project `content_unit_type`, so hand-edited packages cannot contradict the Project format at rest; `validate project` enforces that every packaged `upload_ready[].path` resolves to an existing local file, making `packaged` mean upload-ready deliverables exist; and registration rollback removes empty nested upload-ready directories created during a failed package write.
 
+- Research-intelligence hardening (2026-07-04): added `ResearchSearchPlan`,
+  `ResearchSourceYield`, and `docs/research-adapter-registry.md`, requiring
+  completed research runs to record source-selection intent before browsing and
+  source-yield outcomes after browsing. The slice adapts Agentic OS query
+  routing and engagement-weighted source evaluation while preserving
+  InfluencerOS schema-backed evidence/provenance. Heavy connectors remain
+  planned/deferred: logged-in social access, scraping APIs, API-backed search,
+  scheduled research, notifications, and YouTube as a first-class platform
+  require separate pre-go-live decisions.
+
 Remaining:
 
-- Research-intelligence hardening after slices 6-7, before scheduled research automation: combine `ResearchSearchPlan`, source-yield learning, Agentic OS query-intent routing, and engagement-weighted source evaluation. Pull this forward only if repeated live research evals show material source-search waste before slice 7 closes.
+- Scheduled research automation remains deferred until the manual
+  research-intelligence loop has been exercised against real creator runs.
 
 ### Phase 2: Learning OS
 
@@ -458,7 +469,7 @@ references.
 
 ## Next Work Queue
 
-1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills), and 7 (Output Package registration with `create-output-package` and `register-output-package`) are complete (slices 1-5 on 2026-07-03, slices 6-7 on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Continue Phase 1 with research-intelligence hardening before scheduled research automation.
+1. Phase 1 slices 1 (master intake import), 2 (creator readiness validation), 3 (ADR 0020 research module schema slice), 4 (Research Findings and Idea Queue workflow: run-scoped consistency checks, recall index, content board, retention prune, and the `create-research-findings`/`manage-idea-queue` producer skills), 5 (Idea Promotion to Project workflow: promotion link consistency and the `promote-idea` human-approval gate), 6 (format-specific production planning with article/thread routing and the `apply-social-template`/`create-production-plan` producer skills), 7 (Output Package registration with `create-output-package` and `register-output-package`), and the research-intelligence hardening follow-up are complete (slices 1-5 on 2026-07-03, slices 6-7 and research-intelligence hardening on 2026-07-04; records in `docs/workflows/master-intake-import-implementation-plan.md`, `docs/workflows/creator-readiness-validation-implementation-plan.md`, and `docs/workflows/research-and-ideas-implementation-plan.md`). Next Phase 1 work should exercise the manual research-intelligence loop before any scheduled research automation.
 2. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log
