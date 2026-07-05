@@ -249,15 +249,17 @@ influencer_os/cli.py
 
 ```text
 influencer_os/cli.py
-  list-connectors [--workspace <ws>]  -> connectors.registry.available()
+  list-connectors [--env-file <path>]  -> connectors.registry.connector_status()
        reports each connector available|unavailable from env (env.py: key present,
        kill switch off, per-run call cap) — no provider call
-  research-fetch <connector> <query> [--limit N ...] -> connectors.fetch.run_fetch()
-       registry.resolve(connector) -> connector module (openai_reddit | xai_x |
+  research-fetch <connector> <target> [--depth|--days|--from-date|--to-date|--max-posts|--out|--env-file]
+       -> connectors.fetch dispatch (fetch_reddit | fetch_x | fetch_firecrawl |
+         fetch_linkedin) -> connector module (openai_reddit | xai_x |
          firecrawl_web | linkedin_apify) -> http.py provider call
        -> parse.py / models.py map provider output to ResearchEvidence + MetricSnapshot
        -> validate against research-fetch-result.schema.json BEFORE emitting
-  guardrails: standing approval by key presence for api_backed/scraping_api only;
+  guardrails: standing approval by key presence pinned to the four ADR 0022
+    adapter IDs (not api_backed/scraping_api at large);
     per-run call cap (INFLUENCER_OS_CONNECTOR_MAX_CALLS) and kill switch
     (INFLUENCER_OS_DISABLE_PAID_CONNECTORS); free reddit.com enrichment bounded
     separately; runs only inside an explicit user-initiated fetch (no scheduled path).
