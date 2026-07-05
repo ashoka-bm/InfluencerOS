@@ -87,6 +87,9 @@ def main(argv=None):
     memory_parser.add_argument("fact", help="One-line durable fact.")
     memory_parser.add_argument("--section", default=DEFAULT_MEMORY_SECTION, help="Target section heading, without the leading '## '.")
 
+    connectors_parser = subparsers.add_parser("list-connectors", help="Show research-acquisition connectors and whether each is available given current API keys (ADR 0022).")
+    connectors_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
+
     learning_parser = subparsers.add_parser("log-learning", help="Append a dated per-skill learning entry to a learnings file.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
     learning_parser.add_argument("skill_name", help="Skill folder name the learning applies to.")
@@ -272,6 +275,22 @@ def main(argv=None):
                 print("Already saved; no change.")
             else:
                 print(f"Saved memory fact ({result['bytes_used']}/{result['byte_cap']} bytes).")
+            return 0
+
+        if args.command == "list-connectors":
+            from influencer_os.connectors import env as connector_env, registry
+            config = connector_env.get_config(
+                env_path=Path(args.env_file) if args.env_file else None
+            )
+            rows = registry.connector_status(config)
+            available = sum(1 for r in rows if r["available"])
+            print(f"Research-acquisition connectors: {available}/{len(rows)} available")
+            if connector_env.paid_connectors_disabled(config):
+                print("(paid connector tier is OFF via INFLUENCER_OS_DISABLE_PAID_CONNECTORS)")
+            for r in rows:
+                mark = "available" if r["available"] else "unavailable"
+                platform = r["platform"] or "web"
+                print(f"- [{mark}] {r['connector']} ({r['adapter_id']}, {platform}) - {r['reason']}")
             return 0
 
         if args.command == "log-learning":
