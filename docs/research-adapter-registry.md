@@ -73,6 +73,12 @@ Activation env vars:
 
 Keys live in the environment / `.env` only (gitignored); see `.env.example`.
 
+CLI seam: `python3 -m influencer_os list-connectors` shows availability;
+`python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin>
+"<topic-or-url>"` runs one fetch and emits a result validated against
+`schemas/research-fetch-result.schema.json`. The `create-research-findings`
+skill curates candidates into `ResearchEvidence`/`MetricSnapshot` records.
+
 ## Planned / Deferred Adapters
 
 | Adapter ID | Access method | Auth | Approval | Activation requirement |

@@ -90,6 +90,17 @@ def main(argv=None):
     connectors_parser = subparsers.add_parser("list-connectors", help="Show research-acquisition connectors and whether each is available given current API keys (ADR 0022).")
     connectors_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
+    fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
+    fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin"], help="Connector to run.")
+    fetch_parser.add_argument("target", help="Topic (reddit/x), page URL (firecrawl), or profile URL (linkedin).")
+    fetch_parser.add_argument("--depth", choices=["quick", "default", "deep"], default="default", help="Discovery depth for reddit/x.")
+    fetch_parser.add_argument("--days", type=int, default=30, help="Recency window in days (default 30).")
+    fetch_parser.add_argument("--from-date", dest="from_date", help="Window start YYYY-MM-DD; overrides --days with --to-date.")
+    fetch_parser.add_argument("--to-date", dest="to_date", help="Window end YYYY-MM-DD.")
+    fetch_parser.add_argument("--max-posts", dest="max_posts", type=int, default=5, help="Max posts per LinkedIn profile (default 5).")
+    fetch_parser.add_argument("--out", help="Write the fetch-result JSON here instead of stdout.")
+    fetch_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
+
     learning_parser = subparsers.add_parser("log-learning", help="Append a dated per-skill learning entry to a learnings file.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
     learning_parser.add_argument("skill_name", help="Skill folder name the learning applies to.")
@@ -291,6 +302,53 @@ def main(argv=None):
                 mark = "available" if r["available"] else "unavailable"
                 platform = r["platform"] or "web"
                 print(f"- [{mark}] {r['connector']} ({r['adapter_id']}, {platform}) - {r['reason']}")
+            return 0
+
+        if args.command == "research-fetch":
+            import json as json_module
+
+            from influencer_os.connectors import env as connector_env, fetch as connector_fetch
+            from influencer_os.validation import validate_record as validate_record_fn
+
+            config = connector_env.get_config(
+                env_path=Path(args.env_file) if args.env_file else None
+            )
+            budget = connector_env.CallBudget(config["MAX_CALLS"])
+            try:
+                if args.connector == "reddit":
+                    result = connector_fetch.fetch_reddit(
+                        args.target, config, budget, depth=args.depth,
+                        from_date=args.from_date, to_date=args.to_date, days=args.days,
+                    )
+                elif args.connector == "x":
+                    result = connector_fetch.fetch_x(
+                        args.target, config, budget, depth=args.depth,
+                        from_date=args.from_date, to_date=args.to_date, days=args.days,
+                    )
+                elif args.connector == "firecrawl":
+                    result = connector_fetch.fetch_firecrawl(args.target, config, budget)
+                else:
+                    result = connector_fetch.fetch_linkedin(
+                        args.target, config, budget,
+                        max_posts=args.max_posts, days=args.days,
+                    )
+            except connector_fetch.ConnectorUnavailable as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                print("Run `python3 -m influencer_os list-connectors` to see availability.", file=sys.stderr)
+                return 1
+
+            validate_record_fn("research-fetch-result", result)
+            payload = json_module.dumps(result, indent=2)
+            if args.out:
+                Path(args.out).write_text(payload + "\n")
+                print(f"Wrote fetch result: {args.out}", file=sys.stderr)
+            else:
+                print(payload)
+            print(
+                f"{result['connector']}: {len(result['candidates'])} candidate(s), "
+                f"{result['calls_used']} paid call(s) used, status {result['status']}",
+                file=sys.stderr,
+            )
             return 0
 
         if args.command == "log-learning":

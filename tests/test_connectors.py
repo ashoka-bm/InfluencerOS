@@ -406,6 +406,50 @@ class ModelCacheTests(unittest.TestCase):
         self.assertEqual(second, "gpt-5.1")
 
 
+class ResearchFetchCliTests(unittest.TestCase):
+    def test_cli_unavailable_connector_fails_cleanly(self):
+        from influencer_os.cli import main
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("# no keys\n")
+            with mock.patch.dict("os.environ", {}, clear=True):
+                code = main(["research-fetch", "reddit", "pothos", "--env-file", str(env_path)])
+        self.assertEqual(code, 1)
+
+    def test_cli_writes_validated_result_with_mocked_fetch(self):
+        from influencer_os import cli
+        fake_result = {
+            "connector": "reddit_openai",
+            "adapter_id": "reddit_api_or_search",
+            "platform": "reddit",
+            "topic": "pothos",
+            "from_date": "2026-06-05",
+            "to_date": "2026-07-05",
+            "model": "gpt-4o",
+            "candidates": [{"id": "R1", "url": "https://www.reddit.com/r/s/comments/a/t/"}],
+            "enriched_count": 1,
+            "calls_used": 2,
+            "truncated": False,
+            "capped": False,
+            "status": "ok",
+            "notes": [],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=sk-test\n")
+            out_path = Path(tmp) / "result.json"
+            with mock.patch.dict("os.environ", {}, clear=True), \
+                    mock.patch("influencer_os.connectors.fetch.fetch_reddit", return_value=fake_result):
+                code = cli.main([
+                    "research-fetch", "reddit", "pothos",
+                    "--env-file", str(env_path), "--out", str(out_path),
+                ])
+            self.assertEqual(code, 0)
+            import json as json_module
+            written = json_module.loads(out_path.read_text())
+            self.assertEqual(written["connector"], "reddit_openai")
+
+
 class ConnectorDriftTests(unittest.TestCase):
     def test_provider_keys_derive_from_registry(self):
         self.assertEqual(env.provider_keys(), [c["key"] for c in registry.CONNECTORS])

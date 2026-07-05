@@ -570,9 +570,31 @@ current loop would just schedule thin-evidence runs. No repo code changed; all
 run artifacts live under the untracked remy-vale workspace fixture.
 ```
 
+Research-acquisition connector layer (2026-07-05): ADR 0022 accepted and
+implemented across batches A-D. The env-gated connector tier mirrors the
+Agentic OS str-trending-research acquisition path (stdlib-only, mock-hook
+testing): reddit_openai (OpenAI Responses web_search + direct reddit.com JSON
+engagement enrichment), x_xai (x_search, inline engagement), firecrawl_web
+(v2/scrape), and linkedin_apify (harvestapi actor). Key presence is standing
+approval for the research tier only (per-run call cap + kill switch; generation
+gates unchanged). A high-effort code review of batches A-B produced 10
+confirmed findings, all fixed in batch B.5 — including the policy/mechanism
+split where the search-plan and source-yield validators still rejected
+api_backed/scraping_api adapters that ADR 0022 standing-approves (validators
+now split standing-approved vs fully-gated methods), restored recency windows,
+budget/depth resizing (free reddit enrichment decoupled from the paid cap),
+parse hardening, env precedence, an in-process model cache, and a
+schema-validated fetch-result contract (schemas/research-fetch-result). CLI:
+`list-connectors` and `research-fetch` (validates output before emitting).
+The create-research-findings skill documents the connector step; 17 runtime
+skills synced to all four fixture workspaces. Verification: 372 tests pass,
+43 example records validate, drift checks pass (22), fixture workspaces
+validate. No live provider calls were made; first live validation happens when
+a real key lands in .env.
+
 ## Next Work Queue
 
-1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. Continue with more real creator runs — ideally against a Reddit-capable adapter — before approving scheduled automation.
+1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
 2. Begin Phase 2 Learning OS when ready: published-post registration, analytics snapshot ingestion, performance summaries, creator-memory distillation, SQL index rebuilds, and semantic lookup projection.
 3. Optional: render the comparison map Excalidraw scene.
 

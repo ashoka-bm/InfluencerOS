@@ -47,9 +47,43 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    research is time-sensitive. A term you are testing rather than deriving from
    creator context must use the `hypothesis` term_basis.
 4. Start from known high-signal sources (intelligence files), then branch
-   outward. Browser-visible public data only: no logged-in sessions, private
-   URLs, scraping APIs, cookies, platform API credentials, scheduled jobs, or
-   external notifications.
+   outward. Allowed acquisition (ADR 0022): browser-visible public data plus
+   the key-gated research-acquisition connectors below. Still forbidden:
+   logged-in sessions, private URLs, scheduled jobs, and external
+   notifications.
+
+## Key-Gated Connectors (ADR 0022)
+
+Before planning sources, run `python3 -m influencer_os list-connectors`.
+Connectors whose API key is present are **standing-approved** for research
+acquisition — no per-run prompt — bounded by a per-run paid-call cap and the
+`INFLUENCER_OS_DISABLE_PAID_CONNECTORS` kill switch:
+
+- `reddit_openai` (`reddit_api_or_search`, needs `OPENAI_API_KEY`): Reddit
+  threads with real upvotes/comments.
+- `x_xai` (`x_api`, needs `XAI_API_KEY`): X posts with inline engagement.
+- `firecrawl_web` (`firecrawl_public_web`, needs `FIRECRAWL_API_KEY`): rendered
+  public web/JS pages.
+- `linkedin_apify` (`linkedin_apify`, needs `APIFY_API_KEY`): public LinkedIn
+  profile posts.
+
+Usage inside a run:
+
+- Declare the connector in `search-plan.json` `adapters_considered` with its
+  adapter ID, `access_method` (`api_backed`/`scraping_api`),
+  `adapter_status: "active"`, and `decision: "use_now"` only when
+  `list-connectors` shows it available; otherwise mark it
+  `skip_this_run`/`future_connector` and fall back to public web.
+- Fetch with
+  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin> "<topic-or-url>" --out .tmp/<run-id>-<connector>.json`.
+  The result validates against `schemas/research-fetch-result.schema.json` and
+  is a transient candidate list, never canonical state.
+- Curate: promote only creator-fit candidates into `evidence.jsonl`; map real
+  engagement (`score`/`num_comments`, `likes`/`reposts`/`replies`) into
+  `metric-snapshots.jsonl` records; judge tiers by the Signal Tier Rubric as
+  usual. Record one `source-yield.jsonl` line per connector query with the
+  connector's `adapter_id` and access method, including low-yield outcomes,
+  and note `capped`/`truncated` results honestly.
 5. Capture one `evidence.jsonl` line per real post/article/creator inspected
    when it produces material evidence (`schemas/research-evidence.schema.json`)
    and metric snapshots in `metric-snapshots.jsonl`
@@ -137,8 +171,10 @@ evidence a queue entry, promotion, or project references.
 
 - Date the research and cite sources; trend claims stay tied to evidence.
 - Audience and niche are creator-profile inputs, never invented here.
-- Public research needs no approval; Whisper/API transcription fallback,
-  first-run tool installs, and video batches require explicit user approval.
+- Public research needs no approval; ADR 0022 key-gated connectors are
+  standing-approved by key presence. Whisper/API transcription fallback,
+  first-run tool installs, logged-in access, and video batches still require
+  explicit user approval.
 - Fix validation failures before presenting results; never leave the
   workspace invalid.
 
