@@ -37,6 +37,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-03: Live research eval showed a need for source-yield learning: after Phase 1 slices 6-7, add the merged research-intelligence hardening slice that tracks searched-but-unused sources, downgrades repeated background-only/low-yield sources in research intelligence, and lands before scheduled research automation.
 - 2026-07-04: Research-intelligence hardening now requires search-plan.json before browsing, source-yield.jsonl after browsing, and sources.json yield_stats for completed runs.
 - 2026-07-04: Quality determination is now anchored: assign visible_metric_signal/confidence from the Signal Tier Rubric, require corroboration-breadth plus a contradiction pass in synthesis, ground query terms in creator context (not model knowledge), and expect a thin-evidence WARN when a material run promotes few checked sources (docs/workflows/research-and-ideas.md).
+- 2026-07-05: ADR 0022 connectors are standing-approved by API-key presence; declare a connector adapter as use_now in search-plan only when 'list-connectors' shows it available, else mark it future_connector/skip_this_run and fall back to public web.
 
 ### create-production-plan
 - 2026-07-04: Phase 1 slice 6 established one Project per content unit: content_unit_type must map to exactly one target format, and article/thread plans do not require Base Video Generation Plans.
