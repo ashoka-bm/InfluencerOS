@@ -203,6 +203,14 @@ Likely implementation slices:
 
 Goal: generate or import media through approved providers while preserving provenance.
 
+Status: draft implementation plan exists (2026-07-05), written while Phase 2
+executes. The entry-criteria verification, runnable exit-criteria rewrite,
+reference review, and five OPEN execution decisions (provider package shape,
+approval-record semantics, first real adapter, provenance ledger, quality-gate
+strictness) live in `docs/workflows/generation-os-implementation-plan.md`.
+Execution does not start until those decisions are user-approved, ADR 0023 is
+recorded, and Phase 2 closes out (or interleaving is explicitly approved).
+
 Entry criteria:
 
 - Planning OS produces stable provider-neutral Base Video Generation Plans.
