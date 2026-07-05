@@ -11,7 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 from influencer_os.validation import (
-    GATED_RESEARCH_ACCESS_METHODS,
+    FULLY_GATED_ACCESS_METHODS,
     ValidationError,
     load_json,
     validate_file,
@@ -574,10 +574,11 @@ def validate_research(workspace_path):
                     for record in run_records["metric-snapshots.jsonl"]
                 }
                 for record in source_yield_records:
-                    if record["access_method"] in GATED_RESEARCH_ACCESS_METHODS:
-                        # The yield ledger records what the run actually did;
-                        # a gated method here attests the run executed something
-                        # the slice forbids, so the plan-side gate is not enough.
+                    if record["access_method"] in FULLY_GATED_ACCESS_METHODS:
+                        # The yield ledger records what the run actually did; a
+                        # fully-gated method (logged-in session or scheduled job)
+                        # attests the run executed something the slice forbids.
+                        # ADR 0022 api_backed/scraping_api connectors are allowed.
                         raise ValidationError(
                             f"{source_yield_path}: source yield "
                             f"{record['research_source_yield_id']} used gated "

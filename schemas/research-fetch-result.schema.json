@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/research-fetch-result.schema.json",
+  "title": "ResearchFetchResult",
+  "description": "Transient output of a research-acquisition connector (ADR 0022). Candidates are curated into ResearchEvidence/MetricSnapshot by the create-research-findings skill; this is a workflow-boundary contract, not a canonical stored record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "connector",
+    "adapter_id",
+    "platform",
+    "topic",
+    "from_date",
+    "to_date",
+    "model",
+    "candidates",
+    "enriched_count",
+    "calls_used",
+    "truncated",
+    "capped",
+    "status",
+    "notes"
+  ],
+  "properties": {
+    "connector": { "type": "string", "minLength": 1 },
+    "adapter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$" },
+    "platform": {
+      "type": "string",
+      "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "web"]
+    },
+    "topic": { "type": "string", "minLength": 1 },
+    "from_date": { "type": "string", "format": "date" },
+    "to_date": { "type": "string", "format": "date" },
+    "model": { "type": "string" },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "url"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "pattern": "^https?://" }
+        }
+      }
+    },
+    "enriched_count": { "type": "integer", "minimum": 0 },
+    "calls_used": { "type": "integer", "minimum": 0 },
+    "truncated": { "type": "boolean" },
+    "capped": { "type": "boolean" },
+    "status": { "type": "string", "enum": ["ok", "no_results"] },
+    "notes": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

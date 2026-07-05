@@ -9,7 +9,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from influencer_os.connectors import env, fetch, openai_reddit, reddit_enrich, registry
+from influencer_os.connectors import env, fetch, models, openai_reddit, reddit_enrich, registry
+from influencer_os.validation import validate_record
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class EnvConfigTests(unittest.TestCase):
@@ -106,6 +109,27 @@ class RedditParseTests(unittest.TestCase):
     def test_parse_handles_error_response(self):
         self.assertEqual(openai_reddit.parse_reddit_response({"error": {"message": "bad key"}}), [])
 
+    def test_parse_ignores_extra_json_object_before_items(self):
+        # Model emits an aside object before the real payload; greedy first-{ to
+        # last-} matching would corrupt this, so the extractor must skip it.
+        text = (
+            '{"analysis": "let me think"} then the answer: '
+            '{"items": [{"title": "ok", '
+            '"url": "https://www.reddit.com/r/s/comments/z/t/", "relevance": 0.7}]}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["relevance"], 0.7)
+
+    def test_parse_defaults_non_numeric_relevance(self):
+        text = (
+            '{"items": [{"title": "x", '
+            '"url": "https://www.reddit.com/r/s/comments/z/t/", "relevance": "high"}]}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["relevance"], 0.5)  # bad value defaulted, no crash
+
 
 class RedditEnrichTests(unittest.TestCase):
     def _thread(self):
@@ -163,6 +187,85 @@ class FetchRedditTests(unittest.TestCase):
         result = fetch.fetch_reddit("pothos", config, budget, mock_search_response=self._response("{}"))
         self.assertTrue(result["capped"])
         self.assertEqual(result["candidates"], [])
+        self.assertEqual(result["model"], "")  # coerced, never None
+
+    def test_fetch_drops_stale_candidates(self):
+        text = (
+            '{"items": ['
+            '{"title": "old", "url": "https://www.reddit.com/r/s/comments/a/o/", "date": "2020-01-01", "relevance": 0.9},'
+            '{"title": "new", "url": "https://www.reddit.com/r/s/comments/b/n/", "date": "2026-06-20", "relevance": 0.9},'
+            '{"title": "undated", "url": "https://www.reddit.com/r/s/comments/c/u/", "relevance": 0.8}'
+            ']}'
+        )
+        config = {"OPENAI_API_KEY": "sk"}
+        budget = env.CallBudget(5)
+        result = fetch.fetch_reddit(
+            "pothos", config, budget, from_date="2026-06-05", to_date="2026-07-05",
+            mock_search_response=self._response(text), mock_model="gpt-4o",
+            mock_thread_data={"x": 1},
+        )
+        titles = {c["title"] for c in result["candidates"]}
+        self.assertEqual(titles, {"new", "undated"})  # stale dropped, unknown kept
+        self.assertTrue(any("older than" in n for n in result["notes"]))
+
+    def test_fetch_truncates_enrichment_without_dropping_candidates(self):
+        text = (
+            '{"items": ['
+            '{"title": "a", "url": "https://www.reddit.com/r/s/comments/a/a/", "relevance": 0.9},'
+            '{"title": "b", "url": "https://www.reddit.com/r/s/comments/b/b/", "relevance": 0.9}'
+            ']}'
+        )
+        config = {"OPENAI_API_KEY": "sk"}
+        budget = env.CallBudget(5)
+        thread = [{"data": {"children": [{"data": {"score": 5, "num_comments": 1, "upvote_ratio": 0.9}}]}}, {"data": {"children": []}}]
+        result = fetch.fetch_reddit(
+            "pothos", config, budget, max_enrich=1,
+            mock_search_response=self._response(text), mock_model="gpt-4o", mock_thread_data=thread,
+        )
+        self.assertTrue(result["truncated"])
+        self.assertEqual(result["enriched_count"], 1)
+        self.assertEqual(len(result["candidates"]), 2)  # tail retained, just unenriched
+        self.assertEqual(result["calls_used"], 1)  # enrichment is free; only the paid search counted
+        self.assertTrue(any("limited to 1" in n for n in result["notes"]))
+
+    def test_fetch_result_conforms_to_schema(self):
+        text = ('{"items": [{"title": "t", '
+                '"url": "https://www.reddit.com/r/s/comments/z/t/", "relevance": 0.8}]}')
+        config = {"OPENAI_API_KEY": "sk"}
+        budget = env.CallBudget(5)
+        thread = [{"data": {"children": [{"data": {"score": 5, "num_comments": 1, "upvote_ratio": 0.9}}]}}, {"data": {"children": []}}]
+        result = fetch.fetch_reddit(
+            "pothos", config, budget,
+            mock_search_response=self._response(text), mock_model="gpt-4o", mock_thread_data=thread,
+        )
+        validate_record("research-fetch-result", result)  # raises on mismatch
+
+
+class ModelCacheTests(unittest.TestCase):
+    def setUp(self):
+        models.clear_model_cache()
+
+    def tearDown(self):
+        models.clear_model_cache()
+
+    def test_model_selection_is_cached_and_skips_network(self):
+        first = models.select_openai_model("sk", mock_models=[{"id": "gpt-5.1", "created": 2}])
+        self.assertEqual(first, "gpt-5.1")
+        # Second call without mocks must hit the cache, not the network.
+        with mock.patch.object(models.http, "get", side_effect=AssertionError("network hit")):
+            second = models.select_openai_model("sk")
+        self.assertEqual(second, "gpt-5.1")
+
+
+class ConnectorDriftTests(unittest.TestCase):
+    def test_provider_keys_derive_from_registry(self):
+        self.assertEqual(env.provider_keys(), [c["key"] for c in registry.CONNECTORS])
+
+    def test_every_connector_documented_in_registry_doc(self):
+        doc = (ROOT / "docs" / "research-adapter-registry.md").read_text()
+        for c in registry.CONNECTORS:
+            self.assertIn(c["adapter_id"], doc, f"{c['adapter_id']} missing from registry doc")
+            self.assertIn(c["key"], doc, f"{c['key']} missing from registry doc")
 
 
 if __name__ == "__main__":

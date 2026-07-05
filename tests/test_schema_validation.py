@@ -304,6 +304,37 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_record("research-search-plan", invalid)
 
+    def test_search_plan_allows_active_key_gated_connector_use_now(self):
+        # ADR 0022: an active api_backed/scraping_api connector is standing-
+        # approved by key presence, so use_now with approval_required false is valid.
+        example = load_json("examples/research-search-plan.example.json")
+        valid = deepcopy(example)
+        valid["adapters_considered"].append({
+            "adapter_id": "reddit_api_or_search",
+            "access_method": "api_backed",
+            "adapter_status": "active",
+            "auth_required": True,
+            "approval_required": False,
+            "decision": "use_now",
+            "reason": "OPENAI_API_KEY present; standing-approved research connector.",
+        })
+        validate_record("research-search-plan", valid)  # must not raise
+
+    def test_search_plan_still_rejects_loggedin_use_now(self):
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["adapters_considered"].append({
+            "adapter_id": "instagram_logged_in_browser",
+            "access_method": "logged_in_browser",
+            "adapter_status": "active",
+            "auth_required": True,
+            "approval_required": True,
+            "decision": "use_now",
+            "reason": "attempting to use a logged-in session directly",
+        })
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
     def test_search_plan_rejects_query_outside_planned_platforms(self):
         example = load_json("examples/research-search-plan.example.json")
         invalid = deepcopy(example)

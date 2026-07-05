@@ -1,0 +1,30 @@
+{
+  "connector": "reddit_openai",
+  "adapter_id": "reddit_api_or_search",
+  "platform": "reddit",
+  "topic": "low light houseplants for renters",
+  "from_date": "2026-06-05",
+  "to_date": "2026-07-05",
+  "model": "gpt-5.1",
+  "candidates": [
+    {
+      "id": "R1",
+      "title": "Which low-light plants actually survive a north-facing rental?",
+      "url": "https://www.reddit.com/r/houseplants/comments/abc123/low_light_rental/",
+      "subreddit": "houseplants",
+      "date": "2026-06-28",
+      "why_relevant": "Beginners in dim rentals naming the plants that survive; strong objection language.",
+      "relevance": 0.9,
+      "engagement": { "score": 812, "num_comments": 145, "upvote_ratio": 0.97 },
+      "top_comments": [
+        { "score": 60, "author": "planty", "excerpt": "Low light is not no light. Move it to the window and it recovers." }
+      ]
+    }
+  ],
+  "enriched_count": 1,
+  "calls_used": 1,
+  "truncated": false,
+  "capped": false,
+  "status": "ok",
+  "notes": []
+}

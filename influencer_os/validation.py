@@ -70,12 +70,23 @@ REQUIRED_CREATIVE_STAGES = {
     "cta",
 }
 
-GATED_RESEARCH_ACCESS_METHODS = {
+# Access methods for the ADR 0022 key-gated research-acquisition connectors.
+# Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
+# is active) and need not set `approval_required`.
+STANDING_APPROVED_ACCESS_METHODS = {
     "api_backed",
     "scraping_api",
+}
+
+# Access methods still fully gated: they may never be `use_now` and must set
+# `approval_required` (logged-in sessions and unattended scheduled jobs).
+FULLY_GATED_ACCESS_METHODS = {
     "logged_in_browser",
     "scheduled_job",
 }
+
+# Union retained for callers that mean "any provider/heavy access method".
+GATED_RESEARCH_ACCESS_METHODS = STANDING_APPROVED_ACCESS_METHODS | FULLY_GATED_ACCESS_METHODS
 
 LOW_YIELD_OUTCOMES = {
     "background_only",
@@ -429,16 +440,21 @@ def validate_research_search_plan_semantics(record):
                 "ResearchSearchPlan.adapters_considered: only active adapters "
                 "may have decision 'use_now'"
             )
-        if adapter.get("access_method") in GATED_RESEARCH_ACCESS_METHODS:
+        # ADR 0022: api_backed/scraping_api are the key-gated connector tier;
+        # standing-approved by key presence, so `use_now` is allowed when the
+        # adapter is active (enforced by the adapter_status check above) and
+        # `approval_required` is not mandated. Logged-in and scheduled access
+        # stay fully gated.
+        if adapter.get("access_method") in FULLY_GATED_ACCESS_METHODS:
             if adapter.get("decision") == "use_now":
                 raise ValidationError(
-                    "ResearchSearchPlan.adapters_considered: gated access "
-                    "methods cannot be used in this slice"
+                    "ResearchSearchPlan.adapters_considered: logged-in and "
+                    "scheduled access methods cannot be used in this slice"
                 )
             if adapter.get("approval_required") is not True:
                 raise ValidationError(
-                    "ResearchSearchPlan.adapters_considered: gated access "
-                    "methods must require approval"
+                    "ResearchSearchPlan.adapters_considered: logged-in and "
+                    "scheduled access methods must require approval"
                 )
 
     for query in record.get("planned_queries", []):

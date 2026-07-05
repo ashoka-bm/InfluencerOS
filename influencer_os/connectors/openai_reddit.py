@@ -19,8 +19,9 @@ DEPTH_CONFIG = {"quick": (15, 25), "default": (30, 50), "deep": (70, 100)}
 
 REDDIT_SEARCH_PROMPT = """Find Reddit discussion threads about: {topic}
 
-Search broadly for the core subject on reddit.com. Return as many relevant
-threads as you find; we filter by date and engagement afterwards.
+Search broadly for the core subject on reddit.com. Prefer threads from
+{from_date} to {to_date}; research is time-sensitive, so favor recent activity
+and set "date" to "YYYY-MM-DD" when you can determine it (null if you cannot).
 
 REQUIRED: URLs must contain "/r/" AND "/comments/".
 REJECT: developers.reddit.com, business.reddit.com.
@@ -56,17 +57,26 @@ def search_reddit(
     api_key: str,
     model: str,
     topic: str,
+    from_date: str,
+    to_date: str,
     depth: str = "default",
     mock_response: Optional[Dict] = None,
 ) -> Dict[str, Any]:
-    """Call the OpenAI Responses API to find Reddit threads for a topic."""
+    """Call the OpenAI Responses API to find Reddit threads for a topic.
+
+    `from_date`/`to_date` (YYYY-MM-DD) bias the search toward the recency window;
+    research is time-sensitive, so the caller always passes an explicit window.
+    """
     if mock_response is not None:
         return mock_response
 
     min_items, max_items = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     timeout = 90 if depth == "quick" else 120 if depth == "default" else 180
-    input_text = REDDIT_SEARCH_PROMPT.format(topic=topic, min_items=min_items, max_items=max_items)
+    input_text = REDDIT_SEARCH_PROMPT.format(
+        topic=topic, from_date=from_date, to_date=to_date,
+        min_items=min_items, max_items=max_items,
+    )
 
     models_to_try = [model] + [m for m in MODEL_FALLBACK_ORDER if m != model]
     last_error: Optional[http.HTTPError] = None
@@ -109,6 +119,46 @@ def _extract_output_text(response: Dict[str, Any]) -> str:
     return ""
 
 
+def _iter_balanced_objects(text: str):
+    """Yield every balanced ``{...}`` substring, left to right."""
+    for start, ch in enumerate(text):
+        if ch != "{":
+            continue
+        depth = 0
+        for j in range(start, len(text)):
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    yield text[start:j + 1]
+                    break
+
+
+def _extract_items(output_text: str) -> List[Any]:
+    """Find the JSON object that carries "items", tolerating surrounding text
+    or other JSON objects (a greedy first-brace-to-last-brace match corrupts
+    the payload when the model emits more than one object)."""
+    for candidate in _iter_balanced_objects(output_text):
+        if '"items"' not in candidate:
+            continue
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("items"), list):
+            return data["items"]
+    return []
+
+
+def _safe_relevance(value: Any) -> float:
+    """Coerce a model-supplied relevance to [0, 1], defaulting on bad input."""
+    try:
+        return min(1.0, max(0.0, float(value)))
+    except (TypeError, ValueError):
+        return 0.5
+
+
 def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract clean Reddit candidate items from an OpenAI response."""
     if response.get("error"):
@@ -117,16 +167,8 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not output_text:
         return []
 
-    match = re.search(r'\{[\s\S]*"items"[\s\S]*\}', output_text)
-    if not match:
-        return []
-    try:
-        raw_items = json.loads(match.group()).get("items", [])
-    except json.JSONDecodeError:
-        return []
-
     clean: List[Dict[str, Any]] = []
-    for i, item in enumerate(raw_items):
+    for i, item in enumerate(_extract_items(output_text)):
         if not isinstance(item, dict):
             continue
         url = item.get("url", "")
@@ -143,7 +185,7 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "subreddit": str(item.get("subreddit", "")).strip().lstrip("r/"),
                 "date": date,
                 "why_relevant": str(item.get("why_relevant", "")).strip(),
-                "relevance": min(1.0, max(0.0, float(item.get("relevance", 0.5)))),
+                "relevance": _safe_relevance(item.get("relevance", 0.5)),
             }
         )
     return clean

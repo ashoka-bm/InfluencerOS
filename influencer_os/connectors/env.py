@@ -8,12 +8,20 @@ call cap and a global paid-connector kill switch.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
-
-# Provider key -> the connector(s) it activates.
-PROVIDER_KEYS = ("OPENAI_API_KEY", "XAI_API_KEY", "FIRECRAWL_API_KEY", "APIFY_API_KEY")
+from typing import Any, Dict, List, Optional
 
 DEFAULT_MAX_CALLS = 12
+
+
+def provider_keys() -> List[str]:
+    """The provider env-var names, derived from the connector registry.
+
+    Single source of truth: the registry defines the connectors; this reads the
+    keys off it. Imported lazily to avoid a registry<->env import cycle.
+    """
+    from influencer_os.connectors.registry import CONNECTORS
+
+    return [c["key"] for c in CONNECTORS]
 
 
 def _find_project_env(start: Optional[Path] = None) -> Path:
@@ -54,9 +62,14 @@ def get_config(env_path: Optional[Path] = None) -> Dict[str, Any]:
     file_env = load_env_file(env_path or _find_project_env())
 
     def resolve(name: str) -> Optional[str]:
-        return os.environ.get(name) or file_env.get(name)
+        # os.environ takes precedence, including an explicit empty value; only
+        # fall back to the file when the var is truly unset.
+        value = os.environ.get(name)
+        if value is not None:
+            return value
+        return file_env.get(name)
 
-    config: Dict[str, Any] = {key: resolve(key) for key in PROVIDER_KEYS}
+    config: Dict[str, Any] = {key: resolve(key) for key in provider_keys()}
 
     disable = (resolve("INFLUENCER_OS_DISABLE_PAID_CONNECTORS") or "").lower()
     config["DISABLE_PAID_CONNECTORS"] = disable in ("1", "true", "yes")

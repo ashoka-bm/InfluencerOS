@@ -65,6 +65,15 @@ Activation contract:
 - Keys are read from the environment / `.env` only (never hardcoded, logged, or
   committed). `.env` is already gitignored; `.env.example` documents the vars.
 
+Enforcement: the standing-approval split is implemented in the search-plan and
+source-yield validators. `api_backed` and `scraping_api` (the key-gated tier)
+may be `use_now` when the adapter is `active` and need not set
+`approval_required`; `logged_in_browser` and `scheduled_job` stay fully gated
+(never `use_now`, must require approval). Reddit thread enrichment is a free
+public reddit.com read and does not draw on the paid call budget; it is bounded
+separately by a per-run enrichment cap. Connector output is a workflow-boundary
+contract validated by `schemas/research-fetch-result.schema.json`.
+
 Guardrails so standing approval is not unbounded:
 
 - A per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`, default small) bounds

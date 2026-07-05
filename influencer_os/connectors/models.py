@@ -15,6 +15,15 @@ OPENAI_FALLBACK_MODELS = ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o"]
 
 XAI_ALIASES = {"latest": "grok-4-1-fast", "stable": "grok-4-1-fast"}
 
+# In-process cache of the resolved model per provider. A single research run
+# resolves many topics in one process; without this each fetch would re-hit
+# /v1/models for the same answer. Cleared only by process exit.
+_MODEL_CACHE: Dict[str, str] = {}
+
+
+def clear_model_cache() -> None:
+    _MODEL_CACHE.clear()
+
 
 def parse_version(model_id: str) -> Optional[Tuple[int, ...]]:
     match = re.search(r"(\d+(?:\.\d+)*)", model_id)
@@ -38,6 +47,8 @@ def select_openai_model(
 ) -> str:
     if policy == "pinned" and pin:
         return pin
+    if mock_models is None and "openai" in _MODEL_CACHE:
+        return _MODEL_CACHE["openai"]
     if mock_models is not None:
         models = mock_models
     else:
@@ -51,7 +62,9 @@ def select_openai_model(
     if not candidates:
         return OPENAI_FALLBACK_MODELS[0]
     candidates.sort(key=lambda m: (parse_version(m.get("id", "")) or (0,), m.get("created", 0)), reverse=True)
-    return candidates[0]["id"]
+    selected = candidates[0]["id"]
+    _MODEL_CACHE["openai"] = selected
+    return selected
 
 
 def select_xai_model(api_key: str, policy: str = "latest", pin: Optional[str] = None) -> str:
