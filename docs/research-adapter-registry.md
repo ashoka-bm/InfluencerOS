@@ -48,15 +48,37 @@ redesigning research provenance.
 | `user_provided_local_video` | `user_provided_local` | no | no | Inspect local files supplied by the user when local tooling is already available. |
 | `manual_source_paste` | `manual_paste` | no | no | Use pasted source text when platform access is unavailable. |
 
-## Planned Pre-Go-Live Adapters
+## Key-Gated Research-Acquisition Connectors (ADR 0022)
+
+Built as the `influencer_os/connectors/` layer. Each is **active when its env
+key is present** and **unavailable otherwise** (the run falls back to built-in
+`WebSearch`/`WebFetch`). Under ADR 0022, key presence is standing approval for
+that connector's research-acquisition calls — no per-run prompt — bounded by a
+per-run call cap and a global kill switch. This standing-approval carve-out
+covers research acquisition only; generation calls stay behind exact approval.
+
+| Adapter ID | Connector | Access method | Env key | Maps output into |
+| --- | --- | --- | --- | --- |
+| `reddit_api_or_search` | `reddit_openai` | `api_backed` | `OPENAI_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (upvotes/comments) |
+| `x_api` | `x_xai` | `api_backed` | `XAI_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (likes/reposts/replies) |
+| `firecrawl_public_web` | `firecrawl_web` | `scraping_api` | `FIRECRAWL_API_KEY` | `ResearchEvidence` (rendered public pages) |
+| `linkedin_apify` | `linkedin_apify` | `api_backed` | `APIFY_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (post reactions) |
+
+Activation env vars:
+
+- `INFLUENCER_OS_CONNECTOR_MAX_CALLS` — per-run cap on paid provider calls
+  (default small); exceeding it stops that connector as a low-yield outcome.
+- `INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1` — kill switch that disables the whole
+  paid tier regardless of keys.
+
+Keys live in the environment / `.env` only (gitignored); see `.env.example`.
+
+## Planned / Deferred Adapters
 
 | Adapter ID | Access method | Auth | Approval | Activation requirement |
 | --- | --- | --- | --- | --- |
 | `youtube_public_video` | `external_video_understanding` | no | conditional | Decide whether YouTube is a first-class research platform or a video-source adapter. |
 | `youtube_data_api` | `api_backed` | yes | yes | Add env/key policy, quota policy, retention rules, and ADR 0020 platform decision if treated as a platform. |
-| `x_api` | `api_backed` | yes | yes | Add cost/auth policy and map engagement output into `MetricSnapshot`. |
-| `reddit_api_or_search` | `api_backed` | yes | yes | Add provider policy and map upvotes/comments into `MetricSnapshot`. |
-| `firecrawl_public_web` | `scraping_api` | yes | yes | Add scraping provider boundary, cost controls, and allowed-domain policy. |
 | `instagram_logged_in_browser` | `logged_in_browser` | yes | yes | Add account ownership, private-data exclusion, session storage, and audit policy. |
 | `tiktok_logged_in_browser` | `logged_in_browser` | yes | yes | Add account ownership, private-data exclusion, session storage, and audit policy. |
 | `scheduled_research_refresh` | `scheduled_job` | varies | yes | Add Automation OS job definition, approval boundaries, and notification policy. |
@@ -85,10 +107,12 @@ These adapt the Agentic OS `str-trending-research` routing tables:
 - Every completed research run must create `search-plan.json` before browsing
   and `source-yield.jsonl` after browsing.
 - Search plans may name planned/deferred adapters, but only `active` adapters
-  may have `decision: "use_now"`.
-- API-backed, scraping, logged-in, provider transcription, batch video,
-  scheduled execution, and external notifications require explicit approval
-  before use.
+  (including key-gated connectors whose env key is present) may have
+  `decision: "use_now"`.
+- The four ADR 0022 key-gated research-acquisition connectors are standing-
+  approved by key presence (bounded by the call cap and kill switch). Logged-in
+  access, provider transcription, batch video, scheduled execution, and external
+  notifications still require explicit approval before use.
 - Source-yield records should capture both useful and low-yield attempts.
 - `research/intelligence/sources.json` aggregate `yield_stats` must reconcile
   with `source-yield.jsonl` records that reference `source_intel_*` IDs.
