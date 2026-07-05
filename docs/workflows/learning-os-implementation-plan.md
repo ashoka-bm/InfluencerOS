@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-05
 
-Status: **Draft — pending user approval of the Execution Decisions below.**
-No Phase 2 code lands until the pending decisions are approved; approved
-decisions get recorded in this doc the way the Phase 1 plan recorded its
-slice-by-slice execution decisions.
+Status: **Approved for execution (2026-07-05).** All four execution decisions
+below are user-approved; Decision 1 was finalized after inspecting the Agentic
+OS reference implementation (see the decision record). Slices execute in
+order, one approved batch at a time.
 
 ## Goal
 
@@ -135,6 +135,9 @@ records the fact.
   invariants are not enough).
 - Write hardening inherited from `register-output-package`: reject symlinked
   write targets; rollback on partial failure.
+- Skill `skills/register-published-post/SKILL.md` (Decision 2): thin wrapper
+  over the CLI, `create-output-package` pattern; lands with its registry,
+  context-matrix, conductor, and architecture-map rows in the same batch.
 - Tests: happy path, package/project mismatch, dangling asset ref, at-rest
   hand-edit probe, duplicate `published_post_record_id`, non-packaged
   project rejection.
@@ -158,14 +161,17 @@ records the fact.
 - At-rest parity in `validate project`: snapshot chain integrity
   (snapshot -> PublishedPostRecord -> Output Package -> Project), metric
   bounds already in-schema, duplicate snapshot ids.
+- Skill `skills/ingest-analytics/SKILL.md` (Decision 2): thin wrapper routing
+  manual vs CSV entry to the CLIs; same-batch registry/matrix/conductor rows.
 - Tests: manual path, CSV path (including null metrics and a malformed row),
   shared-writer API mock, dangling `published_post_record_id`, platform
   mismatch, raw-ref escape probe, at-rest hand-edit probe.
 
-### Slice 3: Performance Summary Contract
+### Slice 3: Performance Summary Contract And Skill
 
-The mechanical half of summarization: record placement, validation, and
-provenance. Interpretation happens in slice 4's skill.
+Record placement, validation, provenance, and the interpretive skill that
+authors the summary (Decision 2 splits summary authoring from lesson
+distillation so each is independently invokable).
 
 - Canonical record: `projects/<project-slug>/performance-summary.json`
   (Decision 4; the layout doc's `.md` naming is corrected to match).
@@ -177,6 +183,12 @@ provenance. Interpretation happens in slice 4's skill.
 - Advisory WARN: a `published` project with analytics snapshots older than a
   threshold but no performance summary (mirrors the thin-evidence WARN
   pattern: derived from durable at-rest outputs, not a flag).
+- Skill `skills/create-performance-summary/SKILL.md` (Decision 2): reads the
+  project's Creative Performance Map, PublishedPostRecords, and
+  AnalyticsSnapshots; authors the stage findings, `semantic_lookup`
+  narrative, and `index_allowed` call. Includes `## Rules`/`## Self-Update`
+  and evidence-confidence guidance; same-batch registry/matrix/conductor
+  rows.
 - Tests: valid summary, dangling evidence ref, duplicated stage, WARN probe.
 
 ### Slice 4: Learning Distillation (`distill-creator-learning` skill)
@@ -185,15 +197,14 @@ Reconciles the conductor's `[PLANNED — Phase 2]` marker and the skill
 registry's Missing Future Skills row — the open build obligation from
 Phase 0C WS 10.
 
-- New skill `skills/distill-creator-learning/SKILL.md` (Decision 2): reads the
-  packaged project's Creative Performance Map, PublishedPostRecords, and
-  AnalyticsSnapshots; produces the PerformanceSummary record (stage findings,
-  distilled lessons, `semantic_lookup.index_allowed` + `summary_text`) and
-  appends evidence-linked lessons to `memory/learnings.md`; optionally
-  promotes a durable fact to `context/MEMORY.md` via `memory-write` (cap
-  enforced). Includes `## Rules` and `## Self-Update` sections, `dependencies`
-  frontmatter, and evidence-strength guidance (`single_post_signal` vs
-  `multi_post_pattern` per ADR 0008 — don't overfit to one post).
+- New skill `skills/distill-creator-learning/SKILL.md` (Decision 2): consumes
+  one or more PerformanceSummary records (authored in slice 3) plus their
+  evidence chain; distills the `distilled_lessons` judgment
+  (`single_post_signal` vs `multi_post_pattern` per ADR 0008 — don't overfit
+  to one post), appends evidence-linked lessons to `memory/learnings.md`, and
+  optionally promotes a durable fact to `context/MEMORY.md` via
+  `memory-write` (cap enforced). Includes `## Rules` and `## Self-Update`
+  sections and `dependencies` frontmatter.
 - `log-learning` extension: a `--evidence` argument required for creator
   lesson entries; IDs are validated against workspace records at write time
   and re-checked by `validate workspace` at rest (exit criterion 4).
@@ -236,9 +247,15 @@ Phase 0C WS 10.
   `analytics/`.
 - CLI: `rebuild-lookup` (per-creator, mirrors `rebuild-index` semantics) and
   `query-lookup <creator> <terms>` returning source-path-cited matches.
+  Queries are never persisted (reference privacy default).
 - Creator scoping: every row carries `creator_slug`; queries require one.
+  Adopt the reference `scope.ts` discipline: scoping is a hard leak boundary
+  with a dedicated no-leak test, not a query-time convention.
+- Record the Decision 1 phasing (keyword leg now, reference-faithful local
+  vector leg with Command Centre un-deferral) in `agentic-os-alignment.md`.
 - Tests: allowlist coverage, `index_allowed: false` exclusion, raw-analytics
-  absence probe, creator-scope isolation, delete-and-rebuild.
+  absence probe, creator-scope no-leak probe (creator A's query can never
+  return creator B's rows), delete-and-rebuild.
 
 ## Creator Workspace Layout (Phase 2 additions in context)
 
@@ -303,66 +320,84 @@ Process-learnings applied as standing plan rules:
 7. Advisory gates key on durable at-rest outputs, never on a mutable
    declarative flag (2026-07-04).
 
-## Pending Execution Decisions
+## Execution Decisions (User-Approved 2026-07-05)
 
-Surfaced for user approval before any slice executes. Each has a
-recommendation; approved outcomes get recorded here as User-Approved with a
-date, following the Phase 1 plan convention.
+Do not reopen these without user approval.
 
-### Decision 1: Semantic lookup implementation
+### Decision 1: Semantic lookup — reference-phased hybrid, keyword leg first
 
 Problem: ADR 0011 requires a semantic lookup projection, but true embeddings
-need either provider calls (approval-gated, recurring cost, network
-dependency) or a local embedding model (heavy dependency; the repo is
-deliberately stdlib-only).
+need either provider calls or a local model, and the repo is deliberately
+stdlib-only. The user asked that the Agentic OS reference be inspected first
+so the implementation follows it as closely as possible.
 
-Recommendation: v1 lookup is a SQLite FTS5 full-text projection in the
-existing index database — stdlib-only, deterministic, rebuildable, satisfies
-every ADR 0011 scoping rule. Embedding-based retrieval is recorded as a
-deliberate future upgrade behind explicit approval (the projection's sources
-and scoping rules are the durable contract; the ranking backend can be
-swapped without schema or layout changes). If accepted, note the divergence
-in `agentic-os-alignment.md` (reference uses vector SQL).
+Reference findings (2026-07-05, from
+`/Users/ashokaji/code/External repos/Agentic Academy/agentic-os`):
 
-### Decision 2: Phase 2 skill surface
+- The reference's semantic memory is a **Command Centre subsystem**
+  (`command-centre/src/lib/memory/`): TypeScript, PGLite/Postgres store,
+  HNSW + cosine vector index, bootstrapped by a SessionStart hook
+  (`memory-bootstrap-index.js`) and nightly cron. Command Centre, hooks, and
+  cron are all explicitly deferred in InfluencerOS.
+- Embeddings are **local, not provider-backed**: BGE-M3 (1024-dim) via
+  Transformers.js, with a deterministic dependency-free `HashEmbedder` for
+  tests. The reference never calls a provider to embed.
+- Search is **hybrid by design**: vector search + keyword search fused with
+  RRF, then a three-stage rerank. Keyword search is a first-class leg
+  (`store.keywordSearch`), not a fallback.
+- Scoping is a hard leak boundary (`scope.ts`) enforced by dedicated
+  `no-leak` tests; queries are not persisted by default (privacy default).
 
-Problem: the registry obligates exactly one future skill
-(`distill-creator-learning`), but Phase 2 has four workflows. Phase 1 gave
-each producing phase an owner skill; mirroring that would add three thin
-skills for mechanical CLI wraps.
+Approved decision: build the **keyword leg now** as a SQLite FTS5 projection
+in the existing `influencer-os.sqlite` (Python stdlib, deterministic,
+rebuildable, ADR 0011 scoping rules). This is a phasing of the reference's
+own hybrid design, not a divergence in kind: the **vector leg follows the
+reference exactly** (local BGE-M3-class embedder, hash-embedder test double,
+RRF fusion over the same projection contract) when Command Centre is
+un-deferred — its natural home in the reference architecture. Adopt the
+reference's scope-boundary discipline now: creator-scoped rows plus a
+dedicated no-leak test, and no query persistence. Record the phasing in
+`agentic-os-alignment.md` in slice 6.
 
-Recommendation: one new skill. Registration (slice 1) and ingestion (slice 2)
-are deterministic CLI operations with no judgment — CLI-only, documented in
-the conductor's post-pipeline phase table. `distill-creator-learning` owns
-both interpretation steps: authoring the PerformanceSummary and distilling
-lessons into memory (they share one evidence read and ADR 0008 treats them as
-one distillation act). The conductor's post-pipeline section maps:
-publication registration -> CLI, analytics ingestion -> CLI, performance
-summary + learning distillation -> `distill-creator-learning`.
+### Decision 2: Phase 2 skill surface — conductor routes, one skill per step
 
-### Decision 3: Analytics ingestion scope for v1
+Problem: the registry obligates one future skill, but Phase 2 has four
+workflow steps; the alternatives were CLI-only wrapping vs. per-step skills.
 
-Problem: ADR 0004 is API-primary by design, but the AGENTS.md rule forbids
-platform-specific adapters unless explicitly requested, and platform
-analytics APIs need auth, quotas, and per-platform metric mapping.
+Approved decision: the existing `influencer-os` conductor remains the single
+conducting skill; **each Phase 2 step is its own skill** so steps stay
+independently invokable and composable across workflows:
 
-Recommendation: v1 builds manual entry plus a neutral InfluencerOS CSV
-template (our own documented column contract; the operator exports from a
-platform and maps columns once — no per-platform parsers). The shared writer
-seam is built and mock-tested so a platform API connector can drop in later
-under the ADR 0022 connector pattern when explicitly requested. Exit
-criterion 2 is worded accordingly.
+| Step | Skill | Slice |
+| --- | --- | --- |
+| Publication registration | `register-published-post` | 1 |
+| Analytics ingestion | `ingest-analytics` | 2 |
+| Performance summary | `create-performance-summary` | 3 |
+| Learning distillation | `distill-creator-learning` | 4 |
 
-### Decision 4: Performance summary canonical form
+The mechanical skills (slices 1–2) are thin wrappers over their CLI commands
+(the `create-output-package` pattern); the interpretive skills (slices 3–4)
+carry the judgment rules. Each skill folder lands in the same batch as its
+registry row, context-matrix coverage, conductor phase-table row, and
+architecture-map sync (drift checks pin them together). The registry's
+Missing Future Skills table gains the three new planned skills when slice 1
+opens, each marked `[PLANNED]` in the conductor until built.
 
-Problem: `docs/creator-workspace-structure.md` names
-`performance-summary.md`, but the record schema is JSON and every other
-mid-pipeline record is a schema-validated JSON file.
+### Decision 3: Analytics ingestion scope — manual + neutral CSV
 
-Recommendation: `performance-summary.json` is canonical (schema-validated,
-index-projectable); the layout doc is corrected in slice 3. The
-`semantic_lookup.summary_text` field already carries the human-readable
-narrative, so no parallel markdown file is needed.
+Approved as recommended: v1 builds manual entry plus a neutral InfluencerOS
+CSV template (our own documented column contract; the operator maps a
+platform export once — no per-platform parsers, honoring the
+no-platform-adapters rule). The shared writer seam is built and mock-tested
+so a platform API connector can drop in later under the ADR 0022 connector
+pattern when explicitly requested. Exit criterion 2 is worded accordingly.
+
+### Decision 4: Performance summary canonical form — JSON
+
+Approved as recommended: `performance-summary.json` is canonical
+(schema-validated, index-projectable); the layout doc is corrected in
+slice 3. The `semantic_lookup.summary_text` field carries the human-readable
+narrative, so no parallel markdown file is created.
 
 ## Migration Notes
 

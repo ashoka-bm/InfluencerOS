@@ -167,10 +167,13 @@ scheduled/unattended acquisition stays deferred to Phase 4 Automation OS.
 
 Goal: capture performance evidence, distill lessons, and feed future planning.
 
-Status: planned (2026-07-05). The implementation plan, entry-criteria
-verification, and the runnable rewrite of the exit criteria below live in
-`docs/workflows/learning-os-implementation-plan.md`; execution starts once its
-Pending Execution Decisions are user-approved.
+Status: planned and approved for execution (2026-07-05). The implementation
+plan, entry-criteria verification, the runnable rewrite of the exit criteria
+below, and the four user-approved execution decisions (FTS5 keyword lookup
+phased ahead of the reference's local-embedding vector leg, one skill per
+step under the existing conductor, manual + neutral-CSV ingestion,
+JSON-canonical performance summaries) live in
+`docs/workflows/learning-os-implementation-plan.md`.
 
 Entry criteria:
 
