@@ -163,6 +163,9 @@ records the fact.
   bounds already in-schema, duplicate snapshot ids.
 - Skill `skills/ingest-analytics/SKILL.md` (Decision 2): thin wrapper routing
   manual vs CSV entry to the CLIs; same-batch registry/matrix/conductor rows.
+  Carries the platform data-latency caveats from the Reference Review (e.g.
+  YouTube lags 2–3 days) so early snapshots are annotated, never treated as
+  final.
 - Tests: manual path, CSV path (including null metrics and a malformed row),
   shared-writer API mock, dangling `published_post_record_id`, platform
   mismatch, raw-ref escape probe, at-rest hand-edit probe.
@@ -188,7 +191,10 @@ distillation so each is independently invokable).
   AnalyticsSnapshots; authors the stage findings, `semantic_lookup`
   narrative, and `index_allowed` call. Includes `## Rules`/`## Self-Update`
   and evidence-confidence guidance; same-batch registry/matrix/conductor
-  rows.
+  rows. Anchors interpretation with the Performance Benchmark Rubric and
+  stage-remediation mapping adapted from the reference
+  `mkt-content-analytics` skill (see Reference Review); the rubric is
+  recorded in `agentic-os-alignment.md` alongside the Signal Tier Rubric.
 - Tests: valid summary, dangling evidence ref, duplicated stage, WARN probe.
 
 ### Slice 4: Learning Distillation (`distill-creator-learning` skill)
@@ -232,9 +238,14 @@ Phase 0C WS 10.
 
 ### Slice 6: Semantic Lookup Projection
 
-- Implementation per Decision 1 (recommended: SQLite FTS5 table in the same
+- Implementation per Decision 1: SQLite FTS5 table in the same
   `influencer-os.sqlite`, stdlib `sqlite3`, no new dependencies, no provider
-  calls).
+  calls. Row granularity, authority weighting, rerank stages, and change
+  detection follow the reference memory schema as adapted in the Reference
+  Review section: heading-aware deterministic chunks with line provenance,
+  longest-prefix authority weights (config-tunable), BM25 x authority x
+  recency-decay rerank with a floor-ratio gate, and normalized-content
+  sha256 change detection.
 - Indexed sources (ADR 0011 allowlist, creator-scoped):
   - `brand_context/identity.md`, `brand_context/soul.md`,
     `brand_context/personal-brand.md`,
@@ -398,6 +409,94 @@ Approved as recommended: `performance-summary.json` is canonical
 (schema-validated, index-projectable); the layout doc is corrected in
 slice 3. The `semantic_lookup.summary_text` field carries the human-readable
 narrative, so no parallel markdown file is created.
+
+## Reference Review (2026-07-05)
+
+A full review of the Agentic OS reference's Learning-adjacent subsystems,
+done before slice execution so the plan adapts the reference instead of
+reinventing it. Reviewed: `command-centre/src/lib/memory/` (types, discovery,
+chunker, indexer, reranker, scope, search, capture),
+`.claude/skills/mkt-content-analytics/SKILL.md`, and the memory cron jobs
+(`daily-memory-distill`, `nightly-memory-index`, `weekly-memory-gaps`).
+
+### Analytics: the reference has no file-first analytics layer
+
+`mkt-content-analytics` retrieves live metrics from a third-party aggregator
+MCP (Zernio) and analyzes them ad hoc — no at-rest records, no snapshots, no
+provenance chain. The InfluencerOS record chain (PublishedPostRecord ->
+AnalyticsSnapshot -> PerformanceSummary) is therefore not a re-invention of a
+reference wheel; it is the ADR 0004/0005/0008 divergence covering what the
+reference delegates to a paid external service. Two consequences:
+
+- If the API ingestion path is ever requested (Decision 3 future path), the
+  reference pattern is **one aggregator integration**, not per-platform
+  connectors — consistent with our no-platform-adapters rule.
+- The reference skill's *interpretation content* is directly reusable and is
+  folded into slices 2–3 below:
+  - a **benchmark rubric** (e.g. YouTube CTR 4–6% good / 6–10% great / 10%+
+    excellent; retention 40/50/60%; LinkedIn engagement 2/5/10%; Instagram
+    3/6/10%) anchoring stage findings the way the Signal Tier Rubric anchors
+    research confidence,
+  - a **metric-to-remediation mapping** that lands exactly on our five
+    attribution stages (low CTR -> title/packaging; high impressions + low
+    clicks -> thumbnail; early retention drop -> hook/structure; limited
+    reach -> hashtags/distribution; engagement timing -> posting time),
+  - **platform caveats** for snapshot quality: YouTube analytics lag 2–3
+    days; LinkedIn personal accounts expose no click metrics; per-platform
+    metric availability differs (supports ADR 0004 "absent, never guessed").
+
+Slice additions from this finding:
+
+- Slice 2 (`ingest-analytics` skill): record platform data-latency caveats in
+  snapshot `notes`; guidance not to treat a pre-latency snapshot as final.
+- Slice 3 (`create-performance-summary` skill): carry a Performance Benchmark
+  Rubric and the stage-remediation mapping (adapted, platform-scoped to the
+  ADR 0020 set) so `stage_findings` interpretations and
+  `recommended_next_actions` are anchored to a closed rubric, not authored
+  from vibes. Record the rubric in `agentic-os-alignment.md` alongside the
+  Signal Tier Rubric.
+
+### Memory index: design details adopted into slice 6
+
+The reference memory store (`memory_sources` + `memory_chunks` + rerank) has
+four portable design decisions the FTS5 projection adopts:
+
+1. **Heading-aware deterministic chunking** (chunker.ts): accumulate text
+   under the nearest markdown heading, flush at ~1200 chars (2000 hard cap,
+   150-char overlap on hard splits), record heading, heading level, and
+   1-based start/end lines. Same input, same chunks. The lookup projection
+   indexes heading-level chunks with line provenance, not whole files —
+   `query-lookup` cites `source_path:line`.
+2. **Authority weights by longest-prefix path map**, config-overridable
+   (reference defaults: `context/MEMORY.md` 2.0, `context/learnings.md` 1.5,
+   dailies 1.0, transcripts 0.8). Adapted creator-scope defaults:
+   `memory/learnings.md` 1.5, performance-summary `summary_text` 1.3,
+   `brand_context/` 1.2, findings/stable findings 1.0 — tunable via a config
+   block, exact values settled in slice 6.
+3. **Rerank on returned rows using denormalized columns** (reranker.ts):
+   final score = BM25 relevance x authority weight x recency decay
+   (exponential half-life with a dampening floor; undated rows do not
+   decay), then a floor-ratio gate dropping hits below a ratio of the top
+   score. Reference defaults (14-day half-life, 0.7 floor, 0.3 ratio) are the
+   starting tunables; creator lessons likely warrant a longer half-life. The
+   rerank runs in application code over FTS5 hits — when the vector leg
+   arrives (Decision 1), only the candidate generator changes; the rerank
+   stage is already the reference's.
+4. **Stable change detection**: sources store a sha256 over normalized
+   content (LF endings, trimmed) so rebuilds can skip unchanged files; title
+   extracted from the first H1, content date parsed from `YYYY-MM-DD`
+   filenames. Matches the recall index's existing hash discipline.
+
+### Distillation cron jobs: already covered, correctly deferred
+
+`daily-memory-distill` (dedup, consolidate-before-cap, resolve stale
+threads), `nightly-memory-index`, and `weekly-memory-gaps` are markdown cron
+jobs. Their procedures are already adapted in the Phase 0C `wrap-up`/
+`memory-write` skills and the byte-cap discipline; their scheduling belongs
+to Phase 4 (cron deferred), where they wrap the manual `rebuild-index`/
+`rebuild-lookup`/distillation commands this phase builds. The
+`weekly-memory-gaps` "stale thread" concept is mirrored by the slice 3
+advisory WARN (published project without a performance summary).
 
 ## Migration Notes
 
