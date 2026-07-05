@@ -262,7 +262,7 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `projects/<project-id>/published/` stores Published Post Records that link the Output Package to real platform publications. `python3 -m influencer_os register-published-post` is the write gate for `published/published-post-records/`: it validates the record against the registered Output Package (chain ids, upload-asset ids, caption path), writes it, moves the Project `packaged` → `published` on the first record attesting a live post, and rolls back on failure. It records a publication a human already performed; it never publishes.
 
-`projects/<project-id>/analytics/` stores API, manual, CSV, or derived Analytics Snapshots for the project's Published Post Records. `raw/` may preserve safe raw exports or API payloads.
+`projects/<project-id>/analytics/` stores API, manual, CSV, or derived Analytics Snapshots for the project's Published Post Records. Snapshots live in `snapshots/` (one file per `analytics_snapshot_id`); `raw/` may preserve safe raw exports or API payloads (never tokens or secrets). `python3 -m influencer_os add-analytics-snapshot` and `import-analytics-csv` are the write gates: both flow through one shared seam that pins the snapshot to a live Published Post Record on the same platform, derives `hours_since_publish` when omitted, and requires `raw_source_ref`/`retention_curve_ref` to resolve inside `analytics/raw/`.
 
 `projects/<project-id>/performance-summary.md` stores the short postmortem that links back to raw analytics, Published Post Records, and the Output Package.
 

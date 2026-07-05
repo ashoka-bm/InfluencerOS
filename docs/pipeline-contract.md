@@ -121,6 +121,18 @@ sub-`published` Project fail, no two records may claim the same
 `(platform, platform_post_id)` or `public_url` identity, and the Output
 Package must stay `upload_ready` at every status from `packaged` onward.
 
+`add-analytics-snapshot` and `import-analytics-csv` are the ingestion gates
+(Phase 2 slice 2). Every path — manual entry, the neutral InfluencerOS CSV
+template, and any future API connector — writes through one shared seam: the
+snapshot must cite a registered Published Post Record whose status attests a
+live post, `platform` must match that record, chain ids must match the
+Project and package, `hours_since_publish` derives from the record
+timestamps when omitted (a snapshot timestamped before publication is
+rejected), and `raw_source_ref`/`retention_curve_ref` must resolve to real
+files under `analytics/raw/` inside the project. The CSV import is
+all-or-nothing. At rest, `validate project` re-checks every ingestion
+invariant, including filename-matches-id per snapshot.
+
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 
 Analytics Snapshots must preserve enough dimensions for performance attribution:

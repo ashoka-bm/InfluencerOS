@@ -15,8 +15,9 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.boards import rebuild_board, validate_board
+from influencer_os.analytics import import_analytics_csv
 from influencer_os.projects import init_project, validate_project
-from influencer_os.projects import register_output_package, register_published_post
+from influencer_os.projects import add_analytics_snapshot, register_output_package, register_published_post
 from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
@@ -73,6 +74,14 @@ def main(argv=None):
     published_parser = subparsers.add_parser("register-published-post", help="Register a Published Post Record inside a packaged project (records a human publication; never publishes).")
     published_parser.add_argument("record", help="Path to a PublishedPostRecord JSON file.")
     published_parser.add_argument("--project", required=True, help="Path to the project directory.")
+
+    snapshot_parser = subparsers.add_parser("add-analytics-snapshot", help="Ingest one AnalyticsSnapshot JSON record for a published project (manual/derived entry).")
+    snapshot_parser.add_argument("record", help="Path to an AnalyticsSnapshot JSON file.")
+    snapshot_parser.add_argument("--project", required=True, help="Path to the project directory.")
+
+    csv_parser = subparsers.add_parser("import-analytics-csv", help="Import AnalyticsSnapshots from the neutral InfluencerOS CSV template (all-or-nothing).")
+    csv_parser.add_argument("csv_file", help="Path to a CSV file matching docs/templates/analytics/analytics-snapshot-template.csv.")
+    csv_parser.add_argument("--project", required=True, help="Path to the project directory.")
 
     index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
     index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
@@ -240,6 +249,21 @@ def main(argv=None):
             print(f"Registered published post record: {result['record_path']}")
             print(f"Project status: {result['project_status']}")
             print("Next phase: analytics snapshots for this published post.")
+            return 0
+
+        if args.command == "add-analytics-snapshot":
+            result = add_analytics_snapshot(args.project, args.record)
+            print(f"Ingested analytics snapshot: {result['snapshot_path']}")
+            print(f"Hours since publish: {result['hours_since_publish']}")
+            print("Next phase: performance summary once enough snapshots exist.")
+            return 0
+
+        if args.command == "import-analytics-csv":
+            results = import_analytics_csv(args.project, args.csv_file)
+            print(f"Imported {len(results)} analytics snapshots:")
+            for result in results:
+                print(f"- {result['snapshot_path']}")
+            print("Next phase: performance summary once enough snapshots exist.")
             return 0
 
         if args.command == "update-creators":

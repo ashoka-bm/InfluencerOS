@@ -644,10 +644,38 @@ registers. 412 tests pass (6 added); 43 examples validate; 18 runtime
 skills synced to all four fixture workspaces. Two process learnings
 recorded (schema-mirror nullability, status-equality invariants).
 
+Phase 2 slice 2 (2026-07-05): Analytics Snapshot ingestion.
+`add-analytics-snapshot` (manual/derived JSON) and `import-analytics-csv`
+(neutral InfluencerOS template at
+`docs/templates/analytics/analytics-snapshot-template.csv`, 35 columns,
+all-or-nothing) landed with `skills/ingest-analytics/SKILL.md` and its
+registry/matrix/conductor/architecture-map rows in the same batch. Every
+path writes through one shared seam (`write_analytics_snapshot`, ADR 0004)
+— proven by a mocked api-sourced record driving the same function — so a
+future API connector drops in without a second invariant set. The seam
+pins each snapshot to a registered Published Post Record whose status
+attests a live post, requires platform match, fills chain ids from the
+project (CSV rows cannot mistype them), derives `hours_since_publish` from
+the record timestamps when omitted (rejecting pre-publication snapshots),
+maps blank CSV cells to null (absent, never guessed), and requires
+`raw_source_ref`/`retention_curve_ref` to resolve to real files under
+`analytics/raw/` with escape rejection. `validate project` re-checks every
+ingestion invariant at rest, including filename-matches-id. The skill
+carries the reference-derived platform caveats (YouTube 2–3 day lag,
+LinkedIn personal click gap). Verification: 433 tests pass (21 added in
+`tests/test_analytics.py` — manual/CSV/API-mock paths, derivation,
+liveness, platform mismatch, raw-ref escape/missing probes, transactional
+CSV rollback, template and schema drift pins, and three at-rest hand-edit
+probes); 43 examples validate; drift checks pass; 19 runtime skills synced
+to all four fixture workspaces, all validating. Full workflow replay in
+`.tmp/slice2-verify`: publication registration, manual + CSV ingestion,
+project/workspace/board validation, and index rebuild all pass. Exit
+criterion 2 of the Phase 2 plan is met.
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slice 1 (published-post registration) complete 2026-07-05; next is slice 2 (analytics snapshot ingestion: shared writer seam, manual entry, neutral CSV template, `ingest-analytics` skill).
+2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration) and 2 (analytics snapshot ingestion) complete 2026-07-05; next is slice 3 (Performance Summary contract + `create-performance-summary` skill, incl. the performance-summary.md -> .json rename).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

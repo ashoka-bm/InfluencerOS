@@ -36,6 +36,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-production-plan` | create production plan, route project by format, draft generation plan | Project, applied template, locked promotion, evidence brief, Creator Profile, references, research evidence | `projects/<project-slug>/plan/production-plan.json`; `plan/generation-plan.json` for short-form video | yes |
 | `create-output-package` | register output package, package upload-ready assets, mark project packaged | Project, applied template, production plan, generation plan when present, locked promotion, Reference Library | `projects/<project-slug>/output-package/`, Project status via `register-output-package` | yes |
 | `register-published-post` | record a manual publication, register published post, mark project published | Project, registered Output Package, operator publication facts | `projects/<project-slug>/published/published-post-records/`, Project status via `register-published-post` | yes |
+| `ingest-analytics` | add analytics snapshot, import analytics CSV, record post performance | Project, registered Output Package, live Published Post Records, operator platform exports | `projects/<project-slug>/analytics/` via `add-analytics-snapshot`/`import-analytics-csv` | yes |
 
 ## Creator Setup Subskills
 
@@ -69,7 +70,6 @@ These are not repo-owned skills and must not be added to conductor
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `ingest-analytics` | route manual/CSV analytics snapshots into the project | Learning OS (Phase 2 slice 2) |
 | `create-performance-summary` | author the PerformanceSummary from analytics evidence | Learning OS (Phase 2 slice 3) |
 | `distill-creator-learning` | convert performance evidence into creator memory | Learning OS (Phase 2 slice 4) |
 

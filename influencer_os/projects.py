@@ -1,3 +1,4 @@
+import datetime
 import json
 import shutil
 from pathlib import Path
@@ -404,7 +405,9 @@ def _validate_published_records(project_dir, project, output_package):
     """At-rest checks for published/published-post-records/ (slice 1 parity).
 
     Every writer-enforced registration invariant is re-checked here so a
-    hand-edited record or status cannot validate at rest.
+    hand-edited record or status cannot validate at rest. Returns the
+    validated records keyed by id so analytics validation can resolve
+    published_post_record_id references without re-reading files.
     """
     records_dir = Path(project_dir) / "published" / "published-post-records"
     record_paths = sorted(records_dir.glob("*.json")) if records_dir.is_dir() else []
@@ -418,6 +421,7 @@ def _validate_published_records(project_dir, project, output_package):
     live_count = 0
     seen_platform_post_ids = {}
     seen_public_urls = {}
+    records_by_id = {}
     for record_path in record_paths:
         _ensure_contained_file(record_path, project_dir, "published post record")
         record = _validate_project_record(record_path, "published-post-record")
@@ -453,6 +457,7 @@ def _validate_published_records(project_dir, project, output_package):
 
         if record["publication_status"] in PUBLICATION_LIVE_STATUSES:
             live_count += 1
+        records_by_id[record_id] = record
 
     if _status_at_least(project, "published") and live_count == 0:
         raise ValueError(
@@ -464,6 +469,209 @@ def _validate_published_records(project_dir, project, output_package):
             "Project carries live published post records but its status is "
             f"below published: {project['status']!r}"
         )
+    return records_by_id
+
+
+def _parse_record_timestamp(value):
+    """Parse an ISO timestamp (Z-suffixed or offset), else None."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _validate_analytics_snapshot_matches(record, project, output_package, published_records):
+    """Shared writer/at-rest checks pinning an AnalyticsSnapshot to its chain.
+
+    Called by write_analytics_snapshot at write time and by
+    _validate_analytics_records at rest so the two paths cannot drift.
+    """
+    if record["project_id"] != project["project_id"]:
+        raise ValueError(
+            "Analytics snapshot project_id does not match project: "
+            f"{record['project_id']!r} != {project['project_id']!r}"
+        )
+    if record["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValueError(
+            "Analytics snapshot creator_profile_id does not match project: "
+            f"{record['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+        )
+    if record["output_package_id"] != output_package["output_package_id"]:
+        raise ValueError(
+            "Analytics snapshot output_package_id does not match the registered package: "
+            f"{record['output_package_id']!r} != {output_package['output_package_id']!r}"
+        )
+
+    ppr_id = record["published_post_record_id"]
+    published_record = published_records.get(ppr_id)
+    if published_record is None:
+        raise ValueError(
+            "Analytics snapshot published_post_record_id does not resolve to a "
+            f"registered published post record: {ppr_id!r}"
+        )
+    if published_record["publication_status"] not in PUBLICATION_LIVE_STATUSES:
+        raise ValueError(
+            "Analytics snapshots may only measure posts that went live; "
+            f"{ppr_id!r} has publication_status "
+            f"{published_record['publication_status']!r}"
+        )
+    if record["platform"] != published_record["platform"]:
+        raise ValueError(
+            "Analytics snapshot platform does not match its published post record: "
+            f"{record['platform']!r} != {published_record['platform']!r}"
+        )
+
+
+def _analytics_raw_refs(record):
+    """The record's optional analytics/raw/ file references."""
+    refs = []
+    if record["raw_source_ref"] is not None:
+        refs.append(("raw_source_ref", record["raw_source_ref"]))
+    curve_ref = record["attribution_metrics"]["body_retention"]["retention_curve_ref"]
+    if curve_ref is not None:
+        refs.append(("attribution_metrics.body_retention.retention_curve_ref", curve_ref))
+    return refs
+
+
+def _validate_analytics_raw_refs(project_dir, record):
+    """Raw refs must stay inside analytics/raw/ and resolve to real files."""
+    for field, raw_ref in _analytics_raw_refs(record):
+        relative_path = _safe_project_relative_path(
+            raw_ref,
+            required_prefix=("analytics", "raw"),
+            context=f"Analytics snapshot {field}",
+        )
+        raw_path = Path(project_dir) / relative_path
+        if not raw_path.exists():
+            raise FileNotFoundError(
+                f"Analytics snapshot {field} does not resolve to a file: {raw_ref!r}"
+            )
+        _ensure_contained_file(raw_path, project_dir, f"Analytics snapshot {field}")
+
+
+def _validate_analytics_records(project_dir, project, output_package, published_records):
+    """At-rest checks for analytics/snapshots/ (slice 2 parity).
+
+    Every writer-enforced ingestion invariant is re-checked here so a
+    hand-edited snapshot cannot validate at rest.
+    """
+    snapshots_dir = Path(project_dir) / "analytics" / "snapshots"
+    snapshot_paths = sorted(snapshots_dir.glob("*.json")) if snapshots_dir.is_dir() else []
+
+    if snapshot_paths and output_package is None:
+        raise ValueError(
+            "Analytics snapshots require a packaged project with a "
+            f"registered Output Package: {snapshots_dir}"
+        )
+
+    for snapshot_path in snapshot_paths:
+        _ensure_contained_file(snapshot_path, project_dir, "analytics snapshot")
+        record = _validate_project_record(snapshot_path, "analytics-snapshot")
+        record_id = record["analytics_snapshot_id"]
+        if snapshot_path.stem != record_id:
+            raise ValueError(
+                f"Analytics snapshot filename must match its id: "
+                f"{snapshot_path.name} carries {record_id!r}"
+            )
+        _validate_analytics_snapshot_matches(record, project, output_package, published_records)
+        _validate_analytics_raw_refs(project_dir, record)
+
+
+def write_analytics_snapshot(project_path, record):
+    """The shared ingestion seam (ADR 0004): every path — manual entry, CSV
+    import, and any future API connector — writes through this function so
+    the ingestion invariants cannot drift per path.
+    """
+    project_dir = Path(project_path)
+    project_manifest_path = project_dir / "project.json"
+    package_path = project_dir / "output-package" / "output-package.json"
+
+    if not project_manifest_path.exists():
+        raise FileNotFoundError(f"Missing project manifest: {project_manifest_path}")
+
+    project = load_json(project_manifest_path)
+    validate_record("project", project)
+    if not _status_at_least(project, "published"):
+        raise ValueError(
+            "Analytics ingestion requires a published project; "
+            f"got status {project['status']!r}"
+        )
+
+    # Preflight the project (including already-ingested snapshots) before
+    # writing.
+    validate_project(project_dir)
+
+    validate_record("analytics-snapshot", record)
+    output_package = load_json(package_path)
+    published_records = _load_published_records_by_id(project_dir)
+    _validate_analytics_snapshot_matches(record, project, output_package, published_records)
+
+    if record["hours_since_publish"] is None:
+        record = dict(record)
+        record["hours_since_publish"] = _derive_hours_since_publish(
+            record, published_records[record["published_post_record_id"]]
+        )
+
+    _validate_analytics_raw_refs(project_dir, record)
+
+    record_id = record["analytics_snapshot_id"]
+    destination = project_dir / "analytics" / "snapshots" / f"{record_id}.json"
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError(f"Analytics snapshot already ingested: {destination}")
+    _ensure_contained_target(destination, project_dir, "analytics snapshot destination")
+
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        _write_json(destination, record)
+        validate_project(project_dir)
+    except Exception:
+        if destination.exists() or destination.is_symlink():
+            destination.unlink()
+        raise
+
+    return {
+        "analytics_snapshot_id": record_id,
+        "published_post_record_id": record["published_post_record_id"],
+        "hours_since_publish": record["hours_since_publish"],
+        "snapshot_path": destination,
+    }
+
+
+def add_analytics_snapshot(project_path, record_path):
+    """Manual/derived ingestion: a full schema-shaped record authored as JSON."""
+    record_path = Path(record_path)
+    if not record_path.exists():
+        raise FileNotFoundError(f"Missing analytics snapshot record: {record_path}")
+    return write_analytics_snapshot(project_path, load_json(record_path))
+
+
+def _load_published_records_by_id(project_dir):
+    records_dir = Path(project_dir) / "published" / "published-post-records"
+    records = {}
+    for record_path in sorted(records_dir.glob("*.json")) if records_dir.is_dir() else []:
+        record = load_json(record_path)
+        records[record["published_post_record_id"]] = record
+    return records
+
+
+def _derive_hours_since_publish(record, published_record):
+    """Compute hours_since_publish from the two timestamps when parseable."""
+    snapshot_at = _parse_record_timestamp(record["snapshot_at"])
+    published_at = _parse_record_timestamp(published_record["published_at"])
+    if snapshot_at is None or published_at is None:
+        return None
+    if (snapshot_at.tzinfo is None) != (published_at.tzinfo is None):
+        return None
+    hours = (snapshot_at - published_at).total_seconds() / 3600
+    if hours < 0:
+        raise ValueError(
+            "Analytics snapshot_at is earlier than the published post's "
+            f"published_at: {record['snapshot_at']!r} < "
+            f"{published_record['published_at']!r}"
+        )
+    return round(hours, 2)
 
 
 def _upload_ready_relative_paths(output_package):
@@ -813,7 +1021,8 @@ def _validate_project_records(project_dir, project, workspace_dir):
         _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
-    _validate_published_records(project_dir, project, output_package)
+    published_records = _validate_published_records(project_dir, project, output_package)
+    _validate_analytics_records(project_dir, project, output_package, published_records)
 
 
 def _validate_project_record(record_path, schema_name):

@@ -173,6 +173,17 @@ python3 -m influencer_os register-published-post path/to/published-post-record.j
 
 The record must match the registered Output Package: chain ids, `assets_used` upload-asset ids, and the caption/description path must all resolve to what the package declares. The command writes the record under `published/published-post-records/` and moves the project `packaged` → `published` on the first record whose `publication_status` attests a live post (`scheduled`/`failed` records register without the status change). It records a publication that already happened; it never publishes, uploads, or schedules.
 
+## Ingest Analytics
+
+Add performance snapshots for a published post — manual entry from a full JSON record, or bulk import from the neutral InfluencerOS CSV template ([analytics-snapshot-template.csv](docs/templates/analytics/analytics-snapshot-template.csv)):
+
+```bash
+python3 -m influencer_os add-analytics-snapshot path/to/analytics-snapshot.json --project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+python3 -m influencer_os import-analytics-csv path/to/snapshots.csv --project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+```
+
+Every ingestion path writes through one shared seam: the snapshot must cite a live published post record on the same platform, missing platform metrics stay `null` (never guessed), `hours_since_publish` is derived from the timestamps when omitted, and raw exports referenced by the record must exist under the project's `analytics/raw/`. The CSV import is all-or-nothing. No platform APIs are called; API connectors remain a designed seam awaiting an explicit request.
+
 ## Validate Research State
 
 Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:

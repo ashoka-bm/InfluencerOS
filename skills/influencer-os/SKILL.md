@@ -48,7 +48,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [BUILT — Phase 1 slice 6] |
 | `create-output-package` | Output Package + provenance | [BUILT — Phase 1 slice 7] |
 | `register-published-post` | PublishedPostRecord + Project published status | [BUILT — Phase 2 slice 1] |
-| `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [PLANNED — Phase 2 slice 2] |
+| `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
 | `create-performance-summary` | PerformanceSummary from analytics evidence | [PLANNED — Phase 2 slice 3] |
 | `distill-creator-learning` | Creator Memory lessons from performance evidence | [PLANNED — Phase 2 slice 4] |
 
@@ -70,7 +70,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | 10. Generation Approval Gate | user (exact-call approval) | — | [BUILT gate] |
 | Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [BUILT] |
 | Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` | [BUILT — Phase 2 slice 1] |
-| Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [PLANNED — Phase 2 slice 2] |
+| Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [BUILT — Phase 2 slice 2] |
 | Post-pipeline: Performance summary | `create-performance-summary` | `Skill(skill: "create-performance-summary")` | [PLANNED — Phase 2 slice 3] |
 | Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [PLANNED — Phase 2 slice 4] |
 
