@@ -307,7 +307,7 @@ def main(argv=None):
         if args.command == "research-fetch":
             import json as json_module
 
-            from influencer_os.connectors import env as connector_env, fetch as connector_fetch
+            from influencer_os.connectors import env as connector_env, fetch as connector_fetch, http as connector_http
             from influencer_os.validation import validate_record as validate_record_fn
 
             config = connector_env.get_config(
@@ -335,6 +335,12 @@ def main(argv=None):
             except connector_fetch.ConnectorUnavailable as exc:
                 print(f"error: {exc}", file=sys.stderr)
                 print("Run `python3 -m influencer_os list-connectors` to see availability.", file=sys.stderr)
+                return 1
+            except connector_http.HTTPError as exc:
+                # A provider fault (bad/expired key -> 401/403, 5xx after retries,
+                # or a malformed body) must degrade to a clean error, not a
+                # traceback: HTTPError is not in the outer handler's tuple.
+                print(f"error: provider request failed: {exc}", file=sys.stderr)
                 return 1
 
             validate_record_fn("research-fetch-result", result)

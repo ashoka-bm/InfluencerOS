@@ -16,16 +16,24 @@ def extract_output_text(response: Dict[str, Any]) -> str:
     if isinstance(output, str):
         return output
     if isinstance(output, list):
+        # Assign-then-return-if-non-empty, not return-on-first-match: the output
+        # list can lead with non-message items (web_search_call, reasoning) or an
+        # empty placeholder, and short-circuiting on those would drop the real
+        # assistant message that follows.
         for item in output:
+            text = ""
             if isinstance(item, dict):
                 if item.get("type") == "message":
                     for c in item.get("content", []):
                         if isinstance(c, dict) and c.get("type") == "output_text":
-                            return c.get("text", "")
+                            text = c.get("text", "")
+                            break
                 elif "text" in item:
-                    return item["text"]
+                    text = item["text"]
             elif isinstance(item, str):
-                return item
+                text = item
+            if text:
+                return text
     for choice in response.get("choices", []):
         if "message" in choice:
             return choice["message"].get("content", "")
@@ -33,15 +41,34 @@ def extract_output_text(response: Dict[str, Any]) -> str:
 
 
 def iter_balanced_objects(text: str):
-    """Yield every balanced ``{...}`` substring, left to right."""
+    """Yield every balanced ``{...}`` substring, left to right, ignoring braces
+    that appear inside JSON string literals.
+
+    String-awareness matters: a lone ``{`` or ``}`` inside a model-supplied value
+    (a title, tweet text, a code snippet, LaTeX like ``\\frac{a}``) would otherwise
+    mis-balance the depth counter and truncate an otherwise-valid payload.
+    """
     for start, ch in enumerate(text):
         if ch != "{":
             continue
         depth = 0
+        in_str = False
+        esc = False
         for j in range(start, len(text)):
-            if text[j] == "{":
+            c = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif c == "\\":
+                    esc = True
+                elif c == '"':
+                    in_str = False
+                continue
+            if c == '"':
+                in_str = True
+            elif c == "{":
                 depth += 1
-            elif text[j] == "}":
+            elif c == "}":
                 depth -= 1
                 if depth == 0:
                     yield text[start:j + 1]

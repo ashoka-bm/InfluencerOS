@@ -71,8 +71,18 @@ def get_config(env_path: Optional[Path] = None) -> Dict[str, Any]:
 
     config: Dict[str, Any] = {key: resolve(key) for key in provider_keys()}
 
-    disable = (resolve("INFLUENCER_OS_DISABLE_PAID_CONNECTORS") or "").lower()
-    config["DISABLE_PAID_CONNECTORS"] = disable in ("1", "true", "yes")
+    def truthy(raw: Optional[str]) -> bool:
+        return (raw or "").strip().lower() in ("1", "true", "yes")
+
+    # The kill switch is a last-resort safety guardrail, so it turns ON if EITHER
+    # os.environ or the .env file enables it, and a blank environ export is
+    # treated as absent. (Unlike an API key, where an explicit empty environ
+    # value intentionally wins and fails closed, an empty value here must not
+    # silently override a .env `=1` and fail the guardrail open.)
+    kill_var = "INFLUENCER_OS_DISABLE_PAID_CONNECTORS"
+    config["DISABLE_PAID_CONNECTORS"] = truthy(os.environ.get(kill_var)) or truthy(
+        file_env.get(kill_var)
+    )
 
     raw_cap = resolve("INFLUENCER_OS_CONNECTOR_MAX_CALLS")
     try:

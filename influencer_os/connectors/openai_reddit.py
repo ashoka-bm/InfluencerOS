@@ -23,6 +23,8 @@ def is_reddit_thread_url(url: str) -> bool:
         parsed = urlparse(url)
     except ValueError:
         return False
+    if parsed.scheme not in ("http", "https"):
+        return False
     host = (parsed.netloc or "").lower().split(":")[0]
     if host in _REDDIT_REJECT_HOSTS:
         return False
@@ -138,7 +140,7 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "id": f"R{i + 1}",
                 "title": str(item.get("title", "")).strip(),
                 "url": url,
-                "subreddit": str(item.get("subreddit", "")).strip().lstrip("r/"),
+                "subreddit": str(item.get("subreddit", "")).strip().removeprefix("r/"),
                 "date": date,
                 "why_relevant": str(item.get("why_relevant", "")).strip(),
                 "relevance": safe_relevance(item.get("relevance", 0.5)),

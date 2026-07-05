@@ -58,6 +58,29 @@ class EnvConfigTests(unittest.TestCase):
             config = env.get_config(env_path=env_path)
             self.assertEqual(config["MAX_CALLS"], env.DEFAULT_MAX_CALLS)
 
+    def test_empty_environ_does_not_defeat_env_kill_switch(self):
+        # A blank `export INFLUENCER_OS_DISABLE_PAID_CONNECTORS=` must not fail the
+        # safety guardrail open over a .env value of 1.
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=sk\nINFLUENCER_OS_DISABLE_PAID_CONNECTORS=1\n")
+            with mock.patch.dict(
+                "os.environ", {"INFLUENCER_OS_DISABLE_PAID_CONNECTORS": ""}, clear=True
+            ):
+                config = env.get_config(env_path=env_path)
+            self.assertTrue(config["DISABLE_PAID_CONNECTORS"])
+            self.assertFalse(env.has_key(config, "OPENAI_API_KEY"))
+
+    def test_environ_can_enable_kill_switch_when_env_file_silent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=sk\n")
+            with mock.patch.dict(
+                "os.environ", {"INFLUENCER_OS_DISABLE_PAID_CONNECTORS": "1"}, clear=True
+            ):
+                config = env.get_config(env_path=env_path)
+            self.assertTrue(config["DISABLE_PAID_CONNECTORS"])
+
 
 class CallBudgetTests(unittest.TestCase):
     def test_budget_bounds_calls(self):
@@ -151,6 +174,61 @@ class RedditParseTests(unittest.TestCase):
         )
         items = openai_reddit.parse_reddit_response(self._response(text))
         self.assertEqual([i["title"] for i in items], ["real"])  # only the genuine thread survives
+
+    def test_parse_survives_unbalanced_brace_in_string(self):
+        # A lone brace inside a title (code snippet, LaTeX, prose) must not
+        # truncate the payload and silently drop every candidate.
+        text = (
+            '{"items": [{"title": "my code broke here } and then", '
+            '"url": "https://www.reddit.com/r/learnpython/comments/abc/t/", "relevance": 0.9}]}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["title"], "my code broke here } and then")
+
+    def test_parse_subreddit_normalization_preserves_leading_r(self):
+        # Only a literal "r/" prefix is dropped; subreddits that merely start
+        # with 'r' keep their first letter (lstrip stripped the char set).
+        text = (
+            '{"items": ['
+            '{"title": "a", "url": "https://www.reddit.com/r/relationships/comments/a/b/", "subreddit": "r/relationships", "relevance": 0.9},'
+            '{"title": "b", "url": "https://www.reddit.com/r/running/comments/c/d/", "subreddit": "running", "relevance": 0.9}'
+            ']}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual([i["subreddit"] for i in items], ["relationships", "running"])
+
+    def test_parse_rejects_scheme_relative_url(self):
+        # A scheme-relative URL clears the host/path filter but would fail the
+        # schema ^https?:// pin, so it must be dropped as a candidate instead.
+        text = (
+            '{"items": ['
+            '{"title": "rel", "url": "//www.reddit.com/r/s/comments/a/b/", "relevance": 0.9},'
+            '{"title": "ok", "url": "https://www.reddit.com/r/s/comments/c/d/", "relevance": 0.9}'
+            ']}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual([i["title"] for i in items], ["ok"])
+
+
+class OutputTextExtractionTests(unittest.TestCase):
+    def test_empty_leading_item_does_not_hide_real_message(self):
+        # A leading empty/placeholder output item must not short-circuit the
+        # walk before the real assistant message is reached.
+        from influencer_os.connectors.parse import extract_output_text
+        response = {"output": [
+            "",
+            {"type": "message", "content": [{"type": "output_text", "text": "REAL"}]},
+        ]}
+        self.assertEqual(extract_output_text(response), "REAL")
+
+    def test_empty_output_text_message_falls_through_to_next(self):
+        from influencer_os.connectors.parse import extract_output_text
+        response = {"output": [
+            {"type": "message", "content": [{"type": "output_text", "text": ""}]},
+            {"type": "message", "content": [{"type": "output_text", "text": "REAL"}]},
+        ]}
+        self.assertEqual(extract_output_text(response), "REAL")
 
 
 class RedditEnrichTests(unittest.TestCase):
@@ -309,6 +387,26 @@ class XaiParseTests(unittest.TestCase):
         items = xai_x.parse_x_response(self._response(text))
         self.assertEqual([i["text"] for i in items], ["real"])  # only a real status URL survives
 
+    def test_parse_survives_unbalanced_brace_in_post_text(self):
+        # A lone opening brace in tweet text (code/LaTeX) must not drop candidates.
+        text = (
+            '{"items": [{"text": "use { to open a block", '
+            '"url": "https://x.com/u/status/1", "relevance": 0.9}]}'
+        )
+        items = xai_x.parse_x_response(self._response(text))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["text"], "use { to open a block")
+
+    def test_parse_rejects_scheme_relative_status_url(self):
+        text = (
+            '{"items": ['
+            '{"text": "rel", "url": "//x.com/u/status/1", "relevance": 0.9},'
+            '{"text": "ok", "url": "https://x.com/u/status/2", "relevance": 0.9}'
+            ']}'
+        )
+        items = xai_x.parse_x_response(self._response(text))
+        self.assertEqual([i["text"] for i in items], ["ok"])
+
 
 class FirecrawlParseTests(unittest.TestCase):
     def test_parse_reduces_scrape_to_candidate(self):
@@ -332,6 +430,14 @@ class FirecrawlParseTests(unittest.TestCase):
         item = firecrawl_web.parse_scrape_response(response, "https://x")
         self.assertTrue(item["markdown_truncated"])
         self.assertEqual(len(item["markdown"]), firecrawl_web.MAX_MARKDOWN_CHARS)
+
+    def test_parse_falls_back_when_sourceurl_not_http(self):
+        # A non-http sourceURL from the provider must not become the candidate
+        # url (it would fail the schema ^https?:// pin); fall back to the
+        # caller-supplied http(s) url instead.
+        response = {"success": True, "data": {"markdown": "# hi", "metadata": {"sourceURL": "ftp://internal/x"}}}
+        item = firecrawl_web.parse_scrape_response(response, "https://example.com/a")
+        self.assertEqual(item["url"], "https://example.com/a")
 
 
 class LinkedinParseTests(unittest.TestCase):
@@ -460,6 +566,22 @@ class ResearchFetchCliTests(unittest.TestCase):
             env_path.write_text("# no keys\n")
             with mock.patch.dict("os.environ", {}, clear=True):
                 code = main(["research-fetch", "reddit", "pothos", "--env-file", str(env_path)])
+        self.assertEqual(code, 1)
+
+    def test_cli_provider_http_error_fails_cleanly(self):
+        # A live provider fault (e.g. a bad/expired key -> 401) must surface as a
+        # clean error + exit 1, not an unhandled HTTPError traceback.
+        from influencer_os import cli
+        from influencer_os.connectors import http
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=sk-bad\n")
+            with mock.patch.dict("os.environ", {}, clear=True), \
+                    mock.patch(
+                        "influencer_os.connectors.fetch.fetch_reddit",
+                        side_effect=http.HTTPError("HTTP 401: Unauthorized", 401, "{}"),
+                    ):
+                code = cli.main(["research-fetch", "reddit", "pothos", "--env-file", str(env_path)])
         self.assertEqual(code, 1)
 
     def test_cli_writes_validated_result_with_mocked_fetch(self):

@@ -48,10 +48,18 @@ def parse_scrape_response(response: Dict[str, Any], url: str) -> Optional[Dict[s
     if not markdown:
         return None
 
+    # Prefer the provider's sourceURL, but only when it is itself http(s): the
+    # caller-supplied `url` is already http(s), and the result schema pins every
+    # candidate url to ^https?://, so a non-http sourceURL must not invalidate
+    # the whole otherwise-valid scrape.
+    source_url = metadata.get("sourceURL")
+    if not (isinstance(source_url, str) and source_url.startswith(("http://", "https://"))):
+        source_url = url
+
     truncated = len(markdown) > MAX_MARKDOWN_CHARS
     return {
         "id": "F1",
-        "url": metadata.get("sourceURL") or url,
+        "url": source_url,
         "title": str(metadata.get("title", "")).strip(),
         "description": str(metadata.get("description", "")).strip(),
         "markdown": markdown[:MAX_MARKDOWN_CHARS],

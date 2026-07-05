@@ -24,6 +24,8 @@ def is_x_status_url(url: str) -> bool:
         parsed = urlparse(url)
     except ValueError:
         return False
+    if parsed.scheme not in ("http", "https"):
+        return False
     host = (parsed.netloc or "").lower().split(":")[0]
     return host in _X_HOSTS and "/status/" in parsed.path
 
