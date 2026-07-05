@@ -1,6 +1,6 @@
 # InfluencerOS Architecture Map
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 This is the whole-system blueprint at file granularity: where every file lives, what it owns, and which function or skill calls which other function or skill. It records **structure and call flow, not file internals**. Internals (schema fields, skill prose, function bodies) are defined in the files themselves and built in dedicated TDD passes.
 
@@ -20,9 +20,10 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (42) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (43) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
+Research connectors        influencer_os/connectors/ (env-gated acquisition tier)        [BUILT — ADR 0022; dormant until key]
 Creator Workspaces         workspace-library/creators/<slug>/ (ignored, runnable root)   [BUILT scaffold]
 Self-improvement loop      skills/wrap-up, skills/memory-write + memory CLI              [BUILT — ADR 0016]
 Propagation                CLI: init-creator, sync-creator-runtime, update-creators      [BUILT — ADR 0018]
@@ -66,16 +67,17 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
 | `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
 | `maps/` | Excalidraw map records. | [BUILT] |
-| `docs/adr/0001–0021` | Architectural decisions (0020 defined the research module; 0021 hardens research planning and source-yield learning). | [BUILT] |
+| `docs/adr/0001–0022` | Architectural decisions (0020 defined the research module; 0021 hardens research planning and source-yield learning; 0022 adds the env-gated research-acquisition connector layer). | [BUILT] |
 
 ### Workflow contracts
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (42) | JSON Schema contract per durable record. | [BUILT] |
-| `examples/*.example.json` (42) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (43) | JSON Schema contract per durable record (incl. `research-fetch-result` connector output). | [BUILT] |
+| `examples/*.example.json` (43) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
-| `docs/provider-boundary.md` | Provider approval boundary. | [BUILT] |
+| `docs/provider-boundary.md` | Provider approval boundary (generation exact-approval; research-acquisition standing approval per ADR 0022). | [BUILT] |
+| `docs/research-adapter-registry.md` | Research acquisition adapter/connector permission registry (ADR 0021/0022). | [BUILT] |
 | `docs/creator-workspace-structure.md` | Workspace layout + local-state policy. | [BUILT] |
 
 ### Skills (`skills/<skill-name>/`)
@@ -107,7 +109,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `cli.py` | Command surface; routes to helpers (`register-output-package` included), holds no product rules. | [BUILT] |
+| `cli.py` | Command surface; routes to helpers (`register-output-package`, `list-connectors`, `research-fetch` included), holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
 | `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
@@ -117,6 +119,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
+| `connectors/` | Env-gated research-acquisition tier (ADR 0022): `env.py` (key detection, kill switch, call cap), `http.py` (stdlib client), `registry.py`/`fetch.py` (availability + dispatch), `models.py`/`parse.py` (canonical mapping to `ResearchEvidence`/`MetricSnapshot`), and connectors `openai_reddit.py` (+`reddit_enrich.py`), `xai_x.py`, `firecrawl_web.py`, `linkedin_apify.py`. Powers `list-connectors` + `research-fetch`; output validated by `research-fetch-result.schema.json`. | [BUILT — ADR 0022; dormant until provider key] |
 
 ### Tests (`tests/`) — parity + contract
 
@@ -137,6 +140,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
 | source-intake provenance check | `source_intakes` paths are schema-pinned under `sources/(intakes\|imports\|notes)/`; `validate workspace` additionally fails on missing files and symlink escapes after `resolve()`; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
 | creator readiness check | Status-keyed medium-based blockers collected into one error: foundation population + required Markdown sections + lower-bound word/sample floors + `TBD` scan + context byte caps, intake provenance, required asset kinds per content medium, lifecycle asset/prompt existence with containment, typed + medium-required primary `reference_refs` (kind-checked at every status; non-retired and prompted-or-later at generation_ready), and asset `source_ref` resolution to a recorded intake id or contained workspace file; asset paths schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, Phase 1 slice 2] |
+| connector layer | Env detection + kill switch + call cap, availability gating, canonical-record mapping, per-connector parsing (mock-hooked; no live calls), and `research-fetch-result` schema validation. | [BUILT — `test_connectors.py`, ADR 0022] |
 
 ### Deferred / gated subsystems
 
@@ -237,7 +241,27 @@ influencer_os/cli.py
   -> memory.py               (bounded memory-write + log-learning writers)
   -> runs.py                 (dry-run init)
   -> validation.py           (fail-closed schema subset incl. $ref/oneOf/anyOf/allOf)
+  -> connectors/             (list-connectors availability; research-fetch dispatch, ADR 0022)
   -> schemas/                (JSON Schema contracts)
+```
+
+## Research-Acquisition Connector Call Graph (ADR 0022)
+
+```text
+influencer_os/cli.py
+  list-connectors [--workspace <ws>]  -> connectors.registry.available()
+       reports each connector available|unavailable from env (env.py: key present,
+       kill switch off, per-run call cap) — no provider call
+  research-fetch <connector> <query> [--limit N ...] -> connectors.fetch.run_fetch()
+       registry.resolve(connector) -> connector module (openai_reddit | xai_x |
+         firecrawl_web | linkedin_apify) -> http.py provider call
+       -> parse.py / models.py map provider output to ResearchEvidence + MetricSnapshot
+       -> validate against research-fetch-result.schema.json BEFORE emitting
+  guardrails: standing approval by key presence for api_backed/scraping_api only;
+    per-run call cap (INFLUENCER_OS_CONNECTOR_MAX_CALLS) and kill switch
+    (INFLUENCER_OS_DISABLE_PAID_CONNECTORS); free reddit.com enrichment bounded
+    separately; runs only inside an explicit user-initiated fetch (no scheduled path).
+  no key -> connector reports unavailable; run falls back to built-in WebSearch/WebFetch.
 ```
 
 ## Determinism Boundary Table
@@ -249,6 +273,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 | Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace`: full medium-based readiness validator at `content_ready`/`generation_ready`/`active` (foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence) plus the generation-ready visual-asset gate [BUILT — WS14 + Phase 1 slice 2] | status transitions stay human |
 | Video understanding | public URLs or local real videos | `video-understanding-pack` | dated, source-linked; `/watch` or local equivalent only feeds distilled observations | `validate record video-understanding-pack` [BUILT — WS12] | exact approval for Whisper/API transcription fallback, batch processing, or first-run dependency installs |
 | Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` incl. JSONL line validation [BUILT — Phase 1 slice 3] | none |
+| Research acquisition (connector) | search plan + query | `research-fetch-result` → mapped `research-evidence` + `metric-snapshot` | provider output maps to canonical records; per-run call cap honored; no key → unavailable + built-in fallback | `research-fetch` validates against `research-fetch-result.schema.json` before emitting [BUILT — ADR 0022] | standing approval by key presence (api_backed/scraping_api only); kill switch + call cap bound it |
 | Research findings | research evidence | `research-findings` frontmatter + `findings.md` | concise, topic-organized, source-linked | frontmatter + char limit via `validate research` [BUILT — Phase 1 slice 3] | none |
 | Idea queue | findings + evidence + schedule | `idea-queue-entry` + `idea-queue` manifest | scored, evidence-linked, statused | `validate queue`: manifest/entry consistency + evidence ref resolution [BUILT — Phase 1 slice 3] | none |
 | Idea promotion | queue entry | `idea-promotion` | human-approved locked snapshot | promotion gate: real queue entry required; unresolved evidence warns (human-approved) / fails (automated) [BUILT — Phase 1 slice 3] | user approves |

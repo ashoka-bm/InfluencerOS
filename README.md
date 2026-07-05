@@ -184,6 +184,38 @@ such as `.tmp/watch/...`; do not commit downloaded videos, frames, audio clips,
 or transcripts. Whisper/API transcription fallback, first-run dependency
 installs, and video batches require explicit approval.
 
+## Research Acquisition Connectors
+
+An env-gated research-acquisition connector tier (ADR 0022) can pull evidence
+that built-in `WebSearch`/`WebFetch` cannot reach — Reddit threads and X posts
+with engagement metrics, JS-rendered public pages, and public LinkedIn posts.
+Each connector is **available only when its provider key is set** in `.env`
+(`OPENAI_API_KEY`, `XAI_API_KEY`, `FIRECRAWL_API_KEY`, `APIFY_API_KEY`); with no
+key it reports `unavailable` and research falls back to the built-ins. List
+availability without making any provider call:
+
+```bash
+python3 -m influencer_os list-connectors
+```
+
+Run a single fetch inside an explicit, user-initiated research run. Output maps
+to canonical `ResearchEvidence`/`MetricSnapshot` records and is validated against
+`schemas/research-fetch-result.schema.json` before it is emitted:
+
+```bash
+python3 -m influencer_os research-fetch reddit "low-light houseplants" --days 30
+python3 -m influencer_os research-fetch x "creatine timing" --depth deep --out .tmp/x-fetch.json
+python3 -m influencer_os research-fetch firecrawl https://example.com/post
+python3 -m influencer_os research-fetch linkedin https://www.linkedin.com/in/<profile> --max-posts 5
+```
+
+Key presence is standing approval for this research tier only — no per-run
+prompt — bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and
+a global kill switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`). Generation
+provider calls (image/video/audio/render) keep the exact-approval gate and are
+unchanged. There is no scheduled/unattended path; that stays deferred to
+Automation OS.
+
 ## Validate Any Record
 
 Validate one mid-pipeline record against any schema in `schemas/`:

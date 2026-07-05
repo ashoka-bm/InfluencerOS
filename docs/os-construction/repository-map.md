@@ -37,6 +37,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `docs/os-construction/maps/` | Markdown records for created architecture maps. |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. |
 | `docs/provider-boundary.md` | Approval boundary for provider-backed work. |
+| `docs/research-adapter-registry.md` | Research-acquisition adapter/connector permission registry (ADR 0021/0022). |
 | `docs/creator-workspace-structure.md` | Creator workspace layout and local state policy. |
 | `docs/adr/` | Architectural decisions. |
 | `docs/workflows/` | Human-readable workflow specs. |
@@ -47,7 +48,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 
 | Path | Role |
 | --- | --- |
-| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `init-run`, `rebuild-index`, `rebuild-board`, `prune`, `memory-write`, `log-learning`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `init-run`, `rebuild-index`, `rebuild-board`, `prune`, `memory-write`, `log-learning`, `list-connectors`, `research-fetch`). It should call workflow helpers, not hold product rules. |
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |
@@ -57,6 +58,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `influencer_os/prune.py` | Research retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + its snapshots, removals recorded as run-manifest pruned ids. |
 | `influencer_os/memory.py` | Bounded `memory-write` and `log-learning` writers (ADR 0016). |
 | `influencer_os/runs.py` | Dry-run initialization and run records. |
+| `influencer_os/connectors/` | Env-gated research-acquisition connector tier (ADR 0022): env detection/kill switch/call cap, stdlib HTTP client, registry + fetch dispatch, canonical-record mapping, and the Reddit/OpenAI, X/xAI, Firecrawl, and LinkedIn/Apify connectors. Powers `list-connectors` and `research-fetch`; dormant until a provider key is present. |
 
 ## Contracts
 
@@ -160,6 +162,7 @@ influencer_os/cli.py
   -> memory.py
   -> runs.py
   -> validation.py
+  -> connectors/   (list-connectors, research-fetch — ADR 0022)
   -> schemas/
 ```
 

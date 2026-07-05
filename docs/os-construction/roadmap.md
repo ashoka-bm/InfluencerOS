@@ -1,6 +1,6 @@
 # InfluencerOS Roadmap
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 This roadmap defines phase order, exit criteria, and implementation priorities. Progress status lives in `docs/os-construction/progress.md`.
 
@@ -30,7 +30,8 @@ Approved standing overrides:
 - self-improvement runs as local-first system skills (ADR 0016),
 - skills stay repo-central with no category prefixes (ADR 0017),
 - Creator Workspace propagation is built as CLI subcommands with gated content zones (ADR 0018),
-- `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers (ADR 0019).
+- `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers (ADR 0019),
+- research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep the exact-approval gate (ADR 0022).
 
 ## Acceptance-Criteria Policy
 
@@ -149,6 +150,18 @@ live research runtime eval and completed 2026-07-04:
   `research/intelligence/sources.json` usefulness scores and eventually move to
   `flagged_for_removal` or `retired`. Scheduled research automation remains
   deferred until this manual loop has been exercised against real creator runs.
+
+Post-Phase-1 tooling (ADR 0022, 2026-07-05): the research-acquisition connector
+layer (`influencer_os/connectors/` — Reddit/OpenAI, X/xAI, Firecrawl,
+LinkedIn/Apify) landed to close the binding constraint the first live loop run
+surfaced — built-in `WebSearch`/`WebFetch` cannot reach reddit.com or return
+primary-post engagement metrics, capping evidence at `medium` confidence. The
+tier is env-gated and dormant until a provider key is present; key presence is
+standing approval for that tier only (per-run call cap + kill switch; generation
+gates unchanged). This is enabling tooling for the deferred scheduled-research
+loop, not a new phase: the loop must still be exercised with a live connector
+(run 2, needs `OPENAI_API_KEY`) before any scheduled automation is approved, and
+scheduled/unattended acquisition stays deferred to Phase 4 Automation OS.
 
 ## Phase 2: Learning OS
 
