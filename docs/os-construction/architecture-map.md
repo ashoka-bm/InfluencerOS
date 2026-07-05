@@ -82,7 +82,7 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 
 ### Skills (`skills/<skill-name>/`)
 
-Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skill status is per-row below: the research, queue, promotion, template, production-plan, and output-package producers landed in Phase 1 slices 4–7; the remaining [PLANNED] producer belongs to Phase 2.
+Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, optional per-skill `references/`, `SKILL.local.md` overrides, machine-actionable `dependencies` frontmatter. The ADR-0017 conventions are **[BUILT]** as of workstreams 9–10: both conductors and both system skills declare `dependencies` frontmatter, both conductors carry `## Rules`/`## Self-Update`, and a worked `skills/influencer-os/SKILL.local.md` exists. Producer skill status is per-row below: the research, queue, promotion, template, production-plan, and output-package producers landed in Phase 1 slices 4–7; the publication-registration producer landed in Phase 2 slice 1, and the remaining [PLANNED] learning producers belong to Phase 2 slices 2–4.
 
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
@@ -101,7 +101,10 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [BUILT — Phase 1 slice 6] |
 | `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [BUILT — Phase 1 slice 6] |
 | `create-output-package` | planning | Output Package + provenance. | [BUILT — Phase 1 slice 7] |
-| `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2] |
+| `register-published-post` | learning | PublishedPostRecord + Project published status. | [BUILT — Phase 2 slice 1] |
+| `ingest-analytics` | learning | AnalyticsSnapshots from manual/CSV entry. | [PLANNED — Phase 2 slice 2] |
+| `create-performance-summary` | learning | PerformanceSummary from analytics evidence. | [PLANNED — Phase 2 slice 3] |
+| `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2 slice 4] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
 | `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes (2,500-byte cap via CLI). | [BUILT — ADR 0016] |
 
@@ -176,7 +179,10 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [BUILT]
   Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
   (post)   Output Package             -> Skill(create-output-package)                             [BUILT]
-  (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2]
+  (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
+  (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [PLANNED — Phase 2 slice 2]
+  (learn)  Performance summary        -> Skill(create-performance-summary)                        [PLANNED — Phase 2 slice 3]
+  (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2 slice 4]
 
   Until a [PLANNED] owner exists on disk, the conductor halts at that phase and surfaces the
   missing skill (halt rule in skills/influencer-os/SKILL.md ## Dependencies).

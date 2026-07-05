@@ -260,7 +260,7 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `projects/<project-id>/output-package/` stores one upload-ready Output Package. `output-package.json` contains the universal core, platform adaptations, source refs, and required Creative Performance Map. `assets/` holds local materials. `upload-ready/` holds the exact files and text a person needs to upload. `source-refs/` may hold copies or pointers needed to audit how the package was created. `python3 -m influencer_os register-output-package` is the write gate for this folder: it copies upload-ready files, writes the package record, marks the Project `packaged`, validates, and rolls back its writes on failure.
 
-`projects/<project-id>/published/` stores Published Post Records that link the Output Package to real platform publications.
+`projects/<project-id>/published/` stores Published Post Records that link the Output Package to real platform publications. `python3 -m influencer_os register-published-post` is the write gate for `published/published-post-records/`: it validates the record against the registered Output Package (chain ids, upload-asset ids, caption path), writes it, moves the Project `packaged` → `published` on the first record attesting a live post, and rolls back on failure. It records a publication a human already performed; it never publishes.
 
 `projects/<project-id>/analytics/` stores API, manual, CSV, or derived Analytics Snapshots for the project's Published Post Records. `raw/` may preserve safe raw exports or API payloads.
 

@@ -33,6 +33,12 @@ PROJECT_STATUS_ORDER = {
     "archived": 8,
 }
 
+# Publication statuses that attest a post went live on the platform (an
+# "updated" or "deleted" post was necessarily published first). "scheduled"
+# and "failed" records document attempts and never move a Project past
+# packaged.
+PUBLICATION_LIVE_STATUSES = frozenset({"published", "updated", "deleted"})
+
 # Optional source_refs cached from the promotion for convenience; each cached
 # value must stay consistent with the locked promotion snapshot.
 PROMOTION_CACHED_SUBSETS = (
@@ -185,6 +191,74 @@ def register_output_package(project_path, output_package_path, asset_root=None):
     }
 
 
+def register_published_post(project_path, record_path):
+    """Record a human publication of a packaged project's Output Package.
+
+    Registration never publishes anything: it validates and files a
+    PublishedPostRecord under published/published-post-records/ and moves the
+    Project packaged -> published on the first record whose
+    publication_status attests a live post.
+    """
+    project_dir = Path(project_path)
+    record_path = Path(record_path)
+    project_manifest_path = project_dir / "project.json"
+    package_path = project_dir / "output-package" / "output-package.json"
+
+    if not project_manifest_path.exists():
+        raise FileNotFoundError(f"Missing project manifest: {project_manifest_path}")
+    if not record_path.exists():
+        raise FileNotFoundError(f"Missing published post record: {record_path}")
+
+    project = load_json(project_manifest_path)
+    validate_record("project", project)
+    if project["status"] not in ("packaged", "published"):
+        raise ValueError(
+            "Published post registration requires a packaged (or already "
+            f"published) project; got status {project['status']!r}"
+        )
+
+    # Preflight the project (including any already-registered published
+    # records) before mutating it.
+    validate_project(project_dir)
+
+    record = load_json(record_path)
+    validate_record("published-post-record", record)
+    output_package = load_json(package_path)
+    _validate_published_post_matches(record, project, output_package)
+
+    record_id = record["published_post_record_id"]
+    destination = project_dir / "published" / "published-post-records" / f"{record_id}.json"
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError(f"Published post record already registered: {destination}")
+    _ensure_contained_target(destination, project_dir, "published post record destination")
+
+    original_project_text = project_manifest_path.read_text()
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(record_path, destination)
+
+        if (
+            project["status"] == "packaged"
+            and record["publication_status"] in PUBLICATION_LIVE_STATUSES
+        ):
+            project["status"] = "published"
+            _write_json(project_manifest_path, project)
+
+        validate_project(project_dir)
+    except Exception:
+        project_manifest_path.write_text(original_project_text)
+        if destination.exists() or destination.is_symlink():
+            destination.unlink()
+        raise
+
+    return {
+        "published_post_record_id": record_id,
+        "project_id": project["project_id"],
+        "project_status": project["status"],
+        "record_path": destination,
+    }
+
+
 def validate_project(project_path):
     project_dir = Path(project_path)
     project_manifest_path = project_dir / "project.json"
@@ -262,6 +336,88 @@ def _validate_output_package_matches_project(output_package, project):
         raise ValueError(
             "Packaged projects must carry an upload-ready Output Package: "
             f"{output_package['status']!r}"
+        )
+
+
+def _validate_published_post_matches(record, project, output_package):
+    """Shared writer/at-rest checks pinning a PublishedPostRecord to its chain.
+
+    Called by register_published_post at write time and by
+    _validate_published_records at rest so the two paths cannot drift.
+    """
+    if record["project_id"] != project["project_id"]:
+        raise ValueError(
+            "Published post record project_id does not match project: "
+            f"{record['project_id']!r} != {project['project_id']!r}"
+        )
+    if record["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValueError(
+            "Published post record creator_profile_id does not match project: "
+            f"{record['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+        )
+    if record["output_package_id"] != output_package["output_package_id"]:
+        raise ValueError(
+            "Published post record output_package_id does not match the registered package: "
+            f"{record['output_package_id']!r} != {output_package['output_package_id']!r}"
+        )
+
+    known_asset_ids = {asset["upload_asset_id"] for asset in output_package["upload_ready"]}
+    declared_paths = {asset["path"] for asset in output_package["upload_ready"]}
+    assets_used = record["assets_used"]
+
+    used_asset_ids = set(assets_used["primary_media_asset_ids"])
+    used_asset_ids.add(assets_used["thumbnail_or_first_frame_asset_id"])
+    dangling_ids = sorted(used_asset_ids - known_asset_ids)
+    if dangling_ids:
+        raise ValueError(
+            "Published post record assets_used name upload assets the "
+            f"registered package does not declare: {dangling_ids}"
+        )
+    if assets_used["caption_or_description_path"] not in declared_paths:
+        raise ValueError(
+            "Published post record caption_or_description_path is not a "
+            f"declared upload-ready path: {assets_used['caption_or_description_path']!r}"
+        )
+
+
+def _validate_published_records(project_dir, project, output_package):
+    """At-rest checks for published/published-post-records/ (slice 1 parity).
+
+    Every writer-enforced registration invariant is re-checked here so a
+    hand-edited record or status cannot validate at rest.
+    """
+    records_dir = Path(project_dir) / "published" / "published-post-records"
+    record_paths = sorted(records_dir.glob("*.json")) if records_dir.is_dir() else []
+
+    if record_paths and output_package is None:
+        raise ValueError(
+            "Published post records require a packaged project with a "
+            f"registered Output Package: {records_dir}"
+        )
+
+    live_count = 0
+    for record_path in record_paths:
+        _ensure_contained_file(record_path, project_dir, "published post record")
+        record = _validate_project_record(record_path, "published-post-record")
+        record_id = record["published_post_record_id"]
+        if record_path.stem != record_id:
+            raise ValueError(
+                f"Published post record filename must match its id: "
+                f"{record_path.name} carries {record_id!r}"
+            )
+        _validate_published_post_matches(record, project, output_package)
+        if record["publication_status"] in PUBLICATION_LIVE_STATUSES:
+            live_count += 1
+
+    if _status_at_least(project, "published") and live_count == 0:
+        raise ValueError(
+            "Project status is published but published/published-post-records/ "
+            "carries no record attesting a live publication"
+        )
+    if not _status_at_least(project, "published") and live_count > 0:
+        raise ValueError(
+            "Project carries live published post records but its status is "
+            f"below published: {project['status']!r}"
         )
 
 
@@ -515,6 +671,7 @@ def _validate_project_records(project_dir, project, workspace_dir):
     applied_template = None
     production_plan = None
     generation_plan = None
+    output_package = None
 
     if _status_at_least(project, "planning"):
         applied_template = _validate_project_record(
@@ -610,6 +767,8 @@ def _validate_project_records(project_dir, project, workspace_dir):
             )
         _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
+
+    _validate_published_records(project_dir, project, output_package)
 
 
 def _validate_project_record(record_path, schema_name):

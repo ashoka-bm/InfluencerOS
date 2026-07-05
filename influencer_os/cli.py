@@ -16,7 +16,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.projects import init_project, validate_project
-from influencer_os.projects import register_output_package
+from influencer_os.projects import register_output_package, register_published_post
 from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
@@ -69,6 +69,10 @@ def main(argv=None):
     package_parser.add_argument("output_package", help="Path to an Output Package JSON record.")
     package_parser.add_argument("--project", required=True, help="Path to the project directory.")
     package_parser.add_argument("--asset-root", help="Directory containing upload-ready files at the paths named in the package record.")
+
+    published_parser = subparsers.add_parser("register-published-post", help="Register a Published Post Record inside a packaged project (records a human publication; never publishes).")
+    published_parser.add_argument("record", help="Path to a PublishedPostRecord JSON file.")
+    published_parser.add_argument("--project", required=True, help="Path to the project directory.")
 
     index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
     index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
@@ -229,6 +233,13 @@ def main(argv=None):
             print(f"Registered output package: {result['output_package_path']}")
             print(f"Copied {len(result['copied_assets'])} upload-ready assets.")
             print("Next phase: manual publication record when published.")
+            return 0
+
+        if args.command == "register-published-post":
+            result = register_published_post(args.project, args.record)
+            print(f"Registered published post record: {result['record_path']}")
+            print(f"Project status: {result['project_status']}")
+            print("Next phase: analytics snapshots for this published post.")
             return 0
 
         if args.command == "update-creators":

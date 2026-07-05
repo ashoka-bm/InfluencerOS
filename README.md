@@ -163,6 +163,16 @@ python3 -m influencer_os register-output-package path/to/output-package.json --p
 
 `--asset-root` should mirror the package's `upload_ready[].path` values, such as `output-package/upload-ready/final-video.mp4`. Omit it only when those files are already staged inside the project. The command copies upload-ready files, writes `output-package/output-package.json`, marks the project `packaged`, and rolls back those writes if `validate project` fails.
 
+## Register A Published Post
+
+After a human manually publishes the packaged content on a platform, record the publication:
+
+```bash
+python3 -m influencer_os register-published-post path/to/published-post-record.json --project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+```
+
+The record must match the registered Output Package: chain ids, `assets_used` upload-asset ids, and the caption/description path must all resolve to what the package declares. The command writes the record under `published/published-post-records/` and moves the project `packaged` → `published` on the first record whose `publication_status` attests a live post (`scheduled`/`failed` records register without the status change). It records a publication that already happened; it never publishes, uploads, or schedules.
+
 ## Validate Research State
 
 Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:

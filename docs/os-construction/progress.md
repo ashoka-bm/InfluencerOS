@@ -592,10 +592,45 @@ skills synced to all four fixture workspaces. Verification: 372 tests pass,
 validate. No live provider calls were made; first live validation happens when
 a real key lands in .env.
 
+Phase 2 planning (2026-07-05): the Learning OS implementation plan landed at
+`docs/workflows/learning-os-implementation-plan.md` — entry criteria verified,
+exit criteria rewritten as runnable checks, six slices sequenced, four
+execution decisions user-approved (FTS5 keyword lookup phased ahead of the
+reference's local-embedding vector leg; conductor + one skill per step;
+manual + neutral-CSV ingestion; JSON-canonical performance summaries), and a
+reference review of the Agentic OS memory schema and mkt-content-analytics
+skill folded into slices 2, 3, and 6 (benchmark rubric, stage-remediation
+mapping, heading-aware chunking, authority/recency rerank, no-leak scoping).
+
+Phase 2 slice 1 (2026-07-05): Published Post Record registration.
+`register-published-post` CLI + `skills/register-published-post/SKILL.md`
+landed with the conductor/registry/matrix/architecture-map rows in the same
+batch (three remaining Phase 2 skills marked [PLANNED] with the halt rule).
+The writer validates the record against the registered Output Package
+(chain ids, `assets_used` upload-asset ids, caption/description path),
+rejects symlinked write targets, rolls back on failure, and moves the
+Project `packaged -> published` on the first record whose
+`publication_status` attests a live post (`scheduled`/`failed` register
+without the transition). `validate project` re-checks every registration
+invariant at rest via the shared `_validate_published_post_matches` seam:
+filename-matches-id, chain matching, and live-record/status reconciliation
+in both directions (published status without a live record fails; a live
+record on a sub-published project fails). Verification: 406 tests pass (14
+added in `tests/test_published_posts.py` — happy path, below-packaged
+rejection, package mismatch without partial write, dangling asset ref,
+undeclared caption path, duplicate id, symlinked records dir, non-live
+no-flip, and six at-rest hand-edit probes); 43 example records validate;
+drift checks pass; all four fixture workspaces validate after
+`update-creators` synced 18 runtime skills with zero overrides lost. Full
+workflow replay in `.tmp/slice1-verify`: creator init through
+`register-published-post`, record/project/workspace validation,
+rebuild-board, validate board, and rebuild-index all pass with the project
+ending `published`. Exit criterion 1 of the Phase 2 plan is met.
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Begin Phase 2 Learning OS when ready: published-post registration, analytics snapshot ingestion, performance summaries, creator-memory distillation, SQL index rebuilds, and semantic lookup projection.
+2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slice 1 (published-post registration) complete 2026-07-05; next is slice 2 (analytics snapshot ingestion: shared writer seam, manual entry, neutral CSV template, `ingest-analytics` skill).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

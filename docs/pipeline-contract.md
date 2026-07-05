@@ -104,6 +104,18 @@ field to an upload-ready asset. Once a Project is `packaged`, `validate
 project` re-checks that the package format matches the Project content unit
 and that every `upload_ready[].path` resolves to an existing local file.
 
+`register-published-post` is the publication-registration gate (Phase 2 slice
+1). It records a publication a human already performed — never publishing —
+by validating a PublishedPostRecord against the registered Output Package
+(project/creator/package ids, `assets_used` upload-asset ids, and the
+caption/description path must all be declared by the package), writing it
+under `published/published-post-records/`, and moving the Project `packaged`
+→ `published` on the first record whose `publication_status` attests a live
+post (`scheduled`/`failed` records register without the transition). At
+rest, `validate project` re-checks every registration invariant: record
+filenames must match their ids, a `published` Project must carry at least
+one live record, and live records on a sub-`published` Project fail.
+
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 
 Analytics Snapshots must preserve enough dimensions for performance attribution:
