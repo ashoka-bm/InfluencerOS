@@ -547,11 +547,32 @@ mutable material_update flag), the example search-plan routing_basis is
 creator-grounded, and a required per-query term_basis enum makes query-term
 provenance auditable at rest. 330 tests pass; drift checks and example
 validation clean.
+Manual research-loop exercise, run 1 (2026-07-05): ran a real second research
+run for the remy-vale fixture creator (research_run_remy_vale_2026_07_05_001,
+mode scheduled_needs) to exercise the Next Work Queue item 1 loop end to end —
+search-plan before browsing, evidence + source-yield after, findings synthesis,
+then validate/rebuild-index/prune. The loop held: search-plan and both new
+records validate, `validate research` and `validate workspace` pass (13 research
+records, 27 workspace paths), `rebuild-index` rebuilt 11 recall rows, prune
+dry-run found nothing eligible. The run targeted the schedule's under-served
+"low-light plant picks" cluster and added finding_remy_vale_low_light_picks
+(low-to-medium confidence). Two loop learnings for the pre-automation gate:
+(1) the thin-evidence WARN correctly fired (material update, 1 of 4 sources
+yielded) and forced the finding to be re-labeled thin-evidence rather than
+"well-corroborated" — the gate does real work; (2) the binding constraint on
+evidence quality is source access, not planning: Reddit was unreachable for the
+second consecutive run (the tooling cannot fetch reddit.com) and the TikTok tag
+page failed, so runs can currently reach only secondary care guides and discover
+surfaces, which caps confidence at medium with no primary-post metrics. Before
+scheduled research automation is worth approving, the research adapter seam needs
+a Reddit-capable (and ideally logged-in platform) connector; automating the
+current loop would just schedule thin-evidence runs. No repo code changed; all
+run artifacts live under the untracked remy-vale workspace fixture.
 ```
 
 ## Next Work Queue
 
-1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation.
+1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. Continue with more real creator runs — ideally against a Reddit-capable adapter — before approving scheduled automation.
 2. Begin Phase 2 Learning OS when ready: published-post registration, analytics snapshot ingestion, performance summaries, creator-memory distillation, SQL index rebuilds, and semantic lookup projection.
 3. Optional: render the comparison map Excalidraw scene.
 
