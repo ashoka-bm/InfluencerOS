@@ -320,6 +320,23 @@ class SchemaValidationTests(unittest.TestCase):
         })
         validate_record("research-search-plan", valid)  # must not raise
 
+    def test_search_plan_rejects_non_approved_api_backed_use_now(self):
+        # youtube_data_api is api_backed but NOT a standing-approved ADR 0022
+        # connector, so active + use_now + approval false must still fail.
+        example = load_json("examples/research-search-plan.example.json")
+        invalid = deepcopy(example)
+        invalid["adapters_considered"].append({
+            "adapter_id": "youtube_data_api",
+            "access_method": "api_backed",
+            "adapter_status": "active",
+            "auth_required": True,
+            "approval_required": False,
+            "decision": "use_now",
+            "reason": "attempting to use an unapproved api_backed adapter now",
+        })
+        with self.assertRaises(ValidationError):
+            validate_record("research-search-plan", invalid)
+
     def test_search_plan_still_rejects_loggedin_use_now(self):
         example = load_json("examples/research-search-plan.example.json")
         invalid = deepcopy(example)

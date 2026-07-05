@@ -8,9 +8,27 @@ real engagement. Stdlib only. `mock_response` allows tests without live calls.
 
 import re
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from influencer_os.connectors import http
 from influencer_os.connectors.parse import extract_items, extract_output_text, safe_relevance
+
+# Non-content Reddit subdomains the reference explicitly rejects.
+_REDDIT_REJECT_HOSTS = {"developers.reddit.com", "business.reddit.com"}
+
+
+def is_reddit_thread_url(url: str) -> bool:
+    """True only for a real reddit.com thread URL (host + /comments/ path)."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    host = (parsed.netloc or "").lower().split(":")[0]
+    if host in _REDDIT_REJECT_HOSTS:
+        return False
+    if host != "reddit.com" and not host.endswith(".reddit.com"):
+        return False
+    return "/comments/" in parsed.path
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 MODEL_FALLBACK_ORDER = ["gpt-4o", "gpt-4o-mini"]
@@ -110,7 +128,7 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         url = item.get("url", "")
-        if not url or "reddit.com" not in url:
+        if not is_reddit_thread_url(url):
             continue
         date = item.get("date")
         if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(date)):

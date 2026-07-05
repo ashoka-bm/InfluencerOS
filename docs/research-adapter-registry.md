@@ -115,8 +115,10 @@ These adapt the Agentic OS `str-trending-research` routing tables:
 - Search plans may name planned/deferred adapters, but only `active` adapters
   (including key-gated connectors whose env key is present) may have
   `decision: "use_now"`.
-- The four ADR 0022 key-gated research-acquisition connectors are standing-
-  approved by key presence (bounded by the call cap and kill switch). Logged-in
+- Standing approval is pinned to the four ADR 0022 connector adapter IDs
+  (`reddit_api_or_search`, `x_api`, `firecrawl_public_web`, `linkedin_apify`)
+  using their expected access methods, bounded by the call cap and kill switch.
+  Other api_backed/scraping_api adapters (e.g. `youtube_data_api`), logged-in
   access, provider transcription, batch video, scheduled execution, and external
   notifications still require explicit approval before use.
 - Source-yield records should capture both useful and low-yield attempts.

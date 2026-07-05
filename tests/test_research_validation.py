@@ -310,6 +310,33 @@ class ResearchStateValidationTests(unittest.TestCase):
                 validate_research(workspace_dir)
             self.assertIn("gated access method", str(ctx.exception))
 
+    def test_source_yield_allows_standing_approved_connector(self):
+        # An exact ADR 0022 connector using its api_backed method is permitted.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["access_method"] = "api_backed"
+            record["adapter_id"] = "reddit_api_or_search"
+            write_jsonl(yield_path, [record])
+
+            validate_research(workspace_dir)  # must not raise
+
+    def test_source_yield_rejects_unapproved_api_backed_adapter(self):
+        # youtube_data_api is api_backed but not standing-approved, so a yield
+        # record attesting the run used it must fail.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["access_method"] = "api_backed"
+            record["adapter_id"] = "youtube_data_api"
+            write_jsonl(yield_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("gated access method", str(ctx.exception))
+
     def test_thin_evidence_material_run_warns(self):
         # A run that declares a material update but grounds it in a low share of
         # promoted-to-evidence sources gets an advisory (non-failing) WARN.

@@ -140,6 +140,18 @@ class RedditParseTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["relevance"], 0.5)  # bad value defaulted, no crash
 
+    def test_parse_rejects_off_platform_and_non_thread_reddit_urls(self):
+        text = (
+            '{"items": ['
+            '{"title": "spoof", "url": "https://notreddit.com/r/s/comments/a/b/", "relevance": 0.9},'
+            '{"title": "devs", "url": "https://developers.reddit.com/r/x/comments/a/b/", "relevance": 0.9},'
+            '{"title": "listing", "url": "https://www.reddit.com/r/houseplants/", "relevance": 0.9},'
+            '{"title": "real", "url": "https://old.reddit.com/r/houseplants/comments/a/b/", "relevance": 0.9}'
+            ']}'
+        )
+        items = openai_reddit.parse_reddit_response(self._response(text))
+        self.assertEqual([i["title"] for i in items], ["real"])  # only the genuine thread survives
+
 
 class RedditEnrichTests(unittest.TestCase):
     def _thread(self):
@@ -286,6 +298,17 @@ class XaiParseTests(unittest.TestCase):
     def test_parse_handles_error_response(self):
         self.assertEqual(xai_x.parse_x_response({"error": {"message": "bad key"}}), [])
 
+    def test_parse_rejects_off_platform_and_non_status_urls(self):
+        text = (
+            '{"items": ['
+            '{"text": "spoof", "url": "https://x.com.evil.com/u/status/1", "relevance": 0.9},'
+            '{"text": "profile", "url": "https://x.com/someuser", "relevance": 0.9},'
+            '{"text": "real", "url": "https://twitter.com/u/status/9", "relevance": 0.9}'
+            ']}'
+        )
+        items = xai_x.parse_x_response(self._response(text))
+        self.assertEqual([i["text"] for i in items], ["real"])  # only a real status URL survives
+
 
 class FirecrawlParseTests(unittest.TestCase):
     def test_parse_reduces_scrape_to_candidate(self):
@@ -388,6 +411,29 @@ class FetchOtherConnectorsTests(unittest.TestCase):
             mock_response={"success": True, "data": {"markdown": "x", "metadata": {}}})
         self.assertTrue(result["capped"])
         self.assertEqual(result["candidates"], [])
+
+
+class SecretHandlingTests(unittest.TestCase):
+    def test_redact_url_drops_query_string(self):
+        from influencer_os.connectors import http
+        self.assertEqual(
+            http._redact_url("https://api.apify.com/v2/x?token=secret"),
+            "https://api.apify.com/v2/x?<redacted>",
+        )
+        self.assertEqual(http._redact_url("https://x.com/a"), "https://x.com/a")
+
+    def test_linkedin_sends_key_as_header_not_query(self):
+        captured = {}
+
+        def fake_post(url, json_data, headers=None, **kwargs):
+            captured["url"] = url
+            captured["headers"] = headers or {}
+            return []
+
+        with mock.patch.object(linkedin_apify.http, "post", side_effect=fake_post):
+            linkedin_apify.fetch_profile_posts("secret-key", "https://linkedin.com/in/x/")
+        self.assertNotIn("secret-key", captured["url"])
+        self.assertEqual(captured["headers"].get("Authorization"), "Bearer secret-key")
 
 
 class ModelCacheTests(unittest.TestCase):

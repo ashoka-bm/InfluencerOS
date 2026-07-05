@@ -66,10 +66,13 @@ Activation contract:
   committed). `.env` is already gitignored; `.env.example` documents the vars.
 
 Enforcement: the standing-approval split is implemented in the search-plan and
-source-yield validators. `api_backed` and `scraping_api` (the key-gated tier)
-may be `use_now` when the adapter is `active` and need not set
-`approval_required`; `logged_in_browser` and `scheduled_job` stay fully gated
-(never `use_now`, must require approval). Reddit thread enrichment is a free
+source-yield validators and is **pinned to the four connector adapter IDs**
+above (`reddit_api_or_search`, `x_api`, `firecrawl_public_web`,
+`linkedin_apify`) using their expected access methods — not to `api_backed`/
+`scraping_api` at large. Those four may be `use_now` when `active` and need not
+set `approval_required`; every other gated adapter (`logged_in_browser`,
+`scheduled_job`, and non-approved api_backed adapters such as
+`youtube_data_api`) stays fully gated (never `use_now`, must require approval). Reddit thread enrichment is a free
 public reddit.com read and does not draw on the paid call budget; it is bounded
 separately by a per-run enrichment cap. Connector output is a workflow-boundary
 contract validated by `schemas/research-fetch-result.schema.json`.

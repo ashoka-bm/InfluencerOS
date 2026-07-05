@@ -7,7 +7,6 @@ Stdlib only; `mock_response` allows tests without live calls.
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
 
 from influencer_os.connectors import http
 from influencer_os.connectors.parse import safe_int
@@ -47,8 +46,10 @@ def fetch_profile_posts(
         "scrapeReactions": False,
         "scrapeComments": False,
     }
-    url = f"{APIFY_URL}?token={quote(api_key)}"
-    data = http.post(url, payload, timeout=90)
+    # Pass the token as a Bearer header, not a query param, so it never reaches
+    # request logs (Apify accepts Authorization: Bearer <token>).
+    headers = {"Authorization": f"Bearer {api_key}"}
+    data = http.post(APIFY_URL, payload, headers=headers, timeout=90)
     return data if isinstance(data, list) else []
 
 

@@ -7,9 +7,25 @@ enrichment step. Stdlib only; `mock_response` allows tests without live calls.
 
 import re
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from influencer_os.connectors import http
 from influencer_os.connectors.parse import extract_items, extract_output_text, safe_int, safe_relevance
+
+_X_HOSTS = {
+    "x.com", "www.x.com", "mobile.x.com",
+    "twitter.com", "www.twitter.com", "mobile.twitter.com",
+}
+
+
+def is_x_status_url(url: str) -> bool:
+    """True only for a real X/Twitter status URL (known host + /status/ path)."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    host = (parsed.netloc or "").lower().split(":")[0]
+    return host in _X_HOSTS and "/status/" in parsed.path
 
 XAI_RESPONSES_URL = "https://api.x.ai/v1/responses"
 
@@ -93,7 +109,7 @@ def parse_x_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         url = item.get("url", "")
-        if not url:
+        if not is_x_status_url(url):
             continue
 
         engagement = None

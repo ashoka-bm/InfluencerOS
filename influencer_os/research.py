@@ -11,7 +11,8 @@ from collections import Counter
 from pathlib import Path
 
 from influencer_os.validation import (
-    FULLY_GATED_ACCESS_METHODS,
+    GATED_RESEARCH_ACCESS_METHODS,
+    is_standing_approved_adapter,
     ValidationError,
     load_json,
     validate_file,
@@ -574,16 +575,20 @@ def validate_research(workspace_path):
                     for record in run_records["metric-snapshots.jsonl"]
                 }
                 for record in source_yield_records:
-                    if record["access_method"] in FULLY_GATED_ACCESS_METHODS:
-                        # The yield ledger records what the run actually did; a
-                        # fully-gated method (logged-in session or scheduled job)
-                        # attests the run executed something the slice forbids.
-                        # ADR 0022 api_backed/scraping_api connectors are allowed.
+                    # The yield ledger records what the run actually did. A gated
+                    # access method attests the run executed something the slice
+                    # forbids, unless it is an exact standing-approved ADR 0022
+                    # connector (a non-approved api_backed adapter like
+                    # youtube_data_api still fails here).
+                    if record["access_method"] in GATED_RESEARCH_ACCESS_METHODS and not (
+                        is_standing_approved_adapter(record.get("adapter_id"), record["access_method"])
+                    ):
                         raise ValidationError(
                             f"{source_yield_path}: source yield "
                             f"{record['research_source_yield_id']} used gated "
-                            f"access method {record['access_method']!r}, which is "
-                            "not permitted in this slice"
+                            f"access method {record['access_method']!r} with adapter "
+                            f"{record.get('adapter_id')!r}, which is not permitted "
+                            "in this slice"
                         )
                     if plan_platforms and record["platform"] not in plan_platforms:
                         raise ValidationError(

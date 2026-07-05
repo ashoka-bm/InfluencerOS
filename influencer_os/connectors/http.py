@@ -27,6 +27,12 @@ def log(msg: str) -> None:
         sys.stderr.flush()
 
 
+def _redact_url(url: str) -> str:
+    """Drop the query string when logging: it can carry tokens (never log secrets)."""
+    base, sep, query = url.partition("?")
+    return base + ("?<redacted>" if query else "")
+
+
 class HTTPError(Exception):
     """HTTP request error carrying status code and body."""
 
@@ -57,7 +63,7 @@ def request(
         headers.setdefault("Content-Type", "application/json")
 
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    log(f"{method} {url}")
+    log(f"{method} {_redact_url(url)}")
 
     last_error: Optional[HTTPError] = None
     for attempt in range(retries):

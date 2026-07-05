@@ -88,6 +88,24 @@ FULLY_GATED_ACCESS_METHODS = {
 # Union retained for callers that mean "any provider/heavy access method".
 GATED_RESEARCH_ACCESS_METHODS = STANDING_APPROVED_ACCESS_METHODS | FULLY_GATED_ACCESS_METHODS
 
+# The exact ADR 0022 connectors that key presence standing-approves. Standing
+# approval is pinned to these adapter IDs, not to the access method at large:
+# other api_backed/scraping_api adapters (e.g. youtube_data_api) stay gated.
+STANDING_APPROVED_ADAPTER_IDS = {
+    "reddit_api_or_search",
+    "x_api",
+    "firecrawl_public_web",
+    "linkedin_apify",
+}
+
+
+def is_standing_approved_adapter(adapter_id, access_method):
+    """True only for an exact ADR 0022 connector using its expected access method."""
+    return (
+        adapter_id in STANDING_APPROVED_ADAPTER_IDS
+        and access_method in STANDING_APPROVED_ACCESS_METHODS
+    )
+
 LOW_YIELD_OUTCOMES = {
     "background_only",
     "no_platform_signal",
@@ -440,21 +458,24 @@ def validate_research_search_plan_semantics(record):
                 "ResearchSearchPlan.adapters_considered: only active adapters "
                 "may have decision 'use_now'"
             )
-        # ADR 0022: api_backed/scraping_api are the key-gated connector tier;
-        # standing-approved by key presence, so `use_now` is allowed when the
-        # adapter is active (enforced by the adapter_status check above) and
-        # `approval_required` is not mandated. Logged-in and scheduled access
-        # stay fully gated.
-        if adapter.get("access_method") in FULLY_GATED_ACCESS_METHODS:
+        # ADR 0022: only the exact standing-approved connectors are exempt from
+        # the gate. Every other gated access method (logged-in, scheduled, and
+        # any non-approved api_backed/scraping_api adapter such as
+        # youtube_data_api) may not be `use_now` and must require approval.
+        access_method = adapter.get("access_method")
+        if access_method in GATED_RESEARCH_ACCESS_METHODS and not is_standing_approved_adapter(
+            adapter.get("adapter_id"), access_method
+        ):
             if adapter.get("decision") == "use_now":
                 raise ValidationError(
-                    "ResearchSearchPlan.adapters_considered: logged-in and "
-                    "scheduled access methods cannot be used in this slice"
+                    "ResearchSearchPlan.adapters_considered: gated access methods "
+                    "cannot be used now unless the adapter is a standing-approved "
+                    "ADR 0022 connector"
                 )
             if adapter.get("approval_required") is not True:
                 raise ValidationError(
-                    "ResearchSearchPlan.adapters_considered: logged-in and "
-                    "scheduled access methods must require approval"
+                    "ResearchSearchPlan.adapters_considered: gated access methods "
+                    "must require approval unless standing-approved"
                 )
 
     for query in record.get("planned_queries", []):
