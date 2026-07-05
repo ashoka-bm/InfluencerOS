@@ -88,23 +88,24 @@ FULLY_GATED_ACCESS_METHODS = {
 # Union retained for callers that mean "any provider/heavy access method".
 GATED_RESEARCH_ACCESS_METHODS = STANDING_APPROVED_ACCESS_METHODS | FULLY_GATED_ACCESS_METHODS
 
-# The exact ADR 0022 connectors that key presence standing-approves. Standing
-# approval is pinned to these adapter IDs, not to the access method at large:
-# other api_backed/scraping_api adapters (e.g. youtube_data_api) stay gated.
-STANDING_APPROVED_ADAPTER_IDS = {
-    "reddit_api_or_search",
-    "x_api",
-    "firecrawl_public_web",
-    "linkedin_apify",
+# The exact ADR 0022 connectors that key presence standing-approves, each pinned
+# to its expected access method (source of truth: connectors/registry.py).
+# Standing approval is per (adapter_id, method), not to the access method at
+# large: other api_backed/scraping_api adapters (e.g. youtube_data_api) stay
+# gated, and a standing-approved adapter paired with the wrong method is not.
+STANDING_APPROVED_ADAPTER_METHODS = {
+    "reddit_api_or_search": "api_backed",
+    "x_api": "api_backed",
+    "firecrawl_public_web": "scraping_api",
+    "linkedin_apify": "api_backed",
 }
+
+STANDING_APPROVED_ADAPTER_IDS = frozenset(STANDING_APPROVED_ADAPTER_METHODS)
 
 
 def is_standing_approved_adapter(adapter_id, access_method):
     """True only for an exact ADR 0022 connector using its expected access method."""
-    return (
-        adapter_id in STANDING_APPROVED_ADAPTER_IDS
-        and access_method in STANDING_APPROVED_ACCESS_METHODS
-    )
+    return STANDING_APPROVED_ADAPTER_METHODS.get(adapter_id) == access_method
 
 LOW_YIELD_OUTCOMES = {
     "background_only",

@@ -337,6 +337,31 @@ class ResearchStateValidationTests(unittest.TestCase):
                 validate_research(workspace_dir)
             self.assertIn("gated access method", str(ctx.exception))
 
+    def test_source_yield_rejects_standing_approved_adapter_with_wrong_method(self):
+        # Standing approval is pinned per (adapter_id, method): reddit_api_or_search
+        # is approved only with api_backed, so pairing it with scraping_api fails.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["access_method"] = "scraping_api"
+            record["adapter_id"] = "reddit_api_or_search"
+            write_jsonl(yield_path, [record])
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            self.assertIn("gated access method", str(ctx.exception))
+
+    def test_is_standing_approved_adapter_enforces_expected_method(self):
+        from influencer_os.validation import is_standing_approved_adapter
+        self.assertTrue(is_standing_approved_adapter("reddit_api_or_search", "api_backed"))
+        self.assertTrue(is_standing_approved_adapter("firecrawl_public_web", "scraping_api"))
+        # Right adapter id, wrong method -> not standing approved.
+        self.assertFalse(is_standing_approved_adapter("reddit_api_or_search", "scraping_api"))
+        self.assertFalse(is_standing_approved_adapter("firecrawl_public_web", "api_backed"))
+        # Unapproved adapter id.
+        self.assertFalse(is_standing_approved_adapter("youtube_data_api", "api_backed"))
+
     def test_thin_evidence_material_run_warns(self):
         # A run that declares a material update but grounds it in a low share of
         # promoted-to-evidence sources gets an advisory (non-failing) WARN.
