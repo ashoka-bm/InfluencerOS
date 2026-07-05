@@ -31,7 +31,9 @@ and the Project manifest status.
   Project and its registered Output Package.
 - `assets_used.thumbnail_or_first_frame_asset_id` and every
   `assets_used.primary_media_asset_ids` entry must be `upload_asset_` ids the
-  package's `upload_ready` declares.
+  package's `upload_ready` declares. Text packages (`format_article`,
+  `format_thread`) may record `thumbnail_or_first_frame_asset_id: null`;
+  visual packages must name a real asset (mirrors the Output Package rule).
 - `assets_used.caption_or_description_path` must be a declared
   `upload_ready[].path`.
 - `publication_status` is honest state: `published`, `updated`, or `deleted`
@@ -40,7 +42,9 @@ and the Project manifest status.
 - Missing platform facts (`public_url`, `platform_post_id`) are `null`,
   never guessed.
 - One record per platform publication; a multi-platform release registers
-  one record per platform post.
+  one record per platform post. Two records may not claim the same
+  platform post identity — a duplicate `(platform, platform_post_id)` pair
+  or a duplicate `public_url` fails validation regardless of record id.
 
 ## Registration Command
 

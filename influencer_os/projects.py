@@ -3,7 +3,13 @@ import shutil
 from pathlib import Path
 
 from influencer_os.research import validate_promotion_gate
-from influencer_os.validation import ValidationError, load_json, validate_file, validate_record
+from influencer_os.validation import (
+    TEXT_FORMAT_IDS,
+    ValidationError,
+    load_json,
+    validate_file,
+    validate_record,
+)
 
 
 PROJECT_DIRECTORIES = [
@@ -332,10 +338,13 @@ def _validate_output_package_matches_project(output_package, project):
             f"{output_package['source_refs']['idea_promotion_id']!r} != "
             f"{project['source_refs']['idea_promotion_id']!r}"
         )
-    if project.get("status") == "packaged" and output_package["status"] != "upload_ready":
+    # Every status at or past packaged (published, analyzed, archived) keeps
+    # requiring an upload-ready package; the invariant must not lapse when
+    # the project moves on.
+    if _status_at_least(project, "packaged") and output_package["status"] != "upload_ready":
         raise ValueError(
-            "Packaged projects must carry an upload-ready Output Package: "
-            f"{output_package['status']!r}"
+            "Packaged (or later) projects must carry an upload-ready Output Package: "
+            f"got {output_package['status']!r} at project status {project['status']!r}"
         )
 
 
@@ -366,7 +375,18 @@ def _validate_published_post_matches(record, project, output_package):
     assets_used = record["assets_used"]
 
     used_asset_ids = set(assets_used["primary_media_asset_ids"])
-    used_asset_ids.add(assets_used["thumbnail_or_first_frame_asset_id"])
+    thumbnail_id = assets_used["thumbnail_or_first_frame_asset_id"]
+    if thumbnail_id is None:
+        # Mirror the output-package rule: only text formats publish without a
+        # thumbnail or first frame; visual formats must name a real asset.
+        package_format_id = output_package["universal_core"]["format_id"]
+        if package_format_id not in TEXT_FORMAT_IDS:
+            raise ValueError(
+                "Published post record thumbnail_or_first_frame_asset_id is "
+                f"required for {package_format_id!r} packages"
+            )
+    else:
+        used_asset_ids.add(thumbnail_id)
     dangling_ids = sorted(used_asset_ids - known_asset_ids)
     if dangling_ids:
         raise ValueError(
@@ -396,6 +416,8 @@ def _validate_published_records(project_dir, project, output_package):
         )
 
     live_count = 0
+    seen_platform_post_ids = {}
+    seen_public_urls = {}
     for record_path in record_paths:
         _ensure_contained_file(record_path, project_dir, "published post record")
         record = _validate_project_record(record_path, "published-post-record")
@@ -406,6 +428,29 @@ def _validate_published_records(project_dir, project, output_package):
                 f"{record_path.name} carries {record_id!r}"
             )
         _validate_published_post_matches(record, project, output_package)
+
+        # One record per platform post: two records may not claim the same
+        # platform post identity under different record ids.
+        platform_post_id = record["platform_post_id"]
+        if platform_post_id is not None:
+            post_key = (record["platform"], platform_post_id)
+            if post_key in seen_platform_post_ids:
+                raise ValueError(
+                    "Published post records duplicate a platform post: "
+                    f"{record_id!r} and {seen_platform_post_ids[post_key]!r} "
+                    f"both claim {record['platform']!r} post {platform_post_id!r}"
+                )
+            seen_platform_post_ids[post_key] = record_id
+        public_url = record["public_url"]
+        if public_url is not None:
+            if public_url in seen_public_urls:
+                raise ValueError(
+                    "Published post records duplicate a public URL: "
+                    f"{record_id!r} and {seen_public_urls[public_url]!r} "
+                    f"both claim {public_url!r}"
+                )
+            seen_public_urls[public_url] = record_id
+
         if record["publication_status"] in PUBLICATION_LIVE_STATUSES:
             live_count += 1
 

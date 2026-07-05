@@ -111,10 +111,15 @@ by validating a PublishedPostRecord against the registered Output Package
 caption/description path must all be declared by the package), writing it
 under `published/published-post-records/`, and moving the Project `packaged`
 → `published` on the first record whose `publication_status` attests a live
-post (`scheduled`/`failed` records register without the transition). At
-rest, `validate project` re-checks every registration invariant: record
-filenames must match their ids, a `published` Project must carry at least
-one live record, and live records on a sub-`published` Project fail.
+post (`scheduled`/`failed` records register without the transition). Text
+packages publish without a thumbnail: `thumbnail_or_first_frame_asset_id`
+may be `null` for `format_article`/`format_thread` records, mirroring the
+Output Package rule. At rest, `validate project` re-checks every
+registration invariant: record filenames must match their ids, a
+`published` Project must carry at least one live record, live records on a
+sub-`published` Project fail, no two records may claim the same
+`(platform, platform_post_id)` or `public_url` identity, and the Output
+Package must stay `upload_ready` at every status from `packaged` onward.
 
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 

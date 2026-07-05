@@ -627,6 +627,23 @@ workflow replay in `.tmp/slice1-verify`: creator init through
 rebuild-board, validate board, and rebuild-index all pass with the project
 ending `published`. Exit criterion 1 of the Phase 2 plan is met.
 
+Slice 1 review fixes (2026-07-05): three findings, all fixed with failing
+probes first. (P1) Text-format projects could not honestly register
+publications — the PublishedPostRecord schema required a string thumbnail
+while article/thread Output Packages allow null; the schema now mirrors the
+package's nullable union and the match seam enforces the same text-only
+gate (`TEXT_FORMAT_IDS`), proven by a packaged-article fixture. (P2) The
+packaged-requires-upload-ready invariant keyed on `status == "packaged"`
+and lapsed once a project published; it now keys on `_status_at_least`, so
+a hand-edited draft package fails at rest at every status from packaged
+onward. (P2) Duplicate platform publications under different record ids now
+fail: no two records may claim the same `(platform, platform_post_id)` or
+`public_url`; the writer rolls back a duplicate and the at-rest validator
+rejects hand-added ones, while a legitimate second-platform record still
+registers. 412 tests pass (6 added); 43 examples validate; 18 runtime
+skills synced to all four fixture workspaces. Two process learnings
+recorded (schema-mirror nullability, status-equality invariants).
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.

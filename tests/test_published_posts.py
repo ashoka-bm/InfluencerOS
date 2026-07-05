@@ -20,6 +20,7 @@ from tests.test_cli import (
     copy_example_record,
     rewrite_json,
     scaffold_project_workspace,
+    switch_project_to_text_format,
     write_upload_ready_assets,
 )
 
@@ -39,11 +40,87 @@ def scaffold_packaged_project(temp_dir):
     return workspace_dir, project_dir
 
 
-def stage_published_record(temp_dir, mutate=None):
-    record_path = Path(temp_dir) / "published-post-record.json"
+def stage_published_record(temp_dir, mutate=None, filename="published-post-record.json"):
+    record_path = Path(temp_dir) / filename
     copy_example_record("published-post-record.example.json", record_path)
     if mutate is not None:
         rewrite_json(record_path, mutate)
+    return record_path
+
+
+def scaffold_packaged_article_project(temp_dir):
+    """A packaged article (text-format) project whose package has no thumbnail."""
+    workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+    switch_project_to_text_format(workspace_dir, project_dir, "article")
+    package = json.loads((ROOT / "examples" / "output-package.example.json").read_text())
+    package.update(
+        output_package_id="output_package_luna_article_001",
+        status="upload_ready",
+    )
+    package["universal_core"].update(
+        format_id="format_article",
+        title_base="The two-minute laptop-day reset",
+        caption_base="A practical article for easing out of desk tension.",
+        description_base="Long-form article package for Substack.",
+        primary_asset_refs=["upload_asset_luna_article_markdown"],
+    )
+    package["source_refs"]["production_plan_ids"] = ["article_luna_tiny_reset_001"]
+    package["upload_ready"] = [
+        {
+            "upload_asset_id": "upload_asset_luna_article_markdown",
+            "asset_role": "description",
+            "path": "output-package/upload-ready/luna-article.md",
+            "media_type": "text/markdown",
+            "notes": "Upload-ready article body.",
+        }
+    ]
+    package["platform_adaptations"] = [
+        {
+            "platform": "substack",
+            "format_id": "format_article",
+            "title": "The two-minute laptop-day reset",
+            "caption_or_description_path": "output-package/upload-ready/luna-article.md",
+            "thumbnail_or_first_frame_asset_id": None,
+            "cta": "Save this reset for your next laptop-heavy day.",
+            "posting_time_recommendation": "Use creator learning defaults until analytics exist.",
+            "creative_performance_variant_notes": "Substack adaptation has no thumbnail requirement.",
+        }
+    ]
+    package_path = Path(temp_dir) / "article-output-package.json"
+    package_path.write_text(json.dumps(package, indent=2) + "\n")
+    asset_root = Path(temp_dir) / "source-assets"
+    write_upload_ready_assets(asset_root, package)
+    register_output_package(project_dir, package_path, asset_root=asset_root)
+    return workspace_dir, project_dir
+
+
+def article_published_record(temp_dir):
+    record = {
+        "published_post_record_id": "ppr_luna_article_substack_001",
+        "output_package_id": "output_package_luna_article_001",
+        "project_id": "project_luna_tiny_reset_001",
+        "creator_profile_id": "creator_luna_fit",
+        "platform": "substack",
+        "platform_account": "@lunafit",
+        "published_at": "2026-07-05T09:00:00Z",
+        "publication_status": "published",
+        "public_url": "https://lunafit.substack.com/p/two-minute-laptop-day-reset",
+        "platform_post_id": "substack_luna_article_001",
+        "assets_used": {
+            "title_used": "The two-minute laptop-day reset",
+            "caption_or_description_path": "output-package/upload-ready/luna-article.md",
+            "thumbnail_or_first_frame_asset_id": None,
+            "primary_media_asset_ids": ["upload_asset_luna_article_markdown"],
+        },
+        "publication_method": {
+            "method": "manual_upload",
+            "actor": "operator",
+            "scheduler_ref": None,
+        },
+        "notes": "Manual Substack publication of the article package.",
+    }
+    record_path = Path(temp_dir) / "article-published-post-record.json"
+    record_path.write_text(json.dumps(record, indent=2) + "\n")
     return record_path
 
 
@@ -167,6 +244,82 @@ class RegisterPublishedPostTests(unittest.TestCase):
             self.assertIn("escapes project", str(ctx.exception))
             self.assertEqual(list(outside.glob("*.json")), [])
 
+    def test_text_project_registers_with_null_thumbnail(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_packaged_article_project(temp_dir)
+            record_path = article_published_record(temp_dir)
+
+            result = register_published_post(project_dir, record_path)
+
+            self.assertEqual(result["project_status"], "published")
+            validate_project(project_dir)
+
+    def test_visual_project_rejects_null_thumbnail(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_packaged_project(temp_dir)
+            record_path = stage_published_record(
+                temp_dir,
+                lambda record: record["assets_used"].update(
+                    thumbnail_or_first_frame_asset_id=None
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                register_published_post(project_dir, record_path)
+
+            self.assertIn("required for", str(ctx.exception))
+
+    def test_duplicate_platform_post_identity_rolls_back(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_packaged_project(temp_dir)
+            register_published_post(project_dir, stage_published_record(temp_dir))
+            second_path = stage_published_record(
+                temp_dir,
+                lambda record: record.update(
+                    published_post_record_id="ppr_luna_tiny_reset_youtube_002",
+                    public_url="https://youtube.com/shorts/different-url",
+                ),
+                filename="second-record.json",
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                register_published_post(project_dir, second_path)
+
+            self.assertIn("duplicate a platform post", str(ctx.exception))
+            self.assertFalse(
+                (
+                    project_dir
+                    / "published"
+                    / "published-post-records"
+                    / "ppr_luna_tiny_reset_youtube_002.json"
+                ).exists()
+            )
+            validate_project(project_dir)
+
+    def test_second_platform_record_registers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_packaged_project(temp_dir)
+            register_published_post(project_dir, stage_published_record(temp_dir))
+            second_path = stage_published_record(
+                temp_dir,
+                lambda record: record.update(
+                    published_post_record_id="ppr_luna_tiny_reset_instagram_001",
+                    platform="instagram_reels",
+                    public_url="https://instagram.com/reel/example-luna-tiny-reset",
+                    platform_post_id="ig_reel_luna_tiny_reset_001",
+                    assets_used={
+                        **record["assets_used"],
+                        "caption_or_description_path": "output-package/upload-ready/instagram-caption.md",
+                    },
+                ),
+                filename="second-record.json",
+            )
+
+            result = register_published_post(project_dir, second_path)
+
+            self.assertEqual(result["project_status"], "published")
+            validate_project(project_dir)
+
     def test_non_live_record_registers_without_status_flip(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_packaged_project(temp_dir)
@@ -264,6 +417,39 @@ class PublishedRecordsAtRestTests(unittest.TestCase):
                 validate_project(project_dir)
 
             self.assertIn("status is below published", str(ctx.exception))
+
+    def test_draft_package_on_published_project_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = self.registered_project(temp_dir)
+            rewrite_json(
+                project_dir / "output-package" / "output-package.json",
+                lambda package: package.update(status="draft"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+
+            self.assertIn("upload-ready Output Package", str(ctx.exception))
+
+    def test_duplicate_public_url_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = self.registered_project(temp_dir)
+            original = json.loads(self.registered_record_path(project_dir).read_text())
+            duplicate = dict(original)
+            duplicate.update(
+                published_post_record_id="ppr_luna_tiny_reset_youtube_002",
+                platform_post_id="yt_short_luna_tiny_reset_002",
+            )
+            duplicate_path = (
+                self.registered_record_path(project_dir)
+                .with_name("ppr_luna_tiny_reset_youtube_002.json")
+            )
+            duplicate_path.write_text(json.dumps(duplicate, indent=2) + "\n")
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+
+            self.assertIn("duplicate a public URL", str(ctx.exception))
 
     def test_symlinked_record_file_fails_at_rest(self):
         with tempfile.TemporaryDirectory() as temp_dir:
