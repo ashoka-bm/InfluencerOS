@@ -789,6 +789,109 @@ class Batch2HardeningTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "contradicts referenced generated"):
                 validate_project(project_dir)
 
+    def test_stale_review_does_not_cover_reimported_asset(self):
+        # Batch-3 review finding: coverage is content-bound — a review of the
+        # old bytes stops covering a hand-replaced artifact.
+        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            import hashlib
+            new_bytes = b"replaced thumbnail bytes\n"
+            (project_dir / "generation" / "assets" / "tiny-reset-thumb-001.png").write_bytes(new_bytes)
+            rewrite(
+                project_dir / "generation" / "asset-manifest.json",
+                lambda manifest: manifest["rows"][1].update(
+                    content_hash=hashlib.sha256(new_bytes).hexdigest()
+                ),
+            )
+            from influencer_os.generation import (
+                load_asset_manifest,
+                validate_project_generation_assets,
+                validate_project_generation_records,
+            )
+            project = json.loads((project_dir / "project.json").read_text())
+            approvals, _ = validate_project_generation_records(project_dir, project)
+            rows = validate_project_generation_assets(project_dir, project, approvals)
+            from influencer_os.generation import validate_project_quality_reviews
+
+            passing, _ = validate_project_quality_reviews(project_dir, project, rows)
+            self.assertIn("gen_asset_luna_tiny_reset_video_001", passing)
+            self.assertNotIn("gen_asset_luna_tiny_reset_thumb_001", passing)
+
+    def test_latest_review_verdict_wins(self):
+        # Batch-3 review finding: a newer failing review on the same content
+        # beats an older pass.
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            follow_up = load_example("quality-review")
+            follow_up["quality_review_id"] = "quality_review_luna_tiny_reset_002"
+            follow_up["checklist"][0]["result"] = "fail"
+            follow_up["checklist"][0]["notes"] = "Identity drift found on a second look."
+            follow_up["overall_verdict"] = "fail"
+            follow_up["reviewed_at"] = "2026-07-06T18:00:00"
+            write_json(
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_002.json",
+                follow_up,
+            )
+            from influencer_os.generation import (
+                validate_project_generation_assets,
+                validate_project_generation_records,
+                validate_project_quality_reviews,
+            )
+            project = json.loads((project_dir / "project.json").read_text())
+            approvals, _ = validate_project_generation_records(project_dir, project)
+            rows = validate_project_generation_assets(project_dir, project, approvals)
+            passing, _ = validate_project_quality_reviews(project_dir, project, rows)
+            self.assertEqual(passing, set())
+
+    def test_all_not_applicable_pass_is_rejected(self):
+        review = load_example("quality-review")
+        for item in review["checklist"]:
+            item["result"] = "not_applicable"
+        with self.assertRaisesRegex(ValidationError, "judge nothing"):
+            validate_record("quality-review", review)
+
+    def test_generated_refs_require_provider_calls_made(self):
+        from tests.test_analytics import scaffold_published_project
+        from tests.test_cli import rewrite_json as rewrite
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            rewrite(
+                project_dir / "output-package" / "output-package.json",
+                lambda package: package["provider_boundary"].update(
+                    provider_calls_made=False
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "provider_calls_made must be"):
+                validate_project(project_dir)
+
+    def test_planned_status_cannot_detach_ledgered_project(self):
+        # Own adversarial sweep: declaring planned_not_generated on a
+        # project with ledger rows would skip every media binding.
+        from tests.test_analytics import scaffold_published_project
+        from tests.test_cli import rewrite_json as rewrite
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+
+            def detach(package):
+                package["provider_boundary"]["generation_status"] = "planned_not_generated"
+                package["provider_boundary"]["provider_calls_made"] = False
+                for asset in package["upload_ready"]:
+                    asset.pop("generation_manifest_ref", None)
+            rewrite(project_dir / "output-package" / "output-package.json", detach)
+            with self.assertRaisesRegex(ValueError, "must bind to its provenance"):
+                validate_project(project_dir)
+
     def test_reference_import_refuses_symlinked_destination(self):
         from influencer_os.generation import import_reference_asset
 
@@ -847,7 +950,12 @@ class QualityReviewTests(unittest.TestCase):
                 / "quality-reviews"
                 / "quality_review_luna_tiny_reset_001.json",
                 lambda review: review.update(
-                    scope_asset_ids=["gen_asset_never_manifested"]
+                    scope_assets=[
+                        {
+                            "asset_id": "gen_asset_never_manifested",
+                            "content_hash": "0" * 63 + "a",
+                        }
+                    ]
                 ),
             )
             with self.assertRaisesRegex(ValidationError, "no[\\s\\S]*manifest row"):
@@ -965,8 +1073,14 @@ class MockEndToEndChainTests(unittest.TestCase):
                 license_text="operator-generated, full rights",
             )
 
-            # Quality-review the batch, then package.
+            # Quality-review the batch (content-bound to the live manifest),
+            # then package.
+            manifest = load_asset_manifest(project_dir)
             review = load_example("quality-review")
+            review["scope_assets"] = [
+                {"asset_id": row["asset_id"], "content_hash": row["content_hash"]}
+                for row in manifest["rows"]
+            ]
             reviews_dir = project_dir / "generation" / "quality-reviews"
             reviews_dir.mkdir(parents=True, exist_ok=True)
             write_json(

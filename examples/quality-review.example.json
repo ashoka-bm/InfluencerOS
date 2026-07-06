@@ -2,9 +2,15 @@
   "quality_review_id": "quality_review_luna_tiny_reset_001",
   "project_id": "project_luna_tiny_reset_001",
   "creator_profile_id": "creator_luna_fit",
-  "scope_asset_ids": [
-    "gen_asset_luna_tiny_reset_video_001",
-    "gen_asset_luna_tiny_reset_thumb_001"
+  "scope_assets": [
+    {
+      "asset_id": "gen_asset_luna_tiny_reset_video_001",
+      "content_hash": "d7ab57cefba62d7ba0c996ea2d3f4bf3652646f27e80d8af4dcf0b87fef257ed"
+    },
+    {
+      "asset_id": "gen_asset_luna_tiny_reset_thumb_001",
+      "content_hash": "82f93302918dd534ba687b5980764a5ae3cc574c0ac6ca309e2c757bea99c5ed"
+    }
   ],
   "checklist": [
     {
@@ -20,7 +26,7 @@
     {
       "check": "technical_conformance",
       "result": "pass",
-      "notes": "9:16 vertical, 24s runtime, 1080x1920 — within the universal short-form envelope."
+      "notes": "9:16 vertical, 24s runtime, 1080x1920 \u2014 within the universal short-form envelope."
     },
     {
       "check": "creator_boundary_compliance",

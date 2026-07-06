@@ -666,7 +666,9 @@ def validate_quality_review_semantics(record):
     """QualityReview semantics (ADR 0023 Decision 5): the closed checklist
     appears exactly once per check, and the overall verdict must agree with
     the items — a pass with a failing item (or a fail without one) is a
-    dishonest record, not a judgment call."""
+    dishonest record, not a judgment call. A pass also requires at least one
+    genuinely passing item: all-not_applicable is no review at all (batch-3
+    review finding)."""
     review_id = record.get("quality_review_id", "<unknown>")
     checks = [item.get("check") for item in record.get("checklist", [])]
     if sorted(checks) != sorted(QUALITY_REVIEW_CHECKS):
@@ -674,20 +676,29 @@ def validate_quality_review_semantics(record):
             f"quality review {review_id}: checklist must cover each of "
             f"{sorted(QUALITY_REVIEW_CHECKS)} exactly once, got {checks!r}"
         )
-    scope = record.get("scope_asset_ids", [])
-    duplicated = sorted({a for a in scope if scope.count(a) > 1})
+    scope_ids = [
+        entry.get("asset_id")
+        for entry in record.get("scope_assets", [])
+        if isinstance(entry, dict)
+    ]
+    duplicated = sorted({a for a in scope_ids if scope_ids.count(a) > 1})
     if duplicated:
         raise ValidationError(
-            f"quality review {review_id}: duplicate scope_asset_ids {duplicated!r}"
+            f"quality review {review_id}: duplicate scope asset ids {duplicated!r}"
         )
-    has_failing = any(
-        item.get("result") == "fail" for item in record.get("checklist", [])
-    )
+    results = [item.get("result") for item in record.get("checklist", [])]
+    has_failing = "fail" in results
     verdict = record.get("overall_verdict")
     if verdict == "pass" and has_failing:
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'pass' with a "
             "failing checklist item"
+        )
+    if verdict == "pass" and "pass" not in results:
+        raise ValidationError(
+            f"quality review {review_id}: overall_verdict 'pass' requires at "
+            "least one passing checklist item; all-not_applicable reviews "
+            "judge nothing"
         )
     if verdict == "fail" and not has_failing:
         raise ValidationError(

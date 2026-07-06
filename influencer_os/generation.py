@@ -75,8 +75,13 @@ def record_generation_approval(target_path, record_path):
             )
         destination_dir = workspace_dir / REFERENCE_APPROVALS_DIR
 
+    if destination_dir.is_symlink():
+        raise ValidationError(
+            f"{destination_dir} is a symlink; generation record directories "
+            "must be real directories (batch-3 review finding)"
+        )
     destination = destination_dir / f"{record_id}.json"
-    if destination.exists():
+    if destination.exists() or destination.is_symlink():
         raise FileExistsError(
             f"Generation approval already recorded: {destination}; supersede "
             "by cancelling it and recording a new approval"
@@ -323,6 +328,10 @@ def import_reference_asset(
     if not library_path.exists():
         raise FileNotFoundError(f"Missing reference library: {library_path}")
     library = load_json(library_path)
+    # Validate at read (batch-3 review finding): the asset's declared path
+    # is only traversal-safe because the schema pins it; a hand-edited
+    # library must fail here, before any directory is created from it.
+    validate_record("reference-library", library)
 
     asset = next(
         (a for a in library["assets"] if a["asset_id"] == reference_asset_id), None
@@ -360,6 +369,16 @@ def import_reference_asset(
         raise ValidationError(
             f"reference asset {reference_asset_id!r} path is a symlink; "
             "refusing to write through it"
+        )
+    # Containment before any mkdir (batch-3 review finding): the deepest
+    # existing ancestor must already resolve inside the workspace.
+    probe = destination.parent
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    if not probe.resolve().is_relative_to(workspace_root):
+        raise ValidationError(
+            f"reference asset {reference_asset_id!r} path resolves outside "
+            f"the workspace: {asset['path']!r}"
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     resolved_parent = destination.parent.resolve()
@@ -399,6 +418,11 @@ def validate_project_generation_records(project_dir, project):
     partial artifacts.
     """
     approvals_dir = Path(project_dir) / PROJECT_APPROVALS_DIR
+    if approvals_dir.is_symlink():
+        raise ValidationError(
+            f"{PROJECT_APPROVALS_DIR} is a symlink; generation record "
+            "directories must be real directories"
+        )
     records_by_id = {}
     warnings = []
     if not approvals_dir.exists():
@@ -581,15 +605,24 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
     """At-rest checks for generation/quality-reviews/*.json (slice 5).
 
     Returns (passing_asset_ids, warnings). The QualityReview is the one
-    BLOCKING review layer (ADR 0023 Decision 5 / docs/gates-and-reviews.md):
-    the packaging gate consumes passing_asset_ids; a project at `generated`
-    with ledger assets and no review draws an advisory warning.
+    BLOCKING review layer (ADR 0023 Decision 5 / docs/gates-and-reviews.md).
+    Coverage is content-bound (batch-3 review finding): a review covers an
+    asset only when its recorded content_hash matches the manifest row's
+    current hash, and when several current-content reviews cover the same
+    asset the latest `reviewed_at` verdict decides — a stale pass never
+    outlives a re-imported artifact or a newer failing review.
     """
     project_dir = Path(project_dir)
     reviews_dir = project_dir / QUALITY_REVIEWS_DIR
-    passing_asset_ids = set()
+    if reviews_dir.is_symlink():
+        raise ValidationError(
+            f"{QUALITY_REVIEWS_DIR} is a symlink; generation record "
+            "directories must be real directories"
+        )
     warnings = []
     reviews_found = False
+    # asset_id -> (reviewed_at, verdict) for current-content coverage.
+    latest_by_asset = {}
     if reviews_dir.exists():
         for review_path in sorted(reviews_dir.glob("*.json")):
             review = load_json(review_path)
@@ -613,9 +646,9 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
                     "project"
                 )
             dangling = sorted(
-                asset_id
-                for asset_id in review["scope_asset_ids"]
-                if asset_id not in manifest_rows
+                entry["asset_id"]
+                for entry in review["scope_assets"]
+                if entry["asset_id"] not in manifest_rows
             )
             if dangling:
                 raise ValidationError(
@@ -623,8 +656,21 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
                     f"manifest row: {dangling}"
                 )
             reviews_found = True
-            if review["overall_verdict"] == "pass":
-                passing_asset_ids.update(review["scope_asset_ids"])
+            for entry in review["scope_assets"]:
+                asset_id = entry["asset_id"]
+                row = manifest_rows[asset_id]
+                if entry["content_hash"] != row["content_hash"]:
+                    # Stale coverage: the artifact changed since this review.
+                    continue
+                candidate = (review["reviewed_at"], review["overall_verdict"])
+                if asset_id not in latest_by_asset or candidate[0] >= latest_by_asset[asset_id][0]:
+                    latest_by_asset[asset_id] = candidate
+
+    passing_asset_ids = {
+        asset_id
+        for asset_id, (_reviewed_at, verdict) in latest_by_asset.items()
+        if verdict == "pass"
+    }
 
     if manifest_rows and not reviews_found and project.get("status") == "generated":
         warnings.append(

@@ -1526,13 +1526,30 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                 )
         # generation_status honesty against referenced lineage (batch-2
         # review finding): a generated status needs at least one generated
-        # row, and a generated row forces the status to say so.
+        # row, and a generated row forces the status to say so. A project
+        # whose ledger has rows cannot package as planned_not_generated —
+        # that would detach every media asset from its provenance.
         package_status = output_package["provider_boundary"]["generation_status"]
+        if manifest_rows and package_status == "planned_not_generated":
+            raise ValueError(
+                "OutputPackage.provider_boundary.generation_status is "
+                "'planned_not_generated' but the project's asset manifest "
+                "has rows; packaged media must bind to its provenance "
+                "(ADR 0023 slice 4)"
+            )
         if "generated" in referenced_origins and package_status != "generated":
             raise ValueError(
                 "OutputPackage.provider_boundary.generation_status "
                 f"{package_status!r} contradicts referenced generated "
                 "manifest rows"
+            )
+        if (
+            "generated" in referenced_origins
+            and output_package["provider_boundary"]["provider_calls_made"] is not True
+        ):
+            raise ValueError(
+                "OutputPackage.provider_boundary.provider_calls_made must be "
+                "true when packaged media traces to generated manifest rows"
             )
         if package_status == "generated" and referenced_origins and "generated" not in referenced_origins:
             raise ValueError(

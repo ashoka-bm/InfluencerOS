@@ -8,7 +8,7 @@
     "quality_review_id",
     "project_id",
     "creator_profile_id",
-    "scope_asset_ids",
+    "scope_assets",
     "checklist",
     "overall_verdict",
     "reviewed_at"
@@ -26,12 +26,26 @@
       "type": "string",
       "pattern": "^creator_[a-zA-Z0-9_-]+$"
     },
-    "scope_asset_ids": {
+    "scope_assets": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string",
-        "pattern": "^gen_asset_[a-zA-Z0-9_-]+$"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset_id",
+          "content_hash"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "pattern": "^gen_asset_[a-zA-Z0-9_-]+$"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
       }
     },
     "checklist": {
@@ -41,7 +55,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["check", "result", "notes"],
+        "required": [
+          "check",
+          "result",
+          "notes"
+        ],
         "properties": {
           "check": {
             "type": "string",
@@ -54,7 +72,11 @@
           },
           "result": {
             "type": "string",
-            "enum": ["pass", "fail", "not_applicable"]
+            "enum": [
+              "pass",
+              "fail",
+              "not_applicable"
+            ]
           },
           "notes": {
             "type": "string",
@@ -65,7 +87,10 @@
     },
     "overall_verdict": {
       "type": "string",
-      "enum": ["pass", "fail"]
+      "enum": [
+        "pass",
+        "fail"
+      ]
     },
     "reviewer_notes": {
       "type": "string",

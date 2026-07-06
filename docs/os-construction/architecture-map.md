@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (43) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (47) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Research connectors        influencer_os/connectors/ (env-gated acquisition tier)        [BUILT — ADR 0022; dormant until key]
@@ -67,14 +67,14 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
 | `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
 | `maps/` | Excalidraw map records. | [BUILT] |
-| `docs/adr/0001–0022` | Architectural decisions (0020 defined the research module; 0021 hardens research planning and source-yield learning; 0022 adds the env-gated research-acquisition connector layer). | [BUILT] |
+| `docs/adr/0001–0024` | Architectural decisions (0020 research module; 0021 research intelligence; 0022 research-acquisition connectors; 0023 generation provider boundary; 0024 creative content model). | [BUILT] |
 
 ### Workflow contracts
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (43) | JSON Schema contract per durable record (incl. `research-fetch-result` connector output). | [BUILT] |
-| `examples/*.example.json` (43) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (47) | JSON Schema contract per durable record (incl. `research-fetch-result` connector output). | [BUILT] |
+| `examples/*.example.json` (47) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary (generation exact-approval; research-acquisition standing approval per ADR 0022). | [BUILT] |
 | `docs/research-adapter-registry.md` | Research acquisition adapter/connector permission registry (ADR 0021/0022). | [BUILT] |
@@ -123,6 +123,8 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers; evidence-linked creator lessons with at-rest validation. | [BUILT — ADR 0016; creator lessons Phase 2 slice 4] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
+| `generation.py` | Generation OS writers + at-rest checks (ADR 0023): approval-record writer with shared record↔project binding, asset import (project + reference routes), manifest ledger appends and bidirectional reconciliation, content-bound quality-review coverage. | [BUILT — Phase 3 slices 2-5] |
+| `providers/` | Generation provider boundary (ADR 0023): `registry.py` (structural `exact_approval` rows, import fails closed), `dispatch.py` (the only adapter entry point; approval-record-gated, O_EXCL-locked two-phase consumption, kill-switch hard stop, mock adapter). Powers `list-providers`. | [BUILT — Phase 3 slice 1 + review hardening] |
 | `connectors/` | Env-gated research-acquisition tier (ADR 0022): `env.py` (key detection, kill switch, call cap), `http.py` (stdlib client), `registry.py`/`fetch.py` (availability + dispatch), `models.py`/`parse.py` (canonical mapping to `ResearchEvidence`/`MetricSnapshot`), and connectors `openai_reddit.py` (+`reddit_enrich.py`), `xai_x.py`, `firecrawl_web.py`, `linkedin_apify.py`. Powers `list-connectors` + `research-fetch`; output validated by `research-fetch-result.schema.json`. | [BUILT — ADR 0022; dormant until provider key] |
 
 ### Tests (`tests/`) — parity + contract
