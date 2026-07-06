@@ -42,6 +42,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `review-hook-payoff` | review hook and payoff, creative review of a drafted plan, advisory plan review | review packet: drafted plan, applied template, locked promotion intent fields (never the authoring conversation) | `projects/<project-slug>/reviews/<review_record_id>.json` (advisory ReviewRecord; never blocks) | yes |
 | `clear-writing-pass` | clear writing pass, declutter draft text, tighten copy | drafted article/thread/caption/plan text | none (returns rewritten text + change trace in conversation; no record) | yes |
 | `human-voice-pass` | human voice pass, strip AI tells, make it sound like the creator | drafted text, Creator Profile voice constraints, voice samples, brand context | none (returns rewritten text + change trace in conversation; no record) | yes |
+| `request-generation-approval` | request generation approval, package a provider call for approval, record generation approval | Base Video Generation Plan (or reference asset entry), provider registry via `list-providers`, provider boundary | `projects/<project-slug>/generation/approval-records/` (or `references/approval-records/`) via `record-generation-approval` | yes |
 
 ## Creator Setup Subskills
 

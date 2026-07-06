@@ -124,6 +124,10 @@ def main(argv=None):
     providers_parser = subparsers.add_parser("list-providers", help="Show generation providers with capability, key presence, and approval model (ADR 0023; always exact_approval — key presence is never approval).")
     providers_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
+    gen_approval_parser = subparsers.add_parser("record-generation-approval", help="Record a human generation approval as a GenerationApprovalRecord (ADR 0023). Target is the project directory (project scope) or the creator workspace (reference-library scope).")
+    gen_approval_parser.add_argument("target", help="Project directory (project scope) or creator workspace (reference scope).")
+    gen_approval_parser.add_argument("record_file", help="Path to the GenerationApprovalRecord JSON to validate and record.")
+
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
     fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin"], help="Connector to run.")
     fetch_parser.add_argument("target", help="Topic (reddit/x), page URL (firecrawl), or profile URL (linkedin).")
@@ -376,6 +380,13 @@ def main(argv=None):
                 print("Already saved; no change.")
             else:
                 print(f"Saved memory fact ({result['bytes_used']}/{result['byte_cap']} bytes).")
+            return 0
+
+        if args.command == "record-generation-approval":
+            from influencer_os.generation import record_generation_approval
+
+            destination = record_generation_approval(args.target, args.record_file)
+            print(f"Recorded generation approval: {destination}")
             return 0
 
         if args.command == "list-providers":

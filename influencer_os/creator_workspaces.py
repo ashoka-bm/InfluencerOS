@@ -5,6 +5,7 @@ import shutil
 from collections import Counter
 from pathlib import Path
 
+from influencer_os.generation import validate_reference_approval_records
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import validate_promotions
@@ -570,6 +571,11 @@ def validate_creator_workspace(workspace_path):
     # `validate workspace`, not only `validate research`. No-op when the
     # workspace has no promotions yet.
     promotion_warnings, _, _ = validate_promotions(workspace_dir)
+    # Reference-scoped generation approvals (ADR 0023): records under
+    # references/approval-records/ validate, and a reference asset whose
+    # source_ref claims an approval record must resolve to one. No-op when
+    # the workspace has no generation approvals.
+    validate_reference_approval_records(workspace_dir, reference_library)
 
     warnings = list(promotion_warnings)
     # Audio is a selectable modality with no v1 production-plan schema

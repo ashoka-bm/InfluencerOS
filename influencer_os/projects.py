@@ -18,6 +18,9 @@ from influencer_os.validation import (
 PROJECT_DIRECTORIES = [
     "plan",
     "reviews",
+    "generation/approval-records",
+    "generation/assets",
+    "generation/quality-reviews",
     "output-package/assets",
     "output-package/upload-ready",
     "output-package/source-refs",
@@ -506,7 +509,7 @@ def validate_project(project_path):
     # at rest only once authored (Phase 2 slice 3); its presence is validated
     # below and its absence on a mature published project is an advisory WARN.
     required_paths = ["project.json"]
-    required_paths.extend(project["project_paths"][key] for key in ["plan", "reviews", "output_package", "published", "analytics", "evidence_brief"])
+    required_paths.extend(project["project_paths"][key] for key in ["plan", "reviews", "generation", "output_package", "published", "analytics", "evidence_brief"])
     required_paths.extend(_required_record_paths(project))
 
     missing = []
@@ -1463,6 +1466,9 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
+    from influencer_os.generation import validate_project_generation_records
+
+    validate_project_generation_records(project_dir, project)
     review_warnings = _validate_review_records(project_dir, project)
     published_records = _validate_published_records(project_dir, project, output_package)
     analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)

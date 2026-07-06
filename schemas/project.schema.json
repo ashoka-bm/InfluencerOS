@@ -163,6 +163,7 @@
         "root",
         "plan",
         "reviews",
+        "generation",
         "output_package",
         "published",
         "analytics",
@@ -181,6 +182,10 @@
         "reviews": {
           "type": "string",
           "const": "reviews/"
+        },
+        "generation": {
+          "type": "string",
+          "const": "generation/"
         },
         "output_package": {
           "type": "string",

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/generation-approval-record.schema.json",
+  "title": "GenerationApprovalRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generation_approval_record_id",
+    "creator_profile_id",
+    "provider_id",
+    "model",
+    "scope",
+    "requested_assets",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "generation_approval_record_id": {
+      "type": "string",
+      "pattern": "^gen_approval_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^project_[a-zA-Z0-9_-]+$"
+    },
+    "reference_asset_id": {
+      "type": "string",
+      "pattern": "^asset_[a-zA-Z0-9_-]+$"
+    },
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["single_call", "batch"]
+    },
+    "max_calls": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "requested_assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "asset_kind", "prompt_ref"],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "pattern": "^gen_asset_[a-zA-Z0-9_-]+$"
+          },
+          "asset_kind": {
+            "type": "string",
+            "enum": ["image", "video", "audio", "render"]
+          },
+          "prompt_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "user_approval_statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "approved", "executed", "cancelled"]
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resulting_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^gen_asset_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "cost_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

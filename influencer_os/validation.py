@@ -501,6 +501,8 @@ def validate_record_semantics(schema_name, record):
         validate_platform_fit_warning_semantics(record)
     if schema_name == "review-record":
         validate_review_record_semantics(record)
+    if schema_name == "generation-approval-record":
+        validate_generation_approval_semantics(record)
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
@@ -536,6 +538,107 @@ def validate_beat_spine(record, field_name, record_name, require_coverage):
                 f"{record_name}.{field_name}: template beats skip required "
                 f"spine role(s) {sorted(missing)!r}"
             )
+
+
+def validate_generation_approval_semantics(record):
+    """GenerationApprovalRecord semantics (ADR 0023 Decision 2).
+
+    The status ladder is draft -> approved -> executed | cancelled, and
+    every field required by a status must be present exactly there: a draft
+    carries no approval statement, an approved record carries the verbatim
+    statement and timestamp, and only an executed record carries execution
+    fields. Scope semantics: single_call approves exactly one asset and no
+    batch cap; batch requires a cap the request stays within.
+    """
+    record_id = record.get("generation_approval_record_id", "<unknown>")
+    has_project = "project_id" in record
+    has_reference = "reference_asset_id" in record
+    if has_project == has_reference:
+        raise ValidationError(
+            f"generation approval {record_id}: exactly one of project_id or "
+            "reference_asset_id must be set (project or reference-library "
+            "scope)"
+        )
+    if has_project and "plan_ref" not in record:
+        raise ValidationError(
+            f"generation approval {record_id}: project-scoped approvals must "
+            "carry plan_ref (the exact plan the human approved)"
+        )
+
+    requested = record.get("requested_assets", [])
+    asset_ids = [asset.get("asset_id") for asset in requested]
+    duplicated = sorted({a for a in asset_ids if asset_ids.count(a) > 1})
+    if duplicated:
+        raise ValidationError(
+            f"generation approval {record_id}: duplicate requested asset ids "
+            f"{duplicated!r}"
+        )
+
+    scope = record.get("scope")
+    if scope == "single_call":
+        if "max_calls" in record:
+            raise ValidationError(
+                f"generation approval {record_id}: single_call scope carries "
+                "no max_calls"
+            )
+        if len(requested) != 1:
+            raise ValidationError(
+                f"generation approval {record_id}: single_call scope approves "
+                f"exactly one asset, got {len(requested)}"
+            )
+    if scope == "batch":
+        if "max_calls" not in record:
+            raise ValidationError(
+                f"generation approval {record_id}: batch scope requires a "
+                "bounded max_calls"
+            )
+        if len(requested) > record["max_calls"]:
+            raise ValidationError(
+                f"generation approval {record_id}: {len(requested)} requested "
+                f"assets exceed the approved batch cap {record['max_calls']}"
+            )
+
+    status = record.get("status")
+    has_statement = "user_approval_statement" in record
+    has_approved_at = "approved_at" in record
+    has_executed_at = "executed_at" in record
+    has_results = bool(record.get("resulting_asset_ids"))
+    if status == "draft":
+        if has_statement or has_approved_at or has_executed_at or has_results:
+            raise ValidationError(
+                f"generation approval {record_id}: a draft carries no "
+                "approval statement, approval timestamp, or execution fields"
+            )
+    if status in ("approved", "executed"):
+        if not (has_statement and has_approved_at):
+            raise ValidationError(
+                f"generation approval {record_id}: status {status!r} requires "
+                "the verbatim user_approval_statement and approved_at"
+            )
+    if status == "approved" and (has_executed_at or has_results):
+        raise ValidationError(
+            f"generation approval {record_id}: execution fields belong only "
+            "on executed records"
+        )
+    if status == "executed":
+        if not (has_executed_at and has_results):
+            raise ValidationError(
+                f"generation approval {record_id}: executed records require "
+                "executed_at and non-empty resulting_asset_ids"
+            )
+        unknown_results = sorted(
+            set(record["resulting_asset_ids"]) - set(asset_ids)
+        )
+        if unknown_results:
+            raise ValidationError(
+                f"generation approval {record_id}: resulting_asset_ids not in "
+                f"the approved request: {unknown_results}"
+            )
+    if status == "cancelled" and (has_executed_at or has_results):
+        raise ValidationError(
+            f"generation approval {record_id}: cancelled records carry no "
+            "execution fields"
+        )
 
 
 def validate_review_record_semantics(record):

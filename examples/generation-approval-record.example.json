@@ -1,0 +1,23 @@
+{
+  "generation_approval_record_id": "gen_approval_luna_tiny_reset_001",
+  "creator_profile_id": "creator_luna_fit",
+  "project_id": "project_luna_tiny_reset_001",
+  "provider_id": "mock",
+  "model": "mock-1",
+  "plan_ref": "plan/generation-plan.json",
+  "scope": "single_call",
+  "requested_assets": [
+    {
+      "asset_id": "gen_asset_luna_tiny_reset_video_001",
+      "asset_kind": "video",
+      "prompt_ref": "plan/generation-plan.json#prompt_sequence[0]",
+      "filename": "tiny-reset-video-001.mp4",
+      "notes": "Universal short-form vertical base video for the tiny reset."
+    }
+  ],
+  "user_approval_statement": "Approved: generate one mock base video for project_luna_tiny_reset_001 from prompt_sequence[0] of plan/generation-plan.json using provider mock, model mock-1, single call.",
+  "approved_at": "2026-07-06T16:05:00",
+  "status": "approved",
+  "cost_note": "Mock adapter; zero cost.",
+  "created_at": "2026-07-06T16:00:00"
+}

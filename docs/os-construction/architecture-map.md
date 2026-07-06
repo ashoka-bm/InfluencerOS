@@ -180,7 +180,8 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [BUILT]
   Phase 9b Creative review (advisory)  -> Skill(review-hook-payoff) (ReviewRecord, never blocks)  [BUILT — CD slice 4]
              editorial Passes          -> Skill(clear-writing-pass) / Skill(human-voice-pass)     [BUILT — CD slice 4]
-  Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
+  Phase 10 Generation Approval Gate    owner: user -> Skill(request-generation-approval)          [BUILT gate + record — P3 slice 2]
+             (packages the exact call/batch as a GenerationApprovalRecord; dispatch refuses without one)
   (post)   Output Package             -> Skill(create-output-package)                             [BUILT]
   (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
   (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [BUILT — Phase 2 slice 2]
