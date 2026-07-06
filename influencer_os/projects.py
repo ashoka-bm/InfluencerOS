@@ -1332,6 +1332,7 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     from influencer_os.generation import (
         validate_project_generation_assets,
         validate_project_generation_records,
+        validate_project_quality_reviews,
     )
 
     applied_template = None
@@ -1343,6 +1344,10 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     # resolves upload-ready generation_manifest_refs against the ledger.
     approval_records, generation_warnings = validate_project_generation_records(project_dir, project)
     manifest_rows = validate_project_generation_assets(project_dir, project, approval_records)
+    passing_quality_asset_ids, quality_warnings = validate_project_quality_reviews(
+        project_dir, project, manifest_rows
+    )
+    generation_warnings = generation_warnings + quality_warnings
 
     # Plan records are required at planning+ but validated whenever they
     # exist (slice 2 review finding): a plan written prematurely on a
@@ -1480,11 +1485,24 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         # media asset traces asset -> approval record -> plan transitively.
         for asset in output_package.get("upload_ready", []):
             manifest_ref = asset.get("generation_manifest_ref")
-            if manifest_ref is not None and manifest_ref not in manifest_rows:
+            if manifest_ref is None:
+                continue
+            if manifest_ref not in manifest_rows:
                 raise ValueError(
                     f"OutputPackage.upload_ready[{asset['upload_asset_id']}] "
                     f"generation_manifest_ref {manifest_ref!r} does not "
                     "resolve to an asset-manifest row"
+                )
+            # The one BLOCKING review layer (ADR 0023 Decision 5): every
+            # packaged media asset that flows from generation/ needs a
+            # passing QualityReview covering it — generated and imported
+            # alike. Text roles carry no manifest ref and stay exempt.
+            if manifest_ref not in passing_quality_asset_ids:
+                raise ValueError(
+                    f"OutputPackage.upload_ready[{asset['upload_asset_id']}] "
+                    f"asset {manifest_ref!r} has no passing QualityReview "
+                    "covering it; the quality gate blocks packaging "
+                    "(ADR 0023 Decision 5)"
                 )
 
     review_warnings = generation_warnings + _validate_review_records(project_dir, project)

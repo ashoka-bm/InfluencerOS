@@ -684,6 +684,203 @@ class ProvenanceLedgerTests(unittest.TestCase):
             self.assertEqual(asset_rows[0]["record_type"], "generation-asset")
 
 
+class QualityReviewTests(unittest.TestCase):
+    def test_example_validates(self):
+        validate_record("quality-review", load_example("quality-review"))
+
+    def test_checklist_must_cover_every_check_exactly_once(self):
+        review = load_example("quality-review")
+        review["checklist"][1]["check"] = "identity_consistency"
+        with self.assertRaisesRegex(ValidationError, "exactly once"):
+            validate_record("quality-review", review)
+
+    def test_verdict_must_agree_with_items(self):
+        review = load_example("quality-review")
+        review["checklist"][0]["result"] = "fail"
+        with self.assertRaisesRegex(ValidationError, "failing checklist item"):
+            validate_record("quality-review", review)
+        review["overall_verdict"] = "fail"
+        validate_record("quality-review", review)
+        review["checklist"][0]["result"] = "pass"
+        with self.assertRaisesRegex(ValidationError, "requires at[\\s\\S]*least one"):
+            validate_record("quality-review", review)
+
+    def test_review_scoping_unknown_assets_fails_at_rest(self):
+        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            rewrite(
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_001.json",
+                lambda review: review.update(
+                    scope_asset_ids=["gen_asset_never_manifested"]
+                ),
+            )
+            with self.assertRaisesRegex(ValidationError, "no[\\s\\S]*manifest row"):
+                validate_project(project_dir)
+
+    def test_generated_without_review_warns(self):
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            review_path = (
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_001.json"
+            )
+            review_path.unlink()
+            result = validate_project(project_dir)
+            self.assertTrue(
+                any("quality review" in warning for warning in result["warnings"])
+            )
+
+
+class PackagingQualityGateTests(unittest.TestCase):
+    def stage_package(self, temp_dir, project_dir):
+        from tests.test_cli import copy_example_record, write_upload_ready_assets
+
+        package_path = Path(temp_dir) / "output-package.json"
+        copy_example_record("output-package.example.json", package_path)
+        package = json.loads(package_path.read_text())
+        asset_root = Path(temp_dir) / "source-assets"
+        write_upload_ready_assets(asset_root, package)
+        return package_path, asset_root
+
+    def test_packaging_refuses_without_passing_review(self):
+        # Exit criterion 4: register-output-package fails when generation
+        # media lacks a passing QualityReview.
+        from influencer_os.projects import register_output_package
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            (
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_001.json"
+            ).unlink()
+            package_path, asset_root = self.stage_package(temp_dir, project_dir)
+            with self.assertRaisesRegex(ValueError, "no passing QualityReview"):
+                register_output_package(project_dir, package_path, asset_root=asset_root)
+            # Rollback: the refusal leaves the project unpackaged.
+            project = json.loads((project_dir / "project.json").read_text())
+            self.assertEqual(project["status"], "generated")
+
+    def test_hand_flipped_failing_review_fails_at_rest(self):
+        # Exit criterion 4 at-rest parity: flipping a passing review to
+        # failing after packaging makes validate project fail.
+        from tests.test_analytics import scaffold_published_project
+        from tests.test_cli import rewrite_json as rewrite
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+
+            def flip(review):
+                review["checklist"][0]["result"] = "fail"
+                review["overall_verdict"] = "fail"
+            rewrite(
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_001.json",
+                flip,
+            )
+            with self.assertRaisesRegex(ValueError, "no passing QualityReview"):
+                validate_project(project_dir)
+
+
+class MockEndToEndChainTests(unittest.TestCase):
+    def test_mock_generation_to_packaging_chain(self):
+        # Exit criterion 5: approval -> mock dispatch -> quality review ->
+        # packaging; every upload-ready media asset resolves through the
+        # manifest to its approval record and plan.
+        from influencer_os.generation import import_generated_asset, load_asset_manifest
+        from influencer_os.projects import register_output_package
+        from tests.test_cli import copy_example_record, write_upload_ready_assets
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+
+            # Approve and dispatch the mock video generation.
+            record_path, record = stage_approval_record(
+                temp_dir,
+                mutate=lambda r: r["requested_assets"][0].update(
+                    filename="tiny-reset-video-001.mp4"
+                ),
+            )
+            record_generation_approval(project_dir, record_path)
+            dispatch_generation(
+                project_dir, record["generation_approval_record_id"], config=BASE_CONFIG
+            )
+
+            # Import the externally made thumbnail.
+            thumb_source = Path(temp_dir) / "thumb-export.png"
+            thumb_source.write_bytes(b"external thumbnail bytes\n")
+            import_generated_asset(
+                project_dir,
+                thumb_source,
+                "gen_asset_luna_tiny_reset_thumb_001",
+                "image",
+                filename="tiny-reset-thumb-001.png",
+                source="Provider web UI export",
+                license_text="operator-generated, full rights",
+            )
+
+            # Quality-review the batch, then package.
+            review = load_example("quality-review")
+            reviews_dir = project_dir / "generation" / "quality-reviews"
+            reviews_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                reviews_dir / f"{review['quality_review_id']}.json", review
+            )
+
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            package["provider_boundary"]["generation_status"] = "generated"
+            package["provider_boundary"]["provider_calls_made"] = True
+            write_json(package_path, package)
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+            register_output_package(project_dir, package_path, asset_root=asset_root)
+
+            result = validate_project(project_dir)
+            self.assertEqual(
+                json.loads((project_dir / "project.json").read_text())["status"],
+                "packaged",
+            )
+            # Chain resolution: each packaged media ref -> manifest row ->
+            # (generated) executed approval naming the plan.
+            manifest = load_asset_manifest(project_dir)
+            rows = {row["asset_id"]: row for row in manifest["rows"]}
+            packaged = json.loads(
+                (project_dir / "output-package" / "output-package.json").read_text()
+            )
+            media_refs = [
+                asset["generation_manifest_ref"]
+                for asset in packaged["upload_ready"]
+                if "generation_manifest_ref" in asset
+            ]
+            self.assertEqual(len(media_refs), 2)
+            for ref in media_refs:
+                self.assertIn(ref, rows)
+            video_row = rows["gen_asset_luna_tiny_reset_video_001"]
+            self.assertEqual(
+                video_row["approval_record_id"],
+                record["generation_approval_record_id"],
+            )
+            self.assertTrue(video_row["plan_prompt_ref"].startswith("plan/generation-plan.json"))
+
+
 class ListProvidersCliTests(unittest.TestCase):
     def test_list_providers_reports_exact_approval(self):
         result = subprocess.run(

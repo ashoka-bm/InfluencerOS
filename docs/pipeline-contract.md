@@ -15,6 +15,8 @@ creator.profile
   -> format-specific template application
   -> format-specific production plan
   -> creative review (advisory), after a plan is drafted (ADR 0024; docs/gates-and-reviews.md)
+  -> generation approval record (human gate), then mock/provider dispatch or asset import (ADR 0023)
+  -> quality review (blocking for generation media), before packaging
   -> output.record, when generation or import creates an artifact
 ```
 
@@ -213,6 +215,9 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Social Template | `schemas/social-template.schema.json` | `examples/social-template.example.json` |
 | Applied Social Template | `schemas/applied-social-template.schema.json` | `examples/applied-social-template.example.json` |
 | Review Record | `schemas/review-record.schema.json` | `examples/review-record.example.json` |
+| Generation Approval Record | `schemas/generation-approval-record.schema.json` | `examples/generation-approval-record.example.json` |
+| Generation Asset Manifest | `schemas/generation-asset-manifest.schema.json` | `examples/generation-asset-manifest.example.json` |
+| Quality Review | `schemas/quality-review.schema.json` | `examples/quality-review.example.json` |
 | Micro-Journey Video Plan | `schemas/micro-journey-video-plan.schema.json` | `examples/micro-journey-video-plan.example.json` |
 | Carousel Plan | `schemas/carousel-plan.schema.json` | `examples/carousel-plan.example.json` |
 | Single Image Post Plan | `schemas/single-image-post-plan.schema.json` | `examples/single-image-post-plan.example.json` |

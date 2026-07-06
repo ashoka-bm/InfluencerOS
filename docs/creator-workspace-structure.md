@@ -106,6 +106,11 @@ workspace-library/creators/<creator-slug>/
         production-plan.json
         generation-plan.json
       reviews/
+      generation/
+        approval-records/
+        assets/
+        asset-manifest.json
+        quality-reviews/
       output-package/
         output-package.json
         assets/
@@ -261,6 +266,8 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 `projects/<project-id>/plan/` stores Applied Social Templates, format-specific production plans, and provider-neutral generation plans.
 
 `projects/<project-id>/reviews/` stores advisory creative Review Records (ADR 0024; contract in `docs/gates-and-reviews.md`), one file per `review_record_id`. `validate project` checks them at rest (schema, filename pin, project/creator scope, artifact-ref resolution) and surfaces an unwaived `block` recommendation as a warning only — creative reviews never halt the pipeline.
+
+`projects/<project-id>/generation/` stores Generation OS records (ADR 0023): `approval-records/` holds GenerationApprovalRecords (single-use, verbatim human approval; `record-generation-approval` is the writer and `dispatch_generation` the only consumer); `assets/` holds generated or imported media files; `asset-manifest.json` is the per-asset provenance ledger `validate project` reconciles bidirectionally against disk; `quality-reviews/` holds the blocking QualityReviews the packaging gate requires for generation-sourced media.
 
 `projects/<project-id>/output-package/` stores one upload-ready Output Package. `output-package.json` contains the universal core, platform adaptations, source refs, and required Creative Performance Map. `assets/` holds local materials. `upload-ready/` holds the exact files and text a person needs to upload. `source-refs/` may hold copies or pointers needed to audit how the package was created. `python3 -m influencer_os register-output-package` is the write gate for this folder: it copies upload-ready files, writes the package record, marks the Project `packaged`, validates, and rolls back its writes on failure.
 

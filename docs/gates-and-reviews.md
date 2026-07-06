@@ -17,12 +17,12 @@ The canonical control contract for InfluencerOS (ADR 0024, Creative Direction sl
 4. Hook/Payoff Review after a plan is drafted — **Review (advisory)**, all six plan types.
 5. Clear-Writing Pass and Human-Voice Pass on drafted text — **Passes (advisory)**.
 6. Provider Boundary before any generation call — **human gate (blocking)**.
-7. (Phase 3, future) provider-safety `QualityReview` before packaging — the only planned **blocking** review layer; it does not exist yet and is not designed here.
+7. Provider-safety `QualityReview` between generation and packaging — the one **blocking** review layer (ADR 0023 Decision 5, built in Phase 3 slice 5): `register-output-package` and `validate project` refuse a packaged media asset that flows from `generation/` without a passing QualityReview covering it — generated and imported alike; text roles are exempt. Owned by `review-generated-assets`; records live at `projects/<slug>/generation/quality-reviews/`.
 
 ## Two Layers, One Rule
 
-- **Creative-advisory layer (this doc, v1):** every creative Review and Pass is advisory. An `approval_status` of `revise` or `block` is a strong recommendation to the human, not an auto-stop. `validate project` surfaces an unwaived `block` as a warning string and still passes; packaging and registration proceed.
-- **Provider-safety layer (Phase 3, future):** the planned `QualityReview` may block. Nothing in the creative layer may be promoted into it implicitly.
+- **Creative-advisory layer (v1):** every creative Review and Pass is advisory. An `approval_status` of `revise` or `block` is a strong recommendation to the human, not an auto-stop. `validate project` surfaces an unwaived `block` as a warning string and still passes; packaging and registration proceed.
+- **Provider-safety layer (Phase 3, built):** the `QualityReview` blocks packaging for generation-sourced media (closed checklist: identity consistency, continuity with plan, technical conformance, creator boundary compliance; verdict must agree with the items). Nothing in the creative layer may be promoted into it implicitly — a creative review becoming blocking still requires its own ADR.
 
 **Real-world-risk carve-out:** a finding that the content makes a false claim about a real person, brand, or product is a **must-acknowledge advisory** — the reviewer sets `severity: blocking`, and the human must either revise the artifact or record a `human_waiver` on the Review Record. It is still not a hard block in v1; its realization as one is explicitly deferred to Phase 3.
 

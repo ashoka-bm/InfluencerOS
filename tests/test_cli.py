@@ -131,6 +131,15 @@ def seed_generation_fixtures(project_dir):
         project_dir / "generation" / "asset-manifest.json",
     )
 
+    # The blocking quality gate (ADR 0023 Decision 5): packaged media needs
+    # a passing QualityReview covering its manifest assets.
+    reviews_dir = project_dir / "generation" / "quality-reviews"
+    reviews_dir.mkdir(parents=True, exist_ok=True)
+    copy_example_record(
+        "quality-review.example.json",
+        reviews_dir / "quality_review_luna_tiny_reset_001.json",
+    )
+
     # The approval record binds only to a generation-ready-or-later project,
     # and a project with generated assets has honestly reached `generated`.
     rewrite_json(

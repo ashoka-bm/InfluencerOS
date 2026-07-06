@@ -505,6 +505,8 @@ def validate_record_semantics(schema_name, record):
         validate_generation_approval_semantics(record)
     if schema_name == "generation-asset-manifest":
         validate_generation_manifest_semantics(record)
+    if schema_name == "quality-review":
+        validate_quality_review_semantics(record)
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
@@ -649,6 +651,48 @@ def validate_generation_approval_semantics(record):
         raise ValidationError(
             f"generation approval {record_id}: cancelled records carry no "
             "execution fields"
+        )
+
+
+QUALITY_REVIEW_CHECKS = {
+    "identity_consistency",
+    "continuity_with_plan",
+    "technical_conformance",
+    "creator_boundary_compliance",
+}
+
+
+def validate_quality_review_semantics(record):
+    """QualityReview semantics (ADR 0023 Decision 5): the closed checklist
+    appears exactly once per check, and the overall verdict must agree with
+    the items — a pass with a failing item (or a fail without one) is a
+    dishonest record, not a judgment call."""
+    review_id = record.get("quality_review_id", "<unknown>")
+    checks = [item.get("check") for item in record.get("checklist", [])]
+    if sorted(checks) != sorted(QUALITY_REVIEW_CHECKS):
+        raise ValidationError(
+            f"quality review {review_id}: checklist must cover each of "
+            f"{sorted(QUALITY_REVIEW_CHECKS)} exactly once, got {checks!r}"
+        )
+    scope = record.get("scope_asset_ids", [])
+    duplicated = sorted({a for a in scope if scope.count(a) > 1})
+    if duplicated:
+        raise ValidationError(
+            f"quality review {review_id}: duplicate scope_asset_ids {duplicated!r}"
+        )
+    has_failing = any(
+        item.get("result") == "fail" for item in record.get("checklist", [])
+    )
+    verdict = record.get("overall_verdict")
+    if verdict == "pass" and has_failing:
+        raise ValidationError(
+            f"quality review {review_id}: overall_verdict 'pass' with a "
+            "failing checklist item"
+        )
+    if verdict == "fail" and not has_failing:
+        raise ValidationError(
+            f"quality review {review_id}: overall_verdict 'fail' requires at "
+            "least one failing checklist item"
         )
 
 

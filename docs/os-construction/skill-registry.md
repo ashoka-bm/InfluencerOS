@@ -44,6 +44,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `human-voice-pass` | human voice pass, strip AI tells, make it sound like the creator | drafted text, Creator Profile voice constraints, voice samples, brand context | none (returns rewritten text + change trace in conversation; no record) | yes |
 | `request-generation-approval` | request generation approval, package a provider call for approval, record generation approval | Base Video Generation Plan (or reference asset entry), provider registry via `list-providers`, provider boundary | `projects/<project-slug>/generation/approval-records/` (or `references/approval-records/`) via `record-generation-approval` | yes |
 | `import-generated-asset` | import generated media, bring in an external export, register user-provided media | operator provenance answers (source, tool, license), project manifest or Reference Library | `generation/assets/` + `generation/asset-manifest.json` row (or reference asset path + source block) via `import-generated-asset` | yes |
+| `review-generated-assets` | quality review generated assets, run the packaging quality gate, check identity/continuity/conformance/boundaries | asset manifest + artifact files, production and generation plans, Reference Library approved assets, Creator Profile boundaries | `projects/<project-slug>/generation/quality-reviews/<quality_review_id>.json` (BLOCKING gate for packaged generation media) | yes |
 
 ## Creator Setup Subskills
 

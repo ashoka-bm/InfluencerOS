@@ -25,6 +25,7 @@ PROJECT_APPROVALS_DIR = "generation/approval-records"
 REFERENCE_APPROVALS_DIR = "references/approval-records"
 ASSETS_DIR = "generation/assets"
 MANIFEST_PATH = "generation/asset-manifest.json"
+QUALITY_REVIEWS_DIR = "generation/quality-reviews"
 
 UNKNOWN_LICENSE_WARNING = "license-unknown: no license information was provided; verify usage rights before publishing"
 
@@ -492,6 +493,64 @@ def validate_project_generation_assets(project_dir, project, approval_records_by
             f"(provenance is mandatory): {orphans}"
         )
     return rows_by_id
+
+
+def validate_project_quality_reviews(project_dir, project, manifest_rows):
+    """At-rest checks for generation/quality-reviews/*.json (slice 5).
+
+    Returns (passing_asset_ids, warnings). The QualityReview is the one
+    BLOCKING review layer (ADR 0023 Decision 5 / docs/gates-and-reviews.md):
+    the packaging gate consumes passing_asset_ids; a project at `generated`
+    with ledger assets and no review draws an advisory warning.
+    """
+    project_dir = Path(project_dir)
+    reviews_dir = project_dir / QUALITY_REVIEWS_DIR
+    passing_asset_ids = set()
+    warnings = []
+    reviews_found = False
+    if reviews_dir.exists():
+        for review_path in sorted(reviews_dir.glob("*.json")):
+            review = load_json(review_path)
+            try:
+                validate_record("quality-review", review)
+            except ValidationError as exc:
+                raise ValidationError(f"{review_path}: {exc}") from None
+            review_id = review["quality_review_id"]
+            if review_id != review_path.stem:
+                raise ValidationError(
+                    f"{review_path}: filename does not match "
+                    f"quality_review_id {review_id!r}"
+                )
+            if review["project_id"] != project["project_id"]:
+                raise ValidationError(
+                    f"quality review {review_id} does not target this project"
+                )
+            if review["creator_profile_id"] != project["creator_profile_id"]:
+                raise ValidationError(
+                    f"quality review {review_id} creator does not match the "
+                    "project"
+                )
+            dangling = sorted(
+                asset_id
+                for asset_id in review["scope_asset_ids"]
+                if asset_id not in manifest_rows
+            )
+            if dangling:
+                raise ValidationError(
+                    f"quality review {review_id} scopes assets with no "
+                    f"manifest row: {dangling}"
+                )
+            reviews_found = True
+            if review["overall_verdict"] == "pass":
+                passing_asset_ids.update(review["scope_asset_ids"])
+
+    if manifest_rows and not reviews_found and project.get("status") == "generated":
+        warnings.append(
+            "warning: project is 'generated' with ledger assets but no "
+            "quality review; run review-generated-assets before packaging "
+            "(the packaging gate is blocking, ADR 0023 Decision 5)"
+        )
+    return passing_asset_ids, warnings
 
 
 def validate_reference_approval_records(workspace_dir, reference_library):

@@ -183,6 +183,7 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 10 Generation Approval Gate    owner: user -> Skill(request-generation-approval)          [BUILT gate + record — P3 slice 2]
              (packages the exact call/batch as a GenerationApprovalRecord; dispatch refuses without one)
   Phase 10b External media import      -> Skill(import-generated-asset) (no provider call)        [BUILT — P3 slice 3]
+  Phase 10c Quality gate (BLOCKING)    -> Skill(review-generated-assets) (before packaging)       [BUILT — P3 slice 5]
   (post)   Output Package             -> Skill(create-output-package)                             [BUILT]
   (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
   (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [BUILT — Phase 2 slice 2]
