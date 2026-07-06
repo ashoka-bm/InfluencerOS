@@ -46,10 +46,15 @@ python3 -m influencer_os record-generation-approval <creator-workspace>/projects
 python3 -m influencer_os record-generation-approval <creator-workspace> <record.json>
 ```
 
-- Records are single-use (ADR 0023 Decision 2): dispatch consumes an
-  `approved` record into `executed` and refuses a second run. Re-generation
+- Records are single-use (ADR 0023 Decision 2): dispatch flips an
+  `approved` record to `executing` before the first call and `executed`
+  after the last, and refuses a second run (a leftover `executing` record
+  means a crashed dispatch — investigate, never re-run it). Re-generation
   after a failed or unsatisfying result needs a new record — pre-fill it
   from the plan to keep this cheap.
+- Every requested asset's `prompt_ref` must point into the approved
+  `plan_ref` file; a prompt from anywhere else is unapproved content and
+  both the writer and dispatch refuse it.
 - Never edit a recorded approval; cancel (`status: cancelled` via a new
   write is not allowed — ask the user, then supersede with a new record and
   mark the old one cancelled in the same session) and record fresh.

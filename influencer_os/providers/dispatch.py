@@ -26,7 +26,7 @@ def _mock_generate(request, assets_dir, approval_record):
     costs."""
     asset_id = request["asset_id"]
     filename = request.get("filename") or f"{asset_id}.bin"
-    artifact_path = Path(assets_dir) / filename
+    artifact_path = _contained_artifact_path(assets_dir, filename, asset_id)
     seed = json.dumps(
         {
             "asset_id": asset_id,
@@ -52,6 +52,25 @@ def _mock_generate(request, assets_dir, approval_record):
 _ADAPTERS = {
     "mock": _mock_generate,
 }
+
+
+def _contained_artifact_path(assets_dir, filename, asset_id):
+    """A requested filename is a bare name that resolves inside the assets
+    dir — a forged record cannot write outside it (batch-1 review finding)."""
+    assets_dir = Path(assets_dir)
+    name = Path(filename).name
+    if name != filename or name in (".", "..") or not name:
+        raise GenerationDispatchError(
+            f"requested asset {asset_id!r} filename must be a bare file "
+            f"name, got {filename!r}"
+        )
+    artifact_path = assets_dir / name
+    if artifact_path.resolve().parent != assets_dir.resolve():
+        raise GenerationDispatchError(
+            f"requested asset {asset_id!r} filename escapes the assets "
+            f"directory: {filename!r}"
+        )
+    return artifact_path
 
 
 def _approval_records_dir(project_dir):
@@ -93,7 +112,10 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     """
     project_dir = Path(project_dir)
     config = config if config is not None else env.get_config()
-    if env.paid_connectors_disabled(config):
+    # The kill switch is a hard stop read from the real environment on every
+    # dispatch — an injected config can restrict further but never re-enable
+    # (batch-1 review finding).
+    if env.paid_connectors_disabled(config) or env.paid_connectors_disabled(env.get_config()):
         raise GenerationDispatchError(
             "generation dispatch is disabled by "
             "INFLUENCER_OS_DISABLE_PAID_CONNECTORS (kill switch); an approved "
@@ -101,6 +123,16 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
         )
 
     record_path, record = _load_approval_record(project_dir, approval_record_id)
+
+    # Bind the record to the project it sits in before trusting it (batch-1
+    # review finding): a hand-written approved record targeting a different
+    # project, creator, premature status, or dangling plan refs must refuse
+    # exactly like the writer would have.
+    from influencer_os.generation import validate_approval_record_binding
+
+    project = validate_approval_record_binding(
+        project_dir, record, error_class=GenerationDispatchError
+    )
 
     status = record["status"]
     if status == "draft":
@@ -111,6 +143,12 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     if status == "cancelled":
         raise GenerationDispatchError(
             f"approval record {approval_record_id!r} is cancelled"
+        )
+    if status == "executing":
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} is mid-execution or a "
+            "dispatch crashed; investigate the assets on disk and record a "
+            "new approval — an in-flight record is never re-run"
         )
     if status == "executed":
         raise GenerationDispatchError(
@@ -153,12 +191,19 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     assets_dir = project_dir / "generation" / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
 
+    # Two-phase consumption (batch-1 review finding): flip the record to
+    # `executing` BEFORE any adapter call so a crash or concurrent dispatch
+    # can never replay calls against the same approval — a leftover
+    # `executing` record refuses dispatch and demands a fresh approval.
+    record["status"] = "executing"
+    record_path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+
     calls = []
     for request in requested:
         metadata = adapter(request, assets_dir, record)
         calls.append({**metadata, "asset_id": request["asset_id"], "request": request})
 
-    # Consume the record: single-use by construction (Decision 2).
+    # Phase two: consume the record (single-use by construction, Decision 2).
     record["status"] = "executed"
     record["executed_at"] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     record["resulting_asset_ids"] = [call["asset_id"] for call in calls]

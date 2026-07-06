@@ -95,6 +95,13 @@ default.
   no code path may dispatch a generation call without an approved
   GenerationApprovalRecord id, probed by tests every slice that touches the
   package. The test suite never instantiates a real provider adapter.
+- Consumption is a two-phase compare-and-swap (slice 1-2 review hardening):
+  dispatch flips `approved -> executing` before the first adapter call and
+  `executing -> executed` after the last, so a crash or concurrent dispatch
+  can never replay calls against one approval; a leftover `executing` record
+  refuses re-dispatch and surfaces as a validation warning. The kill switch
+  is read from the real environment on every dispatch — an injected config
+  can restrict further but never re-enable.
 - New schemas: `generation-approval-record`, `generation-asset-manifest`,
   `quality-review`; `project.schema.json` `project_paths` gains the pinned
   `generation/` subtree; `output-package.schema.json` `upload_ready[]` gains

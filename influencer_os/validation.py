@@ -611,13 +611,13 @@ def validate_generation_approval_semantics(record):
                 f"generation approval {record_id}: a draft carries no "
                 "approval statement, approval timestamp, or execution fields"
             )
-    if status in ("approved", "executed"):
+    if status in ("approved", "executing", "executed"):
         if not (has_statement and has_approved_at):
             raise ValidationError(
                 f"generation approval {record_id}: status {status!r} requires "
                 "the verbatim user_approval_statement and approved_at"
             )
-    if status == "approved" and (has_executed_at or has_results):
+    if status in ("approved", "executing") and (has_executed_at or has_results):
         raise ValidationError(
             f"generation approval {record_id}: execution fields belong only "
             "on executed records"
@@ -628,13 +628,22 @@ def validate_generation_approval_semantics(record):
                 f"generation approval {record_id}: executed records require "
                 "executed_at and non-empty resulting_asset_ids"
             )
-        unknown_results = sorted(
-            set(record["resulting_asset_ids"]) - set(asset_ids)
-        )
-        if unknown_results:
+        results = record["resulting_asset_ids"]
+        duplicated_results = sorted({r for r in results if results.count(r) > 1})
+        if duplicated_results:
             raise ValidationError(
-                f"generation approval {record_id}: resulting_asset_ids not in "
-                f"the approved request: {unknown_results}"
+                f"generation approval {record_id}: duplicate "
+                f"resulting_asset_ids {duplicated_results!r}"
+            )
+        # All-or-nothing honesty (batch-1 review finding): an executed record
+        # accounts for every approved asset exactly once. Partial execution
+        # is a crashed `executing` record, never a partially-filled
+        # `executed` one.
+        if set(results) != set(asset_ids):
+            raise ValidationError(
+                f"generation approval {record_id}: resulting_asset_ids must "
+                "equal the approved requested_assets exactly; partial "
+                "execution stays in status 'executing'"
             )
     if status == "cancelled" and (has_executed_at or has_results):
         raise ValidationError(

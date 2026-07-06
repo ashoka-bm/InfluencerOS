@@ -1468,8 +1468,8 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
 
     from influencer_os.generation import validate_project_generation_records
 
-    validate_project_generation_records(project_dir, project)
-    review_warnings = _validate_review_records(project_dir, project)
+    _, generation_warnings = validate_project_generation_records(project_dir, project)
+    review_warnings = generation_warnings + _validate_review_records(project_dir, project)
     published_records = _validate_published_records(project_dir, project, output_package)
     analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)
     summary_warnings = _validate_performance_summary(

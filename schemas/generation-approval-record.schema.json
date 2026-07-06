@@ -45,7 +45,10 @@
     },
     "scope": {
       "type": "string",
-      "enum": ["single_call", "batch"]
+      "enum": [
+        "single_call",
+        "batch"
+      ]
     },
     "max_calls": {
       "type": "integer",
@@ -57,7 +60,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["asset_id", "asset_kind", "prompt_ref"],
+        "required": [
+          "asset_id",
+          "asset_kind",
+          "prompt_ref"
+        ],
         "properties": {
           "asset_id": {
             "type": "string",
@@ -65,7 +72,12 @@
           },
           "asset_kind": {
             "type": "string",
-            "enum": ["image", "video", "audio", "render"]
+            "enum": [
+              "image",
+              "video",
+              "audio",
+              "render"
+            ]
           },
           "prompt_ref": {
             "type": "string",
@@ -73,7 +85,7 @@
           },
           "filename": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^(?!\\.\\.?$)[^/\\\\\\n\\r]+$"
           },
           "notes": {
             "type": "string",
@@ -92,7 +104,13 @@
     },
     "status": {
       "type": "string",
-      "enum": ["draft", "approved", "executed", "cancelled"]
+      "enum": [
+        "draft",
+        "approved",
+        "executing",
+        "executed",
+        "cancelled"
+      ]
     },
     "executed_at": {
       "type": "string",

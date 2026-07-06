@@ -117,7 +117,7 @@ check below passes and is recorded in `progress.md`:
    marks a generation provider auto-approved (the inverse of the ADR 0022
    research-connector test).
 2. **Approval workflow records exact calls or batches.**
-   `record-generation-approval <workspace> <project> <request.json>` writes a
+   `record-generation-approval <project-dir> <request.json>` writes a
    validating GenerationApprovalRecord naming the exact provider, model,
    prompt/plan refs, scope (`single_call` or `batch` with a bounded call
    count), and the verbatim user approval statement. Dispatch (mock adapter in

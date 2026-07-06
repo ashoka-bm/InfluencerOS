@@ -189,7 +189,9 @@ class ApprovalRecordSemanticsTests(unittest.TestCase):
             validate_record("generation-approval-record", record)
         record["executed_at"] = "2026-07-06T16:10:00"
         record["resulting_asset_ids"] = ["gen_asset_never_requested"]
-        with self.assertRaisesRegex(ValidationError, "not in[\\s\\S]*approved request"):
+        with self.assertRaisesRegex(
+            ValidationError, "must[\\s\\S]*equal the approved requested_assets"
+        ):
             validate_record("generation-approval-record", record)
 
 
@@ -272,6 +274,133 @@ class DispatchConsumptionTests(unittest.TestCase):
             # Single-use: a second dispatch on the consumed record refuses.
             with self.assertRaisesRegex(GenerationDispatchError, "already consumed"):
                 dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+
+    def test_injected_config_cannot_reenable_the_kill_switch(self):
+        # Batch-1 review finding: the hard stop reads the real environment on
+        # every dispatch; config injection can only restrict further.
+        import os
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, record_id = self.approve_and_dispatch(temp_dir)
+            with mock.patch.dict(
+                os.environ, {"INFLUENCER_OS_DISABLE_PAID_CONNECTORS": "1"}
+            ):
+                with self.assertRaisesRegex(GenerationDispatchError, "kill switch"):
+                    dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+
+    def test_dispatch_refuses_forged_record_for_other_project(self):
+        # Batch-1 review finding: a hand-written approved record targeting a
+        # different project refuses at dispatch, not only at rest.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            record = load_example("generation-approval-record")
+            record["project_id"] = "project_somebody_else_001"
+            write_json(
+                project_dir
+                / "generation"
+                / "approval-records"
+                / f"{record['generation_approval_record_id']}.json",
+                record,
+            )
+            with self.assertRaisesRegex(GenerationDispatchError, "targets project"):
+                dispatch_generation(
+                    project_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_dispatch_refuses_premature_project_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)  # planning
+            record = load_example("generation-approval-record")
+            write_json(
+                project_dir
+                / "generation"
+                / "approval-records"
+                / f"{record['generation_approval_record_id']}.json",
+                record,
+            )
+            with self.assertRaisesRegex(GenerationDispatchError, "ready_for_generation"):
+                dispatch_generation(
+                    project_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_dispatch_refuses_traversal_filename(self):
+        # Batch-1 review finding: a forged filename cannot write outside
+        # generation/assets/.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            def mutate(record):
+                record["requested_assets"][0]["filename"] = "escape.bin"
+            project_dir, record_id = self.approve_and_dispatch(temp_dir, mutate=mutate)
+            # Forge the traversal AFTER recording (the schema now rejects it
+            # at write time), then confirm dispatch still refuses.
+            record_path = (
+                project_dir / "generation" / "approval-records" / f"{record_id}.json"
+            )
+            record = json.loads(record_path.read_text())
+            record["requested_assets"][0]["filename"] = "../../escape.bin"
+            record_path.write_text(json.dumps(record, indent=2) + "\n")
+            with self.assertRaisesRegex(
+                GenerationDispatchError, "does not validate|bare file name"
+            ):
+                dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+
+    def test_dispatch_refuses_executing_record(self):
+        # Two-phase consumption (batch-1 review finding): a crashed dispatch
+        # leaves `executing`, which never re-runs.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, record_id = self.approve_and_dispatch(temp_dir)
+            record_path = (
+                project_dir / "generation" / "approval-records" / f"{record_id}.json"
+            )
+            record = json.loads(record_path.read_text())
+            record["status"] = "executing"
+            record_path.write_text(json.dumps(record, indent=2) + "\n")
+            with self.assertRaisesRegex(GenerationDispatchError, "mid-execution|crashed"):
+                dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+            # And at rest it warns instead of silently passing.
+            result = validate_project(project_dir)
+            self.assertTrue(
+                any("executing" in warning for warning in result["warnings"])
+            )
+
+    def test_prompt_ref_must_point_into_the_approved_plan(self):
+        # Batch-1 review finding: a prompt from another file is unapproved
+        # content; the writer refuses it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            record_path, _ = stage_approval_record(
+                temp_dir,
+                mutate=lambda record: record["requested_assets"][0].update(
+                    prompt_ref="plan/production-plan.json#hook"
+                ),
+            )
+            with self.assertRaisesRegex(
+                ValidationError, "does not point into the approved plan_ref"
+            ):
+                record_generation_approval(project_dir, record_path)
+
+    def test_executed_results_must_cover_the_request_exactly(self):
+        record = load_example("generation-approval-record")
+        record["status"] = "executed"
+        record["executed_at"] = "2026-07-06T16:10:00"
+        record["resulting_asset_ids"] = [
+            "gen_asset_luna_tiny_reset_video_001",
+            "gen_asset_luna_tiny_reset_video_001",
+        ]
+        with self.assertRaisesRegex(ValidationError, "duplicate resulting"):
+            validate_record("generation-approval-record", record)
+        record["scope"] = "batch"
+        record["max_calls"] = 2
+        record["requested_assets"] = record["requested_assets"] + [
+            {**record["requested_assets"][0], "asset_id": "gen_asset_second"}
+        ]
+        record["resulting_asset_ids"] = ["gen_asset_luna_tiny_reset_video_001"]
+        with self.assertRaisesRegex(ValidationError, "exactly"):
+            validate_record("generation-approval-record", record)
 
     def test_dispatch_refuses_draft_and_cancelled(self):
         for status, message in (("draft", "is a draft"), ("cancelled", "is cancelled")):

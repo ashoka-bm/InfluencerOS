@@ -837,6 +837,18 @@ def _asset_source_ref_blockers(workspace_dir, manifest, assets):
                     f"{asset['asset_id']} source_ref names unrecorded intake {source_ref!r}"
                 )
             continue
+        if source_ref.startswith("gen_approval_"):
+            # A generation-approval ref resolves through
+            # references/approval-records/ (ADR 0023), not the filesystem;
+            # validate_reference_approval_records owns dangling-ref failures.
+            if not (
+                workspace_dir / "references" / "approval-records" / f"{source_ref}.json"
+            ).is_file():
+                blockers.append(
+                    f"{asset['asset_id']} source_ref names unrecorded "
+                    f"generation approval {source_ref!r}"
+                )
+            continue
         resolved = (workspace_dir / source_ref).resolve()
         if Path(source_ref).is_absolute() or not resolved.is_relative_to(workspace_root):
             blockers.append(f"{asset['asset_id']} source_ref escapes the workspace: {source_ref}")

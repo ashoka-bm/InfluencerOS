@@ -40,12 +40,6 @@ def record_generation_approval(target_path, record_path):
     Library. Records are write-once — supersede by cancelling and writing a
     new one, never by editing.
     """
-    from influencer_os.projects import (
-        PROJECT_STATUS_ORDER,
-        _ensure_contained_file,
-        _locate_workspace,
-    )
-
     target_path = Path(target_path)
     record = load_json(record_path)
     validate_record("generation-approval-record", record)
@@ -58,29 +52,7 @@ def record_generation_approval(target_path, record_path):
 
     if "project_id" in record:
         project_dir = target_path
-        manifest_path = project_dir / "project.json"
-        if not manifest_path.exists():
-            raise FileNotFoundError(f"Missing project manifest: {manifest_path}")
-        project = load_json(manifest_path)
-        if project["project_id"] != record["project_id"]:
-            raise ValidationError(
-                f"generation approval {record_id} targets project "
-                f"{record['project_id']!r} but {project_dir} is "
-                f"{project['project_id']!r}"
-            )
-        if project["creator_profile_id"] != record["creator_profile_id"]:
-            raise ValidationError(
-                f"generation approval {record_id} creator does not match the "
-                f"project: {record['creator_profile_id']!r} != "
-                f"{project['creator_profile_id']!r}"
-            )
-        if PROJECT_STATUS_ORDER[project["status"]] < PROJECT_STATUS_ORDER["ready_for_generation"]:
-            raise ValidationError(
-                f"generation approval {record_id}: project status "
-                f"{project['status']!r} is before 'ready_for_generation'; "
-                "finish planning before approving generation"
-            )
-        _resolve_plan_ref(project_dir, record_id, record["plan_ref"])
+        validate_approval_record_binding(project_dir, record)
         destination_dir = project_dir / PROJECT_APPROVALS_DIR
     else:
         workspace_dir = target_path
@@ -113,7 +85,62 @@ def record_generation_approval(target_path, record_path):
     return destination
 
 
-def _resolve_plan_ref(project_dir, record_id, plan_ref):
+def validate_approval_record_binding(project_dir, record, project=None, error_class=ValidationError):
+    """The one project-binding contract, shared by the writer, dispatch, and
+    the at-rest validator (batch-1 review finding): a project-scoped approval
+    record must belong to exactly the project directory it sits in, at a
+    generation-ready status, with every plan and prompt ref resolving inside
+    that project."""
+    from influencer_os.projects import PROJECT_STATUS_ORDER
+
+    project_dir = Path(project_dir)
+    record_id = record.get("generation_approval_record_id", "<unknown>")
+    if "project_id" not in record:
+        raise error_class(
+            f"generation approval {record_id} is reference-scoped; it cannot "
+            "be used against a project"
+        )
+    if project is None:
+        manifest_path = project_dir / "project.json"
+        if not manifest_path.exists():
+            raise error_class(f"Missing project manifest: {manifest_path}")
+        project = load_json(manifest_path)
+    if project["project_id"] != record["project_id"]:
+        raise error_class(
+            f"generation approval {record_id} targets project "
+            f"{record['project_id']!r} but {project_dir} is "
+            f"{project['project_id']!r}"
+        )
+    if project["creator_profile_id"] != record["creator_profile_id"]:
+        raise error_class(
+            f"generation approval {record_id} creator does not match the "
+            f"project: {record['creator_profile_id']!r} != "
+            f"{project['creator_profile_id']!r}"
+        )
+    if PROJECT_STATUS_ORDER[project["status"]] < PROJECT_STATUS_ORDER["ready_for_generation"]:
+        raise error_class(
+            f"generation approval {record_id}: project status "
+            f"{project['status']!r} is before 'ready_for_generation'; "
+            "finish planning before approving generation"
+        )
+    _resolve_plan_ref(project_dir, record_id, record["plan_ref"], error_class=error_class)
+    plan_file_part = record["plan_ref"].split("#", 1)[0]
+    for request in record.get("requested_assets", []):
+        prompt_ref = request.get("prompt_ref", "")
+        prompt_file_part = prompt_ref.split("#", 1)[0]
+        # Every prompt the human approved points into the approved plan
+        # (batch-1 review finding): a prompt_ref naming another file smuggles
+        # unapproved content into the call.
+        if prompt_file_part != plan_file_part:
+            raise error_class(
+                f"generation approval {record_id}: requested asset "
+                f"{request.get('asset_id')!r} prompt_ref {prompt_ref!r} does "
+                f"not point into the approved plan_ref {record['plan_ref']!r}"
+            )
+    return project
+
+
+def _resolve_plan_ref(project_dir, record_id, plan_ref, error_class=ValidationError):
     """plan_ref names the plan file the human approved; the fragment after
     '#' (a prompt pointer) is prose for the human, the file must exist."""
     from influencer_os.projects import _ensure_contained_file
@@ -121,17 +148,20 @@ def _resolve_plan_ref(project_dir, record_id, plan_ref):
     file_part = plan_ref.split("#", 1)[0]
     relative = Path(file_part)
     if relative.is_absolute() or ".." in relative.parts:
-        raise ValidationError(
+        raise error_class(
             f"generation approval {record_id}: plan_ref must be a relative "
             f"path inside the project: {plan_ref!r}"
         )
     plan_path = Path(project_dir) / relative
     if not plan_path.exists():
-        raise ValidationError(
+        raise error_class(
             f"generation approval {record_id}: plan_ref does not resolve to "
             f"a file: {plan_ref!r}"
         )
-    _ensure_contained_file(plan_path, project_dir, f"generation approval {record_id} plan_ref")
+    try:
+        _ensure_contained_file(plan_path, project_dir, f"generation approval {record_id} plan_ref")
+    except ValueError as exc:
+        raise error_class(str(exc)) from None
 
 
 def load_asset_manifest(project_dir, project=None):
@@ -335,11 +365,18 @@ def import_reference_asset(
 
 
 def validate_project_generation_records(project_dir, project):
-    """At-rest checks for generation/approval-records/*.json (slice 2)."""
+    """At-rest checks for generation/approval-records/*.json (slice 2).
+
+    Returns (records_by_id, warnings). A leftover `executing` record — a
+    crashed or in-flight dispatch — is surfaced as a warning: it refuses
+    re-dispatch by construction, and the human decides what to do with the
+    partial artifacts.
+    """
     approvals_dir = Path(project_dir) / PROJECT_APPROVALS_DIR
     records_by_id = {}
+    warnings = []
     if not approvals_dir.exists():
-        return records_by_id
+        return records_by_id, warnings
     for record_path in sorted(approvals_dir.glob("*.json")):
         record = load_json(record_path)
         try:
@@ -352,20 +389,16 @@ def validate_project_generation_records(project_dir, project):
                 f"{record_path}: filename does not match "
                 f"generation_approval_record_id {record_id!r}"
             )
-        if record.get("project_id") != project["project_id"]:
-            raise ValidationError(
-                f"generation approval {record_id} does not target this "
-                f"project: {record.get('project_id')!r} != "
-                f"{project['project_id']!r}"
+        validate_approval_record_binding(project_dir, record, project=project)
+        if record["status"] == "executing":
+            warnings.append(
+                f"warning: generation approval {record_id} is stuck in "
+                "'executing' (crashed or in-flight dispatch); it will never "
+                "re-dispatch — review generation/assets/ and record a new "
+                "approval if needed"
             )
-        if record["creator_profile_id"] != project["creator_profile_id"]:
-            raise ValidationError(
-                f"generation approval {record_id} creator does not match the "
-                "project"
-            )
-        _resolve_plan_ref(project_dir, record_id, record["plan_ref"])
         records_by_id[record_id] = record
-    return records_by_id
+    return records_by_id, warnings
 
 
 def validate_reference_approval_records(workspace_dir, reference_library):
