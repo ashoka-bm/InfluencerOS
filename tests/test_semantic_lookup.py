@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import sqlite3
 import tempfile
 import unittest
@@ -292,6 +293,29 @@ class LookupProjectionTests(unittest.TestCase):
             for row in sources:
                 self.assertNotIn("analytics", row[1])
 
+    def test_allowlisted_symlink_to_raw_analytics_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_lookup_workspace(temp_dir)
+            identity_path = workspace_dir / "brand_context" / "identity.md"
+            identity_path.unlink()
+            identity_path.symlink_to(
+                workspace_dir / "projects" / PROJECT_SLUG / "analytics" / "raw" / "export.json"
+            )
+
+            with self.assertRaises(ValidationError):
+                rebuild_lookup(workspace_dir, db_path=db_path_for(temp_dir))
+
+    def test_allowlisted_parent_symlink_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_lookup_workspace(temp_dir)
+            raw_dir = workspace_dir / "projects" / PROJECT_SLUG / "analytics" / "raw"
+            (raw_dir / "identity.md").write_text(f"# Raw\n\n{RAW_MARKER}\n")
+            shutil.rmtree(workspace_dir / "brand_context")
+            (workspace_dir / "brand_context").symlink_to(raw_dir)
+
+            with self.assertRaises(ValidationError):
+                rebuild_lookup(workspace_dir, db_path=db_path_for(temp_dir))
+
     def test_creator_scope_is_a_hard_boundary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_a = scaffold_lookup_workspace(temp_dir)
@@ -308,6 +332,33 @@ class LookupProjectionTests(unittest.TestCase):
                 hits = query_lookup(workspace, ["resets"], db_path=db_path)
                 self.assertTrue(hits)
                 self.assertEqual({hit["creator_slug"] for hit in hits}, {slug})
+
+    def test_other_creators_do_not_change_relevance_scores(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_a = scaffold_lookup_workspace(temp_dir)
+            db_path = db_path_for(temp_dir)
+            rebuild_lookup(workspace_a, db_path=db_path)
+            before = [
+                (hit["source_path"], hit["chunk_index"],
+                 round(hit["relevance"], 12), hit["final_score"])
+                for hit in query_lookup(workspace_a, ["resets"], db_path=db_path)
+            ]
+
+            workspace_b = scaffold_second_creator(temp_dir)
+            stable_dir = workspace_b / "research" / "stable-findings"
+            stable_dir.mkdir(parents=True, exist_ok=True)
+            for index in range(80):
+                (stable_dir / f"2026-07-{(index % 28) + 1:02d}-mira-{index}.md").write_text(
+                    "# Mira note\n\nresets resets resets resets resets\n"
+                )
+            rebuild_lookup(workspace_b, db_path=db_path)
+
+            after = [
+                (hit["source_path"], hit["chunk_index"],
+                 round(hit["relevance"], 12), hit["final_score"])
+                for hit in query_lookup(workspace_a, ["resets"], db_path=db_path)
+            ]
+            self.assertEqual(after, before)
 
     def test_rebuilding_one_creator_never_touches_another(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -876,19 +876,25 @@ dropping every hit. Indexed sources walk an explicit allowlist
 schema-valid manifest-anchored PerformanceSummary records — the shared
 `collect_anchored_learning_records` seam — where `index_allowed` is
 true); `analytics/`, raw exports, transcripts, and media are unreachable
-by construction. Creator scoping follows the reference `scope.ts`
-discipline: every row carries `creator_slug`, queries require one and
-filter in SQL, with a dedicated no-leak test (creator A's query never
-returns creator B's rows even on shared terms) and a
-rebuild-one-creator-never-touches-another probe. Queries are never
+by construction, and review follow-up rejects symlinked lookup source
+files or symlinked allowlist directories so allowed paths cannot alias
+denied material. Creator scoping follows the reference `scope.ts`
+discipline: every row carries `creator_slug`, queries require one,
+filter in SQL, and use a creator-local FTS table so BM25 statistics are
+not influenced by another creator's corpus, with dedicated no-leak tests
+(creator A's query never returns creator B's rows even on shared terms,
+and creator B's indexed text does not change creator A's relevance
+scores) and a rebuild-one-creator-never-touches-another probe. Queries
+are never
 persisted: `query-lookup` opens the database read-only and a test pins
 the database bytes unchanged across a query. JSON-sourced chunks cite
 the record (heading = summary id, no line numbers) instead of fake
 summary-text line positions. Verification: 523 tests pass (22 added
 across chunker determinism/provenance/window-overlap, rerank stages,
 BM25 sigmoid monotonicity, FTS5 term sanitization against operator
-injection, allowlist coverage, `index_allowed: false` exclusion,
-raw-marker absence, no-leak, delete-and-rebuild equivalence,
+injection, allowlist coverage, symlink fail-closed behavior,
+`index_allowed: false` exclusion, raw-marker absence, no-leak,
+creator-local relevance scoring, delete-and-rebuild equivalence,
 change-detection skip/re-chunk, config override and fail-closed, CLI
 happy/error paths); 43 examples validate; drift checks pass; all four
 fixture workspaces validate and `update-creators` synced 21 skills with

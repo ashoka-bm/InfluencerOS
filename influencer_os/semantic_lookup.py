@@ -14,11 +14,14 @@ Design rules carried from the reference and ADR 0011:
 - **Allowlist by construction.** The indexer walks an explicit list of
   workspace paths plus schema-valid PerformanceSummary records whose
   ``semantic_lookup.index_allowed`` is true. It never walks ``analytics/``,
-  raw exports, transcripts, or media, so raw payloads cannot leak into the
-  projection by any filter mistake.
+  raw exports, transcripts, or media, and rejects symlinked lookup sources so
+  raw payloads cannot leak into the projection by any filter mistake or path
+  alias.
 - **Creator scope is a hard leak boundary.** Every row carries
-  ``creator_slug``; queries require one and filter on it in SQL
-  (reference ``scope.ts`` discipline, covered by a dedicated no-leak test).
+  ``creator_slug``; queries require one, search a creator-local FTS table so
+  BM25 statistics cannot be influenced by another creator, and filter on the
+  real metadata columns in SQL (reference ``scope.ts`` discipline, covered by
+  dedicated no-leak tests).
 - **Deterministic chunks with provenance.** Heading-aware markdown chunking
   (soft target 1200 chars, hard cap 2000, 150-char overlap on hard splits)
   recording heading and 1-based start/end source lines — same input, same
@@ -115,17 +118,6 @@ CREATE TABLE IF NOT EXISTS lookup_chunks (
     content_date TEXT,
     indexed_on TEXT NOT NULL,
     UNIQUE (creator_slug, source_path, chunk_index)
-)
-"""
-
-# External-content FTS5: tokens only, rows resolve back to lookup_chunks by
-# rowid, so the creator-scope predicate runs on the real metadata columns.
-CREATE_FTS_SQL = """
-CREATE VIRTUAL TABLE IF NOT EXISTS lookup_fts USING fts5(
-    content,
-    heading,
-    content='lookup_chunks',
-    content_rowid='id'
 )
 """
 
@@ -360,6 +352,60 @@ def _date_from_filename(path):
     return None
 
 
+def _quote_identifier(name):
+    if not name.startswith("lookup_fts_"):
+        raise ValidationError(f"unsafe lookup table name: {name!r}")
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _fts_table_name(creator_slug):
+    digest = hashlib.sha256(creator_slug.encode()).hexdigest()[:16]
+    return f"lookup_fts_{digest}"
+
+
+def _has_symlink_component(path, root):
+    root = Path(root)
+    path = Path(path)
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return True
+    current = root
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            return True
+    return False
+
+
+def _require_lookup_source_file(path, workspace_dir):
+    """Lookup sources must be real in-workspace files, not symlink aliases.
+
+    The allowlist is meaningful only if an allowlisted path cannot redirect to
+    denied material such as analytics/raw, transcripts, media, or secrets.
+    """
+    path = Path(path)
+    workspace_dir = Path(workspace_dir)
+    if _has_symlink_component(path, workspace_dir):
+        raise ValidationError(
+            f"{path}: lookup sources must not be symlinks or live under "
+            "symlinked directories"
+        )
+    try:
+        resolved = path.resolve(strict=True)
+    except FileNotFoundError:
+        raise ValidationError(f"{path}: lookup source does not exist") from None
+    workspace_resolved = workspace_dir.resolve()
+    try:
+        resolved.relative_to(workspace_resolved)
+    except ValueError:
+        raise ValidationError(
+            f"{path}: lookup source must resolve inside {workspace_dir}"
+        ) from None
+    if not path.is_file():
+        raise ValidationError(f"{path}: lookup source must be a regular file")
+
+
 def collect_lookup_sources(workspace_dir, config=None):
     """The full indexable surface for one creator: markdown allowlist files,
     stable findings, and index-allowed PerformanceSummary narratives.
@@ -378,6 +424,7 @@ def collect_lookup_sources(workspace_dir, config=None):
 
     def add_markdown(path):
         relative = path.relative_to(workspace_dir)
+        _require_lookup_source_file(path, workspace_dir)
         text = path.read_text()
         sources.append({
             "source_path": str(relative),
@@ -394,6 +441,10 @@ def collect_lookup_sources(workspace_dir, config=None):
             add_markdown(path)
 
     stable_dir = workspace_dir / STABLE_FINDINGS_DIR
+    if stable_dir.exists() and _has_symlink_component(stable_dir, workspace_dir):
+        raise ValidationError(
+            f"{stable_dir}: lookup source directories must not be symlinks"
+        )
     if stable_dir.is_dir():
         for path in sorted(stable_dir.glob("*.md")):
             add_markdown(path)
@@ -408,6 +459,7 @@ def collect_lookup_sources(workspace_dir, config=None):
             continue
         summary_text = lookup["summary_text"]
         relative = record_path.relative_to(workspace_dir)
+        _require_lookup_source_file(record_path, workspace_dir)
         # JSON-sourced chunks cite the record, not text lines: chunker line
         # numbers would point into summary_text, not the file on disk.
         chunks = chunk_markdown(summary_text)
@@ -448,7 +500,6 @@ def rebuild_lookup(workspace_path, db_path=None):
         _require_fts5(connection)
         connection.execute(CREATE_SOURCES_SQL)
         connection.execute(CREATE_CHUNKS_SQL)
-        connection.execute(CREATE_FTS_SQL)
 
         existing = {
             row[0]: (row[1], row[2])
@@ -493,9 +544,7 @@ def rebuild_lookup(workspace_path, db_path=None):
                     for chunk in source["chunks"]
                 ],
             )
-        # External-content FTS5 does not follow table writes on its own;
-        # rebuild it from lookup_chunks so tokens always match the rows.
-        connection.execute("INSERT INTO lookup_fts(lookup_fts) VALUES('rebuild')")
+        _rebuild_creator_fts(connection, creator_slug)
         connection.commit()
     finally:
         connection.close()
@@ -518,6 +567,24 @@ def _delete_source(connection, creator_slug, source_path):
     connection.execute(
         "DELETE FROM lookup_sources WHERE creator_slug = ? AND source_path = ?",
         (creator_slug, source_path),
+    )
+
+
+def _rebuild_creator_fts(connection, creator_slug):
+    """Populate a creator-local FTS table so BM25 statistics cannot be affected
+    by another creator's corpus."""
+    table = _quote_identifier(_fts_table_name(creator_slug))
+    connection.execute(
+        f"CREATE VIRTUAL TABLE IF NOT EXISTS {table} USING fts5("
+        "content, heading, chunk_id UNINDEXED)"
+    )
+    connection.execute(f"DELETE FROM {table}")
+    connection.execute(
+        f"INSERT INTO {table} (rowid, content, heading, chunk_id) "
+        "SELECT id, content, COALESCE(heading, ''), id "
+        "FROM lookup_chunks WHERE creator_slug = ? "
+        "ORDER BY source_path, chunk_index",
+        (creator_slug,),
     )
 
 
@@ -624,13 +691,16 @@ def query_lookup(workspace_path, terms, db_path=None, limit=8):
     connection = sqlite3.connect(f"file:{db_file}?mode=ro", uri=True)
     try:
         try:
+            fts_table = _fts_table_name(creator_slug)
+            quoted_fts_table = _quote_identifier(fts_table)
             fetched = connection.execute(
                 "SELECT c.creator_slug, c.source_path, c.chunk_index, "
                 "c.heading, c.start_line, c.end_line, c.content, "
-                "c.authority_weight, c.content_date, bm25(lookup_fts) "
-                "FROM lookup_fts JOIN lookup_chunks c ON c.id = lookup_fts.rowid "
-                "WHERE lookup_fts MATCH ? AND c.creator_slug = ? "
-                "ORDER BY bm25(lookup_fts) LIMIT ?",
+                f"c.authority_weight, c.content_date, bm25({quoted_fts_table}) "
+                f"FROM {quoted_fts_table} JOIN lookup_chunks c "
+                f"ON c.id = {quoted_fts_table}.chunk_id "
+                f"WHERE {quoted_fts_table} MATCH ? AND c.creator_slug = ? "
+                f"ORDER BY bm25({quoted_fts_table}) LIMIT ?",
                 (match, creator_slug, max(limit * 4, 24)),
             ).fetchall()
         except sqlite3.OperationalError as exc:
