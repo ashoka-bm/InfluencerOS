@@ -714,7 +714,9 @@ validated, so `../../outside` and missing paths passed as provenance;
 each ref must now be a relative path resolving to an existing file inside
 the project, symlink-safe (same containment class as raw refs). 460 tests
 pass (5 added); 43 examples validate; the slice replay stays green; the
-skill contract and pipeline contract teach both rules.
+skill contract and pipeline contract teach both rules. Two process
+learnings recorded (validate the join between related id lists; every
+ref-shaped field gets an unresolvable probe in its shipping slice).
 
 Slice 2 review fixes (2026-07-05): three findings, all fixed with failing
 probes first. (P1) The pre-publication rejection lived inside
