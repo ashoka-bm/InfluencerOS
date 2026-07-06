@@ -2,12 +2,11 @@
 
 Last updated: 2026-07-06
 
-Status: **Execution-ready draft — pending approval of execution decisions
-D1–D6.** Phase 4 was rescoped from "Automation OS" to Improvement OS by the
-2026-07-06 grilling session (ADR 0025). The record designs below are written
-on the D1–D6 recommendations; approving D1–D6 (or amending them) is the
-single gate before Batch 1 starts. Record approval by updating this status
-line, matching the Phase 3 precedent.
+Status: **In execution.** The operator's 2026-07-06 directive to implement
+this plan in well-sized, individually Codex-reviewed pieces approved D1–D6 on
+their recommendations (Phase 3 precedent). Executing as three batches
+(slices 1–2, 3–4, 5), each gated by a gpt-5.5 adversarial review and fix
+batch before it counts as merged.
 
 ## Goal
 
