@@ -151,6 +151,41 @@ class AddAnalyticsSnapshotTests(unittest.TestCase):
 
             self.assertIn("earlier than", str(ctx.exception))
 
+    def test_rejects_pre_publication_snapshot_with_supplied_hours(self):
+        # Review finding: the ordering check must not depend on derivation.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            record_path = stage_snapshot_record(
+                temp_dir,
+                lambda record: record.update(
+                    snapshot_at="2026-06-28T18:30:00Z", hours_since_publish=24
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                add_analytics_snapshot(project_dir, record_path)
+
+            self.assertIn("earlier than", str(ctx.exception))
+
+    def test_rejects_symlinked_raw_ref_inside_project(self):
+        # Review finding: a symlink under analytics/raw/ pointing at another
+        # project file must not pass containment.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            link = project_dir / "analytics" / "raw" / "project-link.json"
+            link.symlink_to(Path("..") / ".." / "project.json")
+            record_path = stage_snapshot_record(
+                temp_dir,
+                lambda record: record.update(
+                    raw_source_ref="analytics/raw/project-link.json"
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                add_analytics_snapshot(project_dir, record_path)
+
+            self.assertIn("escapes root", str(ctx.exception))
+
     def test_rejects_below_published_project(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_packaged_project(temp_dir)
@@ -374,6 +409,31 @@ class ImportAnalyticsCsvTests(unittest.TestCase):
             self.assertEqual(list(snapshots_dir.glob("*.json")), [])
             validate_project(project_dir)
 
+    def test_rejects_nan_and_infinite_metric_cells(self):
+        # Review finding: float() accepts "nan"/"inf"; neither is valid JSON
+        # and NaN silently defeats the validator's min/max comparisons.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            for bad_value in ("nan", "inf", "-inf"):
+                row = csv_row_from_record(self.example_record(), overrides={"views": bad_value})
+                csv_path = write_csv(temp_dir, [row], filename=f"bad-{bad_value.strip('-')}.csv")
+
+                with self.assertRaises(ValueError) as ctx:
+                    import_analytics_csv(project_dir, csv_path)
+
+                self.assertIn("finite", str(ctx.exception))
+
+    def test_validator_rejects_nan_in_record(self):
+        from influencer_os.validation import ValidationError
+
+        record = self.example_record()
+        record["metrics"]["views"] = float("nan")
+
+        with self.assertRaises(ValidationError) as ctx:
+            validate_record("analytics-snapshot", record)
+
+        self.assertIn("not a finite number", str(ctx.exception))
+
     def test_template_file_matches_column_contract(self):
         template = (ROOT / "docs" / "templates" / "analytics" / "analytics-snapshot-template.csv")
         header = next(csv.reader(io.StringIO(template.read_text())))
@@ -423,6 +483,31 @@ class AnalyticsAtRestTests(unittest.TestCase):
                 validate_project(project_dir)
 
             self.assertIn("filename must match its id", str(ctx.exception))
+
+    def test_hand_edited_pre_publication_snapshot_at_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = self.ingested_project(temp_dir)
+            rewrite_json(
+                snapshot_destination(project_dir),
+                lambda record: record.update(snapshot_at="2026-06-28T18:30:00Z"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+
+            self.assertIn("earlier than", str(ctx.exception))
+
+    def test_symlinked_raw_file_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = self.ingested_project(temp_dir)
+            raw_file = project_dir / "analytics" / "raw" / "youtube-24h-manual-entry.json"
+            raw_file.unlink()
+            raw_file.symlink_to(Path("..") / ".." / "project.json")
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_project(project_dir)
+
+            self.assertIn("escapes root", str(ctx.exception))
 
     def test_deleted_raw_file_fails_at_rest(self):
         with tempfile.TemporaryDirectory() as temp_dir:

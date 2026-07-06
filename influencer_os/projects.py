@@ -312,7 +312,9 @@ def validate_project(project_path):
 
 
 def _write_json(path, record):
-    path.write_text(json.dumps(record, indent=2) + "\n")
+    # allow_nan=False: NaN/Infinity are not valid JSON; refuse to persist
+    # them even if a caller slipped past validation.
+    path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
 
 
 def _validate_output_package_matches_project(output_package, project):
@@ -523,6 +525,23 @@ def _validate_analytics_snapshot_matches(record, project, output_package, publis
             f"{record['platform']!r} != {published_record['platform']!r}"
         )
 
+    # A snapshot timestamped before publication is dishonest regardless of
+    # whether hours_since_publish was supplied or derived; check whenever
+    # both timestamps parse (write time and at rest).
+    snapshot_at = _parse_record_timestamp(record["snapshot_at"])
+    published_at = _parse_record_timestamp(published_record["published_at"])
+    if (
+        snapshot_at is not None
+        and published_at is not None
+        and (snapshot_at.tzinfo is None) == (published_at.tzinfo is None)
+        and snapshot_at < published_at
+    ):
+        raise ValueError(
+            "Analytics snapshot_at is earlier than the published post's "
+            f"published_at: {record['snapshot_at']!r} < "
+            f"{published_record['published_at']!r}"
+        )
+
 
 def _analytics_raw_refs(record):
     """The record's optional analytics/raw/ file references."""
@@ -536,7 +555,13 @@ def _analytics_raw_refs(record):
 
 
 def _validate_analytics_raw_refs(project_dir, record):
-    """Raw refs must stay inside analytics/raw/ and resolve to real files."""
+    """Raw refs must stay inside analytics/raw/ and resolve to real files.
+
+    Containment is checked against analytics/raw/ itself, not the project
+    root: a symlink placed inside raw/ that points at another project file
+    (or outside the project) resolves outside raw/ and is rejected.
+    """
+    raw_root = Path(project_dir) / "analytics" / "raw"
     for field, raw_ref in _analytics_raw_refs(record):
         relative_path = _safe_project_relative_path(
             raw_ref,
@@ -548,7 +573,7 @@ def _validate_analytics_raw_refs(project_dir, record):
             raise FileNotFoundError(
                 f"Analytics snapshot {field} does not resolve to a file: {raw_ref!r}"
             )
-        _ensure_contained_file(raw_path, project_dir, f"Analytics snapshot {field}")
+        _ensure_contained_file(raw_path, raw_root, f"Analytics snapshot {field}")
 
 
 def _validate_analytics_records(project_dir, project, output_package, published_records):
@@ -657,21 +682,19 @@ def _load_published_records_by_id(project_dir):
 
 
 def _derive_hours_since_publish(record, published_record):
-    """Compute hours_since_publish from the two timestamps when parseable."""
+    """Compute hours_since_publish from the two timestamps when parseable.
+
+    Ordering is already enforced by _validate_analytics_snapshot_matches
+    (which runs before derivation on every path), so the difference is
+    never negative here.
+    """
     snapshot_at = _parse_record_timestamp(record["snapshot_at"])
     published_at = _parse_record_timestamp(published_record["published_at"])
     if snapshot_at is None or published_at is None:
         return None
     if (snapshot_at.tzinfo is None) != (published_at.tzinfo is None):
         return None
-    hours = (snapshot_at - published_at).total_seconds() / 3600
-    if hours < 0:
-        raise ValueError(
-            "Analytics snapshot_at is earlier than the published post's "
-            f"published_at: {record['snapshot_at']!r} < "
-            f"{published_record['published_at']!r}"
-        )
-    return round(hours, 2)
+    return round((snapshot_at - published_at).total_seconds() / 3600, 2)
 
 
 def _upload_ready_relative_paths(output_package):

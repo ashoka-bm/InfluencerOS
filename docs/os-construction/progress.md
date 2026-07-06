@@ -672,6 +672,23 @@ to all four fixture workspaces, all validating. Full workflow replay in
 project/workspace/board validation, and index rebuild all pass. Exit
 criterion 2 of the Phase 2 plan is met.
 
+Slice 2 review fixes (2026-07-05): three findings, all fixed with failing
+probes first. (P1) The pre-publication rejection lived inside
+hours-derivation, so a snapshot with supplied `hours_since_publish` and a
+`snapshot_at` before publication ingested cleanly; the timestamp-ordering
+check moved into the shared match seam, so it now fires on every path and
+at rest (hand-edit probe added). (P2) CSV parsing accepted `nan`/`inf` via
+`float()`, the validator's min/max comparisons are silently false against
+NaN, and `json.dumps` re-emits non-standard NaN — closed at three layers:
+the CSV parser rejects non-finite numbers, the validator's number branch
+rejects them fail-closed across all schemas, and `_write_json` uses
+`allow_nan=False`. (P2) Raw-ref containment resolved against the project
+root, so a symlink inside `analytics/raw/` pointing at another project
+file passed; containment now resolves against `analytics/raw/` itself
+(write-time and at-rest symlink probes added). 439 tests pass (6 added);
+43 examples validate. Three process learnings recorded
+(derivation-branch checks, NaN fail-closed, narrowest containment root).
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.

@@ -16,6 +16,7 @@ have a matching ``examples/*.example.json`` and vice versa.
 
 import datetime
 import json
+import math
 import re
 from pathlib import Path
 
@@ -245,6 +246,11 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
                 raise ValidationError(f"{path}: {value!r} does not match {pattern!r}")
 
     if isinstance(value, (int, float)) and not isinstance(value, bool):
+        # NaN/Infinity are not valid JSON, and NaN silently defeats the
+        # min/max comparisons below (all comparisons are false). Python's
+        # json.loads accepts them by default, so reject them here fail-closed.
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValidationError(f"{path}: {value!r} is not a finite number")
         if "minimum" in schema and value < schema["minimum"]:
             raise ValidationError(f"{path}: number below minimum {schema['minimum']!r}")
         if "maximum" in schema and value > schema["maximum"]:

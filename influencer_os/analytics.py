@@ -13,6 +13,7 @@ package) are filled from the project being imported into, so a CSV cannot
 mistype them.
 """
 import csv
+import math
 from pathlib import Path
 
 from influencer_os.projects import write_analytics_snapshot
@@ -187,6 +188,10 @@ def _optional_number(cell, column):
     try:
         if value.lstrip("-").isdigit():
             return int(value)
-        return float(value)
+        number = float(value)
     except ValueError:
         raise ValueError(f"column {column!r} is not a number: {value!r}") from None
+    # float() accepts "nan"/"inf"; neither is valid JSON nor an honest metric.
+    if not math.isfinite(number):
+        raise ValueError(f"column {column!r} is not a finite number: {value!r}")
+    return number
