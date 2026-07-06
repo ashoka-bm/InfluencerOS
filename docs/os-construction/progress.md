@@ -823,6 +823,28 @@ mismatch, valid-record-without-manifest); 43 examples validate; the
 records all anchor). One process learning recorded (sweep recorded
 learning classes against every new seam of the same shape).
 
+Slice 5 review follow-up (2026-07-06): closing the review exposed an
+inversion — after the P2 fix, `rebuild-index` was the *only* command
+rejecting learning records in unanchored project folders; the fake-project
+plant passed both `validate workspace` and `validate research` (verified
+by reproduction), so a projection had become stricter than the validators
+it must never substitute for. The anchoring walk moved to one shared
+function, `collect_anchored_learning_records` in `projects.py` (the owner
+of the project layout contract), called by both the recall-index scan and
+`validate workspace` at rest — guard rule 1 (writer/projection invariants
+re-checked at rest) and guard rule 3 (multi-path checks share one
+function) applied together. Phase 1 index scans deliberately stay
+lightweight: those record types are already schema-validated,
+filename-pinned, and creator-scoped by `validate research`/`validate
+queue` (verified by a planted id-only queue entry failing at rest), so
+index-side re-validation would create a second drift-prone path for
+invariants the primary validators own. 501 tests pass (3 added — anchored
+records pass workspace validation, the unanchored plant fails it, a
+manifest-mismatched summary fails it; the slice 4 spoofed-record at-rest
+probe now asserts both layers: the lessons rule on its own seam and the
+earlier workspace-level anchoring rejection); 43 examples validate; the
+replay and all four fixture workspaces stay green.
+
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
 resolved independently, so a summary could cite one post while citing

@@ -51,6 +51,90 @@ PUBLICATION_LIVE_STATUSES = frozenset({"published", "updated", "deleted"})
 # durable at-rest snapshot data, never from a mutable flag.
 PERFORMANCE_SUMMARY_DUE_HOURS = 72
 
+# Phase 2 learning records live inside the owning project folder. The globs
+# mirror the writer layout exactly; `analytics/raw/` payloads are never
+# scanned because only the snapshots/ subfolder is named. The final flag
+# marks per-record files whose filename must equal their id (the fixed
+# performance-summary.json name is exempt).
+LEARNING_RECORD_SCANS = (
+    ("published/published-post-records/*.json",
+     "published_post_record_id", "published-post-record", True),
+    ("analytics/snapshots/*.json",
+     "analytics_snapshot_id", "analytics-snapshot", True),
+    ("performance-summary.json",
+     "performance_summary_id", "performance-summary", False),
+)
+
+
+def collect_anchored_learning_records(workspace_dir):
+    """Walk every project folder and return (path, record_type, id_field,
+    record) for each Phase 2 learning record, failing closed when a record
+    does not schema-validate, does not carry its id as the filename, or does
+    not anchor to a schema-valid sibling project manifest with a matching
+    project_id (process-learning 2026-07-06: existence of an id is not
+    existence of a record). One function shared by `validate workspace` at
+    rest and the recall-index scan, so the two checks cannot drift (slice 5
+    review follow-up)."""
+    projects_dir = Path(workspace_dir) / "projects"
+    results = []
+    if not projects_dir.is_dir():
+        return results
+    for project_dir in sorted(
+        path for path in projects_dir.iterdir() if path.is_dir()
+    ):
+        learning_files = [
+            (record_path, id_field, record_type, filename_is_id)
+            for pattern, id_field, record_type, filename_is_id
+            in LEARNING_RECORD_SCANS
+            for record_path in sorted(project_dir.glob(pattern))
+        ]
+        if not learning_files:
+            continue
+        manifest_path = project_dir / "project.json"
+        if not manifest_path.exists():
+            raise ValidationError(
+                f"{project_dir}: learning records exist but no "
+                "project.json manifest anchors them"
+            )
+        manifest = load_json(manifest_path)
+        try:
+            validate_record("project", manifest)
+        except ValidationError as exc:
+            raise ValidationError(
+                f"{manifest_path}: not a valid project manifest to "
+                f"anchor learning records: {exc}"
+            ) from None
+        for record_path, id_field, record_type, filename_is_id in learning_files:
+            record = _load_anchored_learning_record(
+                record_path, record_type, id_field, filename_is_id,
+                manifest["project_id"],
+            )
+            results.append((record_path, record_type, id_field, record))
+    return results
+
+
+def _load_anchored_learning_record(record_path, record_type, id_field,
+                                   filename_is_id, anchor_project_id):
+    record = load_json(record_path)
+    try:
+        validate_record(record_type, record)
+    except ValidationError as exc:
+        raise ValidationError(
+            f"{record_path}: not a valid {record_type} record: {exc}"
+        ) from None
+    record_id = record[id_field]
+    if filename_is_id and record_path.stem != record_id:
+        raise ValidationError(
+            f"{record_path}: filename must equal its {id_field} "
+            f"({record_id!r})"
+        )
+    if record["project_id"] != anchor_project_id:
+        raise ValidationError(
+            f"{record_path}: project_id {record['project_id']!r} does not "
+            f"match the owning manifest ({anchor_project_id!r})"
+        )
+    return record
+
 # Optional source_refs cached from the promotion for convenience; each cached
 # value must stay consistent with the locked promotion snapshot.
 PROMOTION_CACHED_SUBSETS = (

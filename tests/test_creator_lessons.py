@@ -234,6 +234,36 @@ class CreatorLessonWriteTests(unittest.TestCase):
             )
 
 
+class LearningRecordAnchoringAtRestTests(unittest.TestCase):
+    """Slice 5 review follow-up: the anchoring rule the recall index enforces
+    must also hold at rest — the workspace validator stays the strictest
+    check, and both callers share one function."""
+
+    def test_anchored_learning_records_pass_workspace_validation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            validate_creator_workspace(workspace_dir)
+
+    def test_unanchored_learning_record_fails_workspace_validation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            plant_bare_id_record(workspace_dir)
+
+            with self.assertRaisesRegex(ValidationError, "manifest"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_manifest_mismatched_learning_record_fails_workspace_validation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_summarized_project(temp_dir)
+            summary_path = project_dir / "performance-summary.json"
+            summary = json.loads(summary_path.read_text())
+            summary["project_id"] = "project_someone_elses_001"
+            summary_path.write_text(json.dumps(summary, indent=2) + "\n")
+
+            with self.assertRaisesRegex(ValidationError, "manifest"):
+                validate_creator_workspace(workspace_dir)
+
+
 class CreatorLessonAtRestTests(unittest.TestCase):
     def test_workspace_with_valid_lesson_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -287,7 +317,13 @@ class CreatorLessonAtRestTests(unittest.TestCase):
             path = learnings_path(workspace_dir)
             path.write_text(path.read_text().replace(SNAPSHOT_ID, fake_id))
 
+            # The lessons rule rejects the spoofed citation on its own
+            # layer; since the slice 5 review follow-up the workspace
+            # validator fails even earlier, because the planted record
+            # itself cannot anchor to a project manifest.
             with self.assertRaisesRegex(ValidationError, "performance_summary_fake"):
+                validate_creator_lessons(workspace_dir)
+            with self.assertRaisesRegex(ValidationError, "manifest"):
                 validate_creator_workspace(workspace_dir)
 
     def test_hand_edited_multi_post_pattern_fails_at_rest(self):

@@ -16,13 +16,14 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import (
     RESEARCH_JSONL_FILES,
     _iter_jsonl_lines,
     load_workspace_scope,
     parse_frontmatter,
 )
-from influencer_os.validation import ValidationError, load_json, validate_record
+from influencer_os.validation import ValidationError, load_json
 
 
 INDEX_DB_RELATIVE = Path("index") / "influencer-os.sqlite"
@@ -45,20 +46,6 @@ UNIQUE_RECORD_TYPES = frozenset({
     "analytics-snapshot",
     "performance-summary",
 })
-
-# Phase 2 learning records live inside the owning project folder (slice 5).
-# The globs mirror the writer layout exactly; `analytics/raw/` payloads are
-# never scanned because only the snapshots/ subfolder is named. The final
-# flag marks per-record files whose filename must equal their id (the fixed
-# performance-summary.json name is exempt).
-PROJECT_RECORD_SCANS = (
-    ("published/published-post-records/*.json",
-     "published_post_record_id", "published-post-record", True),
-    ("analytics/snapshots/*.json",
-     "analytics_snapshot_id", "analytics-snapshot", True),
-    ("performance-summary.json",
-     "performance_summary_id", "performance-summary", False),
-)
 
 INDEX_COLUMNS = (
     "record_id",
@@ -114,35 +101,6 @@ def _required_field(data, field, path):
     if not value:
         raise ValidationError(f"{path}: record has no {field}")
     return value
-
-
-def _load_anchored_project_record(record_path, record_type, id_field,
-                                  filename_is_id, anchor_project_id):
-    """Existence of an id is not existence of a record (process-learning
-    2026-07-06, slice 5 review): a Phase 2 learning record indexes only when
-    it validates against its schema, its `project_id` matches the schema-valid
-    sibling project manifest, and per-record files carry their id as the
-    filename — mirroring the memory-module evidence resolver, but failing
-    the rebuild closed instead of skipping."""
-    record = load_json(record_path)
-    try:
-        validate_record(record_type, record)
-    except ValidationError as exc:
-        raise ValidationError(
-            f"{record_path}: not a valid {record_type} record: {exc}"
-        ) from None
-    record_id = record[id_field]
-    if filename_is_id and record_path.stem != record_id:
-        raise ValidationError(
-            f"{record_path}: filename must equal its {id_field} "
-            f"({record_id!r})"
-        )
-    if record["project_id"] != anchor_project_id:
-        raise ValidationError(
-            f"{record_path}: project_id {record['project_id']!r} does not "
-            f"match the owning manifest ({anchor_project_id!r})"
-        )
-    return record
 
 
 def collect_index_rows(workspace_dir, scope=None):
@@ -233,7 +191,6 @@ def collect_index_rows(workspace_dir, scope=None):
             path for path in projects_dir.iterdir() if path.is_dir()
         ):
             manifest_path = project_dir / "project.json"
-            manifest = None
             if manifest_path.exists():
                 manifest = load_json(manifest_path)
                 project_id = _required_field(manifest, "project_id", manifest_path)
@@ -241,34 +198,15 @@ def collect_index_rows(workspace_dir, scope=None):
                         _hash_bytes(manifest_path.read_bytes()),
                         project_id=project_id)
 
-            learning_files = [
-                (record_path, id_field, record_type, filename_is_id)
-                for pattern, id_field, record_type, filename_is_id
-                in PROJECT_RECORD_SCANS
-                for record_path in sorted(project_dir.glob(pattern))
-            ]
-            if not learning_files:
-                continue
-            if manifest is None:
-                raise ValidationError(
-                    f"{project_dir}: learning records exist but no "
-                    "project.json manifest anchors them"
-                )
-            try:
-                validate_record("project", manifest)
-            except ValidationError as exc:
-                raise ValidationError(
-                    f"{manifest_path}: not a valid project manifest to "
-                    f"anchor learning records: {exc}"
-                ) from None
-            for record_path, id_field, record_type, filename_is_id in learning_files:
-                record = _load_anchored_project_record(
-                    record_path, record_type, id_field, filename_is_id,
-                    manifest["project_id"],
-                )
-                add_row(record[id_field], record_type, record_path,
-                        _hash_bytes(record_path.read_bytes()),
-                        project_id=record["project_id"])
+    # Phase 2 learning records (slice 5): the shared anchoring walk fails
+    # closed on schema-invalid, misnamed, or unanchored records; `validate
+    # workspace` runs the same function at rest.
+    for record_path, record_type, id_field, record in (
+        collect_anchored_learning_records(workspace_dir)
+    ):
+        add_row(record[id_field], record_type, record_path,
+                _hash_bytes(record_path.read_bytes()),
+                project_id=record["project_id"])
 
     board_path = workspace_dir / "boards" / "content-board.json"
     if board_path.exists():
