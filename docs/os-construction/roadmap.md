@@ -203,6 +203,45 @@ Likely implementation slices:
 5. SQL index rebuild.
 6. Semantic lookup projection.
 
+## Creative Direction Workstream (between Phase 2 and Phase 3)
+
+Goal: make creative intent first-class and continuous — the Content Beat
+Spine as the one template vocabulary, `intended_emotion`/`core_message`
+captured at the idea origin and resolved by reference, an advisory
+platform→modality→format capability model, and an advisory creative-review
+layer.
+
+Status: planned (2026-07-06). Architectural decisions are locked in ADR 0024;
+four execution-mechanics decisions are open in
+`docs/workflows/creative-direction-implementation-plan.md`. Runs on the
+creative axis and never touches `influencer_os/providers/` or generation
+machinery; Phase 3 below is independent of this workstream.
+
+Entry criteria (verified 2026-07-06):
+
+- Phase 2 Learning OS build slices are complete and reviewed.
+- ADR 0024 is recorded and the glossary terms are in `CONTEXT.md`.
+
+Exit criteria (runnable checks in the implementation plan):
+
+- Template beats carry the closed `beat_role` spine enum.
+- Intent fields are captured at the idea origin and survive promotion
+  verbatim (schema-optional, skill-required).
+- Production plans resolve intent by reference; the micro-journey plan is
+  spine-shaped.
+- Performance summaries attribute stage findings to applied spine beats.
+- `primary_surfaces`/`content_mediums` validate against the canonical enums
+  and platform fit warns without blocking.
+- The Hook/Payoff Review and both editorial Passes work and cannot block.
+
+Implementation slices, in the agreed batch order:
+
+1. Content Beat Spine + intent fields at the idea origin.
+2. Carry-through and performance alignment (micro-journey restructure).
+3. Platform, modality, and subtype sharpening.
+4. Reviews first slice (Review Record, gates-and-reviews contract,
+   Hook/Payoff Review, Clear-Writing and Human-Voice Passes).
+
 ## Phase 3: Generation OS
 
 Goal: generate or import media through approved providers while preserving provenance.
