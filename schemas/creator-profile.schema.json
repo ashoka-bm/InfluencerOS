@@ -89,11 +89,18 @@
       "required": ["strategy_summary", "primary_surfaces", "content_mediums", "in_scope_formats", "out_of_scope_formats", "research_implications", "readiness_blocker_policy"],
       "properties": {
         "strategy_summary": { "type": "string", "minLength": 1 },
-        "primary_surfaces": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "primary_surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin"]
+          }
+        },
         "content_mediums": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "enum": ["text", "image", "video", "audio", "carousel", "story_sequence"] }
+          "items": { "type": "string", "enum": ["text", "image", "video", "audio"] }
         },
         "in_scope_formats": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
         "out_of_scope_formats": { "type": "array", "items": { "type": "string", "minLength": 1 } },

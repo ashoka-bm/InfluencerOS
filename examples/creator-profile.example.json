@@ -88,14 +88,12 @@
   "content_strategy": {
     "strategy_summary": "Lead with universal short-form wellness videos and reuse the same creator foundation for carousels and story sequences when a visual sequence communicates the idea better than motion.",
     "primary_surfaces": [
-      "Instagram",
-      "TikTok",
-      "YouTube Shorts"
+      "instagram",
+      "tiktok"
     ],
     "content_mediums": [
       "video",
-      "carousel",
-      "story_sequence"
+      "image"
     ],
     "in_scope_formats": [
       "short_form_video",

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from influencer_os.research import validate_promotion_gate
 from influencer_os.validation import (
+    RESEARCH_PLATFORMS,
     TEXT_FORMAT_IDS,
     ValidationError,
     load_json,
@@ -168,11 +169,49 @@ RESEARCH_PACK_LOCATIONS = (
     ("research_", "research/social-research-packs", "social-research-pack", "social_research_pack_id"),
 )
 
-# The ADR 0020 research platform set, used to map distribution surfaces in
-# platform_targets (instagram_reels, tiktok) back to research platforms.
-RESEARCH_PLATFORMS = (
-    "x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin",
-)
+# The advisory platform → format capability map (ADR 0024, Creative
+# Direction slice 3). Fit classifications transcribed from the dated
+# 2026-07-06 capability research in
+# docs/os-construction/generation-content-cross-os-comparison.md §II-C.
+# Numeric platform limits (item caps, tier gates) deliberately stay
+# doc-side and are never validation thresholds. Guides, never gates: a
+# non-native best fit yields a platform_fit ProjectWarning and blocks
+# nothing.
+PLATFORM_FORMAT_FIT = {
+    "format_short_form_video": {
+        "instagram": "native", "tiktok": "native", "linkedin": "native",
+        "x": "native", "facebook": "native", "substack": "native",
+        "reddit": "analog", "medium": "none",
+    },
+    "format_carousel": {
+        "instagram": "native", "tiktok": "native", "linkedin": "native",
+        "reddit": "native", "facebook": "native",
+        "x": "analog", "substack": "analog", "medium": "none",
+    },
+    "format_single_image_post": {
+        "instagram": "native", "linkedin": "native", "x": "native",
+        "facebook": "native", "reddit": "native",
+        "tiktok": "analog", "substack": "analog", "medium": "none",
+    },
+    "format_story_sequence": {
+        "instagram": "native", "facebook": "native",
+        "x": "none", "tiktok": "none", "linkedin": "none",
+        "reddit": "none", "substack": "none", "medium": "none",
+    },
+    "format_article": {
+        "substack": "native", "medium": "native", "linkedin": "native",
+        "x": "native", "reddit": "native",
+        "facebook": "analog", "tiktok": "none", "instagram": "none",
+    },
+    "format_thread": {
+        "x": "native",
+        "linkedin": "subtype", "tiktok": "subtype",
+        "reddit": "analog", "facebook": "analog", "substack": "analog",
+        "medium": "none", "instagram": "none",
+    },
+}
+
+PLATFORM_FIT_RANK = {"native": 3, "subtype": 2, "analog": 1, "none": 0}
 
 
 def init_project(project_manifest_path, creator_workspace):
@@ -183,7 +222,7 @@ def init_project(project_manifest_path, creator_workspace):
     _validate_content_unit_target_format(project)
 
     _validate_creator_match(project, creator_workspace)
-    _resolve_promotion(project, creator_workspace)
+    promotion = _resolve_promotion(project, creator_workspace)
 
     project_dir = creator_workspace / "projects" / project["project_slug"]
     if project_dir.exists():
@@ -199,7 +238,78 @@ def init_project(project_manifest_path, creator_workspace):
         if not path.exists():
             path.write_text(content)
 
+    # Advisory only — computed after the project exists so a poor fit can
+    # never block creation (ADR 0024: platform guides, never gates).
+    _emit_platform_fit_warning(creator_workspace, project, promotion)
+
     return project_dir
+
+
+def _platform_fit_for_surfaces(format_id, surfaces):
+    """The creator's best advisory fit for a format across their primary
+    surfaces, per the dated capability map. Unknown formats or surfaces
+    yield no verdict (None) rather than a false 'none'."""
+    fit_by_platform = PLATFORM_FORMAT_FIT.get(format_id)
+    if not fit_by_platform:
+        return None
+    fits = [
+        fit_by_platform[surface]
+        for surface in surfaces
+        if surface in fit_by_platform
+    ]
+    if not fits:
+        return None
+    return max(fits, key=PLATFORM_FIT_RANK.__getitem__)
+
+
+def _emit_platform_fit_warning(creator_workspace, project, promotion):
+    """Append a platform_fit ProjectWarning when the project's format is not
+    native to any of the creator's primary surfaces (Creative Direction
+    slice 3). Purely advisory: this appends a record and changes nothing
+    else. Skips silently when the profile or its strategy block is missing
+    or pre-enum (legacy fixtures)."""
+    profile_path = Path(creator_workspace) / "creator-profile.json"
+    if not profile_path.exists():
+        return
+    try:
+        profile = load_json(profile_path)
+        surfaces = profile["content_strategy"]["primary_surfaces"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return
+    surfaces = [surface for surface in surfaces if surface in RESEARCH_PLATFORMS]
+    if not surfaces:
+        return
+
+    format_id = _format_id_for_content_unit(project["content_unit_type"])
+    fit = _platform_fit_for_surfaces(format_id, surfaces)
+    if fit is None or fit == "native":
+        return
+
+    warning = {
+        "project_warning_id": f"project_warning_platform_fit_{project['project_id']}",
+        "idea_queue_entry_id": promotion["idea_queue_entry_id"],
+        "idea_promotion_id": promotion["idea_promotion_id"],
+        "project_id": project["project_id"],
+        "warning_type": "platform_fit",
+        "fit_level": fit,
+        "severity": "info",
+        "message": (
+            f"{format_id} is not native to the creator's primary surfaces "
+            f"({', '.join(surfaces)}); best advisory fit is {fit!r} per the "
+            "dated capability map. Guides, never gates."
+        ),
+        "detected_on": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "suggested_actions": [
+            "Confirm the format choice is deliberate for these surfaces.",
+            "Consider a surface-native format or an additional primary surface.",
+        ],
+        "resolved_status": "open",
+    }
+    validate_record("project-warning", warning)
+    warnings_path = Path(creator_workspace) / "system" / "project-warnings.jsonl"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    with warnings_path.open("a") as stream:
+        stream.write(json.dumps(warning) + "\n")
 
 
 def register_output_package(project_path, output_package_path, asset_root=None):

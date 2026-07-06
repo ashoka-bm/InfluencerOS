@@ -60,6 +60,11 @@ Project or supersede the promotion. Do not route around the mismatch.
 - Thread: create the opening post, throughline, ordered posts, evidence to
   use, voice/style constraints, CTA, and review notes. No Base Video
   Generation Plan is required.
+- Article, carousel, and thread plans may carry an optional
+  `format_subtype` (article: `essay` / `reported_feature` /
+  `newsletter_dispatch`; carousel: `designed_slides` / `photo_set`;
+  thread: `chain` / `single_post`). Set it when the subtype changes the
+  authoring craft; omit it otherwise.
 
 ## Provenance Rules
 

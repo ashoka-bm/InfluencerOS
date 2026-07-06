@@ -369,5 +369,154 @@ class SummarySpineAlignmentTests(unittest.TestCase):
             validate_project(project_dir)
 
 
+class PlatformModalityTests(unittest.TestCase):
+    def test_primary_surfaces_outside_platform_enum_fail(self):
+        profile = load_example("creator-profile")
+        profile["content_strategy"]["primary_surfaces"] = ["YouTube Shorts"]
+        with self.assertRaisesRegex(ValidationError, "not in enum"):
+            validate_record("creator-profile", profile)
+
+    def test_content_mediums_outside_modality_enum_fail(self):
+        profile = load_example("creator-profile")
+        profile["content_strategy"]["content_mediums"] = ["video", "carousel"]
+        with self.assertRaisesRegex(ValidationError, "not in enum"):
+            validate_record("creator-profile", profile)
+
+    def test_audio_medium_yields_workspace_warning(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["content_strategy"].update(
+                    content_mediums=["video", "audio"]
+                ),
+            )
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                lambda library: library["assets"].append(
+                    {
+                        "asset_id": "asset_luna_voice_sample",
+                        "asset_type": "voice",
+                        "asset_status": "planned",
+                        "role": "Narration voice reference for audio work.",
+                        "path": "references/voice/luna-voice-sample.md",
+                        "source": {
+                            "source_type": "user_provided",
+                            "source_ref": "sources/intakes/luna-fit-breakdown.md",
+                        },
+                        "created_on": "2026-07-06",
+                        "usage_notes": "Planned voice sample; not yet recorded.",
+                        "semantic_index_allowed": False,
+                    }
+                ),
+            )
+            result = validate_creator_workspace(workspace_dir)
+            self.assertTrue(
+                any("audio" in warning for warning in result["warnings"]),
+                f"expected a standalone-audio warning, got {result['warnings']}",
+            )
+
+
+class FormatSubtypeTests(unittest.TestCase):
+    SEEDS = {
+        "article-plan": ("essay", ["reported_feature", "newsletter_dispatch"]),
+        "carousel-plan": ("designed_slides", ["photo_set"]),
+        "thread-plan": ("chain", ["single_post"]),
+    }
+
+    def test_valid_subtypes_accepted_and_optional(self):
+        for schema_name, (subtype, _) in self.SEEDS.items():
+            plan = load_example(schema_name)
+            validate_record(schema_name, plan)  # optional: absent is fine
+            plan["format_subtype"] = subtype
+            validate_record(schema_name, plan)
+
+    def test_unknown_subtype_fails(self):
+        for schema_name in self.SEEDS:
+            plan = load_example(schema_name)
+            plan["format_subtype"] = "long_form_video"
+            with self.assertRaisesRegex(ValidationError, "not in enum"):
+                validate_record(schema_name, plan)
+
+
+class PlatformFitWarningTests(unittest.TestCase):
+    def read_warnings(self, workspace_dir):
+        path = workspace_dir / "system" / "project-warnings.jsonl"
+        if not path.exists():
+            return []
+        return [
+            json.loads(line)
+            for line in path.read_text().splitlines()
+            if line.strip()
+        ]
+
+    def test_native_fit_emits_no_warning(self):
+        # Luna: instagram + tiktok surfaces, short_form_video project.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            fits = [
+                record
+                for record in self.read_warnings(workspace_dir)
+                if record["warning_type"] == "platform_fit"
+            ]
+            self.assertEqual(fits, [])
+
+    def test_off_surface_format_warns_and_never_blocks(self):
+        # An article project for an instagram/tiktok creator: best fit is
+        # `none`; the project is still created and the workspace still
+        # validates.
+        from influencer_os.projects import init_project
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                workspace_dir
+                / "research"
+                / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json",
+                lambda promotion: promotion.update(
+                    approved_formats=["format_short_form_video", "format_article"],
+                    project_ids_created=promotion["project_ids_created"]
+                    + ["project_luna_article_001"],
+                ),
+            )
+            manifest_path = Path(temp_dir) / "article-project.json"
+            project = load_example("project")
+            project.update(
+                project_id="project_luna_article_001",
+                project_slug="tiny-reset-article",
+                content_unit_type="article",
+                target_formats=["format_article"],
+                platform_targets=["instagram"],
+            )
+            project["project_paths"]["root"] = "projects/tiny-reset-article/"
+            write_json(manifest_path, project)
+            project_dir = init_project(manifest_path, creator_workspace=workspace_dir)
+            self.assertTrue((project_dir / "project.json").exists())
+
+            fits = [
+                record
+                for record in self.read_warnings(workspace_dir)
+                if record["warning_type"] == "platform_fit"
+            ]
+            self.assertEqual(len(fits), 1)
+            self.assertEqual(fits[0]["fit_level"], "none")
+            self.assertEqual(fits[0]["project_id"], "project_luna_article_001")
+            validate_record("project-warning", fits[0])
+
+    def test_fit_level_requires_platform_fit_type(self):
+        warning = load_example("project-warning")
+        warning["fit_level"] = "analog"
+        with self.assertRaisesRegex(ValidationError, "only allowed on"):
+            validate_record("project-warning", warning)
+
+    def test_platform_fit_warning_requires_fit_level(self):
+        warning = load_example("project-warning")
+        warning["warning_type"] = "platform_fit"
+        warning.pop("fit_level", None)
+        with self.assertRaisesRegex(ValidationError, "must[\\s\\S]*carry fit_level"):
+            validate_record("project-warning", warning)
+
+
 if __name__ == "__main__":
     unittest.main()

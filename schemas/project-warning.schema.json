@@ -32,8 +32,13 @@
         "schedule_slot_no_longer_fits",
         "platform_payoff_changed",
         "reference_source_unavailable",
-        "stronger_variant_found"
+        "stronger_variant_found",
+        "platform_fit"
       ]
+    },
+    "fit_level": {
+      "type": "string",
+      "enum": ["native", "subtype", "analog", "none"]
     },
     "severity": {
       "type": "string",

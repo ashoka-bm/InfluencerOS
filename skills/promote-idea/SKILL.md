@@ -91,6 +91,10 @@ the sequence before validating.
   then replace the scaffolded `evidence-brief.md` with a compact
   production-facing brief: the hook, why the evidence says it works, the
   reusable elements to copy, avoid notes, and the source evidence ids.
+- Platform fit is advisory (ADR 0024): if the project's format is not
+  native to the creator's primary surfaces, `init-project` appends a
+  `platform_fit` ProjectWarning. Mention it to the user; it never blocks
+  promotion or project creation.
 
 ## Unsupported Formats
 

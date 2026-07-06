@@ -118,6 +118,14 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "format_subtype": {
+      "type": "string",
+      "enum": [
+        "essay",
+        "reported_feature",
+        "newsletter_dispatch"
+      ]
     }
   }
 }

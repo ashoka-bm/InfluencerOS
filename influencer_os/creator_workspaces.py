@@ -101,16 +101,17 @@ CONTEXT_BYTE_CAPS = {
 
 # Deterministic subset of the creator-setup medium-based blockers, expressed
 # through the reference-library asset_type enum (readiness slice, decision 4).
+# Keyed by the pure modality enum (ADR 0024, Creative Direction slice 3):
+# carousel/story_sequence are formats, not modalities — their former brand +
+# video_style requirements ride the image modality that produces them.
 MEDIUM_REQUIRED_ASSET_KINDS = {
     "text": (),
-    "image": ("character", "brand"),
+    "image": ("character", "brand", "video_style"),
     "video": ("character", "location", "outfit", "video_style", "brand"),
     "audio": ("voice",),
-    "carousel": ("brand", "video_style"),
-    "story_sequence": ("brand", "video_style"),
 }
 
-VISUAL_MEDIUMS = {"image", "video", "carousel", "story_sequence"}
+VISUAL_MEDIUMS = {"image", "video"}
 
 # Lifecycle order: generation_ready requires required kinds at prompted or
 # later; retired assets are excluded from readiness entirely.
@@ -136,7 +137,7 @@ PRIMARY_REF_EXPECTED_TYPES = {
 PRIMARY_REF_REQUIRED_BY_MEDIUM = {
     "primary_character_asset_ids": {"image", "video"},
     "primary_location_asset_ids": {"video"},
-    "primary_video_style_asset_id": {"video", "carousel", "story_sequence"},
+    "primary_video_style_asset_id": {"image", "video"},
 }
 
 INTAKE_ID_PATTERN = re.compile(r"source_[a-zA-Z0-9_-]+")
@@ -570,12 +571,23 @@ def validate_creator_workspace(workspace_path):
     # workspace has no promotions yet.
     promotion_warnings, _, _ = validate_promotions(workspace_dir)
 
+    warnings = list(promotion_warnings)
+    # Audio is a selectable modality with no v1 production-plan schema
+    # (ADR 0024): dangling by design, so selecting it warns instead of
+    # silently implying supported standalone-audio production.
+    if "audio" in creator_profile["content_strategy"]["content_mediums"]:
+        warnings.append(
+            "warning: content_mediums includes 'audio', which has no "
+            "production plan schema yet; standalone-audio production is not "
+            "supported in v1 (ADR 0024)"
+        )
+
     return {
         "creator_slug": manifest["creator_slug"],
         "creator_profile_id": manifest["creator_profile_id"],
         "workspace_path": workspace_dir,
         "checked_paths": sorted(set(required_paths)),
-        "warnings": promotion_warnings,
+        "warnings": warnings,
     }
 
 

@@ -41,11 +41,12 @@ RESEARCH_FORMATS = [
 # applied-social-template carries the plan-layer target_format_id; those
 # copies must stay pinned too.
 ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + (
-    "project", "output-package", "applied-social-template",
+    "project", "output-package", "applied-social-template", "creator-profile",
 )
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",
     "platform_recommendations", "preferred_platforms", "source_platforms",
+    "primary_surfaces",
 }
 CONTENT_TYPE_PROPERTY_NAMES = {"platform_content_type", "source_platform_content_types"}
 FORMAT_PROPERTY_NAMES = {
@@ -385,14 +386,51 @@ class ResearchEnumDriftTests(unittest.TestCase):
         self.assertEqual(CODE_HOOK_CATEGORIES, HOOK_CATEGORIES)
         self.assertTrue(REQUIRED_BEAT_ROLES <= set(BEAT_ROLES))
 
+    def test_modality_enum_is_pinned(self):
+        # ADR 0024: content_mediums is the pure modality enum, identical in
+        # the creator-profile schema, the canonical code constant, and the
+        # medium-based readiness blocker keys.
+        from influencer_os.creator_workspaces import MEDIUM_REQUIRED_ASSET_KINDS
+        from influencer_os.validation import CONTENT_MODALITIES
+
+        expected = ["text", "image", "video", "audio"]
+        self.assertEqual(list(CONTENT_MODALITIES), expected)
+        self.assertEqual(list(MEDIUM_REQUIRED_ASSET_KINDS), expected)
+        schema = json.loads((ROOT / "schemas" / "creator-profile.schema.json").read_text())
+        mediums_enum = schema["properties"]["content_strategy"]["properties"][
+            "content_mediums"
+        ]["items"]["enum"]
+        self.assertEqual(mediums_enum, expected)
+
+    def test_platform_fit_map_covers_every_format_and_platform(self):
+        # The advisory capability map must classify all 6 formats across all
+        # 8 platforms with fit levels from the closed vocabulary — a missing
+        # cell would silently skip the platform_fit advisory.
+        from influencer_os.projects import PLATFORM_FORMAT_FIT
+        from influencer_os.validation import PLATFORM_FIT_LEVELS
+
+        self.assertEqual(sorted(PLATFORM_FORMAT_FIT), sorted(RESEARCH_FORMATS))
+        for format_id, fits in PLATFORM_FORMAT_FIT.items():
+            self.assertEqual(
+                sorted(fits), sorted(RESEARCH_PLATFORMS),
+                f"{format_id} capability row does not cover the 8 platforms",
+            )
+            for platform, fit in fits.items():
+                self.assertIn(
+                    fit, PLATFORM_FIT_LEVELS,
+                    f"{format_id}/{platform} has unknown fit {fit!r}",
+                )
+
     def test_code_constants_match_the_canonical_enums(self):
-        # The surface-mapping platform list and the production-supported
-        # format set are code copies of the canonical vocabulary; pin them
-        # like the schema copies.
+        # The canonical platform constant lives in validation.py (Creative
+        # Direction Decision A); every code copy pins to it like the schema
+        # copies do.
         from influencer_os.projects import PRODUCTION_PLAN_SCHEMAS
         from influencer_os.projects import RESEARCH_PLATFORMS as CODE_PLATFORMS
         from influencer_os.research import PRODUCTION_SUPPORTED_FORMATS
+        from influencer_os.validation import RESEARCH_PLATFORMS as CANONICAL_PLATFORMS
 
+        self.assertEqual(list(CANONICAL_PLATFORMS), RESEARCH_PLATFORMS)
         self.assertEqual(list(CODE_PLATFORMS), RESEARCH_PLATFORMS)
         self.assertTrue(PRODUCTION_SUPPORTED_FORMATS <= set(RESEARCH_FORMATS))
         self.assertEqual(

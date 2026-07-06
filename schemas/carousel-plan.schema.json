@@ -92,6 +92,13 @@
     "idea_promotion_id": {
       "type": "string",
       "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+    },
+    "format_subtype": {
+      "type": "string",
+      "enum": [
+        "designed_slides",
+        "photo_set"
+      ]
     }
   }
 }

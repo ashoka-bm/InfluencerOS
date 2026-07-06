@@ -101,6 +101,21 @@ HOOK_CATEGORIES = [
 # promotion (ADR 0024: schema-optional, skill-required).
 INTENT_FIELDS = ("intended_emotion", "core_message")
 
+# The canonical ADR 0020 8-platform set (Creative Direction Decision A:
+# per-file schema enums stay, but every copy — and every code copy — pins to
+# this one constant via the drift check).
+RESEARCH_PLATFORMS = (
+    "x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin",
+)
+
+# The pure modality enum (ADR 0024): carousel/story_sequence are formats,
+# not modalities. Audio is selectable but has no production-plan schema in
+# v1 — standalone-audio production warns.
+CONTENT_MODALITIES = ("text", "image", "video", "audio")
+
+# Advisory platform-fit vocabulary for the platform_fit ProjectWarning.
+PLATFORM_FIT_LEVELS = ("native", "subtype", "analog", "none")
+
 # Access methods for the ADR 0022 key-gated research-acquisition connectors.
 # Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
 # is active) and need not set `approval_required`.
@@ -477,6 +492,8 @@ def validate_record_semantics(schema_name, record):
         # reported as the duplicate than as the stage the repeat displaced.
         validate_unique_stages(record, "stage_findings", "PerformanceSummary")
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
+    if schema_name == "project-warning":
+        validate_platform_fit_warning_semantics(record)
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
@@ -512,6 +529,23 @@ def validate_beat_spine(record, field_name, record_name, require_coverage):
                 f"{record_name}.{field_name}: template beats skip required "
                 f"spine role(s) {sorted(missing)!r}"
             )
+
+
+def validate_platform_fit_warning_semantics(record):
+    """A platform_fit warning always names its fit level, and fit_level is
+    meaningless on any other warning type (Creative Direction slice 3)."""
+    warning_id = record.get("project_warning_id", "<unknown>")
+    if record.get("warning_type") == "platform_fit":
+        if "fit_level" not in record:
+            raise ValidationError(
+                f"project warning {warning_id}: platform_fit warnings must "
+                "carry fit_level"
+            )
+    elif "fit_level" in record:
+        raise ValidationError(
+            f"project warning {warning_id}: fit_level is only allowed on "
+            "platform_fit warnings"
+        )
 
 
 def validate_intent_carry_forward(promotion, entry):
