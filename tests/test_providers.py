@@ -286,6 +286,156 @@ class DispatchConsumptionTests(unittest.TestCase):
                     dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
 
 
+class ManifestSemanticsTests(unittest.TestCase):
+    def test_example_validates(self):
+        validate_record("generation-asset-manifest", load_example("generation-asset-manifest"))
+
+    def test_generated_row_requires_approval_binding(self):
+        manifest = load_example("generation-asset-manifest")
+        del manifest["rows"][0]["approval_record_id"]
+        with self.assertRaisesRegex(ValidationError, "missing.*approval_record_id"):
+            validate_record("generation-asset-manifest", manifest)
+
+    def test_imported_row_requires_import_source(self):
+        manifest = load_example("generation-asset-manifest")
+        del manifest["rows"][1]["import_source"]
+        with self.assertRaisesRegex(ValidationError, "requires import_source"):
+            validate_record("generation-asset-manifest", manifest)
+
+    def test_row_shapes_are_mutually_exclusive(self):
+        manifest = load_example("generation-asset-manifest")
+        manifest["rows"][1]["approval_record_id"] = "gen_approval_luna_tiny_reset_001"
+        with self.assertRaisesRegex(ValidationError, "must not carry generated-row"):
+            validate_record("generation-asset-manifest", manifest)
+
+    def test_duplicate_asset_ids_and_paths_fail(self):
+        manifest = load_example("generation-asset-manifest")
+        manifest["rows"].append(dict(manifest["rows"][1]))
+        with self.assertRaisesRegex(ValidationError, "duplicate asset ids"):
+            validate_record("generation-asset-manifest", manifest)
+
+    def test_artifact_path_outside_assets_dir_fails(self):
+        manifest = load_example("generation-asset-manifest")
+        manifest["rows"][1]["artifact_path"] = "output-package/assets/smuggled.png"
+        with self.assertRaisesRegex(ValidationError, "does not match"):
+            validate_record("generation-asset-manifest", manifest)
+
+
+class ImportGeneratedAssetTests(unittest.TestCase):
+    def stage_source(self, temp_dir, name="export.png", content=b"imported-bytes\n"):
+        source = Path(temp_dir) / name
+        source.write_bytes(content)
+        return source
+
+    def test_import_happy_path_writes_manifest_row(self):
+        from influencer_os.generation import import_generated_asset, load_asset_manifest
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir)
+            destination = import_generated_asset(
+                project_dir,
+                source,
+                "gen_asset_luna_import_001",
+                "image",
+                source="Provider web UI export",
+                tool_or_provider="external-image-tool",
+                license_text="operator-generated, full rights",
+            )
+            self.assertTrue(destination.exists())
+            manifest = load_asset_manifest(project_dir)
+            self.assertEqual(len(manifest["rows"]), 1)
+            row = manifest["rows"][0]
+            self.assertEqual(row["origin"], "imported")
+            self.assertEqual(row["artifact_path"], "generation/assets/export.png")
+            self.assertNotIn("warnings", row["import_source"])
+            validate_project(project_dir)
+
+    def test_unknown_license_is_captured_not_guessed(self):
+        from influencer_os.generation import (
+            UNKNOWN_LICENSE_WARNING,
+            import_generated_asset,
+            load_asset_manifest,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir)
+            import_generated_asset(
+                project_dir, source, "gen_asset_luna_import_002", "image"
+            )
+            row = load_asset_manifest(project_dir)["rows"][0]
+            self.assertNotIn("license", row["import_source"])
+            self.assertIn(UNKNOWN_LICENSE_WARNING, row["import_source"]["warnings"])
+
+    def test_containment_escape_filename_refused(self):
+        from influencer_os.generation import import_generated_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir)
+            with self.assertRaisesRegex(ValidationError, "bare file name"):
+                import_generated_asset(
+                    project_dir,
+                    source,
+                    "gen_asset_luna_import_003",
+                    "image",
+                    filename="../../../escape.png",
+                )
+
+    def test_duplicate_asset_id_refused_and_copy_rolled_back(self):
+        from influencer_os.generation import import_generated_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir)
+            import_generated_asset(project_dir, source, "gen_asset_dup", "image")
+            with self.assertRaisesRegex(ValidationError, "already has a manifest row"):
+                import_generated_asset(
+                    project_dir, source, "gen_asset_dup", "image", filename="second.png"
+                )
+            self.assertFalse(
+                (project_dir / "generation" / "assets" / "second.png").exists()
+            )
+
+    def test_reference_route_updates_source_block(self):
+        from influencer_os.generation import import_reference_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir, name="identity.png")
+            destination = import_reference_asset(
+                workspace_dir,
+                source,
+                "asset_luna_identity_plate",
+                origin="user_provided",
+            )
+            self.assertTrue(destination.exists())
+            library = json.loads(
+                (workspace_dir / "references" / "reference-library.json").read_text()
+            )
+            asset = next(
+                a for a in library["assets"] if a["asset_id"] == "asset_luna_identity_plate"
+            )
+            self.assertEqual(asset["asset_status"], "user_provided")
+            self.assertEqual(asset["source"]["source_type"], "user_provided")
+
+    def test_reference_route_dangling_approval_refused(self):
+        from influencer_os.generation import import_reference_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_generation_ready_project(temp_dir)
+            source = self.stage_source(temp_dir)
+            with self.assertRaisesRegex(ValidationError, "does not resolve"):
+                import_reference_asset(
+                    workspace_dir,
+                    source,
+                    "asset_luna_identity_plate",
+                    origin="imported",
+                    approval_record_id="gen_approval_never_recorded",
+                )
+
+
 class ListProvidersCliTests(unittest.TestCase):
     def test_list_providers_reports_exact_approval(self):
         result = subprocess.run(

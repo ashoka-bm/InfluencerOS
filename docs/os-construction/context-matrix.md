@@ -47,6 +47,7 @@ InfluencerOS has two context scopes:
 | Creative review | summary | lazy | lazy | summary | lazy | never | lazy | writes | never |
 | Editorial pass | summary | summary | summary | full | full | never | never | full | never |
 | Generation approval | summary | never | never | never | never | lazy | never | writes | never |
+| Generation asset intake | summary | never | never | never | never | writes | never | writes | never |
 
 ## Skill Coverage
 
@@ -72,6 +73,7 @@ Current workflow coverage:
 | `clear-writing-pass` | Editorial pass |
 | `human-voice-pass` | Editorial pass |
 | `request-generation-approval` | Generation approval |
+| `import-generated-asset` | Generation asset intake |
 | `create-creator-profile` | Creator setup |
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |

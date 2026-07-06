@@ -43,6 +43,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `clear-writing-pass` | clear writing pass, declutter draft text, tighten copy | drafted article/thread/caption/plan text | none (returns rewritten text + change trace in conversation; no record) | yes |
 | `human-voice-pass` | human voice pass, strip AI tells, make it sound like the creator | drafted text, Creator Profile voice constraints, voice samples, brand context | none (returns rewritten text + change trace in conversation; no record) | yes |
 | `request-generation-approval` | request generation approval, package a provider call for approval, record generation approval | Base Video Generation Plan (or reference asset entry), provider registry via `list-providers`, provider boundary | `projects/<project-slug>/generation/approval-records/` (or `references/approval-records/`) via `record-generation-approval` | yes |
+| `import-generated-asset` | import generated media, bring in an external export, register user-provided media | operator provenance answers (source, tool, license), project manifest or Reference Library | `generation/assets/` + `generation/asset-manifest.json` row (or reference asset path + source block) via `import-generated-asset` | yes |
 
 ## Creator Setup Subskills
 

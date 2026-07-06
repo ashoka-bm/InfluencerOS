@@ -128,6 +128,23 @@ def main(argv=None):
     gen_approval_parser.add_argument("target", help="Project directory (project scope) or creator workspace (reference scope).")
     gen_approval_parser.add_argument("record_file", help="Path to the GenerationApprovalRecord JSON to validate and record.")
 
+    import_asset_parser = subparsers.add_parser("import-generated-asset", help="Import an externally generated or user-provided media file with full provenance (ADR 0023 slice 3): copies into generation/assets/ and writes the asset-manifest row, or routes into the Reference Library with --reference-asset.")
+    import_asset_parser.add_argument("target", help="Project directory, or the creator workspace when using --reference-asset.")
+    import_asset_parser.add_argument("source_file", help="Local media file to import.")
+    import_asset_parser.add_argument("--asset-id", help="Manifest asset id (gen_asset_...); required for project imports.")
+    import_asset_parser.add_argument("--asset-kind", choices=["image", "video", "audio", "render"], help="Asset kind; required for project imports.")
+    import_asset_parser.add_argument("--origin", choices=["imported", "user_provided"], default="imported", help="Provenance origin (default imported).")
+    import_asset_parser.add_argument("--filename", help="Destination filename (defaults to the source file name).")
+    import_asset_parser.add_argument("--source", help="Where the asset came from (URL, tool export, operator note).")
+    import_asset_parser.add_argument("--tool", dest="tool_or_provider", help="Tool or provider that produced the asset, when known.")
+    import_asset_parser.add_argument("--license", dest="license_text", help="License or usage-rights statement; omitted = a license-unknown warning is recorded, never guessed.")
+    import_asset_parser.add_argument("--creator", help="Original creator, when applicable.")
+    import_asset_parser.add_argument("--attribution", help="Required attribution, when applicable.")
+    import_asset_parser.add_argument("--warning", action="append", default=[], help="Provenance warning to record (repeatable).")
+    import_asset_parser.add_argument("--notes", help="Free-form provenance notes.")
+    import_asset_parser.add_argument("--reference-asset", help="Route the import to this Reference Library asset id instead of a project.")
+    import_asset_parser.add_argument("--approval-record", help="Reference route only: the gen_approval_ record that authorized the generation, when one exists.")
+
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
     fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin"], help="Connector to run.")
     fetch_parser.add_argument("target", help="Topic (reddit/x), page URL (firecrawl), or profile URL (linkedin).")
@@ -387,6 +404,43 @@ def main(argv=None):
 
             destination = record_generation_approval(args.target, args.record_file)
             print(f"Recorded generation approval: {destination}")
+            return 0
+
+        if args.command == "import-generated-asset":
+            from influencer_os.generation import (
+                import_generated_asset,
+                import_reference_asset,
+            )
+
+            if args.reference_asset:
+                destination = import_reference_asset(
+                    args.target,
+                    args.source_file,
+                    args.reference_asset,
+                    origin=args.origin,
+                    approval_record_id=args.approval_record,
+                )
+            else:
+                if not args.asset_id or not args.asset_kind:
+                    raise ValueError(
+                        "import-generated-asset requires --asset-id and --asset-kind for project imports"
+                    )
+                destination = import_generated_asset(
+                    args.target,
+                    args.source_file,
+                    args.asset_id,
+                    args.asset_kind,
+                    origin=args.origin,
+                    filename=args.filename,
+                    source=args.source,
+                    tool_or_provider=args.tool_or_provider,
+                    license_text=args.license_text,
+                    creator=args.creator,
+                    attribution=args.attribution,
+                    warnings=args.warning,
+                    notes=args.notes,
+                )
+            print(f"Imported generated asset: {destination}")
             return 0
 
         if args.command == "list-providers":

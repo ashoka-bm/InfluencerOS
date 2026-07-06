@@ -11,6 +11,7 @@ dependencies:
   - clear-writing-pass
   - human-voice-pass
   - request-generation-approval
+  - import-generated-asset
   - create-output-package
   - register-published-post
   - ingest-analytics
@@ -54,6 +55,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `clear-writing-pass` | Clarity rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
 | `human-voice-pass` | Creator-voice rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
 | `request-generation-approval` | GenerationApprovalRecord packaging the exact approved call/batch (gate stays human) | [BUILT — Phase 3 slice 2] |
+| `import-generated-asset` | Externally generated/user media imported with manifest provenance | [BUILT — Phase 3 slice 3] |
 | `create-output-package` | Output Package + provenance | [BUILT — Phase 1 slice 7] |
 | `register-published-post` | PublishedPostRecord + Project published status | [BUILT — Phase 2 slice 1] |
 | `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
@@ -77,6 +79,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [BUILT] |
 | 9b. Creative review (advisory, after plan drafting) | `review-hook-payoff`; editorial rewrites via `clear-writing-pass` / `human-voice-pass` | `Skill(skill: "review-hook-payoff")`, `Skill(skill: "clear-writing-pass")`, `Skill(skill: "human-voice-pass")` | [BUILT — Creative Direction slice 4] |
 | 10. Generation Approval Gate | user (exact-call approval); `request-generation-approval` packages the exact call/batch as a GenerationApprovalRecord | `Skill(skill: "request-generation-approval")` | [BUILT gate + record — Phase 3 slice 2] |
+| 10b. External media import (no provider call) | `import-generated-asset` | `Skill(skill: "import-generated-asset")` | [BUILT — Phase 3 slice 3] |
 | Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [BUILT] |
 | Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` | [BUILT — Phase 2 slice 1] |
 | Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [BUILT — Phase 2 slice 2] |

@@ -503,6 +503,8 @@ def validate_record_semantics(schema_name, record):
         validate_review_record_semantics(record)
     if schema_name == "generation-approval-record":
         validate_generation_approval_semantics(record)
+    if schema_name == "generation-asset-manifest":
+        validate_generation_manifest_semantics(record)
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
@@ -639,6 +641,66 @@ def validate_generation_approval_semantics(record):
             f"generation approval {record_id}: cancelled records carry no "
             "execution fields"
         )
+
+
+def validate_generation_manifest_semantics(record):
+    """GenerationAssetManifest semantics (ADR 0023 Decision 4).
+
+    The ledger is the single provenance surface: rows are unique per asset
+    and artifact, a generated row must bind to its approval record and plan
+    prompt (viz-image-gen lineage), and an imported/user-provided row must
+    carry its import origin (tool-image-search lineage) — never both shapes
+    on one row.
+    """
+    rows = record.get("rows", [])
+    asset_ids = [row.get("asset_id") for row in rows]
+    duplicate_assets = sorted({a for a in asset_ids if asset_ids.count(a) > 1})
+    if duplicate_assets:
+        raise ValidationError(
+            f"GenerationAssetManifest: duplicate asset ids {duplicate_assets!r}"
+        )
+    paths = [row.get("artifact_path") for row in rows]
+    duplicate_paths = sorted({p for p in paths if paths.count(p) > 1})
+    if duplicate_paths:
+        raise ValidationError(
+            f"GenerationAssetManifest: duplicate artifact paths {duplicate_paths!r}"
+        )
+    for row in rows:
+        asset_id = row.get("asset_id", "<unknown>")
+        if row.get("origin") == "generated":
+            missing = [
+                field
+                for field in ("approval_record_id", "plan_prompt_ref", "provider_call")
+                if field not in row
+            ]
+            if missing:
+                raise ValidationError(
+                    f"GenerationAssetManifest: generated row {asset_id} is "
+                    f"missing {missing!r}; generated assets bind to their "
+                    "approval record and plan prompt"
+                )
+            if "import_source" in row:
+                raise ValidationError(
+                    f"GenerationAssetManifest: generated row {asset_id} must "
+                    "not carry import_source"
+                )
+        else:
+            if "import_source" not in row:
+                raise ValidationError(
+                    f"GenerationAssetManifest: {row.get('origin')} row "
+                    f"{asset_id} requires import_source"
+                )
+            forbidden = [
+                field
+                for field in ("approval_record_id", "plan_prompt_ref", "provider_call")
+                if field in row
+            ]
+            if forbidden:
+                raise ValidationError(
+                    f"GenerationAssetManifest: {row.get('origin')} row "
+                    f"{asset_id} must not carry generated-row fields "
+                    f"{forbidden!r}"
+                )
 
 
 def validate_review_record_semantics(record):

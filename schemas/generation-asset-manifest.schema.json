@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/generation-asset-manifest.schema.json",
+  "title": "GenerationAssetManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project_id", "creator_profile_id", "rows"],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "pattern": "^project_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "origin", "asset_kind", "artifact_path", "content_hash", "recorded_at"],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "pattern": "^gen_asset_[a-zA-Z0-9_-]+$"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["generated", "imported", "user_provided"]
+          },
+          "asset_kind": {
+            "type": "string",
+            "enum": ["image", "video", "audio", "render"]
+          },
+          "approval_record_id": {
+            "type": "string",
+            "pattern": "^gen_approval_[a-zA-Z0-9_-]+$"
+          },
+          "plan_prompt_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider_call": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider_id", "model", "params_hash"],
+            "properties": {
+              "provider_id": { "type": "string", "minLength": 1 },
+              "model": { "type": "string", "minLength": 1 },
+              "params_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "requested_at": { "type": "string", "format": "date-time" },
+              "completed_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          "import_source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source"],
+            "properties": {
+              "source": { "type": "string", "minLength": 1 },
+              "tool_or_provider": { "type": "string", "minLength": 1 },
+              "license": { "type": "string", "minLength": 1 },
+              "creator": { "type": "string", "minLength": 1 },
+              "attribution": { "type": "string", "minLength": 1 },
+              "warnings": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "artifact_path": {
+            "type": "string",
+            "pattern": "^generation/assets/(?!\\.\\.?$)[^/\\n\\r]+$"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
