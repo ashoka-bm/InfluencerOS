@@ -1198,17 +1198,27 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     generation_plan = None
     output_package = None
 
-    if _status_at_least(project, "planning"):
+    # Plan records are required at planning+ but validated whenever they
+    # exist (slice 2 review finding): a plan written prematurely on a
+    # `created` project must satisfy the same contracts, not wait for the
+    # status flip to be checked.
+    plans_required = _status_at_least(project, "planning")
+    applied_template_path = project_dir / "plan" / "applied-template.json"
+    production_plan_path = project_dir / "plan" / "production-plan.json"
+    generation_plan_path = project_dir / "plan" / "generation-plan.json"
+
+    if plans_required or applied_template_path.exists():
         applied_template = _validate_project_record(
-            project_dir / "plan" / "applied-template.json",
+            applied_template_path,
             "applied-social-template",
         )
-        production_plan_schema = _production_plan_schema(project)
+    if plans_required or production_plan_path.exists():
         production_plan = _validate_project_record(
-            project_dir / "plan" / "production-plan.json",
-            production_plan_schema,
+            production_plan_path,
+            _production_plan_schema(project),
         )
 
+    if applied_template is not None:
         if applied_template["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
                 "Applied template idea_promotion_id does not match project source_refs: "
@@ -1223,15 +1233,12 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                 f"target_formats: {applied_template['target_format_id']!r} "
                 f"not in {sorted(project['target_formats'])}"
             )
+
+    if production_plan is not None:
         if production_plan["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
             raise ValueError(
                 "Production plan idea_promotion_id does not match project source_refs: "
                 f"{production_plan['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
-            )
-        if production_plan["applied_social_template_id"] != applied_template["applied_social_template_id"]:
-            raise ValueError(
-                "Production plan applied_social_template_id does not match applied template: "
-                f"{production_plan['applied_social_template_id']!r} != {applied_template['applied_social_template_id']!r}"
             )
         # Intent is resolved by reference (ADR 0024): the canonical
         # intended_emotion lives on the locked promotion, and a plan that
@@ -1252,16 +1259,28 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                     "intent is resolved by reference, never overridden"
                 )
 
-        if _requires_generation_plan(project):
-            generation_plan = _validate_project_record(
-                project_dir / "plan" / "generation-plan.json",
-                "base-video-generation-plan",
+    if applied_template is not None and production_plan is not None:
+        if production_plan["applied_social_template_id"] != applied_template["applied_social_template_id"]:
+            raise ValueError(
+                "Production plan applied_social_template_id does not match applied template: "
+                f"{production_plan['applied_social_template_id']!r} != {applied_template['applied_social_template_id']!r}"
             )
-            if generation_plan["micro_journey_video_plan_id"] != production_plan["micro_journey_video_plan_id"]:
-                raise ValueError(
-                    "Generation plan micro_journey_video_plan_id does not match production plan: "
-                    f"{generation_plan['micro_journey_video_plan_id']!r} != {production_plan['micro_journey_video_plan_id']!r}"
-                )
+
+    if _requires_generation_plan(project) and (
+        plans_required or generation_plan_path.exists()
+    ):
+        generation_plan = _validate_project_record(
+            generation_plan_path,
+            "base-video-generation-plan",
+        )
+        if (
+            production_plan is not None
+            and generation_plan["micro_journey_video_plan_id"] != production_plan["micro_journey_video_plan_id"]
+        ):
+            raise ValueError(
+                "Generation plan micro_journey_video_plan_id does not match production plan: "
+                f"{generation_plan['micro_journey_video_plan_id']!r} != {production_plan['micro_journey_video_plan_id']!r}"
+            )
 
     if _status_at_least(project, "packaged"):
         output_package = _validate_project_record(

@@ -467,7 +467,7 @@ def validate_record_semantics(schema_name, record):
         validate_beat_spine(record, "beat_sequence", "SocialTemplate", require_coverage=True)
     if schema_name == "applied-social-template":
         validate_beat_spine(
-            record, "applied_beats", "AppliedSocialTemplate", require_coverage=False
+            record, "applied_beats", "AppliedSocialTemplate", require_coverage=True
         )
     if schema_name == "output-package":
         validate_required_stages(record, "creative_performance_map", "OutputPackage")
@@ -487,11 +487,12 @@ def validate_beat_spine(record, field_name, record_name, require_coverage):
     """Content Beat Spine semantics (ADR 0024, Creative Direction slice 1).
 
     The schema pins beat_role to the closed enum; this closes the gaps the
-    schema cannot express: a template must land at least a hook and a payoff
-    (require_coverage), and hook_category may only annotate a hook-role beat.
-    Applied templates skip the coverage check — a legitimate application may
-    drop a template's cta/packaging beat, and the learning loop records the
-    absence as a `not_used` stage finding instead.
+    schema cannot express: templates and applied templates must land at
+    least a hook and a payoff (slice 2 review finding: hook/payoff stage
+    findings must always have an applied beat to attribute to), and
+    hook_category may only annotate a hook-role beat. Dropping a template's
+    cta/packaging beat stays legitimate — the learning loop records an
+    absent CTA as a `not_used` stage finding instead.
     """
     beats = [
         beat for beat in record.get(field_name, []) if isinstance(beat, dict)

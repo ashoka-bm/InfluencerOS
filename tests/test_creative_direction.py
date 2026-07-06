@@ -112,8 +112,8 @@ class BeatSpineTests(unittest.TestCase):
             validate_record("applied-social-template", applied)
 
     def test_applied_template_may_drop_cta_and_packaging(self):
-        # Coverage binds templates, not applications: the learning loop
-        # records an absent CTA as a `not_used` stage finding instead.
+        # Dropping cta/packaging stays legitimate: the learning loop records
+        # an absent CTA as a `not_used` stage finding instead.
         applied = load_example("applied-social-template")
         applied["applied_beats"] = [
             beat
@@ -121,6 +121,20 @@ class BeatSpineTests(unittest.TestCase):
             if beat["beat_role"] in {"hook", "retain", "payoff"}
         ]
         validate_record("applied-social-template", applied)
+
+    def test_applied_template_dropping_hook_or_payoff_fails(self):
+        # Slice 2 review finding: hook/payoff stage findings must always
+        # have an applied beat to attribute to, so applications may never
+        # drop them.
+        for dropped in ("hook", "payoff"):
+            applied = load_example("applied-social-template")
+            applied["applied_beats"] = [
+                beat
+                for beat in applied["applied_beats"]
+                if beat["beat_role"] != dropped
+            ]
+            with self.assertRaisesRegex(ValidationError, "skip required spine role"):
+                validate_record("applied-social-template", applied)
 
 
 class SeededTemplateLibraryTests(unittest.TestCase):
@@ -254,6 +268,22 @@ class IntentResolveByReferenceTests(unittest.TestCase):
     def test_plan_overriding_promotion_intent_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "plan" / "production-plan.json",
+                lambda plan: plan.update(intended_emotion="triumphant awe"),
+            )
+            with self.assertRaisesRegex(ValueError, "overrides the locked promotion"):
+                validate_project(project_dir)
+
+    def test_premature_plan_on_created_project_still_checked(self):
+        # Slice 2 review finding: plan records validate whenever they exist,
+        # not only once the project reaches planning status.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project.update(status="created"),
+            )
             rewrite_json(
                 project_dir / "plan" / "production-plan.json",
                 lambda plan: plan.update(intended_emotion="triumphant awe"),

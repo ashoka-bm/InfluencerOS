@@ -955,12 +955,23 @@ def _check_queue_consistency(workspace_dir, scope):
     return entries
 
 
-def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
+def validate_promotion_gate(
+    workspace_dir,
+    promotion,
+    projects_by_id=None,
+    research_ids=None,
+    video_pack_ids=None,
+    known_finding_ids=None,
+):
     """Enforce the promotion gate (Phase 0C workstream 12 residue).
 
     A promotion must point to a real idea queue entry. Unresolved evidence
     refs warn for human-approved promotions (the human saw the evidence) and
     fail for any future automated promotion path. Returns warning strings.
+
+    The optional research_ids / video_pack_ids / known_finding_ids caches let
+    validate_promotions collect the research corpus once instead of per
+    promotion (slice 2 review finding).
     """
     workspace_dir = Path(workspace_dir)
     promotion_id = promotion["idea_promotion_id"]
@@ -994,8 +1005,11 @@ def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
     check_promotion_created_projects(promotion, projects_by_id)
     check_promotion_slot_claims(workspace_dir, promotion)
 
-    evidence_runs, metric_runs, metric_evidence = collect_research_record_ids(workspace_dir)
-    video_pack_ids = collect_video_pack_ids(workspace_dir)
+    if research_ids is None:
+        research_ids = collect_research_record_ids(workspace_dir)
+    evidence_runs, metric_runs, metric_evidence = research_ids
+    if video_pack_ids is None:
+        video_pack_ids = collect_video_pack_ids(workspace_dir)
     warnings = []
 
     unresolved = []
@@ -1016,7 +1030,8 @@ def validate_promotion_gate(workspace_dir, promotion, projects_by_id=None):
             f"warning: {message} (human-approved promotion: warning only)"
         )
 
-    known_finding_ids = collect_finding_ids(workspace_dir)
+    if known_finding_ids is None:
+        known_finding_ids = collect_finding_ids(workspace_dir)
     unresolved_findings = sorted(
         finding_id
         for finding_id in set(promotion.get("research_finding_ids", []))
@@ -1048,6 +1063,11 @@ def validate_promotions(workspace_path, scope=None):
     promotions_by_id = {}
     if promotions_dir.exists():
         projects_by_id = collect_project_manifests(workspace_dir)
+        # Collect the research corpus once for the whole sweep; the gate
+        # would otherwise rescan it per promotion.
+        research_ids = collect_research_record_ids(workspace_dir)
+        video_pack_ids = collect_video_pack_ids(workspace_dir)
+        known_finding_ids = collect_finding_ids(workspace_dir)
         claimed_slots = {}
         for promotion_path in sorted(promotions_dir.glob("*.json")):
             promotion = load_json(promotion_path)
@@ -1063,7 +1083,12 @@ def validate_promotions(workspace_path, scope=None):
             check_creator_scope(promotion, scope, promotion_path)
             warnings.extend(
                 validate_promotion_gate(
-                    workspace_dir, promotion, projects_by_id=projects_by_id
+                    workspace_dir,
+                    promotion,
+                    projects_by_id=projects_by_id,
+                    research_ids=research_ids,
+                    video_pack_ids=video_pack_ids,
+                    known_finding_ids=known_finding_ids,
                 )
             )
             if promotion["promotion_status"] == "active":
