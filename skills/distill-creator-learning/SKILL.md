@@ -52,12 +52,12 @@ python3 -m influencer_os log-learning <creator-workspace>/memory/learnings.md \
 - `<topic>` is the applies-to grouping (e.g. `hooks`, `packaging`,
   `posting time`) — reuse the PerformanceSummary `applies_to` vocabulary
   and existing topic headings before inventing a new one.
-- `--evidence` ids must resolve to real workspace records: performance
-  summaries, published post records, analytics snapshots, projects, or
-  output packages. Cite the PerformanceSummary you distilled from at
-  minimum; the deeper chain resolves through it. The write fails on a
-  dangling id, and `validate workspace` re-fails a hand-edited one at
-  rest.
+- `--evidence` ids must resolve to schema-valid workspace records
+  anchored to their project manifest: performance summaries, published
+  post records, analytics snapshots, projects, or output packages. Cite
+  the PerformanceSummary you distilled from at minimum; the deeper chain
+  resolves through it. The write fails on a dangling or spoofed id, and
+  `validate workspace` re-fails a hand-edited one at rest.
 - The writer enforces the parseable entry format
   (`- YYYY-MM-DD [strength]: lesson (evidence: id, ...)`); duplicates
   within a topic are no-ops.
@@ -74,7 +74,11 @@ python3 -m influencer_os log-learning <creator-workspace>/memory/learnings.md \
   records cover distinct posts. When a new summary repeats an existing
   `single_post_signal` lesson, write the consolidated lesson as
   `multi_post_pattern` citing both summaries rather than adding a
-  near-duplicate.
+  near-duplicate. This is enforced, not advisory: the writer and
+  `validate workspace` count the distinct published posts the cited
+  evidence identifies (direct post ids, snapshots' parent posts, a
+  summary's cited post list — project/package ids identify none) and
+  refuse `multi_post_pattern` below two.
 - `weak_signal`: provisional or incomplete data (pre-latency snapshots,
   unmeasured stages, confounded timing). Never dress a weak signal up as
   a pattern.

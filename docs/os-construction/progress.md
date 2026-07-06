@@ -742,6 +742,28 @@ dangling-evidence writes rejected → durable fact promoted via
 dangling evidence fails at rest, restored copy green → board/index/prune
 green. Exit criterion 4 of the Phase 2 plan is met.
 
+Slice 4 review fixes (2026-07-06): three findings, each reproduced by the
+reviewer before the fix and pinned by a failing probe. (P2) Evidence
+resolution trusted any JSON carrying the right id field — a planted
+`projects/fake-project/performance-summary.json` containing only
+`{"performance_summary_id": ...}` resolved as evidence and validated at
+rest; candidates now resolve only when they validate against their schema
+(record semantics included) and are anchored to a schema-valid
+`project.json` in the same project folder, with per-record files also
+required to carry their id as the filename. (P2) `multi_post_pattern` was
+only enum-checked while the skill contract calls it a multiple-post
+claim; the writer and `validate workspace` now count the distinct
+published posts the cited evidence identifies (direct post ids,
+snapshots' parent posts, a summary's cited post list — project/package
+ids identify none) and refuse the strength below two. (P3) Section-scoped
+checks read the first `## Creator Lessons` heading, so a second section's
+content escaped validation; duplicate headings are now rejected by both
+the writer and the at-rest validator. 489 tests pass (7 probes added:
+spoofed-record write and at-rest, multi-post write reject/accept and
+at-rest hand-edit, duplicate-section write and at-rest); 43 examples
+validate; the skill contract, workspace-structure, ARCHITECTURE, and
+pipeline-contract docs teach all three rules.
+
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
 resolved independently, so a summary could cite one post while citing

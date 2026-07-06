@@ -21,8 +21,10 @@ from influencer_os.memory import (
     creator_lessons_workspace,
     validate_creator_lessons,
 )
+from influencer_os.projects import register_published_post
 from influencer_os.validation import ValidationError
 from tests.test_performance_summary import scaffold_summarized_project
+from tests.test_published_posts import stage_published_record
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +52,29 @@ def append_lesson(workspace_dir, **overrides):
 
 def learnings_path(workspace_dir):
     return workspace_dir / "memory" / "learnings.md"
+
+
+def plant_bare_id_record(workspace_dir):
+    """A spoofed record: right id field, no valid record or project chain."""
+    fake_dir = workspace_dir / "projects" / "fake-project"
+    fake_dir.mkdir(parents=True, exist_ok=True)
+    (fake_dir / "performance-summary.json").write_text(
+        '{"performance_summary_id": "performance_summary_fake"}\n'
+    )
+    return "performance_summary_fake"
+
+
+def register_second_post(temp_dir, project_dir):
+    def second_post(record):
+        record["published_post_record_id"] = "ppr_luna_tiny_reset_youtube_002"
+        record["public_url"] = "https://youtube.com/shorts/example-luna-tiny-reset-2"
+        record["platform_post_id"] = "yt_short_luna_tiny_reset_002"
+
+    register_published_post(
+        project_dir,
+        stage_published_record(temp_dir, mutate=second_post, filename="second-post.json"),
+    )
+    return "ppr_luna_tiny_reset_youtube_002"
 
 
 class CreatorLessonWriteTests(unittest.TestCase):
@@ -150,6 +175,52 @@ class CreatorLessonWriteTests(unittest.TestCase):
             self.assertNotIn("[single_post_signal]", skills_section)
             self.assertIn("[single_post_signal]", lessons_section)
 
+    def test_bare_id_record_does_not_resolve_as_evidence(self):
+        # P2 review finding (2026-07-06): a planted JSON carrying only the id
+        # field previously resolved; candidates must be schema-valid records
+        # anchored to a valid project manifest.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            fake_id = plant_bare_id_record(workspace_dir)
+
+            with self.assertRaisesRegex(ValidationError, "performance_summary_fake"):
+                append_lesson(workspace_dir, evidence_ids=[fake_id])
+
+    def test_multi_post_pattern_requires_evidence_spanning_two_posts(self):
+        # P2 review finding (2026-07-06): the strength was only enum-checked;
+        # the skill contract says multi_post_pattern needs multiple posts.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+
+            with self.assertRaisesRegex(ValidationError, "two distinct published posts"):
+                append_lesson(workspace_dir, strength="multi_post_pattern")
+
+    def test_multi_post_pattern_accepts_evidence_spanning_two_posts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_summarized_project(temp_dir)
+            second_post_id = register_second_post(temp_dir, project_dir)
+
+            result = append_lesson(
+                workspace_dir,
+                evidence_ids=[POST_ID, second_post_id],
+                strength="multi_post_pattern",
+            )
+
+            self.assertEqual(result["status"], "written")
+            validate_creator_workspace(workspace_dir)
+
+    def test_append_refuses_duplicate_creator_lessons_sections(self):
+        # P3 review finding (2026-07-06): section-scoped logic reads the
+        # first heading, so a duplicate section must be rejected outright.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            learnings_path(workspace_dir).write_text(
+                "# Learnings\n\n## Creator Lessons\n\n## Creator Lessons\n"
+            )
+
+            with self.assertRaisesRegex(ValidationError, "duplicate"):
+                append_lesson(workspace_dir)
+
     def test_creator_lessons_workspace_detection(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _ = scaffold_summarized_project(temp_dir)
@@ -206,6 +277,41 @@ class CreatorLessonAtRestTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(ValidationError, "gut_feeling"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_bare_id_record_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            append_lesson(workspace_dir)
+            fake_id = plant_bare_id_record(workspace_dir)
+            path = learnings_path(workspace_dir)
+            path.write_text(path.read_text().replace(SNAPSHOT_ID, fake_id))
+
+            with self.assertRaisesRegex(ValidationError, "performance_summary_fake"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_hand_edited_multi_post_pattern_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            append_lesson(workspace_dir)
+            path = learnings_path(workspace_dir)
+            path.write_text(
+                path.read_text().replace("[single_post_signal]", "[multi_post_pattern]")
+            )
+
+            with self.assertRaisesRegex(ValidationError, "two distinct published posts"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_duplicate_creator_lessons_sections_fail_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_summarized_project(temp_dir)
+            append_lesson(workspace_dir)
+            path = learnings_path(workspace_dir)
+            path.write_text(
+                path.read_text() + "\n## Creator Lessons\n\nUnpoliced free text.\n"
+            )
+
+            with self.assertRaisesRegex(ValidationError, "duplicate"):
                 validate_creator_workspace(workspace_dir)
 
     def test_stray_prose_inside_creator_lessons_section_fails_at_rest(self):

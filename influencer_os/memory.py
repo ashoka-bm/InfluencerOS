@@ -14,7 +14,7 @@ import datetime
 import re
 from pathlib import Path
 
-from influencer_os.validation import ValidationError, load_json
+from influencer_os.validation import ValidationError, load_json, validate_record
 
 
 MEMORY_BYTE_CAP = 2500
@@ -140,26 +140,16 @@ def creator_lessons_workspace(learnings_path):
     return workspace_dir
 
 
-def resolve_workspace_evidence(workspace_dir, evidence_ids):
-    """Every evidence id must resolve to a performance-chain record on disk."""
+def resolve_workspace_evidence(workspace_dir, evidence_ids, strength=None):
+    """Every evidence id must resolve to a schema-valid performance-chain
+    record anchored to its project manifest; a `multi_post_pattern` strength
+    must be supported by evidence identifying at least two published posts.
+    """
     workspace_dir = Path(workspace_dir)
-    unsupported = sorted(
-        evidence_id
-        for evidence_id in evidence_ids
-        if not evidence_id.startswith(EVIDENCE_ID_PREFIXES)
-    )
-    if unsupported:
-        raise ValidationError(
-            "creator lesson evidence ids must use a performance-chain prefix "
-            f"{sorted(EVIDENCE_ID_PREFIXES)}: {unsupported}"
-        )
-    known_ids = _workspace_evidence_ids(workspace_dir)
-    dangling = sorted(set(evidence_ids) - known_ids)
-    if dangling:
-        raise ValidationError(
-            "creator lesson evidence ids do not resolve to records in "
-            f"{workspace_dir}: {dangling}"
-        )
+    records_by_id = _workspace_evidence_records(workspace_dir)
+    _resolve_evidence(records_by_id, evidence_ids, workspace_dir)
+    _check_strength_support(records_by_id, evidence_ids, strength)
+    return records_by_id
 
 
 def append_creator_lesson(workspace_dir, topic, lesson, evidence_ids, strength, entry_date):
@@ -193,7 +183,7 @@ def append_creator_lesson(workspace_dir, topic, lesson, evidence_ids, strength, 
             f"creator lesson evidence strength must be one of {list(EVIDENCE_STRENGTHS)}, "
             f"got {strength!r}"
         )
-    resolve_workspace_evidence(workspace_dir, evidence_ids)
+    resolve_workspace_evidence(workspace_dir, evidence_ids, strength)
 
     entry_line = (
         f"- {entry_date} [{strength}]: {lesson_text} "
@@ -210,6 +200,7 @@ def append_creator_lesson(workspace_dir, topic, lesson, evidence_ids, strength, 
     else:
         content = "# Learnings\n"
 
+    _require_single_lessons_section(content, learnings_path)
     if not _has_heading(content, CREATOR_LESSONS_HEADING):
         content = content.rstrip("\n") + f"\n\n{CREATOR_LESSONS_HEADING}\n"
 
@@ -251,6 +242,7 @@ def validate_creator_lessons(workspace_dir):
         return {"lesson_count": 0}
 
     content = learnings_path.read_text()
+    _require_single_lessons_section(content, learnings_path)
     if not _has_heading(content, CREATOR_LESSONS_HEADING):
         return {"lesson_count": 0}
 
@@ -258,6 +250,7 @@ def validate_creator_lessons(workspace_dir):
         content, CREATOR_LESSONS_HEADING, ("## ", "# ")
     )
     lines = content.splitlines()
+    records_by_id = _workspace_evidence_records(workspace_dir)
     lesson_count = 0
     for offset, line in enumerate(lines[section_start + 1 : section_end]):
         line_number = section_start + 2 + offset
@@ -283,7 +276,11 @@ def validate_creator_lessons(workspace_dir):
                 f"{learnings_path}:{line_number}: empty evidence id in "
                 f"{match['evidence']!r}"
             )
-        resolve_workspace_evidence(workspace_dir, evidence_ids)
+        try:
+            _resolve_evidence(records_by_id, evidence_ids, workspace_dir)
+            _check_strength_support(records_by_id, evidence_ids, match["strength"])
+        except ValidationError as exc:
+            raise ValidationError(f"{learnings_path}:{line_number}: {exc}") from None
         lesson_count += 1
     return {"lesson_count": lesson_count}
 
@@ -296,44 +293,125 @@ def _require_real_date(value, context=None):
         raise ValidationError(f"{prefix}not a real calendar date: {value!r}") from None
 
 
-def _workspace_evidence_ids(workspace_dir):
-    """All performance-chain record ids present in a workspace's projects."""
+def _resolve_evidence(records_by_id, evidence_ids, workspace_dir):
+    unsupported = sorted(
+        evidence_id
+        for evidence_id in evidence_ids
+        if not evidence_id.startswith(EVIDENCE_ID_PREFIXES)
+    )
+    if unsupported:
+        raise ValidationError(
+            "creator lesson evidence ids must use a performance-chain prefix "
+            f"{sorted(EVIDENCE_ID_PREFIXES)}: {unsupported}"
+        )
+    dangling = sorted(set(evidence_ids) - set(records_by_id))
+    if dangling:
+        raise ValidationError(
+            "creator lesson evidence ids do not resolve to schema-valid "
+            f"records in {workspace_dir}: {dangling}"
+        )
+
+
+def _check_strength_support(records_by_id, evidence_ids, strength):
+    """multi_post_pattern is a checkable claim, not a vibe (P2 review
+    finding, 2026-07-06): the cited evidence must identify at least two
+    distinct published posts — directly, through a snapshot's parent post,
+    or through a summary's cited post list. Project and output-package ids
+    are context refs and identify no posts.
+    """
+    if strength != "multi_post_pattern":
+        return
+    posts = set()
+    for evidence_id in evidence_ids:
+        schema_name, record = records_by_id[evidence_id]
+        if schema_name in ("published-post-record", "analytics-snapshot"):
+            posts.add(record["published_post_record_id"])
+        elif schema_name == "performance-summary":
+            posts.update(record["evidence_refs"]["published_post_record_ids"])
+    if len(posts) < 2:
+        raise ValidationError(
+            "multi_post_pattern lessons require cited evidence spanning at "
+            "least two distinct published posts; the cited evidence "
+            f"identifies {sorted(posts)}"
+        )
+
+
+def _require_single_lessons_section(content, learnings_path):
+    """Reject duplicate Creator Lessons headings (P3 review finding,
+    2026-07-06): section-scoped checks read the first heading, so a second
+    section would escape both the writer and the at-rest validator.
+    """
+    count = sum(
+        1 for line in content.splitlines() if line.strip() == CREATOR_LESSONS_HEADING
+    )
+    if count > 1:
+        raise ValidationError(
+            f"{learnings_path}: duplicate {CREATOR_LESSONS_HEADING!r} headings; "
+            "keep exactly one Creator Lessons section"
+        )
+
+
+def _workspace_evidence_records(workspace_dir):
+    """Schema-valid performance-chain records keyed by id.
+
+    A candidate resolves only when it validates against its schema
+    (record semantics included) and is anchored to a schema-valid project
+    manifest in the same project folder; per-record files must also carry
+    their id as the filename (P2 review finding, 2026-07-06: a bare
+    '{"<id-field>": ...}' JSON must not count as evidence). Deeper chain
+    integrity stays `validate project`'s seam.
+    """
     projects_dir = Path(workspace_dir) / "projects"
-    known = set()
+    records = {}
     if not projects_dir.is_dir():
-        return known
+        return records
     for project_dir in sorted(projects_dir.iterdir()):
         if not project_dir.is_dir():
             continue
-        for relative_path, id_field in (
-            ("project.json", "project_id"),
-            ("output-package/output-package.json", "output_package_id"),
-            ("performance-summary.json", "performance_summary_id"),
+        project = _validated_record(project_dir / "project.json", "project")
+        if project is None:
+            continue
+        project_id = project["project_id"]
+        records[project_id] = ("project", project)
+        for relative_path, schema_name, id_field in (
+            ("output-package/output-package.json", "output-package", "output_package_id"),
+            ("performance-summary.json", "performance-summary", "performance_summary_id"),
         ):
-            known.update(_record_id(project_dir / relative_path, id_field))
-        for directory, id_field in (
-            ("published/published-post-records", "published_post_record_id"),
-            ("analytics/snapshots", "analytics_snapshot_id"),
+            record = _validated_record(project_dir / relative_path, schema_name)
+            if record is not None and record["project_id"] == project_id:
+                records[record[id_field]] = (schema_name, record)
+        for directory, schema_name, id_field in (
+            ("published/published-post-records", "published-post-record", "published_post_record_id"),
+            ("analytics/snapshots", "analytics-snapshot", "analytics_snapshot_id"),
         ):
             records_dir = project_dir / directory
             if not records_dir.is_dir():
                 continue
             for record_path in sorted(records_dir.glob("*.json")):
-                known.update(_record_id(record_path, id_field))
-    return known
+                record = _validated_record(record_path, schema_name)
+                if (
+                    record is not None
+                    and record["project_id"] == project_id
+                    and record_path.stem == record[id_field]
+                ):
+                    records[record[id_field]] = (schema_name, record)
+    return records
 
 
-def _record_id(record_path, id_field):
+def _validated_record(record_path, schema_name):
     if not record_path.is_file():
-        return []
+        return None
     try:
         record = load_json(record_path)
     except (ValueError, OSError):
-        # An unreadable or malformed record resolves nothing here; it fails
-        # its own schema validation elsewhere.
-        return []
-    value = record.get(id_field) if isinstance(record, dict) else None
-    return [value] if isinstance(value, str) else []
+        return None
+    if not isinstance(record, dict):
+        return None
+    try:
+        validate_record(schema_name, record)
+    except ValidationError:
+        return None
+    return record
 
 
 def _has_heading(content, heading):
