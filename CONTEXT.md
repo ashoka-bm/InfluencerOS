@@ -38,7 +38,7 @@ The human-readable brand strategy document for one creator. It captures position
 The creator's compact set of gold-standard voice examples. It stores exact samples, source context, content mode, reason, and confidence separately from identity, soul, and brand strategy so agents load examples only when style fidelity matters.
 
 **Content Strategy**:
-The creator's planned publishing direction: primary surfaces, content mediums, in-scope formats, out-of-scope formats, topic and pillar strategy, intended audience response, and research implications. `brand_context/personal-brand.md` is the rich source of truth; `creator-profile.json` stores the operational summary.
+The creator's planned publishing direction: primary surfaces, content mediums, in-scope formats, out-of-scope formats, topic and pillar strategy, intended audience response, and research implications. Primary surfaces are the creator's platforms, drawn from the supported platform set; content mediums are the modalities the creator works in. `brand_context/personal-brand.md` is the rich source of truth; `creator-profile.json` stores the operational summary.
 
 **Reference Library**:
 The creator's reusable visual and audio continuity assets, such as character identity plates, turnaround sheets, macro detail cards, locations, outfits, props, video style cards, shot-family references, and voice samples.
@@ -82,6 +82,12 @@ A dated evidence record created when InfluencerOS inspects real videos. It store
 **Social Post Format**:
 A platform-agnostic content container such as short-form video, carousel, single image post, or story sequence. The format says what kind of artifact is being made before a format-specific template is applied.
 
+**Modality**:
+What a piece of content is fundamentally made of: text, image, video, or audio. Modality is distinct from a piece's Social Post Format (its container) and from the platform it is published to. A creator declares the modalities they work in; each format belongs to a primary modality (a carousel is image, a thread is text).
+
+**Format Subtype**:
+An optional refinement of a Social Post Format that names the specific craft being made — for example an op-ed, reported feature, or newsletter dispatch for an article; designed slides or a photo set for a carousel; or a reply chain versus a single throughline post for a thread. It is advisory, chosen at production time, and never forces a piece to be classified.
+
 **Idea Queue**:
 The creator-scoped Kanban-style backlog of researched content opportunities.
 Queue entries are scored, tied to research findings and evidence, and may be
@@ -99,13 +105,22 @@ the research findings, evidence, metrics, and reusable creative elements that
 sparked the idea.
 
 **Social Template**:
-A reusable visual post structure such as hook-problem-solution, before-process-payoff, hook-steps-payoff, or identity-signal. It improves retention, clarity, and emotional movement without defining the content idea itself.
+A reusable visual post structure such as hook-problem-solution, before-process-payoff, hook-steps-payoff, or identity-signal. Each template is a named arrangement of the Content Beat Spine. It improves retention, clarity, and emotional movement without defining the content idea itself.
 
 **Applied Social Template**:
 The selected template as adapted to one promoted Idea Queue Entry. It states the structural beats, why the template fits, and how each beat maps onto the idea.
 
+**Content Beat Spine**:
+The canonical four-stage structure every piece of content follows: Hook, Retain, Payoff, and CTA. Hook stops the scroll and opens a question; Retain sustains attention through setup and an open loop, promise, or turn; Payoff resolves the promise; CTA invites the next action, including soft product placement. Emotion is not a stage but a cross-cutting attribute: each beat names the feeling it drives. The spine is the shared vocabulary that Social Templates arrange, format-specific production plans instantiate, and the Creative Performance Map and Performance Attribution score (Hook, Retain as body retention, Payoff, CTA, plus the pre-hook Packaging stage they also track).
+
+**Intended Emotion**:
+The single feeling a piece of content is meant to leave its audience with, named as a short phrase. It is the canonical, format-neutral term for the audience's emotional takeaway and supersedes the earlier "target emotion" and the video-specific "intended viewer feeling." Captured once when an idea is formed and carried by reference through promotion and every format-specific plan, where each Content Beat Spine beat expresses how it drives that emotion.
+
+**Core Message**:
+The one point the audience should walk away able to repeat, stated as a single sentence. It is the canonical, format-neutral term for a piece's central claim; format-specific elaborations such as an article thesis or a thread throughline refine it but do not replace it. Like Intended Emotion, it is captured at idea time and carried through to the payoff.
+
 **Micro-Journey Video Plan**:
-The hook-to-payoff structure for one universal short-form video. It names the hook, setup, escalation, payoff, visual movement, target emotion, and shot logic.
+The Content Beat Spine instantiated for one universal short-form video. It names the hook, the retain beat (absorbing what were formerly the separate setup and escalation beats), the payoff, the visual movement, the emotion each beat drives, and the shot logic.
 
 **Carousel Plan**:
 The slide-by-slide production plan for a swipeable image sequence. Each slide carries one visual beat.
@@ -139,3 +154,18 @@ The v1 output target: vertical, short, hook-first, visually legible without plat
 
 **Provider Boundary**:
 The line between dry-run planning and external generation. Drafting plans is allowed; image/video/render generation requires explicit user approval.
+
+**Gate**:
+A human approval that can block the pipeline until granted. InfluencerOS has two: Idea Promotion (moving an idea into production) and the Provider Boundary generation approval (authorizing a paid provider call). Gates are always human-owned; nothing auto-approves them.
+
+**Review**:
+An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.
+
+**Review Record**:
+The record a Review produces. It names the artifact under review, the reviewing role, the upstream context the reviewer was given, what matched and what drifted, findings with severity, a recommended revision, and an advisory status of approve, revise, or block. Only a human may waive a blocking finding.
+
+**Pass**:
+A bounded editorial rewrite of an artifact, such as a Clear Writing Pass or a Human Voice Pass, that returns improved text and a change trace. A Pass emits no Review Record, makes no judgment, and never blocks.
+
+**Warning**:
+A durable, non-blocking advisory signal attached to a record. The Project Warning is the primary example; platform-fit advisories, raised when a chosen format is not native to a creator's platform, are surfaced as Warnings.
