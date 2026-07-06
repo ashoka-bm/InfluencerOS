@@ -2,12 +2,14 @@
 
 Last updated: 2026-07-05
 
-Status: **Draft — execution decisions open (2026-07-05).** Planned in parallel
-while Phase 2 (Learning OS) executes. The five execution decisions below are
-surfaced as problem + recommendation and are **not yet user-approved**; do not
-start slice execution until they are approved and ADR 0023 is recorded.
-Execution is additionally sequenced after Phase 2 closeout unless the user
-explicitly approves interleaving (see Coordination With Phase 2 In Flight).
+Status: **Approved for execution (2026-07-06).** The operator's 2026-07-06
+directive to "implement all of phase three based on the planning that we have
+done" approved the five execution decisions below on their recommendations —
+including Decision 3's recommendation that no real (paid) provider adapter
+ships by default — and they are recorded in ADR 0023
+(`docs/adr/0023-generation-provider-boundary.md`). Phase 2 closed 2026-07-06
+and the Creative Direction workstream closed 2026-07-06, so the sequencing
+condition is met. Slice 1 is open.
 
 ## Goal
 
@@ -322,10 +324,11 @@ registry/matrix rows, advisory gates key on durable outputs). Phase 3 adds:
 9. Paid-call safety in tests: the test suite never instantiates a real
    provider adapter; CI-safe by construction (mock adapter only).
 
-## Execution Decisions (OPEN — awaiting user approval)
+## Execution Decisions (APPROVED 2026-07-06)
 
-Surfaced as problem + recommendation per the working agreement. Approving
-these (with any edits) is the trigger to record ADR 0023 and open slice 1.
+Surfaced as problem + recommendation per the working agreement; approved on
+their recommendations by the operator's 2026-07-06 directive to implement all
+of Phase 3 and recorded in ADR 0023.
 
 ### Decision 1: Provider boundary package — separate `providers/`, not an extension of `connectors/`
 

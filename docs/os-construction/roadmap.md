@@ -246,13 +246,14 @@ Implementation slices, in the agreed batch order:
 
 Goal: generate or import media through approved providers while preserving provenance.
 
-Status: draft implementation plan exists (2026-07-05), written while Phase 2
-executes. The entry-criteria verification, runnable exit-criteria rewrite,
-reference review, and five OPEN execution decisions (provider package shape,
-approval-record semantics, first real adapter, provenance ledger, quality-gate
-strictness) live in `docs/workflows/generation-os-implementation-plan.md`.
-Execution does not start until those decisions are user-approved, ADR 0023 is
-recorded, and Phase 2 closes out (or interleaving is explicitly approved).
+Status: approved for execution (2026-07-06). The five execution decisions
+were approved on their recommendations via the operator's directive to
+implement all of Phase 3 and are recorded in ADR 0023; Phase 2 and the
+Creative Direction workstream are closed, so sequencing is satisfied. The
+entry-criteria verification, runnable exit-criteria rewrite, and reference
+review live in `docs/workflows/generation-os-implementation-plan.md`. Per
+Decision 3, slices 1-5 ship with the deterministic mock adapter only; the
+first real (paid) provider adapter remains a separate operator-chosen batch.
 
 Entry criteria:
 
