@@ -31,6 +31,15 @@ PROJECT_SLUG = "tiny-reset-after-laptop-day"
 PPR_ID = "ppr_luna_tiny_reset_youtube_001"
 SNAPSHOT_ID = "analytics_snapshot_luna_tiny_reset_youtube_24h"
 SUMMARY_ID = "performance_summary_luna_tiny_reset_001"
+SECOND_PROJECT_ID = "project_luna_second_001"
+
+
+def second_project_manifest():
+    """A schema-valid manifest for a second project, so duplicate-id probes
+    can anchor their planted records properly."""
+    manifest = load_example("project")
+    manifest["project_id"] = SECOND_PROJECT_ID
+    return manifest
 
 
 def scaffold_indexable_workspace(temp_dir):
@@ -280,30 +289,121 @@ class RecallIndexFailClosedTests(unittest.TestCase):
             self.assertIn("more than one source", str(ctx.exception))
 
     def test_duplicate_published_post_record_id_across_projects_fails_closed(self):
+        # Two fully anchored projects (valid manifests, matching chain ids,
+        # filename==id) sharing one published-post id is still ambiguous for
+        # bare-id resolution.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)
+            second_dir = workspace_dir / "projects" / "second-project"
+            write_json(second_dir / "project.json", second_project_manifest())
+            post = load_example("published-post-record")
+            post["project_id"] = SECOND_PROJECT_ID
             write_json(
-                workspace_dir / "projects" / "second-project" / "published"
-                / "published-post-records" / f"{PPR_ID}.json",
-                load_example("published-post-record"),
+                second_dir / "published" / "published-post-records"
+                / f"{PPR_ID}.json",
+                post,
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 collect_index_rows(workspace_dir)
             self.assertIn("more than one source", str(ctx.exception))
 
-    def test_duplicate_analytics_snapshot_id_across_files_fails_closed(self):
+    def test_duplicate_analytics_snapshot_id_across_projects_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            second_dir = workspace_dir / "projects" / "second-project"
+            write_json(second_dir / "project.json", second_project_manifest())
+            snapshot = load_example("analytics-snapshot")
+            snapshot["project_id"] = SECOND_PROJECT_ID
+            write_json(
+                second_dir / "analytics" / "snapshots" / f"{SNAPSHOT_ID}.json",
+                snapshot,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("more than one source", str(ctx.exception))
+
+    def test_id_field_only_record_fails_closed(self):
+        # Existence of an id is not existence of a record (process-learning
+        # 2026-07-06): a planted JSON carrying only the id fields must not
+        # index as an analytics snapshot, even inside an anchored project.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_indexable_workspace(temp_dir)
             write_json(
                 workspace_dir / "projects" / PROJECT_SLUG / "analytics"
-                / "snapshots" / "analytics_snapshot_copy.json",
-                load_example("analytics-snapshot"),
+                / "snapshots" / "analytics_snapshot_fake.json",
+                {
+                    "analytics_snapshot_id": "analytics_snapshot_fake",
+                    "project_id": PROJECT_ID,
+                },
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 collect_index_rows(workspace_dir)
-            self.assertIn("more than one source", str(ctx.exception))
+            self.assertIn("analytics_snapshot_fake.json", str(ctx.exception))
+            self.assertIn("not a valid analytics-snapshot", str(ctx.exception))
+
+    def test_id_field_only_record_in_unanchored_folder_fails_closed(self):
+        # The slice 5 review reproduction: junk in a fake project folder with
+        # no manifest fails on the missing anchor.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            write_json(
+                workspace_dir / "projects" / "fake-project" / "analytics"
+                / "snapshots" / "analytics_snapshot_fake.json",
+                {
+                    "analytics_snapshot_id": "analytics_snapshot_fake",
+                    "project_id": "project_nonexistent_001",
+                },
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("fake-project", str(ctx.exception))
+            self.assertIn("manifest", str(ctx.exception))
+
+    def test_record_filename_must_equal_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            snapshots_dir = (
+                workspace_dir / "projects" / PROJECT_SLUG / "analytics" / "snapshots"
+            )
+            (snapshots_dir / f"{SNAPSHOT_ID}.json").rename(
+                snapshots_dir / "analytics_snapshot_renamed.json"
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("filename", str(ctx.exception))
+
+    def test_record_project_id_must_match_owning_manifest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            summary_path = (
+                workspace_dir / "projects" / PROJECT_SLUG / "performance-summary.json"
+            )
+            summary = load_example("performance-summary")
+            summary["project_id"] = "project_someone_elses_001"
+            write_json(summary_path, summary)
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("manifest", str(ctx.exception))
+
+    def test_valid_record_without_project_manifest_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            post = load_example("published-post-record")
+            write_json(
+                workspace_dir / "projects" / "unanchored" / "published"
+                / "published-post-records" / f"{PPR_ID}.json",
+                post,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("manifest", str(ctx.exception))
 
     def test_raw_analytics_payloads_are_never_scanned(self):
         # analytics/raw/ holds safe exports outside the record contract; the

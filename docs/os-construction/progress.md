@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -795,6 +795,33 @@ summary authored → creator lesson via `log-learning --evidence` →
 rows → deleting the database and rebuilding reproduces identical rows
 modulo `indexed_on` → board validation and prune green. Exit criterion 5
 of the Phase 2 plan is met.
+
+Slice 5 review fixes (2026-07-06): two findings, the P2 confirmed by the
+reviewer's reproduction, fixed with failing probes first. (P2) The Phase 2
+index scans accepted any JSON under the expected paths that carried the
+right id field — a planted
+`projects/fake-project/analytics/snapshots/analytics_snapshot_fake.json`
+containing only `analytics_snapshot_id` and a nonexistent `project_id`
+still emitted an analytics-snapshot row, repeating the slice 4
+id-string-vs-record class one day after it was recorded as a process
+learning. The scans now mirror the hardened memory-module evidence
+resolver: every Phase 2 candidate must validate against its schema
+(record semantics included), per-record files must carry their id as the
+filename, the sibling `project.json` must exist and validate as a project
+manifest, and the record's `project_id` must equal the manifest's —
+failing the rebuild closed with the offending path, consistent with the
+index's existing posture (Phase 1 scan behavior is unchanged; those ids
+are cross-checked by the research/queue validators). The duplicate-id
+probes were reworked to anchor their planted duplicates in a second
+schema-valid project, proving the duplicate check still fires on fully
+anchored records. (P3) This file's `Last updated` header had rotted to
+2026-07-05 while recording 2026-07-06 work; corrected. 498 tests pass (5
+added — schema-rejection probe inside an anchored project, the reviewer's
+unanchored-folder reproduction, filename==id, manifest project_id
+mismatch, valid-record-without-manifest); 43 examples validate; the
+`.tmp/slice5-verify.sh` replay stays green end to end (writer-built
+records all anchor). One process learning recorded (sweep recorded
+learning classes against every new seam of the same shape).
 
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
