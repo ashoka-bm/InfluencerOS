@@ -2,10 +2,11 @@
 
 Last updated: 2026-07-06
 
-Status: **Planned — four execution decisions open (2026-07-06).** The
-architectural decisions are already locked in ADR 0024 (grilling session,
-2026-07-06); the four decisions below are execution-level mechanics surfaced
-as problem + recommendation. Approving them opens slice 1.
+Status: **Approved for execution (2026-07-06).** The architectural decisions
+are locked in ADR 0024 (grilling session, 2026-07-06) and the four
+execution-mechanics decisions below were user-approved on 2026-07-06
+(A: drift-pin test; B: `hook_category` optional in slice 1; C: seed five
+presets; D: clean-break restructure). Slice 1 is open.
 
 Naming note: this workstream is **not** the roadmap's Phase 3 (Generation OS).
 Phase 3 remains the provider-safety spine
@@ -229,7 +230,7 @@ outputs). This workstream adds:
     `influencer_os/providers/` (which must not exist until Phase 3) or any
     generation-approval surface.
 
-## Execution Decisions (OPEN — awaiting user approval)
+## Execution Decisions (APPROVED 2026-07-06)
 
 ### Decision A: Platform-enum single-source mechanics — drift-pin test, not cross-file `$ref`
 
@@ -237,39 +238,38 @@ Problem: the grilling locked "one canonical 8-platform enum via a shared
 `$def`," but no schema in the repo uses cross-file `$ref` today and the
 validator is custom Python; introducing `$ref` resolution is new machinery.
 
-Recommendation: keep per-file enums but add a drift-pin test asserting every
+Approved: keep per-file enums but add a drift-pin test asserting every
 platform enum copy (≈10 schemas + the new `primary_surfaces`) is identical to
 one canonical constant in `influencer_os/validation.py`. Same guarantee,
 smallest change, matches the existing drift-check house pattern. Revisit
 `$ref` only if schema count grows.
 
-### Decision B: `hook_category` timing — include in slice 1 as optional
+### Decision B: `hook_category` — include in slice 1 as optional
 
 Problem: the AOS-derived hook taxonomy (8 categories + 3 web-validated) was
 recommended in the comparison but never locked in the grilling.
 
-Recommendation: add `hook_category` as an **optional** enum on `hook`-role
-beats in slice 1 (one field, no new record). It costs nothing while unused
-and is what lets the Learning OS eventually rank hook styles per creator.
-Alternative: defer entirely to a later slice.
+Approved: add `hook_category` as an **optional** enum on `hook`-role beats in
+slice 1 (one field, no new record). It costs nothing while unused and is what
+lets the Learning OS eventually rank hook styles per creator.
 
-### Decision C: Template preset seeding — small seed in slice 1
+### Decision C: Template preset seeding — five presets in slice 1
 
 Problem: the comparison recommends seeding the template library with proven
-named frameworks (PAS, Before/After, Myth→Truth, "I Tried X", Listicle) as
-spine presets; volume is unbounded if left open.
+named frameworks as spine presets; volume is unbounded if left open.
 
-Recommendation: seed exactly three in slice 1 (PAS, Before/After-Bridge,
-Listicle) typed with `beat_role`, alongside migrating the existing templates;
-grow the library from real usage, not up front.
+Approved (user chose the larger seed over the recommended three): seed five
+in slice 1 — PAS, Before/After-Bridge, Listicle, Myth→Truth, and "I Tried X"
+— typed with `beat_role`, alongside migrating the existing templates; grow
+further from real usage.
 
-### Decision D: Micro-journey restructure — full rename, no aliases
+### Decision D: Micro-journey restructure — clean break, no aliases
 
 Problem: the spine restructure of `micro-journey-video-plan` can be a clean
 break (rename/merge fields) or keep legacy fields as aliases for
 compatibility.
 
-Recommendation: clean break (`setup`+`escalation` → one `retain` object;
+Approved: clean break (`setup`+`escalation` → one `retain` object;
 `intended_viewer_feeling` → `intended_emotion`), fixtures refreshed in the
 same slice. Fixtures are disposable build data (roadmap policy); aliases
 would preserve the double vocabulary ADR 0024 exists to remove.

@@ -211,8 +211,8 @@ captured at the idea origin and resolved by reference, an advisory
 platform→modality→format capability model, and an advisory creative-review
 layer.
 
-Status: planned (2026-07-06). Architectural decisions are locked in ADR 0024;
-four execution-mechanics decisions are open in
+Status: approved for execution (2026-07-06). Architectural decisions are
+locked in ADR 0024 and the four execution-mechanics decisions are approved in
 `docs/workflows/creative-direction-implementation-plan.md`. Runs on the
 creative axis and never touches `influencer_os/providers/` or generation
 machinery; Phase 3 below is independent of this workstream.
