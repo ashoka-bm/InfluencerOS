@@ -34,6 +34,14 @@ PROJECT_SCAFFOLDS = {
     "evidence-brief.md": "# Evidence Brief\n\nSummarize the promoted idea's evidence for production use.\n\n",
 }
 
+# Upload-ready role -> manifest asset kinds it may trace to (ADR 0023
+# slice 4/5 hardening). Roles absent here carry no media lineage rule.
+UPLOAD_ROLE_ALLOWED_ASSET_KINDS = {
+    "video": {"video", "render"},
+    "image": {"image"},
+    "thumbnail": {"image"},
+}
+
 PROJECT_STATUS_ORDER = {
     "created": 1,
     "planning": 2,
@@ -1483,6 +1491,7 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         # Generation provenance binding (ADR 0023 slice 4): every upload-ready
         # generation_manifest_ref resolves to a ledger row, so a packaged
         # media asset traces asset -> approval record -> plan transitively.
+        referenced_origins = set()
         for asset in output_package.get("upload_ready", []):
             manifest_ref = asset.get("generation_manifest_ref")
             if manifest_ref is None:
@@ -1492,6 +1501,17 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                     f"OutputPackage.upload_ready[{asset['upload_asset_id']}] "
                     f"generation_manifest_ref {manifest_ref!r} does not "
                     "resolve to an asset-manifest row"
+                )
+            row = manifest_rows[manifest_ref]
+            referenced_origins.add(row["origin"])
+            # Role/kind lineage (batch-2 review finding): a video role must
+            # trace to a video artifact, image-shaped roles to an image.
+            allowed_kinds = UPLOAD_ROLE_ALLOWED_ASSET_KINDS.get(asset["asset_role"])
+            if allowed_kinds is not None and row["asset_kind"] not in allowed_kinds:
+                raise ValueError(
+                    f"OutputPackage.upload_ready[{asset['upload_asset_id']}] "
+                    f"role {asset['asset_role']!r} cannot trace to a "
+                    f"{row['asset_kind']!r} manifest row"
                 )
             # The one BLOCKING review layer (ADR 0023 Decision 5): every
             # packaged media asset that flows from generation/ needs a
@@ -1504,6 +1524,22 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                     "covering it; the quality gate blocks packaging "
                     "(ADR 0023 Decision 5)"
                 )
+        # generation_status honesty against referenced lineage (batch-2
+        # review finding): a generated status needs at least one generated
+        # row, and a generated row forces the status to say so.
+        package_status = output_package["provider_boundary"]["generation_status"]
+        if "generated" in referenced_origins and package_status != "generated":
+            raise ValueError(
+                "OutputPackage.provider_boundary.generation_status "
+                f"{package_status!r} contradicts referenced generated "
+                "manifest rows"
+            )
+        if package_status == "generated" and referenced_origins and "generated" not in referenced_origins:
+            raise ValueError(
+                "OutputPackage.provider_boundary.generation_status is "
+                "'generated' but no referenced manifest row has origin "
+                "'generated'"
+            )
 
     review_warnings = generation_warnings + _validate_review_records(project_dir, project)
     published_records = _validate_published_records(project_dir, project, output_package)

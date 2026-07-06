@@ -684,6 +684,136 @@ class ProvenanceLedgerTests(unittest.TestCase):
             self.assertEqual(asset_rows[0]["record_type"], "generation-asset")
 
 
+class Batch2HardeningTests(unittest.TestCase):
+    def test_concurrent_dispatch_lock_refuses_second_entrant(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            record_path, record = stage_approval_record(temp_dir)
+            record_generation_approval(project_dir, record_path)
+            record_id = record["generation_approval_record_id"]
+            lock_path = (
+                project_dir
+                / "generation"
+                / "approval-records"
+                / f"{record_id}.lock"
+            )
+            lock_path.write_text("")  # simulate a concurrent holder
+            with self.assertRaisesRegex(GenerationDispatchError, "locked by another"):
+                dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+            lock_path.unlink()
+            dispatch_generation(project_dir, record_id, config=BASE_CONFIG)
+
+    def test_symlinked_assets_dir_refused_everywhere(self):
+        from influencer_os.generation import import_generated_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            assets_dir = project_dir / "generation" / "assets"
+            outside = Path(temp_dir) / "outside-assets"
+            outside.mkdir()
+            assets_dir.rmdir()
+            assets_dir.symlink_to(outside)
+
+            source = Path(temp_dir) / "export.png"
+            source.write_bytes(b"bytes\n")
+            with self.assertRaisesRegex(ValidationError, "symlink"):
+                import_generated_asset(project_dir, source, "gen_asset_x", "image")
+
+            record_path, record = stage_approval_record(temp_dir)
+            record_generation_approval(project_dir, record_path)
+            with self.assertRaisesRegex(GenerationDispatchError, "symlink"):
+                dispatch_generation(
+                    project_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+            with self.assertRaisesRegex(ValidationError, "symlink"):
+                validate_project(project_dir)
+
+    def test_nested_assets_subdirectory_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            hidden = project_dir / "generation" / "assets" / "subdir"
+            hidden.mkdir(parents=True)
+            (hidden / "hidden.bin").write_bytes(b"invisible\n")
+            with self.assertRaisesRegex(ValidationError, "must be flat"):
+                validate_project(project_dir)
+
+    def test_manifest_row_contradicting_request_fails(self):
+        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+
+        for mutate, message in (
+            (lambda row: row.update(asset_kind="image"), "contradicts the approved request"),
+            (lambda row: row.update(plan_prompt_ref="plan/generation-plan.json#prompt_sequence[1]"),
+             "does not match the approved prompt_ref"),
+            (lambda row: row["provider_call"].update(model="other-model"),
+             "contradict the approval record"),
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                _, project_dir = scaffold_project_workspace(temp_dir)
+                seed_generation_fixtures(project_dir)
+                rewrite(
+                    project_dir / "generation" / "asset-manifest.json",
+                    lambda manifest: mutate(manifest["rows"][0]),
+                )
+                with self.assertRaisesRegex(ValidationError, message):
+                    validate_project(project_dir)
+
+    def test_role_kind_lineage_enforced_on_packaged_refs(self):
+        from tests.test_analytics import scaffold_published_project
+        from tests.test_cli import rewrite_json as rewrite
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            rewrite(
+                project_dir / "output-package" / "output-package.json",
+                lambda package: package["upload_ready"][0].update(
+                    generation_manifest_ref="gen_asset_luna_tiny_reset_thumb_001"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "cannot trace to a"):
+                validate_project(project_dir)
+
+    def test_generation_status_must_match_referenced_origins(self):
+        from tests.test_analytics import scaffold_published_project
+        from tests.test_cli import rewrite_json as rewrite
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            rewrite(
+                project_dir / "output-package" / "output-package.json",
+                lambda package: package["provider_boundary"].update(
+                    generation_status="imported"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "contradicts referenced generated"):
+                validate_project(project_dir)
+
+    def test_reference_import_refuses_symlinked_destination(self):
+        from influencer_os.generation import import_reference_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_generation_ready_project(temp_dir)
+            library = json.loads(
+                (workspace_dir / "references" / "reference-library.json").read_text()
+            )
+            asset = next(
+                a for a in library["assets"] if a["asset_id"] == "asset_luna_identity_plate"
+            )
+            destination = workspace_dir / asset["path"]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            outside = Path(temp_dir) / "outside-target.png"
+            outside.write_bytes(b"outside\n")
+            destination.symlink_to(outside)
+
+            source = Path(temp_dir) / "identity.png"
+            source.write_bytes(b"identity bytes\n")
+            with self.assertRaisesRegex(ValidationError, "symlink"):
+                import_reference_asset(
+                    workspace_dir, source, "asset_luna_identity_plate"
+                )
+
+
 class QualityReviewTests(unittest.TestCase):
     def test_example_validates(self):
         validate_record("quality-review", load_example("quality-review"))

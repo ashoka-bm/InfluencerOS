@@ -9,6 +9,7 @@ Adapters live in a private table and must never be called directly.
 import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 
 from influencer_os.connectors import env
@@ -71,6 +72,27 @@ def _contained_artifact_path(assets_dir, filename, asset_id):
             f"directory: {filename!r}"
         )
     return artifact_path
+
+
+def _ensure_real_assets_dir(project_dir, error_class=GenerationDispatchError):
+    """The generation tree must be real directories inside the project — a
+    symlinked generation/ or generation/assets/ would silently relocate the
+    trusted root (batch-2 review finding). Creates assets/ when absent."""
+    project_root = Path(project_dir).resolve()
+    generation_dir = Path(project_dir) / "generation"
+    assets_dir = generation_dir / "assets"
+    for directory in (generation_dir, assets_dir):
+        if directory.is_symlink():
+            raise error_class(
+                f"{directory} is a symlink; the generation tree must be real "
+                "directories inside the project"
+            )
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    if not assets_dir.resolve().is_relative_to(project_root):
+        raise error_class(
+            f"{assets_dir} resolves outside the project root"
+        )
+    return assets_dir
 
 
 def _approval_records_dir(project_dir):
@@ -188,15 +210,38 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
             f"{record['max_calls']}"
         )
 
-    assets_dir = project_dir / "generation" / "assets"
-    assets_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir = _ensure_real_assets_dir(project_dir)
 
     # Two-phase consumption (batch-1 review finding): flip the record to
     # `executing` BEFORE any adapter call so a crash or concurrent dispatch
     # can never replay calls against the same approval — a leftover
     # `executing` record refuses dispatch and demands a fresh approval.
-    record["status"] = "executing"
-    record_path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    # The approved -> executing transition is an exclusive compare-and-swap
+    # (batch-2 review finding): an O_EXCL lock file serializes the
+    # read-verify-write window so two concurrent dispatches cannot both
+    # observe `approved`.
+    lock_path = record_path.with_suffix(".lock")
+    try:
+        lock_descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} is locked by another "
+            "dispatch (or a crashed one left the lock); investigate before "
+            "recording a new approval"
+        ) from None
+    try:
+        os.close(lock_descriptor)
+        # Re-read under the lock: the record must still be approved.
+        _, record = _load_approval_record(project_dir, approval_record_id)
+        if record["status"] != "approved":
+            raise GenerationDispatchError(
+                f"approval record {approval_record_id!r} changed status to "
+                f"{record['status']!r} before dispatch could consume it"
+            )
+        record["status"] = "executing"
+        record_path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    finally:
+        lock_path.unlink(missing_ok=True)
 
     calls = []
     for request in requested:

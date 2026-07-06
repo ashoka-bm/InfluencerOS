@@ -142,8 +142,8 @@
     }
   ],
   "provider_boundary": {
-    "generation_status": "imported",
-    "provider_calls_made": false,
+    "generation_status": "generated",
+    "provider_calls_made": true,
     "approval_required_before_generation": true
   }
 }

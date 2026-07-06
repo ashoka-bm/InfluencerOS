@@ -256,7 +256,9 @@ def import_generated_asset(
     target_name = _safe_artifact_filename(
         filename or source_path.name, f"import-generated-asset {asset_id}"
     )
-    assets_dir = project_dir / ASSETS_DIR
+    from influencer_os.providers.dispatch import _ensure_real_assets_dir
+
+    assets_dir = _ensure_real_assets_dir(project_dir, error_class=ValidationError)
     destination = assets_dir / target_name
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(f"Import target already exists: {destination}")
@@ -285,7 +287,6 @@ def import_generated_asset(
     if collected_warnings:
         import_source["warnings"] = collected_warnings
 
-    assets_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source_path, destination)
     try:
         row = {
@@ -350,9 +351,33 @@ def import_reference_asset(
                 f"under {REFERENCE_APPROVALS_DIR}"
             )
 
+    # Destination hardening (batch-2 review finding, mirroring the
+    # register-output-package rules): the declared asset path must resolve
+    # inside the workspace, with no symlinked destination or parents.
     destination = workspace_dir / asset["path"]
+    workspace_root = workspace_dir.resolve()
+    if destination.is_symlink():
+        raise ValidationError(
+            f"reference asset {reference_asset_id!r} path is a symlink; "
+            "refusing to write through it"
+        )
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source_path, destination)
+    resolved_parent = destination.parent.resolve()
+    if not resolved_parent.is_relative_to(workspace_root):
+        raise ValidationError(
+            f"reference asset {reference_asset_id!r} path resolves outside "
+            f"the workspace: {asset['path']!r}"
+        )
+    descriptor, temp_name = tempfile.mkstemp(
+        dir=resolved_parent, prefix=f".{destination.name}.", suffix=".tmp"
+    )
+    try:
+        os.close(descriptor)
+        shutil.copyfile(source_path, temp_name)
+        os.replace(temp_name, destination)
+    except BaseException:
+        Path(temp_name).unlink(missing_ok=True)
+        raise
 
     asset["asset_status"] = "generated" if origin == "imported" else "user_provided"
     asset["source"] = {
@@ -411,13 +436,28 @@ def validate_project_generation_assets(project_dir, project, approval_records_by
     row's plan prompt resolves. Returns rows keyed by asset_id.
     """
     project_dir = Path(project_dir)
+    project_root = project_dir.resolve()
     manifest_path = project_dir / MANIFEST_PATH
+    generation_dir = project_dir / "generation"
     assets_dir = project_dir / ASSETS_DIR
-    asset_files = (
-        {path.name for path in assets_dir.iterdir() if path.is_file() or path.is_symlink()}
-        if assets_dir.exists()
-        else set()
-    )
+    # The generation tree is real directories only, and the reconciliation
+    # walk is exhaustive: subdirectories cannot hide files the ledger cannot
+    # represent (batch-2 review findings).
+    for directory in (generation_dir, assets_dir):
+        if directory.is_symlink():
+            raise ValidationError(
+                f"{directory.relative_to(project_dir)} is a symlink; the "
+                "generation tree must be real directories inside the project"
+            )
+    asset_files = set()
+    if assets_dir.exists():
+        for path in assets_dir.iterdir():
+            if path.is_dir() and not path.is_symlink():
+                raise ValidationError(
+                    "generation/assets/ must be flat: subdirectory "
+                    f"{path.name!r} cannot be represented in the ledger"
+                )
+            asset_files.add(path.name)
 
     if not manifest_path.exists():
         if asset_files:
@@ -454,6 +494,11 @@ def validate_project_generation_assets(project_dir, project, approval_records_by
                 f"asset manifest row {asset_id}: artifact does not resolve "
                 f"to a regular file: {row['artifact_path']!r}"
             )
+        if not artifact_path.resolve().is_relative_to(project_root):
+            raise ValidationError(
+                f"asset manifest row {asset_id}: artifact resolves outside "
+                f"the project: {row['artifact_path']!r}"
+            )
         if _sha256_file(artifact_path) != row["content_hash"]:
             raise ValidationError(
                 f"asset manifest row {asset_id}: artifact content does not "
@@ -477,6 +522,43 @@ def validate_project_generation_assets(project_dir, project, approval_records_by
                     f"asset manifest row {asset_id}: approval record "
                     f"{row['approval_record_id']!r} does not list this asset "
                     "in resulting_asset_ids"
+                )
+            # The row must restate exactly what the human approved (batch-2
+            # review finding): same kind and prompt as the matching request,
+            # same provider and model as the record.
+            request = next(
+                (
+                    r
+                    for r in approval.get("requested_assets", [])
+                    if r.get("asset_id") == asset_id
+                ),
+                None,
+            )
+            if request is None:
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: approval record "
+                    f"{row['approval_record_id']!r} has no matching "
+                    "requested asset"
+                )
+            if row["asset_kind"] != request["asset_kind"]:
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: asset_kind "
+                    f"{row['asset_kind']!r} contradicts the approved request "
+                    f"{request['asset_kind']!r}"
+                )
+            if row["plan_prompt_ref"] != request["prompt_ref"]:
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: plan_prompt_ref does "
+                    "not match the approved prompt_ref"
+                )
+            provider_call = row["provider_call"]
+            if (
+                provider_call["provider_id"] != approval["provider_id"]
+                or provider_call["model"] != approval["model"]
+            ):
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: provider_call "
+                    "provider/model contradict the approval record"
                 )
             prompt_file = row["plan_prompt_ref"].split("#", 1)[0]
             if not (project_dir / prompt_file).is_file():
