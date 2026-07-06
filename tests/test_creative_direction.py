@@ -16,7 +16,7 @@ from pathlib import Path
 
 from influencer_os.creator_workspaces import validate_creator_workspace
 from influencer_os.projects import validate_project
-from influencer_os.research import validate_promotion_gate
+from influencer_os.research import validate_promotion_gate, validate_research
 from influencer_os.validation import (
     ValidationError,
     validate_record,
@@ -503,6 +503,40 @@ class PlatformFitWarningTests(unittest.TestCase):
             self.assertEqual(fits[0]["fit_level"], "none")
             self.assertEqual(fits[0]["project_id"], "project_luna_article_001")
             validate_record("project-warning", fits[0])
+            # Exit criterion 5's strongest at-rest surface: the appended
+            # warning passes pairing, target-ref, and creator-scope checks
+            # inside the research validators (slice 3 review finding).
+            validate_research(workspace_dir)
+
+    def test_platform_fit_warning_is_idempotent_per_project(self):
+        from influencer_os.projects import _emit_platform_fit_warning
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            project = json.loads((project_dir / "project.json").read_text())
+            promotion = json.loads(
+                (
+                    workspace_dir
+                    / "research"
+                    / "idea-promotions"
+                    / "idea_promotion_luna_fit_001.json"
+                ).read_text()
+            )
+            # Force a non-native fit so the writer has something to append.
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["content_strategy"].update(
+                    primary_surfaces=["medium"]
+                ),
+            )
+            _emit_platform_fit_warning(workspace_dir, project, promotion)
+            _emit_platform_fit_warning(workspace_dir, project, promotion)
+            fits = [
+                record
+                for record in self.read_warnings(workspace_dir)
+                if record["warning_type"] == "platform_fit"
+            ]
+            self.assertEqual(len(fits), 1)
 
     def test_fit_level_requires_platform_fit_type(self):
         warning = load_example("project-warning")

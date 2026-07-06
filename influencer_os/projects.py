@@ -1,6 +1,7 @@
 import datetime
 import json
 import shutil
+import sys
 from pathlib import Path
 
 from influencer_os.research import validate_promotion_gate
@@ -238,9 +239,16 @@ def init_project(project_manifest_path, creator_workspace):
         if not path.exists():
             path.write_text(content)
 
-    # Advisory only — computed after the project exists so a poor fit can
-    # never block creation (ADR 0024: platform guides, never gates).
-    _emit_platform_fit_warning(creator_workspace, project, promotion)
+    # Advisory only — computed after the project exists, and best-effort:
+    # no failure in the advisory path may block creation (ADR 0024:
+    # platform guides, never gates; slice 3 review finding).
+    try:
+        _emit_platform_fit_warning(creator_workspace, project, promotion)
+    except Exception as exc:  # noqa: BLE001 — advisory path must not raise
+        print(
+            f"warning: platform-fit advisory could not be recorded: {exc}",
+            file=sys.stderr,
+        )
 
     return project_dir
 
@@ -285,8 +293,23 @@ def _emit_platform_fit_warning(creator_workspace, project, promotion):
     if fit is None or fit == "native":
         return
 
+    warning_id = f"project_warning_platform_fit_{project['project_id']}"
+    warnings_path = Path(creator_workspace) / "system" / "project-warnings.jsonl"
+    # Idempotent: a re-run for the same project must not append a duplicate
+    # warning id (slice 3 review finding).
+    if warnings_path.exists():
+        for line in warnings_path.read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                existing = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if existing.get("project_warning_id") == warning_id:
+                return
+
     warning = {
-        "project_warning_id": f"project_warning_platform_fit_{project['project_id']}",
+        "project_warning_id": warning_id,
         "idea_queue_entry_id": promotion["idea_queue_entry_id"],
         "idea_promotion_id": promotion["idea_promotion_id"],
         "project_id": project["project_id"],
@@ -306,7 +329,6 @@ def _emit_platform_fit_warning(creator_workspace, project, promotion):
         "resolved_status": "open",
     }
     validate_record("project-warning", warning)
-    warnings_path = Path(creator_workspace) / "system" / "project-warnings.jsonl"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     with warnings_path.open("a") as stream:
         stream.write(json.dumps(warning) + "\n")
