@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/production-rubric.schema.json",
+  "title": "ProductionRubric",
+  "description": "The growing list of binary quality criteria (ADR 0025). Criterion ids double as recurrence keys; every rejection must cite or mint a criterion (the Rubric Ratchet). OS-scope rubrics carry craft rules, creator-scope rubrics carry boundary/brand rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rubric_id",
+    "scope",
+    "criteria"
+  ],
+  "properties": {
+    "rubric_id": {
+      "type": "string",
+      "pattern": "^rubric_[a-zA-Z0-9_-]+$"
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "os",
+        "creator"
+      ]
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "creator_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion_id",
+          "statement",
+          "status",
+          "origin",
+          "minted_on"
+        ],
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.]*$"
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "minted",
+              "proven",
+              "blocking",
+              "retired"
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "seed",
+              "rejection",
+              "distillation"
+            ]
+          },
+          "minted_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "minted_from_event_id": {
+            "type": "string",
+            "pattern": "^event_[a-zA-Z0-9_-]+$"
+          },
+          "quality_review_category": {
+            "type": "string",
+            "enum": [
+              "identity_consistency",
+              "continuity_with_plan",
+              "technical_conformance",
+              "creator_boundary_compliance"
+            ]
+          },
+          "blocking_adr": {
+            "type": "string",
+            "pattern": "^docs/adr/[0-9]{4}-[a-z0-9-]+\\.md$"
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

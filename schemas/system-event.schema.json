@@ -88,6 +88,21 @@
         "delivered",
         "failed"
       ]
+    },
+    "recurrence_key": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.]*$"
+    },
+    "criterion_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.]*$"
+    },
+    "iteration_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "unclassified": {
+      "type": "boolean"
     }
   }
 }

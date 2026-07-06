@@ -8,7 +8,7 @@ from pathlib import Path
 from influencer_os.generation import validate_reference_approval_records
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
-from influencer_os.research import validate_promotions
+from influencer_os.research import validate_events_ledger, validate_promotions
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
 
@@ -305,6 +305,19 @@ def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
     for relative_path, data in JSON_SCAFFOLDS.items():
         _write_json_if_missing(workspace_dir / relative_path, data)
 
+    # Creator-scope Production Rubric (ADR 0025): scaffolded valid and empty;
+    # criteria arrive by seeding from boundaries and by the Rubric Ratchet.
+    _write_json_if_missing(
+        workspace_dir / "production-rubric.json",
+        {
+            "rubric_id": f"rubric_{manifest['creator_slug'].replace('-', '_')}",
+            "scope": "creator",
+            "creator_profile_id": manifest["creator_profile_id"],
+            "creator_slug": manifest["creator_slug"],
+            "criteria": [],
+        },
+    )
+
     sync_creator_runtime(workspace_dir)
 
     return workspace_dir
@@ -576,6 +589,16 @@ def validate_creator_workspace(workspace_path):
     # source_ref claims an approval record must resolve to one. No-op when
     # the workspace has no generation approvals.
     validate_reference_approval_records(workspace_dir, reference_library)
+    # Friction ledger and Production Rubric (ADR 0025): the Rubric Ratchet is
+    # reachable from `validate workspace`, not only `validate research` —
+    # both paths call the one shared seam. No-op when neither exists.
+    validate_events_ledger(
+        workspace_dir,
+        {
+            "creator_profile_id": manifest["creator_profile_id"],
+            "creator_slug": manifest["creator_slug"],
+        },
+    )
 
     warnings = list(promotion_warnings)
     # Audio is a selectable modality with no v1 production-plan schema

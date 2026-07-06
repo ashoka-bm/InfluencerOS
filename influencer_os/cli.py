@@ -156,6 +156,29 @@ def main(argv=None):
     fetch_parser.add_argument("--out", help="Write the fetch-result JSON here instead of stdout.")
     fetch_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
+    incident_parser = subparsers.add_parser("log-incident", help="Append one friction event (rejection or incident) to the creator-events ledger (ADR 0025). Rejections must cite a Production Rubric criterion or pass --unclassified (cite-or-mint); verdicts are durable, rejected drafts stay ephemeral.")
+    incident_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+    incident_parser.add_argument("--type", dest="event_type", required=True, choices=["rejection", "incident"], help="Friction event type.")
+    incident_parser.add_argument("--recurrence-key", required=True, help="Recurrence key for bracketing; must equal --criterion when one is cited.")
+    incident_parser.add_argument("--message", required=True, help="One-line description of the friction; never the rejected material itself.")
+    incident_parser.add_argument("--criterion", dest="criterion_id", help="Cited Production Rubric criterion id.")
+    incident_parser.add_argument("--unclassified", action="store_true", help="Rejection whose reason cannot be articulated yet; counts toward the rubric-gap signal.")
+    incident_parser.add_argument("--iteration-count", type=int, help="How many attempts this friction consumed.")
+    incident_parser.add_argument("--project", dest="project_id", help="Project id the friction occurred in.")
+    incident_parser.add_argument("--severity", default="important", choices=["info", "important", "urgent"], help="Event severity (default important).")
+    incident_parser.add_argument("--source-type", default="skill", help="Event source type (default skill).")
+    incident_parser.add_argument("--source-id", required=True, help="Event source id, e.g. the logging skill's name.")
+
+    mint_parser = subparsers.add_parser("mint-criterion", help="Add one minted Production Rubric criterion (ADR 0025). Criterion ids double as recurrence keys and must be unique across the OS and creator rubrics.")
+    mint_parser.add_argument("creator_workspace", help="Path to the Creator Workspace (also the duplicate-check scope).")
+    mint_parser.add_argument("--id", dest="criterion_id", required=True, help="Criterion id (lowercase dotted, e.g. gen.image.hands_correct).")
+    mint_parser.add_argument("--statement", required=True, help="The binary yes/no criterion statement.")
+    mint_parser.add_argument("--os", dest="os_scope", action="store_true", help="Mint into the OS-scope rubric (context/production-rubric.json) instead of the creator rubric.")
+    mint_parser.add_argument("--origin", default="rejection", choices=["seed", "rejection", "distillation"], help="Criterion origin (default rejection).")
+    mint_parser.add_argument("--category", choices=["identity_consistency", "continuity_with_plan", "technical_conformance", "creator_boundary_compliance"], help="Optional quality-review category.")
+    mint_parser.add_argument("--from-event", dest="minted_from_event_id", help="Ledger event id this criterion was distilled from.")
+    mint_parser.add_argument("--notes", help="Optional criterion notes.")
+
     learning_parser = subparsers.add_parser("log-learning", help="Append a dated learning entry: per-skill for OS learnings files, evidence-linked creator lessons for a Creator Workspace memory/learnings.md.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
     learning_parser.add_argument("skill_name", help="Skill folder name for OS learnings, or the lesson topic (applies-to) for creator lessons.")
@@ -528,6 +551,41 @@ def main(argv=None):
                 f"{result['calls_used']} paid call(s) used, status {result['status']}",
                 file=sys.stderr,
             )
+            return 0
+
+        if args.command == "log-incident":
+            from influencer_os.rubric import log_incident
+
+            result = log_incident(
+                args.creator_workspace,
+                event_type=args.event_type,
+                recurrence_key=args.recurrence_key,
+                message=args.message,
+                source_id=args.source_id,
+                criterion_id=args.criterion_id,
+                unclassified=args.unclassified,
+                iteration_count=args.iteration_count,
+                project_id=args.project_id,
+                severity=args.severity,
+                source_type=args.source_type,
+            )
+            print(f"Logged {args.event_type} {result['event_id']} -> {result['ledger_path']}")
+            return 0
+
+        if args.command == "mint-criterion":
+            from influencer_os.rubric import mint_criterion
+
+            result = mint_criterion(
+                args.creator_workspace,
+                criterion_id=args.criterion_id,
+                statement=args.statement,
+                os_scope=args.os_scope,
+                origin=args.origin,
+                category=args.category,
+                minted_from_event_id=args.minted_from_event_id,
+                notes=args.notes,
+            )
+            print(f"Minted criterion {result['criterion_id']} -> {result['rubric_path']}")
             return 0
 
         if args.command == "log-learning":

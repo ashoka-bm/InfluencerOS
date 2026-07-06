@@ -105,6 +105,10 @@
         "reference_library": {
           "type": "string",
           "const": "references/reference-library.json"
+        },
+        "production_rubric": {
+          "type": "string",
+          "const": "production-rubric.json"
         }
       }
     },

@@ -540,3 +540,76 @@ class MemoryPolicyDriftTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ImprovementOsDriftTests(unittest.TestCase):
+    """ADR 0025 drift pins: rubric vocabularies stay identical across the
+    schema, the code constants, and the quality-review checklist; the OS
+    rubric seed validates and covers every quality-review category; and the
+    friction-logging obligation stays present in the producing skills."""
+
+    RUBRIC_SCHEMA = json.loads((ROOT / "schemas" / "production-rubric.schema.json").read_text())
+    EVENT_SCHEMA = json.loads((ROOT / "schemas" / "system-event.schema.json").read_text())
+
+    def criterion_properties(self):
+        return self.RUBRIC_SCHEMA["properties"]["criteria"]["items"]["properties"]
+
+    def test_rubric_enums_match_code_constants(self):
+        from influencer_os.validation import (
+            CRITERION_ORIGINS,
+            CRITERION_STATUSES,
+            RUBRIC_SCOPES,
+        )
+
+        self.assertEqual(
+            self.RUBRIC_SCHEMA["properties"]["scope"]["enum"], list(RUBRIC_SCOPES)
+        )
+        criterion = self.criterion_properties()
+        self.assertEqual(criterion["status"]["enum"], list(CRITERION_STATUSES))
+        self.assertEqual(criterion["origin"]["enum"], list(CRITERION_ORIGINS))
+
+    def test_rubric_category_enum_matches_quality_review_checklist(self):
+        from influencer_os.validation import QUALITY_REVIEW_CHECKS
+
+        category_enum = self.criterion_properties()["quality_review_category"]["enum"]
+        self.assertEqual(sorted(category_enum), sorted(QUALITY_REVIEW_CHECKS))
+        quality_schema = json.loads(
+            (ROOT / "schemas" / "quality-review.schema.json").read_text()
+        )
+        checklist_enum = quality_schema["properties"]["checklist"]["items"][
+            "properties"
+        ]["check"]["enum"]
+        self.assertEqual(sorted(category_enum), sorted(checklist_enum))
+
+    def test_event_friction_fields_share_the_criterion_id_pattern(self):
+        criterion_pattern = self.criterion_properties()["criterion_id"]["pattern"]
+        event_props = self.EVENT_SCHEMA["properties"]
+        self.assertEqual(event_props["criterion_id"]["pattern"], criterion_pattern)
+        self.assertEqual(event_props["recurrence_key"]["pattern"], criterion_pattern)
+
+    def test_os_rubric_seed_validates_and_covers_every_category(self):
+        from influencer_os.validation import QUALITY_REVIEW_CHECKS, validate_record
+
+        rubric = json.loads((ROOT / "context" / "production-rubric.json").read_text())
+        validate_record("production-rubric", rubric)
+        self.assertEqual(rubric["scope"], "os")
+        covered = {
+            criterion.get("quality_review_category")
+            for criterion in rubric["criteria"]
+        }
+        self.assertTrue(
+            set(QUALITY_REVIEW_CHECKS) <= covered,
+            f"OS rubric seed must cover every quality-review category; got {covered}",
+        )
+
+    def test_producing_skills_carry_the_friction_logging_rule(self):
+        for skill in (
+            "review-generated-assets",
+            "request-generation-approval",
+            "create-production-plan",
+            "create-output-package",
+        ):
+            text = (ROOT / "skills" / skill / "SKILL.md").read_text()
+            self.assertIn("## Friction Logging", text, skill)
+            self.assertIn("log-incident", text, skill)
+            self.assertIn("cite-or-mint", text, skill)

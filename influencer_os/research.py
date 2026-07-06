@@ -38,7 +38,6 @@ RESEARCH_JSONL_FILES = (
 
 SYSTEM_JSONL_FILES = (
     ("project-warnings.jsonl", "project-warning"),
-    ("creator-events.jsonl", "system-event"),
 )
 
 # Formats with a production plan schema (projects.PRODUCTION_PLAN_SCHEMAS).
@@ -268,6 +267,50 @@ def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None
                 f"{entry_id!r}, but idea promotion {promotion_id!r} was "
                 f"promoted from {promoted_entry!r}"
             )
+
+
+def validate_events_ledger(workspace_dir, scope):
+    """Shared friction-ledger seam (ADR 0025), called by both validate_research
+    and validate workspace: per-line schema + structural semantics, creator
+    scope, duplicate event ids, criterion resolution against the collected
+    rubric (cite-or-mint at rest), and creator-rubric mint provenance
+    resolving to real ledger events. Returns the checked relative paths."""
+    from influencer_os import rubric as rubric_module
+
+    workspace_dir = Path(workspace_dir)
+    checked = []
+    ledger_path = workspace_dir / "system" / "creator-events.jsonl"
+    criteria_by_id = rubric_module.collect_criteria(workspace_dir, scope=scope)
+    seen_event_ids = set()
+
+    def record_check(record):
+        check_creator_scope(record, scope)
+        event_id = record.get("event_id")
+        if event_id in seen_event_ids:
+            raise ValidationError(f"duplicate event id {event_id!r}")
+        seen_event_ids.add(event_id)
+        rubric_module.check_event_resolution(record, criteria_by_id)
+
+    if ledger_path.exists():
+        validate_jsonl_file("system-event", ledger_path, record_check=record_check)
+        checked.append(str(ledger_path.relative_to(workspace_dir)))
+
+    # Creator-rubric mint provenance must resolve to real ledger events. The
+    # OS rubric is exempt: it may be minted from any workspace's (untracked)
+    # ledger, so its provenance is not resolvable from one workspace.
+    workspace_rubric_path = workspace_dir / rubric_module.WORKSPACE_RUBRIC_FILENAME
+    if workspace_rubric_path.exists():
+        workspace_rubric = rubric_module.load_rubric(workspace_rubric_path)
+        for criterion in workspace_rubric.get("criteria", []):
+            source_event = criterion.get("minted_from_event_id")
+            if source_event is not None and source_event not in seen_event_ids:
+                raise ValidationError(
+                    f"{workspace_rubric_path}: criterion "
+                    f"{criterion['criterion_id']!r} cites minted_from_event_id "
+                    f"{source_event!r} which does not resolve to a ledger event"
+                )
+        checked.append(rubric_module.WORKSPACE_RUBRIC_FILENAME)
+    return checked
 
 
 def load_workspace_scope(workspace_dir):
@@ -712,15 +755,14 @@ def validate_research(workspace_path):
     for filename, schema_name in SYSTEM_JSONL_FILES:
         system_path = workspace_dir / "system" / filename
         if system_path.exists():
-            if schema_name == "project-warning":
-                def record_check(record):
-                    check_project_warning_pairing(record)
-                    check_project_warning_target_refs(record, workspace_dir)
-                    check_creator_scope(record, scope)
-            else:
-                record_check = scoped
+            def record_check(record):
+                check_project_warning_pairing(record)
+                check_project_warning_target_refs(record, workspace_dir)
+                check_creator_scope(record, scope)
             validate_jsonl_file(schema_name, system_path, record_check=record_check)
             checked.append(str(system_path.relative_to(workspace_dir)))
+
+    checked.extend(validate_events_ledger(workspace_dir, scope))
 
     warnings, promotion_paths, _promotions_by_id = validate_promotions(
         workspace_dir, scope=scope

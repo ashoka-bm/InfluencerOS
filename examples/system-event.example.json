@@ -1,15 +1,14 @@
 {
   "event_id": "event_luna_fit_001",
-  "occurred_on": "2026-07-03T09:41:00",
-  "event_type": "research_run_completed",
-  "severity": "info",
-  "message": "Scheduled research run completed with one new queue idea for luna-fit.",
-  "source_type": "automation_run",
-  "source_id": "automation_run_luna_fit_001",
+  "occurred_on": "2026-07-06T15:20:00",
+  "event_type": "rejection",
+  "severity": "important",
+  "message": "Rejected generated clip draft: Luna's face drifts from the identity plate in the payoff shot.",
+  "source_type": "skill",
+  "source_id": "review-generated-assets",
   "creator_profile_id": "creator_luna_fit",
   "creator_slug": "luna-fit",
-  "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
-  "content_card_id": "card_idea_queue_entry_luna_fit_001",
-  "delivery_channel": "kanban",
-  "delivery_status": "delivered"
+  "recurrence_key": "gen.identity.consistent",
+  "criterion_id": "gen.identity.consistent",
+  "iteration_count": 2
 }

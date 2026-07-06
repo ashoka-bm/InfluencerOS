@@ -1,0 +1,347 @@
+"""Improvement OS tests (ADR 0025): the Production Rubric substrate and the
+friction-event seam. Writer (log-incident / mint-criterion) and at-rest
+validation (validate workspace / validate research) share one seam, so every
+negative case is probed on both sides where it applies."""
+
+import json
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from influencer_os.creator_workspaces import init_creator, validate_creator_workspace
+from influencer_os.research import load_workspace_scope, validate_events_ledger
+from influencer_os.rubric import collect_criteria, log_incident, mint_criterion
+from influencer_os.validation import ValidationError, validate_record
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def make_event(**overrides):
+    record = {
+        "event_id": "event_luna_fit_900",
+        "occurred_on": "2026-07-06T12:00:00",
+        "event_type": "rejection",
+        "severity": "important",
+        "message": "Rejected draft for testing.",
+        "source_type": "skill",
+        "source_id": "create-production-plan",
+        "creator_profile_id": "creator_luna_fit",
+        "creator_slug": "luna-fit",
+        "recurrence_key": "gen.identity.consistent",
+        "criterion_id": "gen.identity.consistent",
+    }
+    record.update(overrides)
+    return {key: value for key, value in record.items() if value is not None}
+
+
+class WorkspaceScaffoldMixin:
+    """One template workspace per class; per-test copies keep tests isolated
+    without re-running init_creator (which syncs every runtime skill)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._template_tmp = tempfile.TemporaryDirectory()
+        template_root = Path(cls._template_tmp.name)
+        workspace = init_creator(
+            ROOT / "examples" / "creator-workspace.example.json",
+            workspace_root=template_root,
+        )
+        shutil.copyfile(
+            ROOT / "examples" / "creator-profile.example.json",
+            workspace / "creator-profile.json",
+        )
+        shutil.copyfile(
+            ROOT / "examples" / "reference-library.example.json",
+            workspace / "references" / "reference-library.json",
+        )
+        shutil.copyfile(
+            ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md",
+            workspace / "sources" / "intakes" / "luna-fit-breakdown.md",
+        )
+        cls._template_workspace = workspace
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._template_tmp.cleanup()
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.workspace = Path(tmp.name) / "luna-fit"
+        shutil.copytree(self._template_workspace, self.workspace)
+
+    def append_ledger_line(self, record):
+        ledger = self.workspace / "system" / "creator-events.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        with ledger.open("a") as handle:
+            handle.write(json.dumps(record) + "\n")
+
+    def scope(self):
+        return load_workspace_scope(self.workspace)
+
+
+class EventSemanticsTests(unittest.TestCase):
+    """Structural friction semantics run wherever validate_record runs."""
+
+    def test_rejection_with_both_criterion_and_unclassified_fails(self):
+        with self.assertRaisesRegex(ValidationError, "exactly one of"):
+            validate_record("system-event", make_event(unclassified=True))
+
+    def test_rejection_with_neither_criterion_nor_unclassified_fails(self):
+        record = make_event()
+        del record["criterion_id"]
+        with self.assertRaisesRegex(ValidationError, "exactly one of"):
+            validate_record("system-event", record)
+
+    def test_recurrence_key_must_equal_cited_criterion(self):
+        record = make_event(recurrence_key="gen.plan.continuity")
+        with self.assertRaisesRegex(ValidationError, "recurrence_key must equal"):
+            validate_record("system-event", record)
+
+    def test_friction_fields_forbidden_on_non_friction_events(self):
+        record = make_event(event_type="research_run_completed")
+        del record["criterion_id"]
+        with self.assertRaisesRegex(ValidationError, "only valid on friction"):
+            validate_record("system-event", record)
+
+    def test_incident_requires_recurrence_key(self):
+        record = make_event(event_type="incident")
+        del record["criterion_id"]
+        del record["recurrence_key"]
+        with self.assertRaisesRegex(ValidationError, "require recurrence_key"):
+            validate_record("system-event", record)
+
+    def test_incident_may_not_be_unclassified(self):
+        record = make_event(event_type="incident", unclassified=True)
+        del record["criterion_id"]
+        with self.assertRaisesRegex(ValidationError, "rejections only"):
+            validate_record("system-event", record)
+
+
+class RubricSemanticsTests(unittest.TestCase):
+    def make_rubric(self, **overrides):
+        rubric = {
+            "rubric_id": "rubric_luna_fit",
+            "scope": "creator",
+            "creator_profile_id": "creator_luna_fit",
+            "creator_slug": "luna-fit",
+            "criteria": [],
+        }
+        rubric.update(overrides)
+        return {key: value for key, value in rubric.items() if value is not None}
+
+    def make_criterion(self, **overrides):
+        criterion = {
+            "criterion_id": "creator.test.rule",
+            "statement": "The draft follows the test rule.",
+            "status": "minted",
+            "origin": "rejection",
+            "minted_on": "2026-07-06",
+        }
+        criterion.update(overrides)
+        return criterion
+
+    def test_creator_scope_requires_creator_fields(self):
+        rubric = self.make_rubric(creator_profile_id=None)
+        with self.assertRaisesRegex(ValidationError, "requires creator_profile_id"):
+            validate_record("production-rubric", rubric)
+
+    def test_os_scope_forbids_creator_fields(self):
+        rubric = self.make_rubric(scope="os")
+        with self.assertRaisesRegex(ValidationError, "must not carry"):
+            validate_record("production-rubric", rubric)
+
+    def test_duplicate_criterion_ids_within_file_fail(self):
+        rubric = self.make_rubric(
+            criteria=[self.make_criterion(), self.make_criterion()]
+        )
+        with self.assertRaisesRegex(ValidationError, "duplicate criterion id"):
+            validate_record("production-rubric", rubric)
+
+    def test_blocking_requires_adr(self):
+        rubric = self.make_rubric(criteria=[self.make_criterion(status="blocking")])
+        with self.assertRaisesRegex(ValidationError, "requires blocking_adr"):
+            validate_record("production-rubric", rubric)
+
+    def test_non_blocking_forbids_adr(self):
+        rubric = self.make_rubric(
+            criteria=[
+                self.make_criterion(
+                    blocking_adr="docs/adr/0025-improvement-os-feedback-loops.md"
+                )
+            ]
+        )
+        with self.assertRaisesRegex(ValidationError, "but is not blocking"):
+            validate_record("production-rubric", rubric)
+
+
+class RubricSubstrateTests(WorkspaceScaffoldMixin, unittest.TestCase):
+    def test_init_creator_scaffolds_valid_empty_rubric(self):
+        rubric_path = self.workspace / "production-rubric.json"
+        self.assertTrue(rubric_path.exists())
+        rubric = json.loads(rubric_path.read_text())
+        validate_record("production-rubric", rubric)
+        self.assertEqual(rubric["scope"], "creator")
+        self.assertEqual(rubric["criteria"], [])
+        validate_creator_workspace(self.workspace)
+
+    def test_log_incident_writes_a_resolvable_rejection(self):
+        result = log_incident(
+            self.workspace,
+            event_type="rejection",
+            recurrence_key="gen.identity.consistent",
+            criterion_id="gen.identity.consistent",
+            message="Face drifts from the identity plate.",
+            source_id="review-generated-assets",
+            iteration_count=2,
+        )
+        self.assertEqual(result["event_id"], "event_luna_fit_001")
+        validate_creator_workspace(self.workspace)
+        validate_events_ledger(self.workspace, self.scope())
+
+    def test_unclassified_rejection_validates_end_to_end(self):
+        log_incident(
+            self.workspace,
+            event_type="rejection",
+            recurrence_key="vibe.cluster.tone",
+            unclassified=True,
+            message="Tone felt off; rule not articulable yet.",
+            source_id="create-production-plan",
+        )
+        validate_creator_workspace(self.workspace)
+
+    def test_citing_unknown_criterion_fails_writer_and_at_rest(self):
+        with self.assertRaisesRegex(ValidationError, "unknown rubric criterion"):
+            log_incident(
+                self.workspace,
+                event_type="rejection",
+                recurrence_key="ghost.rule",
+                criterion_id="ghost.rule",
+                message="should fail",
+                source_id="create-production-plan",
+            )
+        self.append_ledger_line(
+            make_event(recurrence_key="ghost.rule", criterion_id="ghost.rule")
+        )
+        with self.assertRaisesRegex(ValidationError, "unknown rubric criterion"):
+            validate_creator_workspace(self.workspace)
+
+    def test_citing_retired_criterion_fails_writer_and_at_rest(self):
+        mint_criterion(
+            self.workspace,
+            criterion_id="creator.test.retired_rule",
+            statement="A rule that gets retired.",
+        )
+        rubric_path = self.workspace / "production-rubric.json"
+        rubric = json.loads(rubric_path.read_text())
+        rubric["criteria"][0]["status"] = "retired"
+        rubric_path.write_text(json.dumps(rubric, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "retired rubric criterion"):
+            log_incident(
+                self.workspace,
+                event_type="rejection",
+                recurrence_key="creator.test.retired_rule",
+                criterion_id="creator.test.retired_rule",
+                message="should fail",
+                source_id="create-production-plan",
+            )
+        self.append_ledger_line(
+            make_event(
+                recurrence_key="creator.test.retired_rule",
+                criterion_id="creator.test.retired_rule",
+            )
+        )
+        with self.assertRaisesRegex(ValidationError, "retired rubric criterion"):
+            validate_creator_workspace(self.workspace)
+
+    def test_duplicate_event_ids_fail_at_rest(self):
+        record = make_event()
+        self.append_ledger_line(record)
+        self.append_ledger_line(record)
+        with self.assertRaisesRegex(ValidationError, "duplicate event id"):
+            validate_creator_workspace(self.workspace)
+
+    def test_mint_criterion_rejects_duplicates_across_scopes(self):
+        mint_criterion(
+            self.workspace,
+            criterion_id="creator.test.rule",
+            statement="The draft follows the test rule.",
+        )
+        with self.assertRaisesRegex(ValidationError, "already exists"):
+            mint_criterion(
+                self.workspace,
+                criterion_id="creator.test.rule",
+                statement="Duplicate within the creator rubric.",
+            )
+        with self.assertRaisesRegex(ValidationError, "already exists"):
+            mint_criterion(
+                self.workspace,
+                criterion_id="gen.identity.consistent",
+                statement="Collides with an OS seed criterion.",
+            )
+
+    def test_workspace_rubric_duplicating_an_os_criterion_fails_at_rest(self):
+        rubric_path = self.workspace / "production-rubric.json"
+        rubric = json.loads(rubric_path.read_text())
+        rubric["criteria"].append(
+            {
+                "criterion_id": "gen.identity.consistent",
+                "statement": "Shadows the OS seed criterion.",
+                "status": "minted",
+                "origin": "rejection",
+                "minted_on": "2026-07-06",
+            }
+        )
+        rubric_path.write_text(json.dumps(rubric, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "duplicate criterion id"):
+            validate_creator_workspace(self.workspace)
+
+    def test_workspace_rubric_with_foreign_creator_fails(self):
+        rubric_path = self.workspace / "production-rubric.json"
+        rubric = json.loads(rubric_path.read_text())
+        rubric["creator_profile_id"] = "creator_other"
+        rubric_path.write_text(json.dumps(rubric, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "does not match the owning"):
+            validate_creator_workspace(self.workspace)
+
+    def test_minted_from_event_id_must_resolve(self):
+        rubric_path = self.workspace / "production-rubric.json"
+        rubric = json.loads(rubric_path.read_text())
+        rubric["criteria"].append(
+            {
+                "criterion_id": "creator.test.from_event",
+                "statement": "Minted from a ledger event.",
+                "status": "minted",
+                "origin": "distillation",
+                "minted_on": "2026-07-06",
+                "minted_from_event_id": "event_luna_fit_777",
+            }
+        )
+        rubric_path.write_text(json.dumps(rubric, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "does not resolve to a ledger event"):
+            validate_creator_workspace(self.workspace)
+        self.append_ledger_line(
+            make_event(
+                event_id="event_luna_fit_777",
+                event_type="rejection",
+                recurrence_key="vibe.cluster.framing",
+                criterion_id=None,
+                unclassified=True,
+            )
+        )
+        validate_creator_workspace(self.workspace)
+
+    def test_collect_criteria_unions_both_scopes(self):
+        mint_criterion(
+            self.workspace,
+            criterion_id="creator.test.rule",
+            statement="The draft follows the test rule.",
+        )
+        criteria = collect_criteria(self.workspace, scope=self.scope())
+        self.assertIn("creator.test.rule", criteria)
+        self.assertIn("gen.identity.consistent", criteria)
+
+
+if __name__ == "__main__":
+    unittest.main()

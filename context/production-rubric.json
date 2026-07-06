@@ -1,0 +1,38 @@
+{
+  "rubric_id": "rubric_influencer_os",
+  "scope": "os",
+  "criteria": [
+    {
+      "criterion_id": "gen.identity.consistent",
+      "statement": "Generated media preserves the creator's visual identity against the approved reference assets.",
+      "status": "minted",
+      "origin": "seed",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "identity_consistency"
+    },
+    {
+      "criterion_id": "gen.plan.continuity",
+      "statement": "Generated media matches the approved plan's shots, setting, actions, and beat structure.",
+      "status": "minted",
+      "origin": "seed",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "continuity_with_plan"
+    },
+    {
+      "criterion_id": "gen.technical.conformant",
+      "statement": "Generated media meets the plan's format, resolution, duration, and file-integrity requirements.",
+      "status": "minted",
+      "origin": "seed",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "technical_conformance"
+    },
+    {
+      "criterion_id": "gen.boundaries.compliant",
+      "statement": "Generated media respects the creator's stated boundaries and disclosure rules.",
+      "status": "minted",
+      "origin": "seed",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "creator_boundary_compliance"
+    }
+  ]
+}

@@ -67,6 +67,25 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 - Do not review creative quality (hook strength, payoff) here — that is
   `review-hook-payoff`; this gate is provider-safety and conformance.
 
+## Friction Logging (ADR 0025)
+
+When the operator rejects a draft, prompt, or asset this skill produced — or
+an attempt fails in a way a future run should avoid — log it at the moment of
+friction, before moving on:
+
+```bash
+python3 -m influencer_os log-incident <creator-workspace> --type rejection \
+  --recurrence-key <criterion-id> --criterion <criterion-id> \
+  --source-id review-generated-assets --message "<one line: what was rejected and why>"
+```
+
+- Cite an existing Production Rubric criterion, or mint one first with
+  `mint-criterion` (cite-or-mint). If the reason cannot be articulated yet,
+  log with `--unclassified` and a recurrence key naming the cluster.
+- Record iteration churn with `--iteration-count` when several attempts
+  preceded acceptance.
+- Verdicts are durable; never store the rejected material itself.
+
 ## Self-Update
 
 When corrected twice the same way, record the lesson via

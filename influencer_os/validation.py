@@ -116,6 +116,15 @@ CONTENT_MODALITIES = ("text", "image", "video", "audio")
 # Advisory platform-fit vocabulary for the platform_fit ProjectWarning.
 PLATFORM_FIT_LEVELS = ("native", "subtype", "analog", "none")
 
+# Improvement OS (ADR 0025) closed vocabularies. Criterion ids double as
+# recurrence keys; the maturity ladder is minted -> proven -> blocking, with
+# retired for criteria that no longer apply. Friction (rejection/incident)
+# events are the only events that carry rubric fields.
+RUBRIC_SCOPES = ("os", "creator")
+CRITERION_STATUSES = ("minted", "proven", "blocking", "retired")
+CRITERION_ORIGINS = ("seed", "rejection", "distillation")
+FRICTION_EVENT_TYPES = ("rejection", "incident")
+
 # Review roles with a built reviewer skill. The schema enum carries the full
 # decided vocabulary (creator_fit and fact_check are approved for the reviews
 # second slice), but a record claiming an unbuilt review ran fails closed.
@@ -511,6 +520,10 @@ def validate_record_semantics(schema_name, record):
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
         validate_research_source_yield_semantics(record)
+    if schema_name == "production-rubric":
+        validate_rubric_semantics(record)
+    if schema_name == "system-event":
+        validate_system_event_semantics(record)
 
 
 def validate_beat_spine(record, field_name, record_name, require_coverage):
@@ -704,6 +717,87 @@ def validate_quality_review_semantics(record):
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'fail' requires at "
             "least one failing checklist item"
+        )
+
+
+def validate_rubric_semantics(record):
+    """ProductionRubric semantics (ADR 0025): scope-conditional creator
+    fields, unique criterion ids (they double as recurrence keys), and the
+    blocking ADR pairing — a criterion may only block through a recorded
+    gates-and-reviews ADR decision, and a non-blocking criterion carrying an
+    ADR ref would misstate its authority."""
+    rubric_id = record.get("rubric_id", "<unknown>")
+    scope = record.get("scope")
+    if scope == "creator":
+        for field in ("creator_profile_id", "creator_slug"):
+            if not record.get(field):
+                raise ValidationError(
+                    f"rubric {rubric_id}: scope 'creator' requires {field}"
+                )
+    if scope == "os":
+        for field in ("creator_profile_id", "creator_slug"):
+            if field in record:
+                raise ValidationError(
+                    f"rubric {rubric_id}: scope 'os' must not carry {field}"
+                )
+    seen_ids = set()
+    for criterion in record.get("criteria", []):
+        criterion_id = criterion.get("criterion_id", "<unknown>")
+        if criterion_id in seen_ids:
+            raise ValidationError(
+                f"rubric {rubric_id}: duplicate criterion id {criterion_id!r}"
+            )
+        seen_ids.add(criterion_id)
+        blocking = criterion.get("status") == "blocking"
+        has_adr = "blocking_adr" in criterion
+        if blocking and not has_adr:
+            raise ValidationError(
+                f"rubric {rubric_id}: blocking criterion {criterion_id!r} "
+                "requires blocking_adr (gates-and-reviews ADR checklist)"
+            )
+        if not blocking and has_adr:
+            raise ValidationError(
+                f"rubric {rubric_id}: criterion {criterion_id!r} carries "
+                "blocking_adr but is not blocking"
+            )
+
+
+def validate_system_event_semantics(record):
+    """SystemEvent friction semantics (ADR 0025), the structural half of the
+    Rubric Ratchet: rejection/incident events carry recurrence keys; a
+    rejection cites exactly one of a criterion or unclassified: true; and a
+    cited criterion id IS the recurrence key. Resolution against the
+    collected rubric lives in rubric.check_event_resolution, which needs the
+    filesystem."""
+    event_id = record.get("event_id", "<unknown>")
+    event_type = record.get("event_type")
+    friction = event_type in FRICTION_EVENT_TYPES
+    for field in ("recurrence_key", "criterion_id", "iteration_count", "unclassified"):
+        if field in record and not friction:
+            raise ValidationError(
+                f"event {event_id}: {field} is only valid on friction events "
+                f"({', '.join(FRICTION_EVENT_TYPES)}), not {event_type!r}"
+            )
+    if friction and not record.get("recurrence_key"):
+        raise ValidationError(
+            f"event {event_id}: {event_type} events require recurrence_key"
+        )
+    if event_type == "rejection":
+        has_criterion = "criterion_id" in record
+        unclassified = record.get("unclassified") is True
+        if has_criterion == unclassified:
+            raise ValidationError(
+                f"event {event_id}: a rejection must carry exactly one of "
+                "criterion_id or unclassified: true (cite-or-mint, ADR 0025)"
+            )
+    if event_type == "incident" and record.get("unclassified"):
+        raise ValidationError(
+            f"event {event_id}: unclassified applies to rejections only"
+        )
+    if "criterion_id" in record and record.get("recurrence_key") != record["criterion_id"]:
+        raise ValidationError(
+            f"event {event_id}: recurrence_key must equal criterion_id when a "
+            "criterion is cited (criterion ids are recurrence keys)"
         )
 
 

@@ -1,0 +1,25 @@
+{
+  "rubric_id": "rubric_luna_fit",
+  "scope": "creator",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "criteria": [
+    {
+      "criterion_id": "creator.boundaries.no_medical_claims",
+      "statement": "The content makes no medical, injury-treatment, or health-outcome claims.",
+      "status": "minted",
+      "origin": "seed",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "creator_boundary_compliance",
+      "notes": "Seeded from the creator boundary: movement resets are energy habits, never therapy."
+    },
+    {
+      "criterion_id": "creator.video.desk_context_visible",
+      "statement": "Desk-reset videos keep Luna's ordinary workday context (desk, timer, mat) visible in the establishing shot.",
+      "status": "minted",
+      "origin": "rejection",
+      "minted_on": "2026-07-06",
+      "quality_review_category": "continuity_with_plan"
+    }
+  ]
+}

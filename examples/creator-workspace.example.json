@@ -15,7 +15,8 @@
     "soul": "brand_context/soul.md",
     "personal_brand": "brand_context/personal-brand.md",
     "voice_samples": "brand_context/voice-samples.md",
-    "reference_library": "references/reference-library.json"
+    "reference_library": "references/reference-library.json",
+    "production_rubric": "production-rubric.json"
   },
   "directories": {
     "context": "context/",
