@@ -182,7 +182,7 @@ remainders: the analytics API connector builds only on explicit request
 Entry criteria:
 
 - Output Package records are stable.
-- Published Post Record and Analytics Snapshot schemas validate.
+- Phase 2 record schemas validate (Published Post Record, Analytics Snapshot, and Performance Summary).
 - Creator Memory policy is implemented.
 
 Exit criteria:

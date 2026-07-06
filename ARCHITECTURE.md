@@ -102,15 +102,18 @@ InfluencerOS v1 does:
 - apply a compatible social template or production structure to the promoted idea,
 - create a format-specific production plan,
 - create a provider-neutral base video generation plan,
-- register an Output Package from existing approved/imported artifacts or text files.
+- register an Output Package from existing approved/imported artifacts or text files,
+- register manual Published Post Records for posts a human already published,
+- ingest manual or neutral-CSV Analytics Snapshots through the shared writer seam,
+- author Performance Summaries, distill evidence-linked creator lessons, and rebuild SQL/semantic lookup projections.
 
 InfluencerOS v1 does not:
 
 - create platform-specific adapters,
 - plan post-production motion graphics,
 - publish or schedule posts,
+- call platform analytics APIs or run scheduled analytics ingestion without explicit scope approval,
 - scrape private social data,
-- run analytics feedback loops,
 - generate media without explicit approval.
 
 ## Module Boundaries

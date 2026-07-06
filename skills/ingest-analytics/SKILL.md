@@ -36,6 +36,10 @@ status, the package, or published records.
 - `hours_since_publish` may be left `null`: it is derived from
   `snapshot_at` minus the record's `published_at` when both parse. A
   snapshot timestamped before publication is rejected.
+- Use comparable timestamp forms: if both `snapshot_at` and the
+  PublishedPostRecord's `published_at` parse, they must either both include
+  timezone offsets or both be naive. Mixed timezone awareness is rejected
+  before trusting `hours_since_publish`.
 - `raw_source_ref` and `retention_curve_ref` must point to real files under
   `analytics/raw/` inside the project; raw exports must never contain
   tokens or secrets.

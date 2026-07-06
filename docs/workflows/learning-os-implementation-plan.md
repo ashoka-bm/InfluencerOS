@@ -37,8 +37,8 @@ Outputs (new at-rest records and projections):
 
 - `projects/<project-slug>/published/published-post-records/*.json`
   (PublishedPostRecord),
-- `projects/<project-slug>/analytics/*.json` and optional `analytics/raw/`
-  (AnalyticsSnapshot),
+- `projects/<project-slug>/analytics/snapshots/*.json`
+  (AnalyticsSnapshot) and optional `analytics/raw/` files,
 - `projects/<project-slug>/performance-summary.json` (PerformanceSummary),
 - distilled lessons appended to `memory/learnings.md` with evidence links,
 - Learning OS rows in `workspace-library/index/influencer-os.sqlite`,
@@ -61,7 +61,7 @@ All three roadmap entry criteria pass today:
 1. **Output Package records are stable.** Phase 1 slice 7 plus its review
    hardening landed 2026-07-04; `register-output-package` and at-rest packaged
    project validation are covered by tests (321+ passing at Phase 1 closeout).
-2. **Published Post Record and Analytics Snapshot schemas validate.**
+2. **Phase 2 schemas validate.**
    `schemas/published-post-record.schema.json`,
    `schemas/analytics-snapshot.schema.json`,
    `schemas/performance-summary.schema.json` exist since 2026-07-01 with
@@ -78,7 +78,7 @@ rewritten here as runnable checks (workstream-14 pattern). Phase 2 exits when
 every check below passes and is recorded in `progress.md`:
 
 1. **Published Post Records can be registered.**
-   `python3 -m influencer_os register-published-post <workspace> <project> <record.json>`
+   `python3 -m influencer_os register-published-post <record.json> --project <project-dir>`
    succeeds against a packaged fixture project; the written record passes
    `validate record published-post-record <path>`; a hand-edited invalid
    record at rest fails `validate project` (test).
@@ -230,8 +230,8 @@ Phase 0C WS 10.
 ### Slice 5: Recall Index Extension
 
 - Extend `rebuild-index` scans to `published/published-post-records/*.json`,
-  `analytics/*.json`, and `performance-summary.json`; add the three types to
-  `UNIQUE_RECORD_TYPES`.
+  `analytics/snapshots/*.json`, and `performance-summary.json`; add the
+  three types to `UNIQUE_RECORD_TYPES`.
 - Provenance columns unchanged (path, hash, timestamps — ADR 0010).
 - Reconciliation both directions where aggregates exist (process-learning
   2026-07-04): index rows must trace to files, and a full rebuild after

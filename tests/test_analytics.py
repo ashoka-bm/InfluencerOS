@@ -167,6 +167,25 @@ class AddAnalyticsSnapshotTests(unittest.TestCase):
 
             self.assertIn("earlier than", str(ctx.exception))
 
+    def test_rejects_pre_publication_snapshot_with_mixed_timezone_awareness(self):
+        # Full Phase 2 review: a supplied hours_since_publish value plus a
+        # naive snapshot timestamp must not bypass ordering against a
+        # timezone-aware PublishedPostRecord.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            record_path = stage_snapshot_record(
+                temp_dir,
+                lambda record: record.update(
+                    snapshot_at="2026-06-28T18:30:00",
+                    hours_since_publish=24,
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                add_analytics_snapshot(project_dir, record_path)
+
+            self.assertIn("timezone awareness", str(ctx.exception))
+
     def test_rejects_symlinked_raw_ref_inside_project(self):
         # Review finding: a symlink under analytics/raw/ pointing at another
         # project file must not pass containment.

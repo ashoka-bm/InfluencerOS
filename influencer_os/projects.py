@@ -622,17 +622,19 @@ def _validate_analytics_snapshot_matches(record, project, output_package, publis
     # both timestamps parse (write time and at rest).
     snapshot_at = _parse_record_timestamp(record["snapshot_at"])
     published_at = _parse_record_timestamp(published_record["published_at"])
-    if (
-        snapshot_at is not None
-        and published_at is not None
-        and (snapshot_at.tzinfo is None) == (published_at.tzinfo is None)
-        and snapshot_at < published_at
-    ):
-        raise ValueError(
-            "Analytics snapshot_at is earlier than the published post's "
-            f"published_at: {record['snapshot_at']!r} < "
-            f"{published_record['published_at']!r}"
-        )
+    if snapshot_at is not None and published_at is not None:
+        if (snapshot_at.tzinfo is None) != (published_at.tzinfo is None):
+            raise ValueError(
+                "Analytics snapshot_at and published_at must use matching "
+                "timezone awareness before hours_since_publish can be trusted: "
+                f"{record['snapshot_at']!r} vs {published_record['published_at']!r}"
+            )
+        if snapshot_at < published_at:
+            raise ValueError(
+                "Analytics snapshot_at is earlier than the published post's "
+                f"published_at: {record['snapshot_at']!r} < "
+                f"{published_record['published_at']!r}"
+            )
 
 
 def _analytics_raw_refs(record):

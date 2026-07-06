@@ -16,6 +16,8 @@ Choose Creator
   -> apply a format-compatible social template
   -> create a format-specific production plan
   -> create a base generation plan when needed
+  -> register an Output Package from approved/imported artifacts
+  -> record manual publication, analytics snapshots, performance summary, and creator lessons
 ```
 
 InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set. Production stays format-first: it supports universal short-form vertical video, carousel, single-image, story-sequence, article, and thread plans without platform adapters.
@@ -73,14 +75,15 @@ Creator setup can capture broader creator strategy inputs, including written sur
 - Article Plan schema
 - Thread Plan schema
 - Base Video Generation Plan schema
-- conductor and producer skills through format-specific production planning
+- producer skills through output packaging and Learning OS distillation
+- local recall index and semantic lookup projection CLIs
 
 ## What V1 Defers
 
 - platform-specific motion graphics
 - caption styling and post-production treatments
 - publishing, scheduling, or uploads
-- analytics feedback loops
+- platform analytics API connectors and scheduled analytics feedback loops
 - provider-backed generation without explicit approval
 
 ## Validate Examples
