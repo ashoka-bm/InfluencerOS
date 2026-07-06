@@ -556,7 +556,10 @@ class CliTests(unittest.TestCase):
             self.assertTrue((project_dir / "published" / "published-post-records").is_dir())
             self.assertTrue((project_dir / "analytics" / "snapshots").is_dir())
             self.assertTrue((project_dir / "analytics" / "raw").is_dir())
-            self.assertTrue((project_dir / "performance-summary.md").exists())
+            # The summary is a schema-validated record authored after
+            # publication (Phase 2 slice 3), never scaffolded at init.
+            self.assertFalse((project_dir / "performance-summary.json").exists())
+            self.assertFalse((project_dir / "performance-summary.md").exists())
 
     def test_validate_project_command_accepts_initialized_project(self):
         with tempfile.TemporaryDirectory() as temp_dir:

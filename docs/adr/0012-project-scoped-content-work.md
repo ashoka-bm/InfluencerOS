@@ -49,3 +49,8 @@ record lives in the research module under
 provenance in `project.json` source refs plus a compact `evidence-brief.md`.
 Project-scoped folders are now `plan/`, `output-package/`, `published/`,
 `analytics/`, and `performance-summary.md`.
+
+The Phase 2 Learning OS plan (Decision 4, 2026-07-05) makes the performance
+summary a canonical schema-validated record: `performance-summary.json`
+(authored after publication, validated by `validate project`) replaces the
+scaffolded `performance-summary.md`, with no parallel markdown file.

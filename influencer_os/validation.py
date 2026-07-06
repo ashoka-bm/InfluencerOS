@@ -437,6 +437,9 @@ def validate_record_semantics(schema_name, record):
         validate_required_stages(record, "creative_performance_map", "OutputPackage")
         validate_output_package_assets(record)
     if schema_name == "performance-summary":
+        # Uniqueness first: five findings with a repeated stage are better
+        # reported as the duplicate than as the stage the repeat displaced.
+        validate_unique_stages(record, "stage_findings", "PerformanceSummary")
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
@@ -454,6 +457,25 @@ def validate_required_stages(record, field_name, record_name):
     if missing:
         raise ValidationError(
             f"{record_name}.{field_name}: missing required stages {sorted(missing)!r}"
+        )
+
+
+def validate_unique_stages(record, field_name, record_name):
+    """Each attribution stage appears exactly once (Phase 2 slice 3).
+
+    The schema's enum + minItems admits a stage list with repeats; this
+    closes that gap. Combined with validate_required_stages, the five
+    stages must appear exactly once each.
+    """
+    stages = [
+        entry.get("stage")
+        for entry in record.get(field_name, [])
+        if isinstance(entry, dict)
+    ]
+    duplicated = sorted({stage for stage in stages if stages.count(stage) > 1})
+    if duplicated:
+        raise ValidationError(
+            f"{record_name}.{field_name}: duplicate stages {duplicated!r}"
         )
 
 

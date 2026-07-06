@@ -103,7 +103,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-output-package` | planning | Output Package + provenance. | [BUILT — Phase 1 slice 7] |
 | `register-published-post` | learning | PublishedPostRecord + Project published status. | [BUILT — Phase 2 slice 1] |
 | `ingest-analytics` | learning | AnalyticsSnapshots from manual/CSV entry. | [BUILT — Phase 2 slice 2] |
-| `create-performance-summary` | learning | PerformanceSummary from analytics evidence. | [PLANNED — Phase 2 slice 3] |
+| `create-performance-summary` | learning | PerformanceSummary from analytics evidence. | [BUILT — Phase 2 slice 3] |
 | `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2 slice 4] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
 | `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes (2,500-byte cap via CLI). | [BUILT — ADR 0016] |
@@ -181,7 +181,7 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   (post)   Output Package             -> Skill(create-output-package)                             [BUILT]
   (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
   (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [BUILT — Phase 2 slice 2]
-  (learn)  Performance summary        -> Skill(create-performance-summary)                        [PLANNED — Phase 2 slice 3]
+  (learn)  Performance summary        -> Skill(create-performance-summary)                        [BUILT — Phase 2 slice 3]
   (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2 slice 4]
 
   Until a [PLANNED] owner exists on disk, the conductor halts at that phase and surfaces the

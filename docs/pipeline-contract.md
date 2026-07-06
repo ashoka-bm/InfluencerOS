@@ -133,6 +133,21 @@ files under `analytics/raw/` inside the project. The CSV import is
 all-or-nothing. At rest, `validate project` re-checks every ingestion
 invariant, including filename-matches-id per snapshot.
 
+`performance-summary.json` is the interpretive Learning OS record (Phase 2
+slice 3): one per Project at the project root, authored by the
+`create-performance-summary` skill rather than a CLI write gate, so
+`validate project` is its enforcement seam. When present, its
+`evidence_refs` must resolve inside the project — `output_package_id` to
+the registered package, every `published_post_record_id` and
+`analytics_snapshot_id` to records on disk — and its `stage_findings` must
+cover packaging, hook, body retention, payoff, and CTA exactly once each
+(record semantics reject a duplicated or missing stage). The summary
+attaches at rest with no dedicated Project status; a `published` Project
+whose snapshots have matured past 72 hours (the slowest platform reporting
+lag) without a summary draws an advisory warning, never a failure.
+Interpretations are anchored to the Performance Benchmark Rubric and the
+stage-remediation mapping carried in the skill.
+
 Missing platform metrics must be recorded as absent or null, never inferred. Raw API payloads and exports may be preserved locally when useful, but secrets and access tokens must never be stored in analytics records.
 
 Analytics Snapshots must preserve enough dimensions for performance attribution:

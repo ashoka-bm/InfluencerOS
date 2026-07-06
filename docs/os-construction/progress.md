@@ -672,6 +672,38 @@ to all four fixture workspaces, all validating. Full workflow replay in
 project/workspace/board validation, and index rebuild all pass. Exit
 criterion 2 of the Phase 2 plan is met.
 
+Phase 2 slice 3 (2026-07-05): Performance Summary contract and skill.
+`projects/<project-slug>/performance-summary.json` is now the canonical
+schema-validated summary record (plan Decision 4): the `performance-summary.md`
+scaffold is gone, the `project_paths` const, example manifest, fixture,
+layout doc, and ADR 0012 amendment all carry the `.json` name, and the
+summary attaches at rest once authored — no write CLI, no new Project
+status. `validate project` is the enforcement seam: `evidence_refs` must
+resolve inside the project (`output_package_id` to the registered package,
+every `published_post_record_id`/`analytics_snapshot_id` to records on
+disk), chain ids must match, containment is symlink-safe, and record
+semantics now reject duplicated attribution stages
+(`validate_unique_stages`) so the five stages appear exactly once each. A
+`published` project with a snapshot at least 72h post-publish (the slowest
+platform reporting lag) and no summary draws an advisory WARN derived from
+at-rest snapshot data (hours recorded, else timestamp-derived), never a
+flag. `skills/create-performance-summary/SKILL.md` (interpretive, Decision
+2) landed with its registry/matrix/conductor/architecture-map rows in the
+same batch and carries the Performance Benchmark Rubric plus the
+stage-remediation mapping adapted from the reference
+`mkt-content-analytics` skill (recorded in `agentic-os-alignment.md`),
+evidence-strength honesty rules (ADR 0008), and the `index_allowed` call.
+Verification: 455 tests pass (16 added in
+`tests/test_performance_summary.py` — valid summary, dangling
+package/post/snapshot refs, chain-id mismatches, duplicate-stage probes,
+schema hand-edit, unpackaged rejection, symlink escape, four WARN probes,
+CLI stderr surfacing); 43 examples validate; drift checks pass; 20 runtime
+skills synced to all four fixture workspaces, all validating. Full
+workflow replay in `.tmp/slice3-verify`: no WARN below maturity, WARN
+fires at 96h, summary authored and validated, WARN clears, index/board
+rebuilds and workspace/research validation stay green. Exit criterion 3 of
+the Phase 2 plan is met.
+
 Slice 2 review fixes (2026-07-05): three findings, all fixed with failing
 probes first. (P1) The pre-publication rejection lived inside
 hours-derivation, so a snapshot with supplied `hours_since_publish` and a
@@ -692,7 +724,7 @@ file passed; containment now resolves against `analytics/raw/` itself
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration) and 2 (analytics snapshot ingestion) complete 2026-07-05; next is slice 3 (Performance Summary contract + `create-performance-summary` skill, incl. the performance-summary.md -> .json rename).
+2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), and 3 (Performance Summary contract + `create-performance-summary` skill) complete 2026-07-05; next is slice 4 (`distill-creator-learning` skill + `log-learning --evidence` extension).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

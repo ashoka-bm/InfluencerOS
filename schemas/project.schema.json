@@ -191,7 +191,7 @@
         },
         "performance_summary": {
           "type": "string",
-          "const": "performance-summary.md"
+          "const": "performance-summary.json"
         },
         "evidence_brief": {
           "type": "string",

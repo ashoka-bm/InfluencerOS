@@ -33,7 +33,7 @@
     "output_package": "output-package/",
     "published": "published/",
     "analytics": "analytics/",
-    "performance_summary": "performance-summary.md",
+    "performance_summary": "performance-summary.json",
     "evidence_brief": "evidence-brief.md"
   },
   "target_formats": [

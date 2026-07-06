@@ -184,6 +184,17 @@ python3 -m influencer_os import-analytics-csv path/to/snapshots.csv --project wo
 
 Every ingestion path writes through one shared seam: the snapshot must cite a live published post record on the same platform, missing platform metrics stay `null` (never guessed), `hours_since_publish` is derived from the timestamps when omitted, and raw exports referenced by the record must exist under the project's `analytics/raw/`. The CSV import is all-or-nothing. No platform APIs are called; API connectors remain a designed seam awaiting an explicit request.
 
+## Author A Performance Summary
+
+Once snapshots have matured (72h+ post-publish), the `create-performance-summary` skill authors `projects/<project-slug>/performance-summary.json` — the interpretive record mapping observed results to the five attribution stages (packaging, hook, body retention, payoff, CTA), anchored to the skill's Performance Benchmark Rubric. There is no write command; validation is the enforcement seam:
+
+```bash
+python3 -m influencer_os validate record performance-summary workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day/performance-summary.json
+python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
+```
+
+Evidence refs must resolve to the project's registered package, published post records, and snapshots; each stage appears exactly once; a published project with mature snapshots and no summary draws an advisory warning.
+
 ## Validate Research State
 
 Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:

@@ -25,7 +25,6 @@ PROJECT_DIRECTORIES = [
 ]
 
 PROJECT_SCAFFOLDS = {
-    "performance-summary.md": "# Performance Summary\n\n",
     "evidence-brief.md": "# Evidence Brief\n\nSummarize the promoted idea's evidence for production use.\n\n",
 }
 
@@ -45,6 +44,12 @@ PROJECT_STATUS_ORDER = {
 # and "failed" records document attempts and never move a Project past
 # packaged.
 PUBLICATION_LIVE_STATUSES = frozenset({"published", "updated", "deleted"})
+
+# A published project whose analytics have matured past the slowest platform
+# reporting lag (YouTube lags 2-3 days — Phase 2 plan Reference Review)
+# should carry a PerformanceSummary. Advisory WARN only, derived from
+# durable at-rest snapshot data, never from a mutable flag.
+PERFORMANCE_SUMMARY_DUE_HOURS = 72
 
 # Optional source_refs cached from the promotion for convenience; each cached
 # value must stay consistent with the locked promotion snapshot.
@@ -280,8 +285,11 @@ def validate_project(project_path):
     if project["project_paths"]["root"] != expected_root:
         raise ValueError(f"Project root path does not match project_slug: {project['project_paths']['root']!r}")
 
+    # performance_summary is deliberately absent: the summary record attaches
+    # at rest only once authored (Phase 2 slice 3); its presence is validated
+    # below and its absence on a mature published project is an advisory WARN.
     required_paths = ["project.json"]
-    required_paths.extend(project["project_paths"][key] for key in ["plan", "output_package", "published", "analytics", "performance_summary", "evidence_brief"])
+    required_paths.extend(project["project_paths"][key] for key in ["plan", "output_package", "published", "analytics", "evidence_brief"])
     required_paths.extend(_required_record_paths(project))
 
     missing = []
@@ -300,7 +308,7 @@ def validate_project(project_path):
     warnings = validate_promotion_gate(workspace_dir, promotion)
     _validate_cached_promotion_refs(project, promotion)
     _resolve_source_refs(project["source_refs"], workspace_dir, "Project source_refs")
-    _validate_project_records(project_dir, project, workspace_dir)
+    warnings.extend(_validate_project_records(project_dir, project, workspace_dir))
 
     return {
         "project_id": project["project_id"],
@@ -580,7 +588,9 @@ def _validate_analytics_records(project_dir, project, output_package, published_
     """At-rest checks for analytics/snapshots/ (slice 2 parity).
 
     Every writer-enforced ingestion invariant is re-checked here so a
-    hand-edited snapshot cannot validate at rest.
+    hand-edited snapshot cannot validate at rest. Returns the validated
+    snapshots keyed by id so performance-summary validation can resolve
+    analytics_snapshot_id references without re-reading files.
     """
     snapshots_dir = Path(project_dir) / "analytics" / "snapshots"
     snapshot_paths = sorted(snapshots_dir.glob("*.json")) if snapshots_dir.is_dir() else []
@@ -591,6 +601,7 @@ def _validate_analytics_records(project_dir, project, output_package, published_
             f"registered Output Package: {snapshots_dir}"
         )
 
+    snapshots_by_id = {}
     for snapshot_path in snapshot_paths:
         _ensure_contained_file(snapshot_path, project_dir, "analytics snapshot")
         record = _validate_project_record(snapshot_path, "analytics-snapshot")
@@ -602,6 +613,89 @@ def _validate_analytics_records(project_dir, project, output_package, published_
             )
         _validate_analytics_snapshot_matches(record, project, output_package, published_records)
         _validate_analytics_raw_refs(project_dir, record)
+        snapshots_by_id[record_id] = record
+    return snapshots_by_id
+
+
+def _validate_performance_summary(project_dir, project, output_package, published_records, analytics_records):
+    """At-rest checks for performance-summary.json (slice 3).
+
+    The summary attaches at rest once authored (no dedicated status); when
+    present, every evidence ref must resolve to this project's registered
+    records. Record-shape rules — including the exactly-once attribution
+    stage set — are enforced by the schema plus record semantics
+    (validate_unique_stages/validate_required_stages) via
+    _validate_project_record. When absent on a published project with
+    mature analytics, an advisory WARN fires. Returns warning strings.
+    """
+    summary_path = Path(project_dir) / "performance-summary.json"
+    if not summary_path.exists() and not summary_path.is_symlink():
+        return _performance_summary_warnings(project, published_records, analytics_records)
+
+    _ensure_contained_file(summary_path, project_dir, "performance summary")
+    summary = _validate_project_record(summary_path, "performance-summary")
+    if output_package is None:
+        raise ValueError(
+            "Performance summary requires a packaged project with a "
+            f"registered Output Package: {summary_path}"
+        )
+    if summary["project_id"] != project["project_id"]:
+        raise ValueError(
+            "Performance summary project_id does not match project: "
+            f"{summary['project_id']!r} != {project['project_id']!r}"
+        )
+    if summary["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValueError(
+            "Performance summary creator_profile_id does not match project: "
+            f"{summary['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+        )
+
+    evidence_refs = summary["evidence_refs"]
+    if evidence_refs["output_package_id"] != output_package["output_package_id"]:
+        raise ValueError(
+            "Performance summary output_package_id does not match the registered package: "
+            f"{evidence_refs['output_package_id']!r} != {output_package['output_package_id']!r}"
+        )
+    dangling_posts = sorted(set(evidence_refs["published_post_record_ids"]) - set(published_records))
+    if dangling_posts:
+        raise ValueError(
+            "Performance summary published_post_record_ids do not resolve to "
+            f"registered published post records: {dangling_posts}"
+        )
+    dangling_snapshots = sorted(set(evidence_refs["analytics_snapshot_ids"]) - set(analytics_records))
+    if dangling_snapshots:
+        raise ValueError(
+            "Performance summary analytics_snapshot_ids do not resolve to "
+            f"ingested analytics snapshots: {dangling_snapshots}"
+        )
+    return []
+
+
+def _performance_summary_warnings(project, published_records, analytics_records):
+    """The published-but-never-summarized advisory WARN (slice 3).
+
+    Fires when at least one snapshot has matured past the slowest platform
+    reporting lag, so an early snapshot alone never nags for a summary the
+    data cannot support yet. hours_since_publish is authoritative when
+    recorded; otherwise it derives from the timestamps, and underivable
+    snapshots do not count as mature.
+    """
+    if not _status_at_least(project, "published"):
+        return []
+    for record in analytics_records.values():
+        hours = record["hours_since_publish"]
+        if hours is None:
+            hours = _derive_hours_since_publish(
+                record, published_records[record["published_post_record_id"]]
+            )
+        if hours is not None and hours >= PERFORMANCE_SUMMARY_DUE_HOURS:
+            return [
+                f"warning: project {project['project_id']} is published with "
+                f"analytics at least {PERFORMANCE_SUMMARY_DUE_HOURS}h "
+                "post-publish but has no performance-summary.json; author one "
+                "via the create-performance-summary skill"
+            ]
+    return []
 
 
 def write_analytics_snapshot(project_path, record):
@@ -1045,7 +1139,10 @@ def _validate_project_records(project_dir, project, workspace_dir):
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
     published_records = _validate_published_records(project_dir, project, output_package)
-    _validate_analytics_records(project_dir, project, output_package, published_records)
+    analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)
+    return _validate_performance_summary(
+        project_dir, project, output_package, published_records, analytics_records
+    )
 
 
 def _validate_project_record(record_path, schema_name):

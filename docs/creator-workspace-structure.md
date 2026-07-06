@@ -116,7 +116,7 @@ workspace-library/creators/<creator-slug>/
       analytics/
         snapshots/
         raw/
-      performance-summary.md
+      performance-summary.json
   memory/
     MEMORY.md
     learnings.md
@@ -264,7 +264,7 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `projects/<project-id>/analytics/` stores API, manual, CSV, or derived Analytics Snapshots for the project's Published Post Records. Snapshots live in `snapshots/` (one file per `analytics_snapshot_id`); `raw/` may preserve safe raw exports or API payloads (never tokens or secrets). `python3 -m influencer_os add-analytics-snapshot` and `import-analytics-csv` are the write gates: both flow through one shared seam that pins the snapshot to a live Published Post Record on the same platform, derives `hours_since_publish` when omitted, and requires `raw_source_ref`/`retention_curve_ref` to resolve inside `analytics/raw/`.
 
-`projects/<project-id>/performance-summary.md` stores the short postmortem that links back to raw analytics, Published Post Records, and the Output Package.
+`projects/<project-id>/performance-summary.json` is the canonical schema-validated PerformanceSummary (Phase 2 plan Decision 4; no parallel markdown file). It is authored by the `create-performance-summary` skill after publication — never scaffolded — and maps observed results to the five attribution stages exactly once each. `validate project` is its enforcement seam: `evidence_refs` must resolve to the project's registered Output Package, Published Post Records, and Analytics Snapshots, and a published project whose snapshots have matured past 72 hours without a summary draws an advisory warning.
 
 `memory/` stores durable creator memory. `learnings.md` contains distilled creator lessons. `MEMORY.md` is a curated working scratchpad. `daily/` can hold dated local notes when useful.
 
