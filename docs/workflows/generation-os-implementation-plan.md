@@ -2,14 +2,16 @@
 
 Last updated: 2026-07-05
 
-Status: **Approved for execution (2026-07-06).** The operator's 2026-07-06
-directive to "implement all of phase three based on the planning that we have
-done" approved the five execution decisions below on their recommendations —
+Status: **Complete (2026-07-06).** The operator's 2026-07-06 directive to
+"implement all of phase three based on the planning that we have done"
+approved the five execution decisions below on their recommendations —
 including Decision 3's recommendation that no real (paid) provider adapter
-ships by default — and they are recorded in ADR 0023
-(`docs/adr/0023-generation-provider-boundary.md`). Phase 2 closed 2026-07-06
-and the Creative Direction workstream closed 2026-07-06, so the sequencing
-condition is met. Slice 1 is open.
+ships by default — recorded in ADR 0023
+(`docs/adr/0023-generation-provider-boundary.md`). All five slices executed
+with three batch-boundary gpt-5.5 adversarial reviews and fix batches; the
+five runnable exit criteria pass and the closeout run is recorded in
+`docs/os-construction/progress.md`. The first real provider adapter remains
+a separate operator-chosen batch (Decision 3).
 
 ## Goal
 

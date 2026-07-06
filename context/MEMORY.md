@@ -8,12 +8,9 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 
 ## Active Threads
 
-- Phase 0C parity hardening is complete: batches A-G all landed 2026-07-03 and every roadmap exit criterion passes.
-- Phase 1 slices 1-7 plus research-intelligence hardening are complete as of 2026-07-04; next exercise the manual research-intelligence loop before scheduled automation.
-- Phase 1 now has tests/test_user_journey.py covering the local-first user journey from new Creator Workspace setup through packaged Project output.
-- Research-intelligence hardening was reviewed 2026-07-04 against the Agentic OS reference: three source-yield at-rest validation gaps closed, ADR 0021 accepted, and quality-determination guidance added (Signal Tier Rubric, corroboration/contradiction synthesis, thin-evidence WARN, anti-contamination queries).
-- Research-acquisition connectors (ADR 0022, influencer_os/connectors/) pull Reddit/X/Firecrawl/LinkedIn evidence; env-gated and dormant until a provider key is set. Key presence is standing approval for the research tier only (bounded by call cap + kill switch); generation calls keep exact approval. CLI: list-connectors, research-fetch.
-- Creative Direction workstream (ADR 0024) complete 2026-07-06: Content Beat Spine, idea-origin intent, advisory platform/modality model, and advisory reviews landed in four slices with per-slice gpt-5.5 reviews; contract doc is docs/gates-and-reviews.md. Phase 3 Generation OS is next and stays blocked on its five open decisions + ADR 0023.
+- Phases 0-3 plus the Creative Direction workstream are complete (2026-07-06): parity hardening, Planning OS, Learning OS, ADR 0024 creative model (spine, intent, advisory platform model, advisory reviews), and ADR 0023 Generation OS (provider registry, approval records, provenance ledger, blocking quality gate — mock adapter only). Closeout runs live in `docs/os-construction/progress.md`.
+- Research-acquisition connectors (ADR 0022, influencer_os/connectors/) pull Reddit/X/Firecrawl/LinkedIn evidence; env-gated and dormant until a provider key is set. Key presence is standing approval for the research tier only (call cap + kill switch); generation calls keep exact approval. Exercise the manual research-intelligence loop against real creator runs before scheduled automation.
+- The first real (paid) generation provider adapter is deliberately unpicked (ADR 0023 Decision 3): the operator chooses it, and it lands as its own approved batch following the adapter contract. Scheduled/unattended generation stays Phase 4.
 
 ## Environment Notes
 
@@ -23,4 +20,4 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 
 ## Pending Decisions
 
-- None. Phase 0C execution decisions are recorded in the short-term plan; do not reopen without user approval.
+- First real generation provider adapter (operator's pick, ADR 0023 Decision 3). All other phase execution decisions are recorded in their plans/ADRs; do not reopen without user approval.

@@ -246,14 +246,13 @@ Implementation slices, in the agreed batch order:
 
 Goal: generate or import media through approved providers while preserving provenance.
 
-Status: approved for execution (2026-07-06). The five execution decisions
-were approved on their recommendations via the operator's directive to
-implement all of Phase 3 and are recorded in ADR 0023; Phase 2 and the
-Creative Direction workstream are closed, so sequencing is satisfied. The
-entry-criteria verification, runnable exit-criteria rewrite, and reference
-review live in `docs/workflows/generation-os-implementation-plan.md`. Per
-Decision 3, slices 1-5 ship with the deterministic mock adapter only; the
-first real (paid) provider adapter remains a separate operator-chosen batch.
+Status: complete (2026-07-06). ADR 0023 recorded; all five slices landed
+with batch-boundary adversarial reviews and fix batches, and the five
+runnable exit criteria pass (closeout run in
+`docs/os-construction/progress.md`). Per Decision 3, the deterministic mock
+adapter is the only installed adapter — the first real (paid) provider
+adapter remains a separate operator-chosen batch following the adapter
+contract, and scheduled/unattended generation stays deferred to Phase 4.
 
 Entry criteria:
 

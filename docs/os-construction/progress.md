@@ -205,6 +205,21 @@ Completed:
 
 Goal: Generate or import media assets from approved providers, assemble final output packages, and preserve provenance and approval boundaries.
 
+Status: Complete (2026-07-06). ADR 0023 recorded (the five execution decisions approved on their plan recommendations via the operator's directive to implement all of Phase 3); all five slices landed with three batch-boundary gpt-5.5 adversarial reviews and fix batches; the five runnable exit criteria pass (see Current Verification). Per Decision 3, the mock adapter is the only installed adapter — the first real (paid) provider adapter remains a separate operator-chosen batch.
+
+Completed:
+
+- Slice 1 — provider registry and adapter boundary: `influencer_os/providers/` as the sibling of the ADR 0022 connector tier under the opposite approval model — every registry row is structurally `approval_model: exact_approval` (import fails closed otherwise), key presence is availability never approval, `dispatch_generation` is the only adapter entry point and requires an approved GenerationApprovalRecord id positionally, and the `INFLUENCER_OS_DISABLE_PAID_CONNECTORS` kill switch overrides everything; `list-providers` CLI; deterministic mock adapter only.
+- Slice 2 — generation approval records: `generation-approval-record` schema (ladder `draft -> approved -> executing -> executed | cancelled`, `single_call`/bounded `batch` scopes, verbatim `user_approval_statement`, per-status field semantics, results must equal the approved request exactly); `record-generation-approval` CLI resolves refs before writing (project at `ready_for_generation`+, plan/prompt refs inside the project, reference assets resolving) and refuses overwrites; `request-generation-approval` skill packages the exact call/batch while the gate stays human; `project_paths` gains `generation/`; at-rest parity in `validate project` and `validate workspace` (reference-scope approvals under `references/approval-records/`).
+- Batch 1 review fixes: env-read kill switch (config injection can never re-enable), one shared record→project binding contract (writer, dispatch, at-rest), two-phase `approved -> executing -> executed` consumption with leftover `executing` records refusing re-dispatch and warning at rest, bare-filename containment, prompt_refs must point into the approved plan_ref.
+- Slice 3 — import-generated-asset: external/user media enters `generation/assets/` with a full-provenance manifest row (tool-image-search-style source/license/attribution/warnings; unknown license captured as a warning, never guessed); `--reference-asset` route updates the Reference Library source block and lifecycle per ADR 0013; copy rolled back if the ledger append fails.
+- Slice 4 — asset provenance ledger: `generation-asset-manifest` schema (generated rows bind approval + plan prompt + provider call; imported rows carry import origin; shapes mutually exclusive); dispatch appends rows before consuming the approval; `validate project` reconciles assets ↔ ledger bidirectionally (orphan files, dangling artifacts, tampered content hashes, unexecuted or non-listing approvals all fail); `output-package.upload_ready[]` media require `generation_manifest_ref` once `generation_status` leaves `planned_not_generated`, resolved to ledger rows at rest; `rebuild-index` projects approval records and manifest assets through the shared validation seams.
+- Batch 2 review fixes: O_EXCL-locked compare-and-swap for `approved -> executing` (concurrent dispatch cannot double-consume), symlink/containment hardening across the generation tree and reference-import destinations, flat assets dir (no hidden subdirectory files), manifest rows must restate the approved request (kind/prompt/provider/model), packaged role→kind lineage, `generation_status` must agree with referenced row origins.
+- Slice 5 — quality gate: `quality-review` schema (closed four-check checklist — identity consistency, continuity with plan, technical conformance, creator boundary compliance — each exactly once; verdict must agree with the items); `review-generated-assets` skill owns the one BLOCKING review layer; `register-output-package` and `validate project` refuse packaged generation-sourced media without a passing QualityReview (text roles exempt); a `generated` project with ledger assets and no review draws an advisory warning; `docs/gates-and-reviews.md` updated — the blocking layer reserved by ADR 0024 now exists.
+- Guard rules held every slice: no code path dispatches without an approved record (probed), the suite never instantiates a real provider adapter (mock only, CI-safe, zero paid calls), and generation approval gates were never weakened — key presence remains research-tier-only standing approval (ADR 0022 carve-out unchanged).
+
+Deliberately open (by decision, not omission): the first real provider adapter (Decision 3 — operator's pick, its own approved batch); scheduled/unattended generation stays Phase 4.
+
 Status: Deferred.
 
 Completed:
@@ -252,6 +267,20 @@ Remaining:
   `article-plan.schema.json`, and `thread-plan.schema.json`.
 
 ## Current Verification
+
+Phase 3 (Generation OS) closeout run (2026-07-06) — the five runnable exit
+criteria plus a live full-workflow replay (approval → mock dispatch → import
+→ quality review → packaging) on the luna-fit fixture creator:
+
+```bash
+python3 -m unittest discover -s tests
+python3 -m influencer_os validate examples
+python3 -m influencer_os list-providers
+python3 -m unittest tests.test_providers            # exit criteria 1-5
+for w in workspace-library/creators/*/; do python3 -m influencer_os validate workspace "$w"; done
+python3 -m influencer_os validate project workspace-library/creators/remy-vale/projects/pothos-drowning-rescue
+# full replay: .tmp/generation-os/closeout.sh (ALL PHASE 3 EXIT CRITERIA GREEN, 2026-07-06)
+```
 
 Creative Direction closeout run (2026-07-06) — the six exit criteria
 demonstrated on the luna-fit fixture creator plus the workspace-library

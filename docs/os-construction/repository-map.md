@@ -99,6 +99,9 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/review-hook-payoff/SKILL.md` | Advisory Hook/Payoff Review producer (spine-keyed ReviewRecord; never blocks). |
 | `skills/clear-writing-pass/SKILL.md` | Clear-Writing Pass (bounded clarity rewrite + change trace; no record). |
 | `skills/human-voice-pass/SKILL.md` | Human-Voice Pass (creator-voice rewrite + change trace; no record). |
+| `skills/request-generation-approval/SKILL.md` | Generation Approval Gate packaging (GenerationApprovalRecord; gate stays human). |
+| `skills/import-generated-asset/SKILL.md` | External media import with manifest provenance (thin CLI wrapper). |
+| `skills/review-generated-assets/SKILL.md` | Blocking QualityReview between generation and packaging (ADR 0023 Decision 5). |
 
 Baseline source skills live under repo `skills/<skill-name>/SKILL.md` (kebab-case, no category prefix, optional per-skill `references/` and `SKILL.local.md` per ADR 0017). `init-creator` copies those skills into each Creator Workspace under `.claude/skills/<skill-name>/SKILL.md`; `sync-creator-runtime` refreshes copied runtime skills while preserving creator `SKILL.local.md` files and creator-only skill folders; `update-creators` runs a backup-protected batch refresh (ADR 0018). The full skill roster, including planned producer skills and the `wrap-up`/`memory-write` system skills, is in `architecture-map.md`.
 
