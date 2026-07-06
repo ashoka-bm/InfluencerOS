@@ -7,6 +7,7 @@ from pathlib import Path
 
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
+from influencer_os.research import validate_promotions
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
 
@@ -562,12 +563,19 @@ def validate_creator_workspace(workspace_path):
     # At-rest parity for the log-learning creator-lesson writer (Phase 2
     # exit criterion 4): hand-edited lessons fail the same evidence rules.
     validate_creator_lessons(workspace_dir)
+    # Promotion records validate on the workspace path too (Creative
+    # Direction slice 1 review finding): the promotion gate — including the
+    # ADR 0024 intent carry-forward check — must be reachable from
+    # `validate workspace`, not only `validate research`. No-op when the
+    # workspace has no promotions yet.
+    promotion_warnings, _, _ = validate_promotions(workspace_dir)
 
     return {
         "creator_slug": manifest["creator_slug"],
         "creator_profile_id": manifest["creator_profile_id"],
         "workspace_path": workspace_dir,
         "checked_paths": sorted(set(required_paths)),
+        "warnings": promotion_warnings,
     }
 
 

@@ -160,6 +160,8 @@ def main(argv=None):
                 result = validate_creator_workspace(args.path)
                 print(f"Validated creator workspace: {result['workspace_path']}")
                 print(f"Checked {len(result['checked_paths'])} workspace paths.")
+                for warning in result.get("warnings", []):
+                    print(warning, file=sys.stderr)
                 return 0
             if args.target == "project":
                 if not args.path:

@@ -42,6 +42,13 @@ Write only `plan/applied-template.json` inside the Project.
 - `target_format_id` must equal the Project target format.
 - `applied_beats` must map every important template beat to the promoted
   idea. Each beat answers a concrete viewer or reader question.
+- Every applied beat carries the template beat's Content Beat Spine
+  `beat_role` (`hook | retain | payoff | cta | packaging`, ADR 0024).
+  Carry `hook_category` only on hook-role beats — copy the template's
+  category unless the application genuinely changes the hook style.
+- Dropping a template's `cta` or `packaging` beat is allowed when the
+  application has no honest use for it; the learning loop records the
+  absence as a `not_used` stage finding. Never drop `hook` or `payoff`.
 - `application_rationale` should explain why this structure fits the payoff,
   not restate the premise.
 
