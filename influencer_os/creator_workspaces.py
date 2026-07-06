@@ -5,6 +5,7 @@ import shutil
 from collections import Counter
 from pathlib import Path
 
+from influencer_os.memory import validate_creator_lessons
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
 
@@ -552,6 +553,9 @@ def validate_creator_workspace(workspace_path):
     _resolve_reference_refs(creator_profile, reference_library)
     _validate_source_intakes(workspace_dir, manifest)
     _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library)
+    # At-rest parity for the log-learning creator-lesson writer (Phase 2
+    # exit criterion 4): hand-edited lessons fail the same evidence rules.
+    validate_creator_lessons(workspace_dir)
 
     return {
         "creator_slug": manifest["creator_slug"],

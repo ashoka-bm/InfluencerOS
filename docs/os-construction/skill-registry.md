@@ -38,6 +38,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `register-published-post` | record a manual publication, register published post, mark project published | Project, registered Output Package, operator publication facts | `projects/<project-slug>/published/published-post-records/`, Project status via `register-published-post` | yes |
 | `ingest-analytics` | add analytics snapshot, import analytics CSV, record post performance | Project, registered Output Package, live Published Post Records, operator platform exports | `projects/<project-slug>/analytics/` via `add-analytics-snapshot`/`import-analytics-csv` | yes |
 | `create-performance-summary` | author performance summary, map results to attribution stages, post postmortem | Project, Creative Performance Map, Published Post Records, AnalyticsSnapshots, production plan | `projects/<project-slug>/performance-summary.json` (agent-authored; `validate project` is the enforcement seam) | yes |
+| `distill-creator-learning` | distill creator lessons, update creator memory from performance, consolidate lessons across posts | PerformanceSummary records and their evidence chain, `memory/learnings.md`, `context/MEMORY.md` | evidence-linked lessons in `memory/learnings.md` via `log-learning --evidence --strength`; optional promoted fact in `context/MEMORY.md` via `memory-write` (2,500-byte cap) | yes |
 
 ## Creator Setup Subskills
 
@@ -71,6 +72,5 @@ These are not repo-owned skills and must not be added to conductor
 
 | Skill | Purpose | Timing |
 | --- | --- | --- |
-| `distill-creator-learning` | convert performance evidence into creator memory | Learning OS (Phase 2 slice 4) |
 
-Coverage for these planned skills is deferred per the Context Coverage Rule until each is built in its Phase 2 slice; the conductor call graph marks them `[PLANNED]` with a halt rule. Per ADR 0017 the machine-actionable source for skill dependencies is each skill's `dependencies` frontmatter (enforced against `docs/os-construction/architecture-map.md` by the call-graph drift check), not a duplicated registry column; skill categories are expressed by this registry's section tables (core workflow, creator setup, system, future).
+None — every previously planned skill is built (`distill-creator-learning` closed the last Phase 0C WS 10 obligation in Phase 2 slice 4). When a future skill is planned, add its row here; coverage is deferred per the Context Coverage Rule until it is built in its slice, and the conductor call graph marks it `[PLANNED]` with a halt rule. Per ADR 0017 the machine-actionable source for skill dependencies is each skill's `dependencies` frontmatter (enforced against `docs/os-construction/architecture-map.md` by the call-graph drift check), not a duplicated registry column; skill categories are expressed by this registry's section tables (core workflow, creator setup, system, future).

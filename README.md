@@ -305,6 +305,14 @@ Append a dated, deduplicated per-skill learning entry (the `wrap-up` skill's wri
 python3 -m influencer_os log-learning context/learnings.md influencer-os "One-line lesson."
 ```
 
+Append an evidence-linked creator lesson to a Creator Workspace `memory/learnings.md` (the `distill-creator-learning` skill's writer; every evidence id must resolve to a workspace record, and `validate workspace` re-checks lessons at rest):
+
+```bash
+python3 -m influencer_os log-learning <creator-workspace>/memory/learnings.md "hooks" \
+  "One-line creator lesson." \
+  --evidence performance_summary_<id> --strength single_post_signal
+```
+
 ## Initialize A Dry Run
 
 ```bash

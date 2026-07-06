@@ -104,7 +104,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `register-published-post` | learning | PublishedPostRecord + Project published status. | [BUILT — Phase 2 slice 1] |
 | `ingest-analytics` | learning | AnalyticsSnapshots from manual/CSV entry. | [BUILT — Phase 2 slice 2] |
 | `create-performance-summary` | learning | PerformanceSummary from analytics evidence. | [BUILT — Phase 2 slice 3] |
-| `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [PLANNED — Phase 2 slice 4] |
+| `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [BUILT — Phase 2 slice 4] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
 | `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes (2,500-byte cap via CLI). | [BUILT — ADR 0016] |
 
@@ -120,7 +120,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. | [BUILT — Phase 1 slice 4 batch B] |
 | `boards.py` | Content Board projection: `rebuild-board` (cards derived, columns/manual order preserved) + `validate board` agreement check. | [BUILT — Phase 1 slice 4 batch C] |
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |
-| `memory.py` | Bounded `memory-write` + `log-learning` writers. | [BUILT — ADR 0016] |
+| `memory.py` | Bounded `memory-write` + `log-learning` writers; evidence-linked creator lessons with at-rest validation. | [BUILT — ADR 0016; creator lessons Phase 2 slice 4] |
 | `runs.py` | Dry-run init + run records. | [BUILT] |
 | `connectors/` | Env-gated research-acquisition tier (ADR 0022): `env.py` (key detection, kill switch, call cap), `http.py` (stdlib client), `registry.py`/`fetch.py` (availability + dispatch), `models.py`/`parse.py` (canonical mapping to `ResearchEvidence`/`MetricSnapshot`), and connectors `openai_reddit.py` (+`reddit_enrich.py`), `xai_x.py`, `firecrawl_web.py`, `linkedin_apify.py`. Powers `list-connectors` + `research-fetch`; output validated by `research-fetch-result.schema.json`. | [BUILT — ADR 0022; dormant until provider key] |
 
@@ -182,7 +182,7 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
   (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [BUILT — Phase 2 slice 2]
   (learn)  Performance summary        -> Skill(create-performance-summary)                        [BUILT — Phase 2 slice 3]
-  (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [PLANNED — Phase 2 slice 4]
+  (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [BUILT — Phase 2 slice 4]
 
   Until a [PLANNED] owner exists on disk, the conductor halts at that phase and surfaces the
   missing skill (halt rule in skills/influencer-os/SKILL.md ## Dependencies).

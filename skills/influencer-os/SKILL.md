@@ -50,7 +50,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `register-published-post` | PublishedPostRecord + Project published status | [BUILT — Phase 2 slice 1] |
 | `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
 | `create-performance-summary` | PerformanceSummary from analytics evidence | [BUILT — Phase 2 slice 3] |
-| `distill-creator-learning` | Creator Memory lessons from performance evidence | [PLANNED — Phase 2 slice 4] |
+| `distill-creator-learning` | Creator Memory lessons from performance evidence | [BUILT — Phase 2 slice 4] |
 
 **Halt rule (ADR 0016/0017):** when a phase's owner skill is marked `[PLANNED]` and its folder does not exist under `skills/`, halt at that phase, tell the user which skill is missing and which roadmap slice builds it, and stop. Never improvise the phase from base knowledge and never pretend the skill ran. Each `[PLANNED]` marker is an open build obligation tracked in `docs/os-construction/skill-registry.md` (Missing Future Skills) and the roadmap phase slice lists.
 
@@ -72,7 +72,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` | [BUILT — Phase 2 slice 1] |
 | Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [BUILT — Phase 2 slice 2] |
 | Post-pipeline: Performance summary | `create-performance-summary` | `Skill(skill: "create-performance-summary")` | [BUILT — Phase 2 slice 3] |
-| Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [PLANNED — Phase 2 slice 4] |
+| Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [BUILT — Phase 2 slice 4] |
 
 ## Video Understanding Requirements
 

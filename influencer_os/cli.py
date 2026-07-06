@@ -3,7 +3,14 @@ import datetime
 import sys
 from pathlib import Path
 
-from influencer_os.memory import DEFAULT_MEMORY_SECTION, append_skill_learning, write_memory_fact
+from influencer_os.memory import (
+    DEFAULT_MEMORY_SECTION,
+    EVIDENCE_STRENGTHS,
+    append_creator_lesson,
+    append_skill_learning,
+    creator_lessons_workspace,
+    write_memory_fact,
+)
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     INTAKE_DESTINATIONS,
@@ -114,11 +121,13 @@ def main(argv=None):
     fetch_parser.add_argument("--out", help="Write the fetch-result JSON here instead of stdout.")
     fetch_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
-    learning_parser = subparsers.add_parser("log-learning", help="Append a dated per-skill learning entry to a learnings file.")
+    learning_parser = subparsers.add_parser("log-learning", help="Append a dated learning entry: per-skill for OS learnings files, evidence-linked creator lessons for a Creator Workspace memory/learnings.md.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
-    learning_parser.add_argument("skill_name", help="Skill folder name the learning applies to.")
+    learning_parser.add_argument("skill_name", help="Skill folder name for OS learnings, or the lesson topic (applies-to) for creator lessons.")
     learning_parser.add_argument("entry", help="One-line learning entry.")
     learning_parser.add_argument("--date", dest="entry_date", help="Entry date as YYYY-MM-DD; defaults to today.")
+    learning_parser.add_argument("--evidence", nargs="+", metavar="RECORD_ID", help="Evidence record ids backing a creator lesson; required when the learnings file is a Creator Workspace memory/learnings.md (ADR 0008).")
+    learning_parser.add_argument("--strength", choices=EVIDENCE_STRENGTHS, help="Evidence strength for a creator lesson; required with --evidence.")
 
     args = parser.parse_args(argv)
 
@@ -394,6 +403,26 @@ def main(argv=None):
 
         if args.command == "log-learning":
             entry_date = args.entry_date or datetime.date.today().isoformat()
+            workspace_dir = creator_lessons_workspace(args.learnings_file)
+            if workspace_dir is not None:
+                result = append_creator_lesson(
+                    workspace_dir,
+                    topic=args.skill_name,
+                    lesson=args.entry,
+                    evidence_ids=args.evidence,
+                    strength=args.strength,
+                    entry_date=entry_date,
+                )
+                if result["status"] == "duplicate":
+                    print("Creator lesson already recorded; no change.")
+                else:
+                    print(f"Logged creator lesson under {args.skill_name}.")
+                return 0
+            if args.evidence or args.strength:
+                raise ValueError(
+                    "--evidence/--strength mark creator lessons and apply only to a "
+                    "Creator Workspace memory/learnings.md (beside creator-workspace.json)"
+                )
             result = append_skill_learning(args.learnings_file, args.skill_name, args.entry, entry_date)
             if result["status"] == "duplicate":
                 print("Learning already recorded; no change.")

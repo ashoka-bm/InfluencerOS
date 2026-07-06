@@ -64,6 +64,7 @@ Current workflow coverage:
 | `register-published-post` | Publication registration |
 | `ingest-analytics` | Analytics ingestion |
 | `create-performance-summary` | Performance summary |
+| `distill-creator-learning` | Learning distillation |
 | `create-creator-profile` | Creator setup |
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |

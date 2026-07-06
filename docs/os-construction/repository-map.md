@@ -90,6 +90,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/register-published-post/SKILL.md` | Published Post Record registration producer (records manual publications). |
 | `skills/ingest-analytics/SKILL.md` | AnalyticsSnapshot ingestion producer (manual entry + neutral CSV import). |
 | `skills/create-performance-summary/SKILL.md` | PerformanceSummary authoring producer (interpretive; benchmark-rubric-anchored). |
+| `skills/distill-creator-learning/SKILL.md` | Creator-lesson distillation producer (interpretive; evidence-linked `log-learning` writes + optional `memory-write` promotion). |
 
 Baseline source skills live under repo `skills/<skill-name>/SKILL.md` (kebab-case, no category prefix, optional per-skill `references/` and `SKILL.local.md` per ADR 0017). `init-creator` copies those skills into each Creator Workspace under `.claude/skills/<skill-name>/SKILL.md`; `sync-creator-runtime` refreshes copied runtime skills while preserving creator `SKILL.local.md` files and creator-only skill folders; `update-creators` runs a backup-protected batch refresh (ADR 0018). The full skill roster, including planned producer skills and the `wrap-up`/`memory-write` system skills, is in `architecture-map.md`.
 

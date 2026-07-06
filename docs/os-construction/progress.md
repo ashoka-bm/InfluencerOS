@@ -164,25 +164,24 @@ Deferred:
 
 Goal: Capture publication records and analytics, attribute performance to creative stages, distill lessons, and make those lessons available through SQL and semantic lookup.
 
-Status: Contracted, not operational.
+Status: In progress — slices 1-4 landed; projection slices 5-6 remain.
 
 Completed:
 
 - API-primary analytics ingestion decision with manual and CSV fallback.
 - Performance Attribution model for packaging, hook, body retention, payoff, and CTA.
 - Durable creator memory policy: distilled lessons plus linked performance summaries.
-- File-first source of truth with rebuildable SQL index.
-- Semantic lookup projection for low-context agent recall.
 - Schema contracts and examples through Performance Summary.
+- Published Post Record registration (`register-published-post` CLI + skill, slice 1).
+- Analytics Snapshot ingestion (`add-analytics-snapshot`/`import-analytics-csv` through one shared writer seam + `ingest-analytics` skill, slice 2).
+- Performance Summary contract and interpretive skill with the Benchmark Rubric and stage-remediation mapping (slice 3).
+- Learning distillation: `distill-creator-learning` skill + evidence-linked creator lessons via `log-learning --evidence --strength`, at-rest re-checked by `validate workspace` (slice 4).
 
 Remaining:
 
-- CLI or file workflow for registering Published Post Records.
-- CLI or file workflow for adding Analytics Snapshots.
-- Performance summary generation workflow.
-- SQL index schema and rebuild command.
-- Semantic lookup projection design and indexing command.
-- Platform connector strategy for YouTube, Instagram, TikTok, and other surfaces.
+- SQL recall-index extension to the three Phase 2 record types (slice 5).
+- Semantic lookup projection (FTS5 keyword leg per Decision 1) and indexing command (slice 6).
+- Platform analytics API connector, only when explicitly requested (Decision 3; the shared writer seam is mock-proven).
 
 ### Phase 3: Generation OS
 
@@ -704,6 +703,45 @@ fires at 96h, summary authored and validated, WARN clears, index/board
 rebuilds and workspace/research validation stay green. Exit criterion 3 of
 the Phase 2 plan is met.
 
+Phase 2 slice 4 (2026-07-06): Learning distillation. The
+`distill-creator-learning` skill exists (interpretive, Decision 2), closing
+the last Phase 0C WS 10 `[PLANNED]` obligation: the conductor's dependency
+and phase-owner rows, the architecture-map producer table and call graph,
+the registry (row moved out of Missing Future Skills, now empty), and the
+context-matrix coverage row all flipped to `[BUILT — Phase 2 slice 4]` in
+the same batch. `log-learning` gained the creator-lesson mode (exit
+criterion 4): when the target is a Creator Workspace `memory/learnings.md`
+(detected by the manifest beside `memory/`), `--evidence` and `--strength`
+are required, every evidence id must resolve to a workspace
+performance-chain record (performance summary, published post record,
+analytics snapshot, project, output package — any other prefix fails
+closed), and the entry is one parseable line under `## Creator Lessons`
+grouped by `### <topic>` headings
+(`- YYYY-MM-DD [strength]: lesson (evidence: id, ...)`); the strength
+vocabulary is pinned to the PerformanceSummary `distilled_lessons` enum by
+a drift test (ADR 0008 scope honesty). `validate workspace` re-checks
+every at-rest lesson the same way — a hand-edited dangling evidence id,
+unknown strength marker, impossible date, or unparseable bullet inside the
+Creator Lessons section fails validation; content outside that section is
+not policed. OS-scope `log-learning` is unchanged, and passing
+`--evidence` against a non-workspace learnings file is rejected rather
+than silently dropped. The promotion path to `context/MEMORY.md` reuses
+the capped `memory-write` writer (cap refusal already tested).
+Verification: 482 tests pass (22 added in `tests/test_creator_lessons.py`
+— write/dedup/topic-scoping, unresolvable-evidence and unsupported-prefix
+rejection at write, four CLI probes, at-rest hand-edit probes for dangling
+ids, strength, format, and out-of-section tolerance, workspace-detection
+unit, strength enum pin); 43 examples validate; drift checks pass; 21
+runtime skills synced to all four fixture workspaces via `update-creators`
+with zero overrides lost, all validating. Full workflow replay in
+`.tmp/slice4-verify`: register-published-post → add-analytics-snapshot
+(maturity WARN fires) → summary authored (WARN clears) → creator lesson
+distilled via `log-learning --evidence --strength` → missing-evidence and
+dangling-evidence writes rejected → durable fact promoted via
+`memory-write` (191/2,500 bytes) → `validate workspace` green, hand-edited
+dangling evidence fails at rest, restored copy green → board/index/prune
+green. Exit criterion 4 of the Phase 2 plan is met.
+
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
 resolved independently, so a summary could cite one post while citing
@@ -738,7 +776,7 @@ file passed; containment now resolves against `analytics/raw/` itself
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), and 3 (Performance Summary contract + `create-performance-summary` skill) complete 2026-07-05; next is slice 4 (`distill-creator-learning` skill + `log-learning --evidence` extension).
+2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), and 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode) complete 2026-07-06; next is slice 5 (recall index extension to the three Phase 2 record types).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

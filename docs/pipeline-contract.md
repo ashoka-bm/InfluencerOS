@@ -166,6 +166,8 @@ Analytics Snapshots must preserve enough dimensions for performance attribution:
 
 Raw Analytics Snapshots remain creator-scoped evidence. Durable creator memory stores distilled lessons plus short performance summaries that link back to Output Packages, Published Post Records, Analytics Snapshots, and source material.
 
+The evidence link is enforced, not aspirational: a creator lesson is written through `log-learning --evidence --strength` (the `distill-creator-learning` skill), the write fails when an evidence id does not resolve to a real workspace record, and `validate workspace` re-checks every at-rest lesson entry the same way. The strength marker (`single_post_signal` / `multi_post_pattern` / `weak_signal`) carries the ADR 0008 don't-overfit judgment and is pinned to the PerformanceSummary `distilled_lessons` enum.
+
 Future research and idea generation should use distilled lessons by default. Agents may inspect raw analytics when diagnosing performance, verifying a lesson, or planning an intentional test.
 
 ## Local SQL Index
