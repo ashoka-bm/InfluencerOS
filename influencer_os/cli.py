@@ -28,6 +28,7 @@ from influencer_os.projects import add_analytics_snapshot, register_output_packa
 from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
+from influencer_os.semantic_lookup import query_lookup, rebuild_lookup
 from influencer_os.runs import DEFAULT_WORKSPACE, init_run
 from influencer_os.validation import ValidationError, validate_examples, validate_file
 
@@ -93,6 +94,16 @@ def main(argv=None):
     index_parser = subparsers.add_parser("rebuild-index", help="Rebuild one creator's rows in the local recall index (ADR 0010 projection).")
     index_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
     index_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
+
+    lookup_parser = subparsers.add_parser("rebuild-lookup", help="Rebuild one creator's semantic lookup projection (ADR 0011 FTS5 keyword leg).")
+    lookup_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+    lookup_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
+
+    query_parser = subparsers.add_parser("query-lookup", help="Search one creator's semantic lookup projection; results cite source path and lines. Queries are never persisted.")
+    query_parser.add_argument("creator_workspace", help="Path to the Creator Workspace (sets the creator scope).")
+    query_parser.add_argument("terms", nargs="+", help="Search terms (matched as AND).")
+    query_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
+    query_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to return (default 8).")
 
     board_parser = subparsers.add_parser("rebuild-board", help="Rebuild the Content Board projection from canonical records.")
     board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
@@ -293,6 +304,36 @@ def main(argv=None):
                 f"{result['row_count']} records"
             )
             print(f"Index database: {result['db_path']}")
+            return 0
+
+        if args.command == "rebuild-lookup":
+            result = rebuild_lookup(args.creator_workspace, db_path=args.db_path)
+            print(
+                f"Rebuilt lookup projection for {result['creator_slug']}: "
+                f"{result['chunk_count']} chunks from {result['source_count']} "
+                f"sources ({result['unchanged_sources']} unchanged)"
+            )
+            print(f"Index database: {result['db_path']}")
+            return 0
+
+        if args.command == "query-lookup":
+            hits = query_lookup(
+                args.creator_workspace, args.terms,
+                db_path=args.db_path, limit=args.limit,
+            )
+            if not hits:
+                print("No matches.")
+                return 0
+            for hit in hits:
+                if hit["start_line"] is not None:
+                    locator = f"{hit['source_path']}:{hit['start_line']}-{hit['end_line']}"
+                else:
+                    locator = hit["source_path"]
+                heading = f" [{hit['heading']}]" if hit["heading"] else ""
+                snippet = " ".join(hit["content"].split())
+                if len(snippet) > 160:
+                    snippet = snippet[:157] + "..."
+                print(f"{hit['final_score']:.4f} {locator}{heading}: {snippet}")
             return 0
 
         if args.command == "rebuild-board":

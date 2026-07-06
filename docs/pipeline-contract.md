@@ -188,6 +188,8 @@ InfluencerOS also maintains a semantic lookup projection for low-context agent r
 
 Raw analytics, raw API payloads, raw exports, secrets, private comments, and large generated media should not be semantically indexed by default.
 
+The v1 projection is the FTS5 keyword leg (`rebuild-lookup` / `query-lookup`, Phase 2 slice 6): heading-aware chunks with line provenance over an explicit creator-scoped allowlist, reranked by BM25 relevance x authority weight x recency decay. Rows carry `creator_slug`, queries require one, and queries are never persisted. A PerformanceSummary joins the projection only when its `semantic_lookup.index_allowed` is true.
+
 Agents should combine SQL and semantic lookup: SQL for exact metric and record queries; semantic lookup for prior lessons, similar-topic performance patterns, audience interpretation, and creative precedent.
 
 ## Record Types

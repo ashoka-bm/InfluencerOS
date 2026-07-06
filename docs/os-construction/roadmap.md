@@ -167,13 +167,17 @@ scheduled/unattended acquisition stays deferred to Phase 4 Automation OS.
 
 Goal: capture performance evidence, distill lessons, and feed future planning.
 
-Status: planned and approved for execution (2026-07-05). The implementation
-plan, entry-criteria verification, the runnable rewrite of the exit criteria
+Status: build slices complete (2026-07-06) — all six slices landed and every
+runnable exit criterion passes (see `progress.md`). The implementation plan,
+entry-criteria verification, the runnable rewrite of the exit criteria
 below, and the four user-approved execution decisions (FTS5 keyword lookup
 phased ahead of the reference's local-embedding vector leg, one skill per
 step under the existing conductor, manual + neutral-CSV ingestion,
 JSON-canonical performance summaries) live in
-`docs/workflows/learning-os-implementation-plan.md`.
+`docs/workflows/learning-os-implementation-plan.md`. Deliberately deferred
+remainders: the analytics API connector builds only on explicit request
+(Decision 3), and the lookup vector leg lands with Command Centre
+(Decision 1).
 
 Entry criteria:
 

@@ -266,6 +266,19 @@ validation never depends on it):
 python3 -m influencer_os rebuild-index workspace-library/creators/luna-fit
 ```
 
+## Rebuild And Query The Semantic Lookup
+
+Rebuild one creator's semantic lookup projection (the ADR 0011 FTS5 keyword
+leg in the same database: heading-aware chunks over brand context, findings,
+stable findings, creator learnings, and index-allowed performance-summary
+narratives — never raw analytics), then search it creator-scoped; results
+cite `source_path:line` and queries are never persisted:
+
+```bash
+python3 -m influencer_os rebuild-lookup workspace-library/creators/luna-fit
+python3 -m influencer_os query-lookup workspace-library/creators/luna-fit hook retention
+```
+
 ## Rebuild The Content Board
 
 Rebuild the Kanban-readable Content Board projection from canonical records

@@ -164,7 +164,7 @@ Deferred:
 
 Goal: Capture publication records and analytics, attribute performance to creative stages, distill lessons, and make those lessons available through SQL and semantic lookup.
 
-Status: In progress — slices 1-4 landed; projection slices 5-6 remain.
+Status: Build slices complete — slices 1-6 landed 2026-07-05/06; only the explicitly-deferred analytics API connector remains.
 
 Completed:
 
@@ -177,11 +177,12 @@ Completed:
 - Performance Summary contract and interpretive skill with the Benchmark Rubric and stage-remediation mapping (slice 3).
 - Learning distillation: `distill-creator-learning` skill + evidence-linked creator lessons via `log-learning --evidence --strength`, at-rest re-checked by `validate workspace` (slice 4).
 - SQL recall-index extension to the three Phase 2 record types (slice 5).
+- Semantic lookup projection: FTS5 keyword leg per Decision 1 (`semantic_lookup.py`, `rebuild-lookup`/`query-lookup`, creator-scoped, allowlist-only, reference chunker/reranker adapted; slice 6).
 
 Remaining:
 
-- Semantic lookup projection (FTS5 keyword leg per Decision 1) and indexing command (slice 6).
 - Platform analytics API connector, only when explicitly requested (Decision 3; the shared writer seam is mock-proven).
+- Vector leg of the lookup projection follows the reference exactly when Command Centre is un-deferred (Decision 1 phasing).
 
 ### Phase 3: Generation OS
 
@@ -845,6 +846,63 @@ probe now asserts both layers: the lessons rule on its own seam and the
 earlier workspace-level anchoring rejection); 43 examples validate; the
 replay and all four fixture workspaces stay green.
 
+Phase 2 slice 6 (2026-07-06): Semantic lookup projection — the ADR 0011
+FTS5 keyword leg per Decision 1. New module
+`influencer_os/semantic_lookup.py` plus `rebuild-lookup` and
+`query-lookup` CLI commands, projecting into the existing
+`workspace-library/index/influencer-os.sqlite` (stdlib `sqlite3`, FTS5
+presence probed and failed closed, no new dependencies, no provider
+calls). The four reference design details adopted per the plan's
+Reference Review: heading-aware deterministic chunking with 1-based line
+provenance (soft 1200 / hard 2000 / 150-char overlap, ported from
+chunker.ts); longest-prefix authority weights (learnings 1.5,
+performance summaries 1.3, brand context 1.2, findings/stable findings
+1.0; tunable per creator via optional `context/lookup-config.json`,
+absent file → defaults, malformed file → fail closed); the three-stage
+rerank in application code over FTS5 candidates (relevance x authority x
+recency decay with 14-day half-life, 0.7 dampening floor, 0.3
+floor-ratio gate, undated rows never decay — reranker.ts, so the future
+vector leg only swaps the candidate generator); and normalized-sha256
+source change detection (unchanged sources keep their rows; an authority
+change also re-indexes). One adaptation recorded in
+`agentic-os-alignment.md`: FTS5 BM25 scores are corpus-dependent and can
+cross zero on tiny corpora, so relevance maps through a sigmoid into
+(0, 1) — the keyword analogue of the reference's non-negative cosine
+similarity, keeping authority boosts meaningful and the floor gate from
+dropping every hit. Indexed sources walk an explicit allowlist
+(`brand_context/identity.md`/`soul.md`/`personal-brand.md`,
+`research/findings.md`, `research/stable-findings/*.md`,
+`memory/learnings.md`, and `semantic_lookup.summary_text` from
+schema-valid manifest-anchored PerformanceSummary records — the shared
+`collect_anchored_learning_records` seam — where `index_allowed` is
+true); `analytics/`, raw exports, transcripts, and media are unreachable
+by construction. Creator scoping follows the reference `scope.ts`
+discipline: every row carries `creator_slug`, queries require one and
+filter in SQL, with a dedicated no-leak test (creator A's query never
+returns creator B's rows even on shared terms) and a
+rebuild-one-creator-never-touches-another probe. Queries are never
+persisted: `query-lookup` opens the database read-only and a test pins
+the database bytes unchanged across a query. JSON-sourced chunks cite
+the record (heading = summary id, no line numbers) instead of fake
+summary-text line positions. Verification: 523 tests pass (22 added
+across chunker determinism/provenance/window-overlap, rerank stages,
+BM25 sigmoid monotonicity, FTS5 term sanitization against operator
+injection, allowlist coverage, `index_allowed: false` exclusion,
+raw-marker absence, no-leak, delete-and-rebuild equivalence,
+change-detection skip/re-chunk, config override and fail-closed, CLI
+happy/error paths); 43 examples validate; drift checks pass; all four
+fixture workspaces validate and `update-creators` synced 21 skills with
+zero overrides lost. Full workflow replay in `.tmp/slice6-verify`
+(`.tmp/slice6-verify.sh`, extending the slice 5 script): creator init
+through publication, analytics, summary, lesson → `rebuild-lookup`
+indexes exactly the allowlist with zero analytics content →
+`query-lookup desk resets` returns cited `source_path:line` hits with
+the creator lesson outranking findings on authority → deleting the
+database and rebuilding both projections reproduces identical rows
+modulo `indexed_on`. Exit criterion 6 of the Phase 2 plan is met; no
+skill surface changed (Decision 2 scopes Phase 2 skills to slices 1-4),
+so the registry and context matrix carry no new rows.
+
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
 resolved independently, so a summary could cite one post while citing
@@ -879,7 +937,7 @@ file passed; containment now resolves against `analytics/raw/` itself
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode), and 5 (recall index extension to the three Phase 2 record types) complete 2026-07-06; next is slice 6 (semantic lookup projection, FTS5 keyword leg per Decision 1).
+2. Phase 2 Learning OS — **build slices complete** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode), 5 (recall index extension to the three Phase 2 record types), and 6 (semantic lookup projection, FTS5 keyword leg per Decision 1: `rebuild-lookup`/`query-lookup`) complete 2026-07-06. All six runnable exit criteria are met; remaining Phase 2 items are explicitly deferred (analytics API connector on request per Decision 3; vector lookup leg with Command Centre per Decision 1).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

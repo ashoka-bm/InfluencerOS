@@ -1,11 +1,15 @@
 # Learning OS Implementation Plan (Phase 2)
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
-Status: **Approved for execution (2026-07-05).** All four execution decisions
-below are user-approved; Decision 1 was finalized after inspecting the Agentic
-OS reference implementation (see the decision record). Slices execute in
-order, one approved batch at a time.
+Status: **Build slices complete (2026-07-06).** All six slices landed in
+order 2026-07-05/06 and every runnable exit criterion passes (verification
+per slice in `docs/os-construction/progress.md`). All four execution
+decisions below are user-approved; Decision 1 was finalized after inspecting
+the Agentic OS reference implementation (see the decision record). Remaining
+Phase 2 surface is deliberately deferred: the analytics API connector builds
+only on explicit request (Decision 3), and the lookup vector leg follows the
+reference when Command Centre is un-deferred (Decision 1).
 
 ## Goal
 
