@@ -44,9 +44,9 @@
     },
     {
       "stage": "cta",
-      "result": "Profile visits appeared but conversion tracking was incomplete.",
-      "interpretation": "The save-oriented CTA fits Luna's tone, but off-platform CTA performance cannot be judged yet.",
-      "confidence": "low"
+      "result": "not_used",
+      "interpretation": "The applied template planned no CTA beat, so no CTA ran; profile visits that did appear were organic. If nurture is the goal next time, plan an explicit cta-role beat.",
+      "confidence": "high"
     }
   ],
   "distilled_lessons": [

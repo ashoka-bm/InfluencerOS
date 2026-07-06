@@ -10,12 +10,11 @@
     "idea_promotion_id",
     "applied_social_template_id",
     "default_video_envelope",
-    "opening_hook",
-    "setup",
-    "escalation",
+    "hook",
+    "retain",
     "payoff",
-    "loop_or_ending",
-    "intended_viewer_feeling",
+    "cta_or_loop",
+    "intended_emotion",
     "shots",
     "continuity_requirements"
   ],
@@ -36,27 +35,34 @@
       "type": "string",
       "const": "universal_short_form_vertical"
     },
-    "opening_hook": {
+    "hook": {
       "type": "string",
       "minLength": 1
     },
-    "setup": {
-      "type": "string",
-      "minLength": 1
-    },
-    "escalation": {
-      "type": "string",
-      "minLength": 1
+    "retain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setup", "escalation"],
+      "properties": {
+        "setup": {
+          "type": "string",
+          "minLength": 1
+        },
+        "escalation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "payoff": {
       "type": "string",
       "minLength": 1
     },
-    "loop_or_ending": {
+    "cta_or_loop": {
       "type": "string",
       "minLength": 1
     },
-    "intended_viewer_feeling": {
+    "intended_emotion": {
       "type": "string",
       "minLength": 1
     },

@@ -3,12 +3,14 @@
   "creator_profile_id": "creator_luna_fit",
   "applied_social_template_id": "applied_template_luna_001",
   "default_video_envelope": "universal_short_form_vertical",
-  "opening_hook": "Luna steps into frame beside an open laptop: 'Two minutes before your next meeting? Do this with me.'",
-  "setup": "She shows the timer and frames the routine as a reset, not a full workout.",
-  "escalation": "Three quick standing moves build from breath to shoulders to legs.",
+  "hook": "Luna steps into frame beside an open laptop: 'Two minutes before your next meeting? Do this with me.'",
+  "retain": {
+    "setup": "She shows the timer and frames the routine as a reset, not a full workout.",
+    "escalation": "Three quick standing moves build from breath to shoulders to legs."
+  },
   "payoff": "Luna returns to the laptop calmer and more upright.",
-  "loop_or_ending": "Final pose lands beside the same laptop framing so the video can loop back to the starting stress moment.",
-  "intended_viewer_feeling": "relief",
+  "cta_or_loop": "Final pose lands beside the same laptop framing so the video can loop back to the starting stress moment.",
+  "intended_emotion": "relieved and capable",
   "shots": [
     {
       "shot_id": "shot_luna_001",

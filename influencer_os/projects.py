@@ -392,7 +392,7 @@ def validate_project(project_path):
     warnings = validate_promotion_gate(workspace_dir, promotion)
     _validate_cached_promotion_refs(project, promotion)
     _resolve_source_refs(project["source_refs"], workspace_dir, "Project source_refs")
-    warnings.extend(_validate_project_records(project_dir, project, workspace_dir))
+    warnings.extend(_validate_project_records(project_dir, project, workspace_dir, promotion))
 
     return {
         "project_id": project["project_id"],
@@ -703,7 +703,7 @@ def _validate_analytics_records(project_dir, project, output_package, published_
     return snapshots_by_id
 
 
-def _validate_performance_summary(project_dir, project, output_package, published_records, analytics_records):
+def _validate_performance_summary(project_dir, project, output_package, published_records, analytics_records, applied_template=None):
     """At-rest checks for performance-summary.json (slice 3).
 
     The summary attaches at rest once authored (no dedicated status); when
@@ -772,7 +772,35 @@ def _validate_performance_summary(project_dir, project, output_package, publishe
         )
 
     _validate_summary_source_material_refs(project_dir, evidence_refs["source_material_refs"])
+    _validate_summary_spine_alignment(summary, applied_template)
     return []
+
+
+def _validate_summary_spine_alignment(summary, applied_template):
+    """The learning loop speaks spine (ADR 0024, Creative Direction slice 2).
+
+    Stage findings attribute to the applied template's beat_role beats. When
+    the applied template planned no cta beat, the cta stage finding must
+    record the absence as `result: "not_used"` — never a judged result for a
+    stage that was never planned, and never an omitted stage (minItems:5
+    still holds). A planned cta beat that was dropped in publication may
+    legitimately still read `not_used`, so only the unplanned direction is
+    enforced.
+    """
+    if applied_template is None:
+        return
+    applied_roles = {
+        beat.get("beat_role") for beat in applied_template.get("applied_beats", [])
+    }
+    if "cta" in applied_roles:
+        return
+    for finding in summary.get("stage_findings", []):
+        if finding.get("stage") == "cta" and finding.get("result") != "not_used":
+            raise ValidationError(
+                "Performance summary cta stage finding must record "
+                "result 'not_used' when the applied template planned no "
+                f"cta-role beat, got {finding.get('result')!r}"
+            )
 
 
 def _validate_summary_source_material_refs(project_dir, refs):
@@ -1164,7 +1192,7 @@ def _research_pack_location(pack_id, context):
     raise ValidationError(f"{context}: unrecognized research pack id prefix: {pack_id!r}")
 
 
-def _validate_project_records(project_dir, project, workspace_dir):
+def _validate_project_records(project_dir, project, workspace_dir, promotion=None):
     applied_template = None
     production_plan = None
     generation_plan = None
@@ -1205,6 +1233,24 @@ def _validate_project_records(project_dir, project, workspace_dir):
                 "Production plan applied_social_template_id does not match applied template: "
                 f"{production_plan['applied_social_template_id']!r} != {applied_template['applied_social_template_id']!r}"
             )
+        # Intent is resolved by reference (ADR 0024): the canonical
+        # intended_emotion lives on the locked promotion, and a plan that
+        # carries the field must restate it verbatim, never override it.
+        # A plan-only value is the legacy path for promotions that predate
+        # intent capture.
+        if promotion is not None:
+            promotion_emotion = promotion.get("intended_emotion")
+            plan_emotion = production_plan.get("intended_emotion")
+            if (
+                promotion_emotion is not None
+                and plan_emotion is not None
+                and plan_emotion != promotion_emotion
+            ):
+                raise ValueError(
+                    "Production plan intended_emotion overrides the locked "
+                    f"promotion: {plan_emotion!r} != {promotion_emotion!r}; "
+                    "intent is resolved by reference, never overridden"
+                )
 
         if _requires_generation_plan(project):
             generation_plan = _validate_project_record(
@@ -1268,7 +1314,12 @@ def _validate_project_records(project_dir, project, workspace_dir):
     published_records = _validate_published_records(project_dir, project, output_package)
     analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)
     return _validate_performance_summary(
-        project_dir, project, output_package, published_records, analytics_records
+        project_dir,
+        project,
+        output_package,
+        published_records,
+        analytics_records,
+        applied_template=applied_template,
     )
 
 

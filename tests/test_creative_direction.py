@@ -3,6 +3,10 @@
 Slice 1: the Content Beat Spine is the one template vocabulary, and the
 intent pair (intended_emotion / core_message) is captured at the idea origin
 and survives promotion verbatim.
+
+Slice 2: the micro-journey plan is spine-shaped, plans resolve intent by
+reference (never override the locked promotion), and the learning loop
+speaks spine (an unplanned CTA reads `not_used`, never a judged result).
 """
 
 import json
@@ -10,11 +14,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from influencer_os.creator_workspaces import validate_creator_workspace
+from influencer_os.projects import validate_project
 from influencer_os.research import validate_promotion_gate
 from influencer_os.validation import (
     ValidationError,
     validate_record,
 )
+from tests.test_cli import rewrite_json, scaffold_project_workspace
+from tests.test_performance_summary import (
+    ingest_example_snapshot,
+    scaffold_summarized_project,
+    write_summary,
+)
+from tests.test_analytics import scaffold_published_project
 from tests.test_research_validation import (
     ENTRY_ID,
     scaffold_research_workspace,
@@ -208,6 +221,122 @@ class IntentCarryForwardTests(unittest.TestCase):
             write_json(entry_path, entry)
             write_json(promotion_path, promotion)
             validate_promotion_gate(workspace_dir, promotion)
+
+
+class SpineShapedMicroJourneyTests(unittest.TestCase):
+    def test_example_is_spine_shaped(self):
+        plan = load_example("micro-journey-video-plan")
+        for field in ("hook", "retain", "payoff", "cta_or_loop", "intended_emotion"):
+            self.assertIn(field, plan)
+        self.assertEqual(sorted(plan["retain"]), ["escalation", "setup"])
+        validate_record("micro-journey-video-plan", plan)
+
+    def test_legacy_shape_fails(self):
+        plan = load_example("micro-journey-video-plan")
+        plan["opening_hook"] = plan.pop("hook")
+        retain = plan.pop("retain")
+        plan["setup"] = retain["setup"]
+        plan["escalation"] = retain["escalation"]
+        plan["loop_or_ending"] = plan.pop("cta_or_loop")
+        plan["intended_viewer_feeling"] = plan.pop("intended_emotion")
+        # Clean break (Decision D): the legacy field names fail both ways —
+        # the spine fields are missing and the old keys are unexpected.
+        with self.assertRaises(ValidationError):
+            validate_record("micro-journey-video-plan", plan)
+
+
+class IntentResolveByReferenceTests(unittest.TestCase):
+    def test_plan_matching_promotion_intent_passes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            validate_project(project_dir)
+
+    def test_plan_overriding_promotion_intent_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                project_dir / "plan" / "production-plan.json",
+                lambda plan: plan.update(intended_emotion="triumphant awe"),
+            )
+            with self.assertRaisesRegex(ValueError, "overrides the locked promotion"):
+                validate_project(project_dir)
+
+    def test_plan_alone_carrying_intent_is_legacy_compatible(self):
+        # A promotion that predates intent capture imposes nothing on the
+        # plan's own intended_emotion.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            for record_name in ("idea-promotions/idea_promotion_luna_fit_001",
+                                "idea-queue/entries/idea_queue_entry_luna_fit_001"):
+                rewrite_json(
+                    workspace_dir / "research" / f"{record_name}.json",
+                    lambda record: [
+                        record.pop(field, None)
+                        for field in ("intended_emotion", "core_message")
+                    ],
+                )
+            validate_project(project_dir)
+
+    def test_workspace_path_enforces_intent_carry_forward(self):
+        # Slice 1 review finding: the carry-forward probe must be reachable
+        # from `validate workspace`, not only `validate research`.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            validate_creator_workspace(workspace_dir)
+            rewrite_json(
+                workspace_dir
+                / "research"
+                / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json",
+                lambda promotion: promotion.update(intended_emotion="smug"),
+            )
+            with self.assertRaisesRegex(ValidationError, "rewrites intended_emotion"):
+                validate_creator_workspace(workspace_dir)
+
+
+class SummarySpineAlignmentTests(unittest.TestCase):
+    def test_unplanned_cta_summary_defaults_pass(self):
+        # The example applied template plans no cta beat and the example
+        # summary records the stage as not_used.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+            validate_project(project_dir)
+
+    def test_unplanned_cta_with_judged_result_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+
+            def mutate(summary):
+                for finding in summary["stage_findings"]:
+                    if finding["stage"] == "cta":
+                        finding["result"] = "Weak conversion."
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(ValidationError, "not_used"):
+                validate_project(project_dir)
+
+    def test_planned_cta_beat_allows_judged_result(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_published_project(temp_dir)
+            rewrite_json(
+                project_dir / "plan" / "applied-template.json",
+                lambda applied: applied["applied_beats"].append(
+                    {
+                        "beat_label": "cta",
+                        "idea_application": "Luna asks viewers to save the reset for their next meeting.",
+                        "viewer_question_answered": "What should I do with this?",
+                        "beat_role": "cta",
+                    }
+                ),
+            )
+            ingest_example_snapshot(temp_dir, project_dir)
+
+            def mutate(summary):
+                for finding in summary["stage_findings"]:
+                    if finding["stage"] == "cta":
+                        finding["result"] = "Saves were strong after the explicit ask."
+                        finding["interpretation"] = "The planned save CTA converted."
+            write_summary(project_dir, mutate=mutate)
+            validate_project(project_dir)
 
 
 if __name__ == "__main__":

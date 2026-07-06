@@ -47,6 +47,15 @@ Project status, snapshots, published records, or the package.
 - `stage_findings` covers each of the five stages exactly once: packaging,
   hook, body_retention, payoff, cta. A duplicated or missing stage fails
   validation.
+- Attribute each stage finding to the applied template's `beat_role` beats
+  (ADR 0024): the spine maps `hook→hook`, `retain→body_retention`,
+  `payoff→payoff`, `cta→cta`, with `packaging` the pre-hook stage. Name
+  the applied beat(s) behind a finding in its `interpretation` so lessons
+  land on the creative decision, not just the metric.
+- An unused CTA is still a finding: when the applied template planned no
+  `cta`-role beat, write the cta stage with `result: "not_used"` (enforced
+  by `validate project`) and interpret what organic action happened
+  anyway. Never omit the stage — `minItems: 5` holds.
 - Wait for mature data: snapshots younger than the platform reporting lag
   (YouTube lags 2–3 days) support only `confidence: low` findings. Say in
   `result` when a stage is judged from provisional data. `validate project`

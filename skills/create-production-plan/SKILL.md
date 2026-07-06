@@ -42,10 +42,12 @@ Project or supersede the promotion. Do not route around the mismatch.
 
 ## Format Rules
 
-- Short-form video: create a Micro-Journey Video Plan with hook, setup,
-  escalation, payoff, shot logic, continuity requirements, and a provider-
-  neutral Base Video Generation Plan. The generation plan is a reviewable
-  plan, not provider approval.
+- Short-form video: create a Micro-Journey Video Plan shaped by the
+  Content Beat Spine (ADR 0024) — `hook`, one `retain` beat holding
+  `setup` and `escalation`, `payoff`, `cta_or_loop`, and
+  `intended_emotion` — plus shot logic, continuity requirements, and a
+  provider-neutral Base Video Generation Plan. The generation plan is a
+  reviewable plan, not provider approval.
 - Carousel: create slide-level visual beats, first-slide hook, creator
   continuity, and generation notes.
 - Single image post: create central visual idea, composition, avatar or scene
@@ -66,6 +68,11 @@ Project or supersede the promotion. Do not route around the mismatch.
   Project.
 - Carry forward the creative elements, evidence IDs, and avoid notes from the
   promotion and evidence brief. Do not invent trend claims.
+- Intent is resolved by reference (ADR 0024): the promotion's
+  `intended_emotion` and `core_message` are canonical. Where a plan schema
+  carries `intended_emotion` (micro-journey), restate the promotion's value
+  verbatim — `validate project` fails an overriding copy. Never add intent
+  fields to plans that lack them.
 - Preserve creator boundaries; text plans must not introduce medical,
   financial, legal, or disclosure-sensitive claims without source support and
   explicit review notes.

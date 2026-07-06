@@ -96,7 +96,7 @@
     },
     {
       "stage": "hook",
-      "creative_decision_ref": "plan/production-plan.json#opening_hook",
+      "creative_decision_ref": "plan/production-plan.json#hook",
       "intended_effect": "Reduce first-three-second drop-off by naming a familiar workday tension.",
       "primary_metrics": [
         "retention_3s_pct",
