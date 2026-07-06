@@ -704,6 +704,18 @@ fires at 96h, summary authored and validated, WARN clears, index/board
 rebuilds and workspace/research validation stay green. Exit criterion 3 of
 the Phase 2 plan is met.
 
+Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
+probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
+resolved independently, so a summary could cite one post while citing
+another post's snapshots — misattributing metrics to the wrong URL/assets
+in multi-publication projects; each cited snapshot's parent post must now
+itself be cited. (P3) `source_material_refs` was schema-required but never
+validated, so `../../outside` and missing paths passed as provenance;
+each ref must now be a relative path resolving to an existing file inside
+the project, symlink-safe (same containment class as raw refs). 460 tests
+pass (5 added); 43 examples validate; the slice replay stays green; the
+skill contract and pipeline contract teach both rules.
+
 Slice 2 review fixes (2026-07-05): three findings, all fixed with failing
 probes first. (P1) The pre-publication rejection lived inside
 hours-derivation, so a snapshot with supplied `hours_since_publish` and a

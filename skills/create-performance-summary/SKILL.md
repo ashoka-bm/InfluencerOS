@@ -36,6 +36,14 @@ Project status, snapshots, published records, or the package.
   the registered package, every `published_post_record_id` and
   `analytics_snapshot_id` to records on disk. Cite every snapshot you
   actually used — provenance is the point.
+- Cited snapshots must belong to cited posts: every
+  `analytics_snapshot_id`'s parent `published_post_record_id` must appear
+  in `published_post_record_ids`, so a multi-publication project cannot
+  attribute one post's metrics to another post's URL and assets.
+- `source_material_refs` are auditable provenance: each must be a relative
+  path to a real file inside the project (e.g.
+  `output-package/output-package.json`, `plan/production-plan.json`,
+  `analytics/raw/<export>`), never a workspace-external or absolute path.
 - `stage_findings` covers each of the five stages exactly once: packaging,
   hook, body_retention, payoff, cta. A duplicated or missing stage fails
   validation.

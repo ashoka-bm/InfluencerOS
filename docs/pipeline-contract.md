@@ -139,7 +139,10 @@ slice 3): one per Project at the project root, authored by the
 `validate project` is its enforcement seam. When present, its
 `evidence_refs` must resolve inside the project — `output_package_id` to
 the registered package, every `published_post_record_id` and
-`analytics_snapshot_id` to records on disk — and its `stage_findings` must
+`analytics_snapshot_id` to records on disk, each cited snapshot's parent
+post among the cited posts (no cross-post metric attribution), and every
+`source_material_ref` a contained project-relative existing file — and its
+`stage_findings` must
 cover packaging, hook, body retention, payoff, and CTA exactly once each
 (record semantics reject a duplicated or missing stage). The summary
 attaches at rest with no dedicated Project status; a `published` Project

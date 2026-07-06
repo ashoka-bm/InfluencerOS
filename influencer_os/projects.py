@@ -668,7 +668,48 @@ def _validate_performance_summary(project_dir, project, output_package, publishe
             "Performance summary analytics_snapshot_ids do not resolve to "
             f"ingested analytics snapshots: {dangling_snapshots}"
         )
+
+    # A cited snapshot's parent post must itself be cited: resolving the two
+    # id lists independently would let a multi-publication project attribute
+    # one post's metrics to another post's URL and assets (P2 review
+    # finding, 2026-07-05).
+    cited_posts = set(evidence_refs["published_post_record_ids"])
+    misattributed = sorted(
+        snapshot_id
+        for snapshot_id in evidence_refs["analytics_snapshot_ids"]
+        if analytics_records[snapshot_id]["published_post_record_id"] not in cited_posts
+    )
+    if misattributed:
+        raise ValueError(
+            "Performance summary cites analytics snapshots whose published "
+            f"post record is not among the cited published_post_record_ids: {misattributed}"
+        )
+
+    _validate_summary_source_material_refs(project_dir, evidence_refs["source_material_refs"])
     return []
+
+
+def _validate_summary_source_material_refs(project_dir, refs):
+    """source_material_refs are provenance, so they must be auditable: each
+    ref must be a relative path resolving to an existing file inside the
+    project, symlink-safe (P3 review finding, 2026-07-05).
+    """
+    for ref in refs:
+        relative_path = Path(ref)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError(
+                "Performance summary source_material_refs must be relative "
+                f"paths inside the project: {ref!r}"
+            )
+        path = Path(project_dir) / relative_path
+        if not path.exists():
+            raise FileNotFoundError(
+                "Performance summary source_material_ref does not resolve "
+                f"to a file: {ref!r}"
+            )
+        _ensure_contained_file(
+            path, project_dir, f"Performance summary source_material_ref {ref!r}"
+        )
 
 
 def _performance_summary_warnings(project, published_records, analytics_records):

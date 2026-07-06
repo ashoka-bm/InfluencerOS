@@ -16,6 +16,7 @@ from pathlib import Path
 from influencer_os.projects import (
     PERFORMANCE_SUMMARY_DUE_HOURS,
     add_analytics_snapshot,
+    register_published_post,
     validate_project,
 )
 from influencer_os.validation import ValidationError
@@ -24,7 +25,10 @@ from tests.test_analytics import (
     stage_snapshot_record,
 )
 from tests.test_cli import copy_example_record, rewrite_json
-from tests.test_published_posts import scaffold_project_workspace
+from tests.test_published_posts import (
+    scaffold_project_workspace,
+    stage_published_record,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +97,84 @@ class PerformanceSummaryAtRestTests(unittest.TestCase):
 
             write_summary(project_dir, mutate=mutate)
             with self.assertRaisesRegex(ValueError, "analytics_snapshot_ids do not resolve"):
+                validate_project(project_dir)
+
+    def test_snapshot_cited_without_its_published_post_fails(self):
+        # P2 review finding: citing a real snapshot under a different cited
+        # post misattributes metrics to the wrong URL/assets in
+        # multi-publication projects. Each cited snapshot's parent post must
+        # itself be cited.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+
+            def second_post(record):
+                record["published_post_record_id"] = "ppr_luna_tiny_reset_youtube_002"
+                record["public_url"] = "https://youtube.com/shorts/example-luna-tiny-reset-2"
+                record["platform_post_id"] = "yt_short_luna_tiny_reset_002"
+
+            register_published_post(
+                project_dir,
+                stage_published_record(temp_dir, mutate=second_post, filename="second-post.json"),
+            )
+
+            def mutate(record):
+                # The cited snapshot belongs to ppr_..._001, which is no
+                # longer among the cited posts.
+                record["evidence_refs"]["published_post_record_ids"] = [
+                    "ppr_luna_tiny_reset_youtube_002"
+                ]
+
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(ValueError, "not among the cited published_post_record_ids"):
+                validate_project(project_dir)
+
+    def test_source_material_ref_escaping_project_fails(self):
+        # P3 review finding: source_material_refs are provenance and must be
+        # validated as contained project-relative existing files.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+
+            def mutate(record):
+                record["evidence_refs"]["source_material_refs"] = ["../../outside"]
+
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(ValueError, "source_material_refs must be relative"):
+                validate_project(project_dir)
+
+    def test_absolute_source_material_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+
+            def mutate(record):
+                record["evidence_refs"]["source_material_refs"] = ["/etc/hosts"]
+
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(ValueError, "source_material_refs must be relative"):
+                validate_project(project_dir)
+
+    def test_missing_source_material_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+
+            def mutate(record):
+                record["evidence_refs"]["source_material_refs"] = ["plan/missing.json"]
+
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(FileNotFoundError, "does not resolve to a file"):
+                validate_project(project_dir)
+
+    def test_symlinked_source_material_ref_escaping_project_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_summarized_project(temp_dir)
+            outside_path = Path(temp_dir) / "outside-material.md"
+            outside_path.write_text("outside\n")
+            (project_dir / "plan" / "linked-material.md").symlink_to(outside_path)
+
+            def mutate(record):
+                record["evidence_refs"]["source_material_refs"] = ["plan/linked-material.md"]
+
+            write_summary(project_dir, mutate=mutate)
+            with self.assertRaisesRegex(ValueError, "escapes root"):
                 validate_project(project_dir)
 
     def test_output_package_id_mismatch_fails(self):
