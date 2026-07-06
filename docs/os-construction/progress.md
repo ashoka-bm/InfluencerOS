@@ -184,6 +184,23 @@ Remaining:
 - Platform analytics API connector, only when explicitly requested (Decision 3; the shared writer seam is mock-proven).
 - Vector leg of the lookup projection follows the reference exactly when Command Centre is un-deferred (Decision 1 phasing).
 
+### Creative Direction Workstream (between Phase 2 and Phase 3)
+
+Goal: Make creative intent first-class and continuous — the Content Beat Spine as the one template vocabulary, intent captured at the idea origin and resolved by reference, an advisory platform→modality→format capability model, and an advisory creative-review layer (ADR 0024).
+
+Status: Complete (2026-07-06). All four slices landed with per-slice gpt-5.5 adversarial reviews and fix batches; the six runnable exit criteria pass (see Current Verification).
+
+Completed:
+
+- Slice 1 — Content Beat Spine + intent at the idea origin: required `beat_role` (`hook|retain|payoff|cta|packaging`) on `social-template.beat_sequence[]` and `applied-social-template.applied_beats[]` with optional `hook_category` (11-value taxonomy, hook-role beats only, Decision B); spine semantics (templates and applied templates must land hook + payoff; hook_category placement) in the validator; optional `intended_emotion`/`core_message` on `idea-queue-entry` and `idea-promotion` (schema-optional, skill-required) with a verbatim carry-forward check in the promotion gate; five named-framework presets seeded as validating records under `docs/templates/social-templates/` (PAS, Before/After-Bridge, Listicle, Myth→Truth, "I Tried X" — Decision C); `manage-idea-queue` captures intent via the "So What?" chain and `promote-idea` copies it verbatim; drift pins for the spine enums.
+- Slice 1 review fixes: `validate workspace` now runs promotion validation (and surfaces its warnings), making the carry-forward check reachable from the exit criterion's named path; `apply-social-template` documents the beat_role contract.
+- Slice 2 — carry-through and performance alignment: `micro-journey-video-plan` restructured to the spine as a clean break (Decision D: `hook`, `retain{setup,escalation}`, `payoff`, `cta_or_loop`, `intended_emotion`); `validate project` fails a production plan whose `intended_emotion` overrides the locked promotion (intent resolves by reference); performance summaries must record an unplanned CTA as `result: "not_used"` (`minItems:5` holds), aligned to the applied template's `beat_role` beats; fixtures migrated.
+- Slice 2 review fixes: plan records validate whenever they exist (a premature plan on a `created` project cannot dodge the no-override check); applied templates must cover hook + payoff so those stage findings always attribute; `validate_promotions` collects the research corpus once per sweep; stale micro-journey wording purged from the HTML map.
+- Slice 3 — platform, modality, and subtype sharpening: `primary_surfaces` constrained to the canonical 8-platform enum (Decision A: canonical constant in `validation.py`, drift-pinned across every schema and code copy); `content_mediums` reduced to the pure modality enum `[text,image,video,audio]` with the medium-based readiness blockers re-keyed; audio selectable with a standalone-audio advisory warning ("no audio plan schema yet"); optional `format_subtype` seeded on article/carousel/thread plans; `init-project` appends an advisory `platform_fit` ProjectWarning (`native|subtype|analog|none`, dated 2026-07-06 capability map in code, numeric limits doc-side only) that never blocks.
+- Slice 3 review fixes: the platform-fit advisory is best-effort (cannot fail `init-project`) and idempotent per project; the off-surface test asserts the appended warning passes full at-rest research validation.
+- Slice 4 — reviews first slice: lean `review-record.schema.json` (spine-keyed findings, `reviewer_execution` independence fields, `human_waiver` requiring a blocking finding, fallback_reason pairing); `docs/gates-and-reviews.md` as the canonical control contract (Gate/Review/Pass/Warning, control order, advisory rule + must-acknowledge real-world-risk carve-out, blocking-promotion ADR checklist) added to the AGENTS.md source-of-truth list; skills `review-hook-payoff` (advisory ReviewRecord), `clear-writing-pass` and `human-voice-pass` (bounded rewrites with change trace, no record) with registry, context-matrix, and conductor rows; `project_paths` gains `reviews/`; `validate project` checks review records at rest and surfaces an unwaived `block` as a warning only — the advisory probe test proves a block halts nothing (and `validate project` is the packaging preflight, so packaging cannot be halted by construction).
+- Guard rules held: no creative Review, Pass, or Warning blocks any pipeline step (per-slice advisory probes); nothing touched `influencer_os/providers/` (which still does not exist) or any generation-approval surface.
+
 ### Phase 3: Generation OS
 
 Goal: Generate or import media assets from approved providers, assemble final output packages, and preserve provenance and approval boundaries.
@@ -235,6 +252,20 @@ Remaining:
   `article-plan.schema.json`, and `thread-plan.schema.json`.
 
 ## Current Verification
+
+Creative Direction closeout run (2026-07-06) — the six exit criteria
+demonstrated on the luna-fit fixture creator plus the workspace-library
+sweep and a full-workflow replay (idea → promotion → template → plan →
+performance summary → block-status review validating advisory):
+
+```bash
+python3 -m unittest discover -s tests
+python3 -m influencer_os validate examples
+python3 -m unittest tests.test_creative_direction tests.test_drift_checks   # exit criteria 1-6
+for w in workspace-library/creators/*/; do python3 -m influencer_os validate workspace "$w"; done
+python3 -m influencer_os validate project workspace-library/creators/remy-vale/projects/pothos-drowning-rescue
+# full replay + advisory probe: .tmp/creative-direction/closeout.sh (ALL EXIT CRITERIA GREEN, 2026-07-06)
+```
 
 Latest verified commands:
 

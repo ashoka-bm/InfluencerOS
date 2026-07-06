@@ -211,11 +211,11 @@ captured at the idea origin and resolved by reference, an advisory
 platform→modality→format capability model, and an advisory creative-review
 layer.
 
-Status: approved for execution (2026-07-06). Architectural decisions are
-locked in ADR 0024 and the four execution-mechanics decisions are approved in
-`docs/workflows/creative-direction-implementation-plan.md`. Runs on the
-creative axis and never touches `influencer_os/providers/` or generation
-machinery; Phase 3 below is independent of this workstream.
+Status: complete (2026-07-06). All four slices landed with per-slice
+adversarial reviews and fix batches; the six runnable exit criteria pass and
+the closeout run is recorded in `docs/os-construction/progress.md`. The
+workstream never touched `influencer_os/providers/` or generation machinery;
+Phase 3 below is independent of it.
 
 Entry criteria (verified 2026-07-06):
 

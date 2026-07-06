@@ -37,11 +37,13 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `docs/os-construction/maps/` | Markdown records for created architecture maps. |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. |
 | `docs/provider-boundary.md` | Approval boundary for provider-backed work. |
+| `docs/gates-and-reviews.md` | Canonical control contract: gates, advisory reviews, passes, warnings (ADR 0024). |
 | `docs/research-adapter-registry.md` | Research-acquisition adapter/connector permission registry (ADR 0021/0022). |
 | `docs/creator-workspace-structure.md` | Creator workspace layout and local state policy. |
 | `docs/adr/` | Architectural decisions. |
 | `docs/workflows/` | Human-readable workflow specs. |
 | `docs/templates/` | Templates copied into creator workspaces or generated records. |
+| `docs/templates/social-templates/` | Seeded named-framework social-template records, spine-typed (ADR 0024 Decision C). |
 | `docs/handoffs/` | Durable handoff notes from prior planning or implementation passes. |
 
 ## Runtime Code
@@ -92,6 +94,9 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/ingest-analytics/SKILL.md` | AnalyticsSnapshot ingestion producer (manual entry + neutral CSV import). |
 | `skills/create-performance-summary/SKILL.md` | PerformanceSummary authoring producer (interpretive; benchmark-rubric-anchored). |
 | `skills/distill-creator-learning/SKILL.md` | Creator-lesson distillation producer (interpretive; evidence-linked `log-learning` writes + optional `memory-write` promotion). |
+| `skills/review-hook-payoff/SKILL.md` | Advisory Hook/Payoff Review producer (spine-keyed ReviewRecord; never blocks). |
+| `skills/clear-writing-pass/SKILL.md` | Clear-Writing Pass (bounded clarity rewrite + change trace; no record). |
+| `skills/human-voice-pass/SKILL.md` | Human-Voice Pass (creator-voice rewrite + change trace; no record). |
 
 Baseline source skills live under repo `skills/<skill-name>/SKILL.md` (kebab-case, no category prefix, optional per-skill `references/` and `SKILL.local.md` per ADR 0017). `init-creator` copies those skills into each Creator Workspace under `.claude/skills/<skill-name>/SKILL.md`; `sync-creator-runtime` refreshes copied runtime skills while preserving creator `SKILL.local.md` files and creator-only skill folders; `update-creators` runs a backup-protected batch refresh (ADR 0018). The full skill roster, including planned producer skills and the `wrap-up`/`memory-write` system skills, is in `architecture-map.md`.
 

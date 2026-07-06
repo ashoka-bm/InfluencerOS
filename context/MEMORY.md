@@ -13,6 +13,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 - Phase 1 now has tests/test_user_journey.py covering the local-first user journey from new Creator Workspace setup through packaged Project output.
 - Research-intelligence hardening was reviewed 2026-07-04 against the Agentic OS reference: three source-yield at-rest validation gaps closed, ADR 0021 accepted, and quality-determination guidance added (Signal Tier Rubric, corroboration/contradiction synthesis, thin-evidence WARN, anti-contamination queries).
 - Research-acquisition connectors (ADR 0022, influencer_os/connectors/) pull Reddit/X/Firecrawl/LinkedIn evidence; env-gated and dormant until a provider key is set. Key presence is standing approval for the research tier only (bounded by call cap + kill switch); generation calls keep exact approval. CLI: list-connectors, research-fetch.
+- Creative Direction workstream (ADR 0024) complete 2026-07-06: Content Beat Spine, idea-origin intent, advisory platform/modality model, and advisory reviews landed in four slices with per-slice gpt-5.5 reviews; contract doc is docs/gates-and-reviews.md. Phase 3 Generation OS is next and stays blocked on its five open decisions + ADR 0023.
 
 ## Environment Notes
 

@@ -2,11 +2,14 @@
 
 Last updated: 2026-07-06
 
-Status: **Approved for execution (2026-07-06).** The architectural decisions
-are locked in ADR 0024 (grilling session, 2026-07-06) and the four
-execution-mechanics decisions below were user-approved on 2026-07-06
-(A: drift-pin test; B: `hook_category` optional in slice 1; C: seed five
-presets; D: clean-break restructure). Slice 1 is open.
+Status: **Complete (2026-07-06).** All four slices executed in the agreed
+batch order with per-slice gpt-5.5 adversarial reviews and fix batches; the
+six runnable exit criteria pass and the closeout run is recorded in
+`docs/os-construction/progress.md`. The architectural decisions were locked
+in ADR 0024 (grilling session, 2026-07-06) and the four execution-mechanics
+decisions below were user-approved on 2026-07-06 (A: drift-pin test;
+B: `hook_category` optional in slice 1; C: seed five presets; D: clean-break
+restructure).
 
 Naming note: this workstream is **not** the roadmap's Phase 3 (Generation OS).
 Phase 3 remains the provider-safety spine
