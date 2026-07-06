@@ -169,3 +169,27 @@ A bounded editorial rewrite of an artifact, such as a Clear Writing Pass or a Hu
 
 **Warning**:
 A durable, non-blocking advisory signal attached to a record. The Project Warning is the primary example; platform-fit advisories, raised when a chosen format is not native to a creator's platform, are surfaced as Warnings.
+
+**Feedback Automation**:
+Automation where each cycle is conditioned on evidence from prior cycles, triggered by events and thresholds rather than the clock. Contrast with temporal automation (clock-scheduled jobs), which is deferred in v1. Phase 4 Improvement OS builds feedback automation only (ADR 0025).
+
+**Declare-Then-Attest**:
+The capture discipline for auditable work: a record of intent written before the work, an attestation of what actually happened written after, and a mechanical at-rest reconciliation of the attestation against durable side effects. Research runs (search plan then source yield, exact declared outputs) and generation approvals (results must equal the approved request) already follow it. Intent-versus-attestation deltas are learning signal; attestation-versus-disk deltas are integrity failures and fail closed.
+
+**Production Rubric**:
+The growing list of binary quality criteria that removes ambiguity about what good means. Each criterion is answerable yes/no about a specific artifact, carries a scope (OS-level craft rules or creator-level boundaries), and its id doubles as the recurrence key for counting violations. Criteria mature from advisory to proven to promoted into the blocking quality checklist.
+
+**Rubric Ratchet**:
+The rule that converts taste into criteria: every rejection of a draft, prompt, or asset must cite an existing Production Rubric criterion or mint a new one. Rejections that cannot be articulated are logged unclassified; accumulating unclassified rejections signals a rubric gap rather than being ignored.
+
+**Rejection Event**:
+A durable, recurrence-keyed system event recording that a draft, prompt, or asset was rejected and why — the cited criterion plus a one-line reason. Verdicts are durable; the rejected material itself stays ephemeral and is never committed.
+
+**Reflection Trigger**:
+The event-driven signal that reflection is due: when recurrence counts or unprocessed-event thresholds are crossed, an advisory warning is surfaced and badged. Improvement work is triggered by what happened, never by the clock; the human review rides this trigger — distillation proposes, the human approves.
+
+**Improvement Claim**:
+The falsifiable statement attached to a distilled skill or routine update, naming the criterion it targets and the expected violation-rate change, verified against subsequent runs. A refuted claim reopens the fix; a confirmed claim closes it.
+
+**Performance Delta**:
+The per-stage comparison of what a Creative Performance Map predicted against what analytics measured, scored confirmed, refuted, or unmeasurable. Refuted predictions are learning, not failures — they are the Performance Delta loop's raw material.

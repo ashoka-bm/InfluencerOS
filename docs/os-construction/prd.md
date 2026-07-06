@@ -25,7 +25,7 @@ The system will copy Agentic OS closely in structure:
 - `SKILL.local.md` overrides,
 - file-first memory,
 - project/output consolidation,
-- scheduled-workflow definitions,
+- scheduled-workflow definitions (deferred with temporal scheduling, ADR 0025),
 - memory-capture conventions later, with hooks deferred until explicitly approved,
 - visual architecture maps.
 
@@ -201,19 +201,33 @@ Required outcomes:
 - Quality checks run before packaging.
 - Output Packages reference final artifacts.
 
-### Phase 4: Automation OS
+### Phase 4: Improvement OS
 
-Goal: add scheduled creator operations after planning, learning, and generation are stable.
+Rescoped 2026-07-06 (ADR 0025) from "Automation OS": feedback automation
+replaced temporal scheduling, which is deferred.
+
+Goal: close the Performance Delta and Production Quality feedback loops with
+falsifiable criteria, so each research, idea, and production cycle is
+conditioned on what prior cycles actually did.
 
 Required outcomes:
 
-- Scheduled research refresh is defined.
-- Scheduled project creation is defined.
-- Scheduled analytics ingestion is defined.
-- Human approval gates block risky, paid, destructive, or irreversible actions.
-- Any publishing or scheduling integration is explicitly approved.
+- Production Rubric criteria are binary and citable, and grow by the Rubric
+  Ratchet: every rejection cites an existing criterion or mints a new one.
+- Creation friction is captured as durable recurrence-keyed events; rejected
+  drafts stay ephemeral.
+- Reflection is event-triggered by thresholds, never clock-scheduled, and
+  never blocks the pipeline.
+- Skill updates carry falsifiable improvement claims verified on subsequent
+  runs.
+- Creative Performance Map predictions are quantifiable and scored
+  confirmed, refuted, or unmeasurable per stage.
+- A human approves every skill-file write; criteria block only after
+  promotion through the gates-and-reviews ADR checklist.
 
-Research-only scheduled jobs may arrive earlier as part of the Research and Ideas module. Those jobs can update findings, queue scores, warnings, badges, and notifications, but cannot promote ideas or create production work without human approval.
+Scheduled jobs (research refresh, analytics ingestion, project creation)
+moved to the deferred Temporal Scheduling scope. If ever reopened, they
+cannot promote ideas or create production work without human approval.
 
 ### Deferred: Command Centre And Anywhere Access
 

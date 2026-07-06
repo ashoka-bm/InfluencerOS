@@ -1,6 +1,6 @@
 # InfluencerOS Roadmap
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 This roadmap defines phase order, exit criteria, and implementation priorities. Progress status lives in `docs/os-construction/progress.md`.
 
@@ -31,7 +31,8 @@ Approved standing overrides:
 - skills stay repo-central with no category prefixes (ADR 0017),
 - Creator Workspace propagation is built as CLI subcommands with gated content zones (ADR 0018),
 - `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers (ADR 0019),
-- research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep the exact-approval gate (ADR 0022).
+- research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep the exact-approval gate (ADR 0022),
+- Phase 4 is Improvement OS: feedback automation (event-triggered reflection with falsifiable criteria) replaces temporal scheduling, which is deferred (ADR 0025).
 
 ## Acceptance-Criteria Policy
 
@@ -276,30 +277,81 @@ Likely implementation slices:
 4. Asset provenance capture.
 5. Quality review checklist.
 
-## Phase 4: Automation OS
+## Phase 4: Improvement OS
 
-Goal: add repeatable scheduled creator operations after planning, learning, and generation are stable.
+Rescoped 2026-07-06 (ADR 0025) from "Automation OS": the binding need is
+feedback automation — each cycle conditioned on evidence from prior cycles —
+not temporal automation (clock-triggered jobs), which moved to the Deferred
+section below. Historical docs that say "Phase 4 Automation OS" refer to this
+phase.
 
-Entry criteria:
+Goal: close the two feedback loops that make the OS improve instead of
+repeat — the Performance Delta loop (Creative Performance Map predictions vs
+measured analytics, feeding Creator Memory) and the Production Quality loop
+(creation friction feeding skill and routine updates) — with a falsifiable
+criterion at every step.
+
+Status: rescoped and planned at draft level (2026-07-06). Entry criteria
+verified and execution decisions pending approval in
+`docs/workflows/improvement-os-implementation-plan.md`.
+
+Entry criteria (verified 2026-07-06):
 
 - Planning OS is reliable.
 - Learning OS can ingest and distill evidence.
 - Provider approval gates cannot be bypassed.
 
-Exit criteria:
+Exit criteria (target outcomes; the runnable rewrite lives in the
+implementation plan per the Acceptance-Criteria Policy):
 
-- Scheduled research refresh is defined.
-- Scheduled project creation is defined.
-- Scheduled analytics ingestion is defined.
-- Human approval gates block risky, paid, destructive, or irreversible actions.
-- Any publishing or scheduling integration is explicitly approved.
+- Production Rubric criteria are binary, scoped, and the Rubric Ratchet is
+  enforced at rest: every rejection cites or mints a criterion.
+- Creation friction is captured as durable recurrence-keyed events; rejected
+  drafts stay ephemeral.
+- A reflection trigger surfaces "reflection due" as an advisory warning from
+  event thresholds — event-driven, never clock-driven, never blocking.
+- Distilled skill updates carry falsifiable improvement claims verified
+  against subsequent runs.
+- Creative Performance Map predictions can be quantified and performance
+  summaries score each stage confirmed, refuted, or unmeasurable.
+- Criteria reach the blocking quality checklist only through the
+  gates-and-reviews ADR checklist.
 
-Likely implementation slices:
+Implementation slices, in the agreed build order:
 
-1. Markdown job definition pattern adapted from Agentic OS.
-2. Scheduled research refresh dry run.
-3. Scheduled analytics ingestion dry run.
-4. Human approval gate for scheduled actions.
+1. Rubric substrate: Production Rubric records, rejection/incident events on
+   the system-event ledger with recurrence keys, `log-incident` CLI,
+   cite-or-mint validation.
+2. Reflection trigger: at-rest event-threshold checks surfacing advisory
+   warnings and board badges, including the unclassified-rejection gap
+   signal.
+3. Distillation with improvement claims: proposal → human approval → skill
+   update, with claim status computed from subsequent runs.
+4. Falsifiable predictions: Creative Performance Map prediction fields and
+   per-stage confirmed/refuted/unmeasurable in performance summaries.
+5. Criteria maturity ladder: advisory → proven → promoted into the blocking
+   quality checklist via the gates-and-reviews ADR checklist.
+
+## Deferred: Temporal Scheduling (former Automation OS scope)
+
+Goal: clock-triggered creator operations — scheduled research refresh,
+scheduled analytics ingestion, markdown job definitions, and any live
+scheduler.
+
+Status: deferred (operator decision, 2026-07-06; ADR 0025).
+
+The scoping decisions: v1 stays local-first with no live scheduler; the
+scheduled-research capability additionally stays gated behind the manual
+research-intelligence loop being exercised with a live connector (ADR 0022
+"run 2", needs `OPENAI_API_KEY`) against real creator data. Scheduled jobs,
+if reopened, may never promote ideas, create projects, or call providers
+without human approval (PRD Out of Scope).
+
+Reopen when:
+
+- the Improvement OS feedback loops are stable,
+- real creator data exists and the live-connector research loop has run,
+- the user explicitly approves a scheduler scope in its own ADR.
 
 ## Deferred: Command Centre
 
@@ -375,4 +427,4 @@ Goal: automatic capture and scheduled jobs.
 
 Status: deferred.
 
-Hooks (session-end memory capture, skill auto-commit) and cron jobs (memory distill/curate/index) are deferred in v1. They only automate skills and checks that already run manually, so their absence removes no v1 capability (see PRD Out of Scope and ADR 0016). Reopen hooks with explicit approval; cron belongs to Phase 4 Automation OS.
+Hooks (session-end memory capture, skill auto-commit) and cron jobs (memory distill/curate/index) are deferred in v1. They only automate skills and checks that already run manually, so their absence removes no v1 capability (see PRD Out of Scope and ADR 0016). Reopen hooks with explicit approval; cron belongs to the deferred Temporal Scheduling scope (ADR 0025).

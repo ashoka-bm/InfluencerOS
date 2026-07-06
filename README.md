@@ -248,8 +248,8 @@ Key presence is standing approval for this research tier only — no per-run
 prompt — bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and
 a global kill switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`). Generation
 provider calls (image/video/audio/render) keep the exact-approval gate and are
-unchanged. There is no scheduled/unattended path; that stays deferred to
-Automation OS.
+unchanged. There is no scheduled/unattended path; scheduled automation stays
+deferred (Temporal Scheduling, ADR 0025).
 
 ## Validate Any Record
 

@@ -236,20 +236,28 @@ Remaining:
 - Asset provenance capture.
 - Quality checks before packaging.
 
-### Phase 4: Automation OS
+### Phase 4: Improvement OS
 
-Goal: Automate recurring content operations once planning, learning, and generation are stable.
+Goal: Close the Performance Delta loop (Creative Performance Map predictions
+vs measured analytics, feeding Creator Memory) and the Production Quality
+loop (creation friction feeding skill and routine updates), with a
+falsifiable criterion at every step.
 
-Status: Deferred.
+Status: Rescoped from "Automation OS" 2026-07-06 (ADR 0025) after the Phase 4
+readiness grilling session; temporal scheduling moved to the roadmap Deferred
+section with its own reopen conditions. Draft implementation plan:
+`docs/workflows/improvement-os-implementation-plan.md`; execution decisions
+D1–D6 pending operator approval.
 
 Remaining:
 
-- Creator posting cadence model.
-- Scheduled research refresh.
-- Scheduled project creation.
-- Scheduled analytics ingestion.
-- Optional publishing/scheduling integrations.
-- Human approval gates for risky, paid, or irreversible actions.
+- Rubric substrate (Production Rubric, recurrence-keyed events on the
+  system-event ledger, `log-incident`, cite-or-mint validation).
+- Reflection trigger (event thresholds → advisory warnings and badges).
+- Distillation with falsifiable improvement claims.
+- Quantified Creative Performance Map predictions with per-stage
+  confirmed/refuted/unmeasurable scoring.
+- Criteria maturity ladder into the blocking quality checklist.
 
 ## Implemented Schema Contracts
 
