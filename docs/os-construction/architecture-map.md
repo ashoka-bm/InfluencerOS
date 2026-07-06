@@ -178,6 +178,8 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
              format_article          -> ArticlePlan
              format_thread           -> ThreadPlan                                                [BUILT]
   Phase 9  Base Video Generation Plan  -> Skill(create-production-plan) (provider-neutral)        [BUILT]
+  Phase 9b Creative review (advisory)  -> Skill(review-hook-payoff) (ReviewRecord, never blocks)  [BUILT — CD slice 4]
+             editorial Passes          -> Skill(clear-writing-pass) / Skill(human-voice-pass)     [BUILT — CD slice 4]
   Phase 10 Generation Approval Gate    owner: user (exact-call approval)                          [BUILT gate]
   (post)   Output Package             -> Skill(create-output-package)                             [BUILT]
   (post)   Publication registration   -> Skill(register-published-post)                           [BUILT — Phase 2 slice 1]
@@ -289,6 +291,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 | Applied template | promoted idea | `applied-social-template` | beats map to idea; every beat carries a Content Beat Spine `beat_role` (ADR 0024); templates must land `hook` + `payoff` | `validate record applied-social-template`; spine semantics in `validate record social-template` [BUILT — WS12 + Creative Direction slice 1] | template gate |
 | Production plan | applied template | format plan (6 schemas) | routed by `target_format_id` and one content unit per Project; article/carousel/thread may carry optional `format_subtype`; micro-journey `intended_emotion` must match the locked promotion (resolve-by-reference) | schema + routing check + intent no-override [BUILT — Phase 1 slice 6 + Creative Direction slices 2-3] | none |
 | Platform fit (advisory) | project format + creator `primary_surfaces` | `project-warning` (`platform_fit`, `fit_level: native\|subtype\|analog\|none`) | non-native best fit warns at `init-project`; never blocks promotion or project creation (ADR 0024) | `platform_fit` semantics in record validation; capability map coverage drift check [BUILT — Creative Direction slice 3] | none (advisory) |
+| Creative review (advisory) | drafted plan + promotion intent packet | `review-record` at `projects/<slug>/reviews/` | findings keyed to spine areas; `block` is a recommendation surfaced as a warning, never a halt; independence via `reviewer_execution.execution_mode` | schema + at-rest checks in `validate project` + advisory probe test [BUILT — Creative Direction slice 4] | none (advisory; contract in `docs/gates-and-reviews.md`) |
 | Base generation plan | video plan | `base-video-generation-plan` | provider-neutral; required for short-form video only | schema + project requirement check [BUILT — Phase 1 slice 6] | none |
 | Output package | plan + artifact | `output-package` | full provenance chain enforced by schema (template + VUP ids required); IDs resolve to records; packaged projects cross-check project, creator, idea, template, plan IDs, upload-ready asset refs, and text-package nullable thumbnail rules | `register-output-package` + schema + provenance resolver [BUILT — WS12 + re-review fixes + Phase 1 slice 7] | generation approval |
 

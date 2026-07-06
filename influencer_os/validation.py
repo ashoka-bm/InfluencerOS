@@ -494,6 +494,8 @@ def validate_record_semantics(schema_name, record):
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
     if schema_name == "project-warning":
         validate_platform_fit_warning_semantics(record)
+    if schema_name == "review-record":
+        validate_review_record_semantics(record)
     if schema_name == "research-search-plan":
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
@@ -528,6 +530,41 @@ def validate_beat_spine(record, field_name, record_name, require_coverage):
             raise ValidationError(
                 f"{record_name}.{field_name}: template beats skip required "
                 f"spine role(s) {sorted(missing)!r}"
+            )
+
+
+def validate_review_record_semantics(record):
+    """ReviewRecord semantics (ADR 0024, Creative Direction slice 4).
+
+    Creative reviews are advisory — none of these rules make a review
+    blocking; they keep the record honest. A fallback execution names why
+    the bounded sub-agent path was unavailable (and a bounded run carries
+    no fallback excuse); a human waiver only means something when there is
+    a blocking-severity finding to waive.
+    """
+    review_id = record.get("review_record_id", "<unknown>")
+    execution = record.get("reviewer_execution", {})
+    mode = execution.get("execution_mode")
+    if mode == "fallback_separated_pass" and "fallback_reason" not in execution:
+        raise ValidationError(
+            f"review record {review_id}: fallback_separated_pass requires "
+            "fallback_reason"
+        )
+    if mode == "bounded_sub_agent" and "fallback_reason" in execution:
+        raise ValidationError(
+            f"review record {review_id}: fallback_reason is only allowed on "
+            "fallback_separated_pass executions"
+        )
+    if "human_waiver" in record:
+        has_blocking_finding = any(
+            finding.get("severity") == "blocking"
+            for finding in record.get("findings", [])
+            if isinstance(finding, dict)
+        )
+        if not has_blocking_finding:
+            raise ValidationError(
+                f"review record {review_id}: human_waiver requires a "
+                "blocking-severity finding to waive"
             )
 
 

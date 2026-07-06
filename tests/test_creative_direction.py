@@ -552,5 +552,107 @@ class PlatformFitWarningTests(unittest.TestCase):
             validate_record("project-warning", warning)
 
 
+class ReviewRecordTests(unittest.TestCase):
+    def write_review(self, project_dir, mutate=None):
+        review = load_example("review-record")
+        if mutate is not None:
+            mutate(review)
+        reviews_dir = project_dir / "reviews"
+        reviews_dir.mkdir(exist_ok=True)
+        path = reviews_dir / f"{review['review_record_id']}.json"
+        write_json(path, review)
+        return path, review
+
+    def test_example_validates(self):
+        validate_record("review-record", load_example("review-record"))
+
+    def test_fallback_requires_reason_and_bounded_forbids_it(self):
+        review = load_example("review-record")
+        del review["reviewer_execution"]["fallback_reason"]
+        with self.assertRaisesRegex(ValidationError, "requires[\\s\\S]*fallback_reason"):
+            validate_record("review-record", review)
+        review["reviewer_execution"]["execution_mode"] = "bounded_sub_agent"
+        review["reviewer_execution"]["fallback_reason"] = "unneeded"
+        with self.assertRaisesRegex(ValidationError, "only allowed on"):
+            validate_record("review-record", review)
+
+    def test_waiver_requires_blocking_finding(self):
+        review = load_example("review-record")
+        review["human_waiver"] = {
+            "waived_by": "user",
+            "waived_on": "2026-07-06",
+            "reason": "Verified the claim against the brand's published spec sheet.",
+        }
+        with self.assertRaisesRegex(ValidationError, "blocking-severity finding"):
+            validate_record("review-record", review)
+        review["findings"][0]["severity"] = "blocking"
+        validate_record("review-record", review)
+
+    def test_valid_review_record_passes_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            self.write_review(project_dir)
+            validate_project(project_dir)
+
+    def test_block_status_is_advisory_and_halts_nothing(self):
+        # The exit-criterion 6 probe: a block-status creative ReviewRecord
+        # does not stop validate project (nor, therefore, packaging — the
+        # packaging preflight is validate_project).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+
+            def mutate(review):
+                review["approval_status"] = "block"
+                review["findings"][0]["severity"] = "blocking"
+            self.write_review(project_dir, mutate=mutate)
+            result = validate_project(project_dir)
+            advisory = [w for w in result["warnings"] if "advisory only" in w]
+            self.assertEqual(len(advisory), 1)
+
+    def test_dangling_artifact_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            self.write_review(
+                project_dir,
+                mutate=lambda review: review.update(
+                    artifact_refs=["plan/missing-plan.json"]
+                ),
+            )
+            with self.assertRaisesRegex(FileNotFoundError, "does not resolve"):
+                validate_project(project_dir)
+
+    def test_escaping_artifact_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            self.write_review(
+                project_dir,
+                mutate=lambda review: review.update(
+                    artifact_refs=["../../creator-profile.json"]
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "relative paths inside"):
+                validate_project(project_dir)
+
+    def test_filename_must_match_review_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            path, review = self.write_review(project_dir)
+            path.rename(path.with_name("review_wrong_name.json"))
+            with self.assertRaisesRegex(ValidationError, "filename does not match"):
+                validate_project(project_dir)
+
+    def test_wrong_promotion_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            self.write_review(
+                project_dir,
+                mutate=lambda review: review.update(
+                    idea_promotion_id="idea_promotion_luna_fit_999"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "locked promotion"):
+                validate_project(project_dir)
+
+
 if __name__ == "__main__":
     unittest.main()

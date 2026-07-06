@@ -30,6 +30,7 @@
   "project_paths": {
     "root": "projects/tiny-reset-after-laptop-day/",
     "plan": "plan/",
+    "reviews": "reviews/",
     "output_package": "output-package/",
     "published": "published/",
     "analytics": "analytics/",

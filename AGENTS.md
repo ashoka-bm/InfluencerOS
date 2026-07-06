@@ -25,6 +25,7 @@ Use these product docs as durable references:
 - `ARCHITECTURE.md`
 - `docs/pipeline-contract.md`
 - `docs/provider-boundary.md`
+- `docs/gates-and-reviews.md`
 - `skills/influencer-os/SKILL.md`
 - `schemas/`
 

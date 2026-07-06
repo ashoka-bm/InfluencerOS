@@ -7,6 +7,9 @@ dependencies:
   - promote-idea
   - apply-social-template
   - create-production-plan
+  - review-hook-payoff
+  - clear-writing-pass
+  - human-voice-pass
   - create-output-package
   - register-published-post
   - ingest-analytics
@@ -46,6 +49,9 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `promote-idea` | Human-approved Idea Promotion + Projects | [BUILT — Phase 1 slice 5] |
 | `apply-social-template` | Applied Social Template | [BUILT — Phase 1 slice 6] |
 | `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [BUILT — Phase 1 slice 6] |
+| `review-hook-payoff` | Advisory Hook/Payoff ReviewRecord (never blocks) | [BUILT — Creative Direction slice 4] |
+| `clear-writing-pass` | Clarity rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
+| `human-voice-pass` | Creator-voice rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
 | `create-output-package` | Output Package + provenance | [BUILT — Phase 1 slice 7] |
 | `register-published-post` | PublishedPostRecord + Project published status | [BUILT — Phase 2 slice 1] |
 | `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
@@ -67,6 +73,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [BUILT] |
 | 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [BUILT] |
 | 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [BUILT] |
+| 9b. Creative review (advisory, after plan drafting) | `review-hook-payoff`; editorial rewrites via `clear-writing-pass` / `human-voice-pass` | `Skill(skill: "review-hook-payoff")`, `Skill(skill: "clear-writing-pass")`, `Skill(skill: "human-voice-pass")` | [BUILT — Creative Direction slice 4] |
 | 10. Generation Approval Gate | user (exact-call approval) | — | [BUILT gate] |
 | Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [BUILT] |
 | Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` | [BUILT — Phase 2 slice 1] |
@@ -125,7 +132,7 @@ Each queue idea must include:
 - recommended format or format variants,
 - audience reason,
 - creator fit,
-- target emotion,
+- intended emotion and core message (ADR 0024),
 - trend evidence,
 - evidence reference IDs from Research Findings, Research Evidence, Metric Snapshots, and Video Understanding Packs when used,
 - novelty angle,
@@ -161,14 +168,13 @@ Useful starter templates:
 
 ## Micro-Journey Requirements
 
-The plan should include:
+The plan is spine-shaped (ADR 0024) and should include:
 
-- opening hook,
-- setup,
-- escalation or demonstration,
+- hook,
+- one retain beat holding setup and escalation/demonstration,
 - payoff,
-- loop or ending behavior,
-- intended viewer feeling,
+- CTA or loop behavior (`cta_or_loop`),
+- intended emotion (matching the locked promotion's `intended_emotion`),
 - shot outline,
 - continuity requirements,
 - base-video constraints.

@@ -17,6 +17,7 @@ from influencer_os.validation import (
 
 PROJECT_DIRECTORIES = [
     "plan",
+    "reviews",
     "output-package/assets",
     "output-package/upload-ready",
     "output-package/source-refs",
@@ -505,7 +506,7 @@ def validate_project(project_path):
     # at rest only once authored (Phase 2 slice 3); its presence is validated
     # below and its absence on a mature published project is an advisory WARN.
     required_paths = ["project.json"]
-    required_paths.extend(project["project_paths"][key] for key in ["plan", "output_package", "published", "analytics", "evidence_brief"])
+    required_paths.extend(project["project_paths"][key] for key in ["plan", "reviews", "output_package", "published", "analytics", "evidence_brief"])
     required_paths.extend(_required_record_paths(project))
 
     missing = []
@@ -1462,9 +1463,10 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
 
+    review_warnings = _validate_review_records(project_dir, project)
     published_records = _validate_published_records(project_dir, project, output_package)
     analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)
-    return _validate_performance_summary(
+    summary_warnings = _validate_performance_summary(
         project_dir,
         project,
         output_package,
@@ -1472,6 +1474,72 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         analytics_records,
         applied_template=applied_template,
     )
+    return review_warnings + summary_warnings
+
+
+def _validate_review_records(project_dir, project):
+    """At-rest checks for reviews/*.json (Creative Direction slice 4).
+
+    Creative reviews are advisory (ADR 0024): a `block` approval_status is
+    a strong recommendation surfaced as a warning string — it never fails
+    validation, halts packaging, or gates any pipeline step. These checks
+    only keep the records honest: schema-valid, filename-pinned, scoped to
+    this project, with artifact refs that resolve inside it.
+    """
+    reviews_dir = Path(project_dir) / "reviews"
+    warnings = []
+    if not reviews_dir.exists():
+        return warnings
+    for review_path in sorted(reviews_dir.glob("*.json")):
+        review = _validate_project_record(review_path, "review-record")
+        review_id = review["review_record_id"]
+        if review_id != review_path.stem:
+            raise ValidationError(
+                f"{review_path}: filename does not match review_record_id "
+                f"{review_id!r}"
+            )
+        if review["project_id"] != project["project_id"]:
+            raise ValueError(
+                f"Review record {review_id} project_id does not match project: "
+                f"{review['project_id']!r} != {project['project_id']!r}"
+            )
+        if review["creator_profile_id"] != project["creator_profile_id"]:
+            raise ValueError(
+                f"Review record {review_id} creator_profile_id does not match "
+                f"project: {review['creator_profile_id']!r} != "
+                f"{project['creator_profile_id']!r}"
+            )
+        locked_promotion = project["source_refs"]["idea_promotion_id"]
+        cited_promotion = review.get("idea_promotion_id")
+        if cited_promotion is not None and cited_promotion != locked_promotion:
+            raise ValueError(
+                f"Review record {review_id} idea_promotion_id does not match "
+                f"the project's locked promotion: {cited_promotion!r} != "
+                f"{locked_promotion!r}"
+            )
+        for ref in review["artifact_refs"]:
+            relative_path = Path(ref)
+            if relative_path.is_absolute() or ".." in relative_path.parts:
+                raise ValueError(
+                    f"Review record {review_id} artifact_refs must be relative "
+                    f"paths inside the project: {ref!r}"
+                )
+            artifact_path = Path(project_dir) / relative_path
+            if not artifact_path.exists():
+                raise FileNotFoundError(
+                    f"Review record {review_id} artifact ref does not resolve "
+                    f"to a file: {ref!r}"
+                )
+            _ensure_contained_file(
+                artifact_path, project_dir, f"Review record {review_id} artifact ref {ref!r}"
+            )
+        if review["approval_status"] == "block" and "human_waiver" not in review:
+            warnings.append(
+                f"warning: review {review_id} ({review['review_role']}) "
+                "recommends block — advisory only; creative reviews never "
+                "halt the pipeline (ADR 0024)"
+            )
+    return warnings
 
 
 def _validate_project_record(record_path, schema_name):

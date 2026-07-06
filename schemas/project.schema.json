@@ -162,6 +162,7 @@
       "required": [
         "root",
         "plan",
+        "reviews",
         "output_package",
         "published",
         "analytics",
@@ -176,6 +177,10 @@
         "plan": {
           "type": "string",
           "const": "plan/"
+        },
+        "reviews": {
+          "type": "string",
+          "const": "reviews/"
         },
         "output_package": {
           "type": "string",
