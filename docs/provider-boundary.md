@@ -28,6 +28,23 @@ Requires explicit user approval:
 
 Approval must name the exact call or batch. A general desire to create content is not generation approval.
 
+## Generation provider registry (ADR 0023)
+
+Generation providers are registered in `influencer_os/providers/registry.py`
+and listed by `python3 -m influencer_os list-providers`. Every row is
+structurally `approval_model: exact_approval` — the registry fails closed at
+import if a row disagrees — and key presence makes a provider *available*,
+never *approved*. The only dispatch entry point
+(`influencer_os.providers.dispatch.dispatch_generation`) requires an approved
+GenerationApprovalRecord id as a positional argument, so no code path can
+reach an adapter without a recorded human approval. The
+`INFLUENCER_OS_DISABLE_PAID_CONNECTORS` kill switch disables generation
+dispatch entirely, even with an approved record.
+
+Per ADR 0023 Decision 3, the only registered adapter is the deterministic
+`mock` test double; the first real (paid) provider adapter is chosen
+explicitly by the operator and lands as its own approved batch.
+
 ## Research-acquisition connectors (ADR 0022)
 
 One bounded carve-out to the "paid provider calls require exact approval" rule

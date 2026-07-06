@@ -121,6 +121,9 @@ def main(argv=None):
     connectors_parser = subparsers.add_parser("list-connectors", help="Show research-acquisition connectors and whether each is available given current API keys (ADR 0022).")
     connectors_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
+    providers_parser = subparsers.add_parser("list-providers", help="Show generation providers with capability, key presence, and approval model (ADR 0023; always exact_approval — key presence is never approval).")
+    providers_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
+
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
     fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin"], help="Connector to run.")
     fetch_parser.add_argument("target", help="Topic (reddit/x), page URL (firecrawl), or profile URL (linkedin).")
@@ -373,6 +376,24 @@ def main(argv=None):
                 print("Already saved; no change.")
             else:
                 print(f"Saved memory fact ({result['bytes_used']}/{result['byte_cap']} bytes).")
+            return 0
+
+        if args.command == "list-providers":
+            from influencer_os.connectors import env as connector_env
+            from influencer_os.providers import registry as provider_registry
+            config = connector_env.get_config(
+                env_path=Path(args.env_file) if args.env_file else None
+            )
+            rows = provider_registry.provider_status(config)
+            available = sum(1 for r in rows if r["available"])
+            print(f"Generation providers: {available}/{len(rows)} available")
+            print("Approval model: exact_approval for every provider — key presence is never generation approval (ADR 0023).")
+            if connector_env.paid_connectors_disabled(config):
+                print("(generation dispatch is OFF via INFLUENCER_OS_DISABLE_PAID_CONNECTORS)")
+            for r in rows:
+                mark = "available" if r["available"] else "unavailable"
+                capabilities = ",".join(r["capabilities"])
+                print(f"- {r['provider_id']} [{capabilities}] ({mark}: {r['reason']}) approval_model={r['approval_model']} — {r['summary']}")
             return 0
 
         if args.command == "list-connectors":
