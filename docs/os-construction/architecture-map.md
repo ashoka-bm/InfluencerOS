@@ -117,7 +117,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
 | `research.py` | Search-plan, JSONL, source-yield, and frontmatter validation; `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A; intelligence hardening 2026-07-04] |
-| `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds; never a validation dependency. | [BUILT — Phase 1 slice 4 batch B] |
+| `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds covering research, project, board, and Phase 2 learning records (`analytics/raw/` never scanned); never a validation dependency. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
 | `boards.py` | Content Board projection: `rebuild-board` (cards derived, columns/manual order preserved) + `validate board` agreement check. | [BUILT — Phase 1 slice 4 batch C] |
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers; evidence-linked creator lessons with at-rest validation. | [BUILT — ADR 0016; creator lessons Phase 2 slice 4] |
@@ -130,7 +130,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `test_schema_validation.py` | All examples validate; coverage derived from disk; fail-closed subset tests. | [BUILT — WS13] |
 | `test_cli.py` | CLI behavior incl. provenance resolution and readiness gates. | [BUILT] |
-| `test_recall_index.py` | Index resolution per record kind, idempotent per-creator rebuilds, fail-closed ambiguity, default ADR 0010 path. | [BUILT — Phase 1 slice 4 batch B] |
+| `test_recall_index.py` | Index resolution per record kind (incl. Phase 2 learning records), idempotent per-creator rebuilds, fail-closed ambiguity, raw-analytics exclusion, delete-and-rebuild equivalence, default ADR 0010 path. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
 | `test_boards.py` | Board derivation (cards, badges, parent/child), metadata preservation, agreement validation, CLI. | [BUILT — Phase 1 slice 4 batch C] |
 | `test_prune.py` | Retention rules (dry-run, apply, protection, idempotence) + pruned-ids reconciliation. | [BUILT — Phase 1 slice 4 batch D] |
 | `test_memory.py` | Bounded memory/learnings writers + CLI. | [BUILT — ADR 0016] |

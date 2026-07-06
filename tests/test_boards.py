@@ -12,7 +12,11 @@ from influencer_os.boards import (
 )
 from influencer_os.validation import ValidationError
 
-from test_recall_index import PROJECT_ID, scaffold_indexable_workspace
+from test_recall_index import (
+    PROJECT_ID,
+    PROJECT_SLUG,
+    scaffold_indexable_workspace,
+)
 from test_research_validation import ENTRY_ID, load_example, write_json, write_jsonl
 
 
@@ -114,7 +118,7 @@ class RebuildBoardTests(unittest.TestCase):
             # Warning targets must exist, so removing the project requires
             # clearing the warning that targets it first.
             (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
-            manifest_path = workspace_dir / "projects" / PROJECT_ID / "project.json"
+            manifest_path = workspace_dir / "projects" / PROJECT_SLUG / "project.json"
             manifest_path.unlink()
 
             rebuild_board(workspace_dir)

@@ -25,14 +25,34 @@ from test_research_validation import (
 ROOT = Path(__file__).resolve().parents[1]
 
 PROJECT_ID = "project_luna_tiny_reset_001"
+# init-project creates slug-named project folders (process-learning
+# 2026-07-03: scaffolds copy the CLI's layout, not an approximation).
+PROJECT_SLUG = "tiny-reset-after-laptop-day"
+PPR_ID = "ppr_luna_tiny_reset_youtube_001"
+SNAPSHOT_ID = "analytics_snapshot_luna_tiny_reset_youtube_24h"
+SUMMARY_ID = "performance_summary_luna_tiny_reset_001"
 
 
 def scaffold_indexable_workspace(temp_dir):
-    """Research scaffold plus one project, so every draft record kind exists."""
+    """Research scaffold plus one project carrying the three Phase 2 learning
+    records, so every indexed record kind exists. Per-record files carry
+    their id as the filename, mirroring the writers."""
     workspace_dir = scaffold_research_workspace(temp_dir)
+    # The research scaffold carries the example project in an id-named
+    # folder; init-project builds slug-named folders, so mirror that here.
+    project_dir = workspace_dir / "projects" / PROJECT_SLUG
+    (workspace_dir / "projects" / PROJECT_ID).rename(project_dir)
     write_json(
-        workspace_dir / "projects" / PROJECT_ID / "project.json",
-        load_example("project"),
+        project_dir / "published" / "published-post-records" / f"{PPR_ID}.json",
+        load_example("published-post-record"),
+    )
+    write_json(
+        project_dir / "analytics" / "snapshots" / f"{SNAPSHOT_ID}.json",
+        load_example("analytics-snapshot"),
+    )
+    write_json(
+        project_dir / "performance-summary.json",
+        load_example("performance-summary"),
     )
     return workspace_dir
 
@@ -85,8 +105,33 @@ class RecallIndexResolutionTests(unittest.TestCase):
             project = only(PROJECT_ID)
             self.assertEqual(project["project_id"], PROJECT_ID)
             self.assertEqual(
-                project["source_path"], f"projects/{PROJECT_ID}/project.json"
+                project["source_path"], f"projects/{PROJECT_SLUG}/project.json"
             )
+
+            post = only(PPR_ID)
+            self.assertEqual(post["record_type"], "published-post-record")
+            self.assertEqual(
+                post["source_path"],
+                f"projects/{PROJECT_SLUG}/published/published-post-records/"
+                f"{PPR_ID}.json",
+            )
+            self.assertEqual(post["project_id"], PROJECT_ID)
+
+            snapshot = only(SNAPSHOT_ID)
+            self.assertEqual(snapshot["record_type"], "analytics-snapshot")
+            self.assertEqual(
+                snapshot["source_path"],
+                f"projects/{PROJECT_SLUG}/analytics/snapshots/{SNAPSHOT_ID}.json",
+            )
+            self.assertEqual(snapshot["project_id"], PROJECT_ID)
+
+            summary = only(SUMMARY_ID)
+            self.assertEqual(summary["record_type"], "performance-summary")
+            self.assertEqual(
+                summary["source_path"],
+                f"projects/{PROJECT_SLUG}/performance-summary.json",
+            )
+            self.assertEqual(summary["project_id"], PROJECT_ID)
 
             idea_card = only(f"card_{ENTRY_ID}")
             self.assertEqual(idea_card["source_path"], "boards/content-board.json")
@@ -132,30 +177,73 @@ class RecallIndexResolutionTests(unittest.TestCase):
             db_path = db_path_for(temp_dir)
             rebuild_index(workspace_dir, db_path=db_path)
 
+            foreign_rows = (
+                (
+                    "evidence_other_001",
+                    "research-evidence",
+                    "creator_other",
+                    "other-creator",
+                    None,
+                    "research/runs/research_run_other/evidence.jsonl",
+                    1,
+                    "hash",
+                    "2026-07-03T00:00:00+00:00",
+                ),
+                (
+                    "analytics_snapshot_other_001",
+                    "analytics-snapshot",
+                    "creator_other",
+                    "other-creator",
+                    "project_other_001",
+                    "projects/other-post/analytics/snapshots/"
+                    "analytics_snapshot_other_001.json",
+                    None,
+                    "hash",
+                    "2026-07-03T00:00:00+00:00",
+                ),
+            )
             connection = sqlite3.connect(db_path)
             try:
-                connection.execute(
+                connection.executemany(
                     "INSERT INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        "evidence_other_001",
-                        "research-evidence",
-                        "creator_other",
-                        "other-creator",
-                        None,
-                        "research/runs/research_run_other/evidence.jsonl",
-                        1,
-                        "hash",
-                        "2026-07-03T00:00:00+00:00",
-                    ),
+                    foreign_rows,
                 )
                 connection.commit()
             finally:
                 connection.close()
 
             rebuild_index(workspace_dir, db_path=db_path)
-            rows = resolve_record_id(db_path, "evidence_other_001")
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["creator_slug"], "other-creator")
+            for record_id in ("evidence_other_001", "analytics_snapshot_other_001"):
+                rows = resolve_record_id(db_path, record_id)
+                self.assertEqual(len(rows), 1, record_id)
+                self.assertEqual(rows[0]["creator_slug"], "other-creator")
+
+    def test_delete_and_rebuild_reproduces_identical_rows(self):
+        # ADR 0010 reconciliation: the database is never the only copy of
+        # anything, so deleting it and rebuilding must reproduce the same
+        # rows modulo the indexed_on timestamp.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            db_path = db_path_for(temp_dir)
+
+            def dump_rows():
+                connection = sqlite3.connect(db_path)
+                try:
+                    return connection.execute(
+                        "SELECT record_id, record_type, creator_profile_id, "
+                        "creator_slug, project_id, source_path, line_number, "
+                        "content_hash FROM records "
+                        "ORDER BY record_type, record_id, source_path"
+                    ).fetchall()
+                finally:
+                    connection.close()
+
+            rebuild_index(workspace_dir, db_path=db_path)
+            first = dump_rows()
+            db_path.unlink()
+            rebuild_index(workspace_dir, db_path=db_path)
+            self.assertEqual(first, dump_rows())
+            self.assertTrue(first)
 
 
 class RecallIndexFailClosedTests(unittest.TestCase):
@@ -190,6 +278,55 @@ class RecallIndexFailClosedTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 collect_index_rows(workspace_dir)
             self.assertIn("more than one source", str(ctx.exception))
+
+    def test_duplicate_published_post_record_id_across_projects_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            write_json(
+                workspace_dir / "projects" / "second-project" / "published"
+                / "published-post-records" / f"{PPR_ID}.json",
+                load_example("published-post-record"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("more than one source", str(ctx.exception))
+
+    def test_duplicate_analytics_snapshot_id_across_files_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            write_json(
+                workspace_dir / "projects" / PROJECT_SLUG / "analytics"
+                / "snapshots" / "analytics_snapshot_copy.json",
+                load_example("analytics-snapshot"),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                collect_index_rows(workspace_dir)
+            self.assertIn("more than one source", str(ctx.exception))
+
+    def test_raw_analytics_payloads_are_never_scanned(self):
+        # analytics/raw/ holds safe exports outside the record contract; the
+        # scan names only snapshots/, so a raw copy of a snapshot must
+        # neither index nor trip duplicate-id detection.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_indexable_workspace(temp_dir)
+            write_json(
+                workspace_dir / "projects" / PROJECT_SLUG / "analytics"
+                / "raw" / "platform-export.json",
+                load_example("analytics-snapshot"),
+            )
+
+            rows = collect_index_rows(workspace_dir)
+            raw_paths = [
+                row["source_path"] for row in rows
+                if "analytics/raw" in row["source_path"]
+            ]
+            self.assertEqual(raw_paths, [])
+            snapshot_rows = [
+                row for row in rows if row["record_id"] == SNAPSHOT_ID
+            ]
+            self.assertEqual(len(snapshot_rows), 1)
 
     def test_malformed_jsonl_fails_closed_with_line(self):
         with tempfile.TemporaryDirectory() as temp_dir:

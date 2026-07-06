@@ -176,10 +176,10 @@ Completed:
 - Analytics Snapshot ingestion (`add-analytics-snapshot`/`import-analytics-csv` through one shared writer seam + `ingest-analytics` skill, slice 2).
 - Performance Summary contract and interpretive skill with the Benchmark Rubric and stage-remediation mapping (slice 3).
 - Learning distillation: `distill-creator-learning` skill + evidence-linked creator lessons via `log-learning --evidence --strength`, at-rest re-checked by `validate workspace` (slice 4).
+- SQL recall-index extension to the three Phase 2 record types (slice 5).
 
 Remaining:
 
-- SQL recall-index extension to the three Phase 2 record types (slice 5).
 - Semantic lookup projection (FTS5 keyword leg per Decision 1) and indexing command (slice 6).
 - Platform analytics API connector, only when explicitly requested (Decision 3; the shared writer seam is mock-proven).
 
@@ -764,6 +764,38 @@ at-rest hand-edit, duplicate-section write and at-rest); 43 examples
 validate; the skill contract, workspace-structure, ARCHITECTURE, and
 pipeline-contract docs teach all three rules.
 
+Phase 2 slice 5 (2026-07-06): Recall index extension. `rebuild-index` now
+projects the three Phase 2 learning records — published post records,
+analytics snapshots, and performance summaries — into the shared recall
+index with the same provenance columns (workspace-relative source path,
+sha256 content hash, `indexed_on`) and bare-id uniqueness guarantee as
+every existing type (all three joined `UNIQUE_RECORD_TYPES`, so a
+duplicated id across files fails the rebuild closed). The scans mirror
+the writer layout exactly — `published/published-post-records/*.json`,
+`analytics/snapshots/*.json`, and `performance-summary.json` per project
+folder (the plan's `analytics/*.json` wording predates the slice 2
+`snapshots/` subfolder) — so `analytics/raw/` payloads are excluded by
+construction: the scan never names that folder. Each row carries the
+record's required `project_id`. The recall-index test scaffold now
+renames the example project into the slug-named folder `init-project`
+actually builds (process-learning 2026-07-03: scaffolds copy the CLI's
+layout). No skill surface changed, so no runtime sync was needed.
+Verification: 493 tests pass (4 added — duplicate published-post id
+across projects, duplicate snapshot id across files, raw-payload
+exclusion probe with a planted raw snapshot copy, delete-and-rebuild row
+equivalence; the resolution test extended with the three new record
+kinds and the cross-creator scoping test with a foreign
+analytics-snapshot row); 43 examples validate; drift checks pass; all
+four fixture workspaces validate. Full workflow replay in
+`.tmp/slice5-verify` (`.tmp/slice5-verify.sh`): creator init through
+packaging, `register-published-post` → `add-analytics-snapshot` (with
+real `analytics/raw/` files the snapshot's raw refs must resolve to) →
+summary authored → creator lesson via `log-learning --evidence` →
+`rebuild-index` resolves all three Phase 2 ids with zero `analytics/raw`
+rows → deleting the database and rebuilding reproduces identical rows
+modulo `indexed_on` → board validation and prune green. Exit criterion 5
+of the Phase 2 plan is met.
+
 Slice 3 review fixes (2026-07-05): two findings, both fixed with failing
 probes first. (P2) `published_post_record_ids` and `analytics_snapshot_ids`
 resolved independently, so a summary could cite one post while citing
@@ -798,7 +830,7 @@ file passed; containment now resolves against `analytics/raw/` itself
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **In progress:** run 1 completed 2026-07-05 (remy-vale fixture); the loop's contracts and gates hold, but the exercise surfaced source access (Reddit/logged-in platforms) as the binding pre-automation constraint. The ADR 0022 connector layer (batches A-D, 2026-07-05) closes that gap in code: run 2 should exercise the Reddit connector live once `OPENAI_API_KEY` is in `.env`, validating the OpenAI response shapes against the mirrored parser before any automation decision.
-2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), and 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode) complete 2026-07-06; next is slice 5 (recall index extension to the three Phase 2 record types).
+2. Phase 2 Learning OS — **in progress** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode), and 5 (recall index extension to the three Phase 2 record types) complete 2026-07-06; next is slice 6 (semantic lookup projection, FTS5 keyword leg per Decision 1).
 3. Optional: render the comparison map Excalidraw scene.
 
 ## Decision Log

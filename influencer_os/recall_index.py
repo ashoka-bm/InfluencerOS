@@ -1,5 +1,7 @@
 """Local recall index: a rebuildable SQLite projection of creator research
-records (ADR 0010, slice 4 batch B).
+records (ADR 0010, Phase 1 slice 4 batch B) and Phase 2 learning records —
+published post records, analytics snapshots, and performance summaries
+(Phase 2 slice 5).
 
 One shared database at ``workspace-library/index/influencer-os.sqlite`` holds
 rows for every creator; ``rebuild_index`` deletes and reinserts only one
@@ -39,7 +41,22 @@ UNIQUE_RECORD_TYPES = frozenset({
     "video-understanding-pack",
     "content-card",
     "stable-finding",
+    "published-post-record",
+    "analytics-snapshot",
+    "performance-summary",
 })
+
+# Phase 2 learning records live inside the owning project folder (slice 5).
+# The globs mirror the writer layout exactly; `analytics/raw/` payloads are
+# never scanned because only the snapshots/ subfolder is named.
+PROJECT_RECORD_SCANS = (
+    ("published/published-post-records/*.json",
+     "published_post_record_id", "published-post-record"),
+    ("analytics/snapshots/*.json",
+     "analytics_snapshot_id", "analytics-snapshot"),
+    ("performance-summary.json",
+     "performance_summary_id", "performance-summary"),
+)
 
 INDEX_COLUMNS = (
     "record_id",
@@ -181,11 +198,27 @@ def collect_index_rows(workspace_dir, scope=None):
 
     projects_dir = workspace_dir / "projects"
     if projects_dir.exists():
-        for manifest_path in sorted(projects_dir.glob("*/project.json")):
-            record = load_json(manifest_path)
-            project_id = _required_field(record, "project_id", manifest_path)
-            add_row(project_id, "project", manifest_path,
-                    _hash_bytes(manifest_path.read_bytes()), project_id=project_id)
+        for project_dir in sorted(
+            path for path in projects_dir.iterdir() if path.is_dir()
+        ):
+            manifest_path = project_dir / "project.json"
+            if manifest_path.exists():
+                record = load_json(manifest_path)
+                project_id = _required_field(record, "project_id", manifest_path)
+                add_row(project_id, "project", manifest_path,
+                        _hash_bytes(manifest_path.read_bytes()),
+                        project_id=project_id)
+            for pattern, id_field, record_type in PROJECT_RECORD_SCANS:
+                for record_path in sorted(project_dir.glob(pattern)):
+                    record = load_json(record_path)
+                    add_row(
+                        _required_field(record, id_field, record_path),
+                        record_type, record_path,
+                        _hash_bytes(record_path.read_bytes()),
+                        project_id=_required_field(
+                            record, "project_id", record_path
+                        ),
+                    )
 
     board_path = workspace_dir / "boards" / "content-board.json"
     if board_path.exists():
