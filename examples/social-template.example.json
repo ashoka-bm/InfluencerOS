@@ -14,19 +14,24 @@
   "beat_sequence": [
     {
       "beat_label": "hook",
-      "beat_job": "Name the situation so the viewer recognizes themselves immediately."
+      "beat_job": "Name the situation so the viewer recognizes themselves immediately.",
+      "beat_role": "hook",
+      "hook_category": "problem_solution"
     },
     {
       "beat_label": "problem",
-      "beat_job": "Make the friction specific enough that the solution feels necessary."
+      "beat_job": "Make the friction specific enough that the solution feels necessary.",
+      "beat_role": "retain"
     },
     {
       "beat_label": "solution",
-      "beat_job": "Show the simple action that resolves the pressure."
+      "beat_job": "Show the simple action that resolves the pressure.",
+      "beat_role": "retain"
     },
     {
       "beat_label": "payoff",
-      "beat_job": "Land the felt result so the viewer remembers why it matters."
+      "beat_job": "Land the felt result so the viewer remembers why it matters.",
+      "beat_role": "payoff"
     }
   ],
   "retention_or_clarity_job": "Keeps the viewer watching by making the gap between discomfort and relief obvious.",
@@ -35,4 +40,3 @@
     "The solution needs too much explanation for a short post."
   ]
 }
-

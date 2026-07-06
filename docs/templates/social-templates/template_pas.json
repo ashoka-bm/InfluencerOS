@@ -1,0 +1,43 @@
+{
+  "social_template_id": "template_pas",
+  "name": "Problem-Agitate-Solve",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_carousel",
+    "format_article",
+    "format_thread"
+  ],
+  "best_for": [
+    "audience pain points the creator can genuinely resolve",
+    "ideas where the cost of inaction is concrete",
+    "advice content that must feel necessary, not optional"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "problem",
+      "beat_job": "Name the audience's problem in their own words so they recognize themselves instantly.",
+      "beat_role": "hook",
+      "hook_category": "identity_call_out"
+    },
+    {
+      "beat_label": "agitate",
+      "beat_job": "Make the cost of the problem vivid: what it keeps breaking, what it compounds into if ignored.",
+      "beat_role": "retain"
+    },
+    {
+      "beat_label": "solve",
+      "beat_job": "Deliver the fix as the obvious release of the tension just built.",
+      "beat_role": "payoff"
+    },
+    {
+      "beat_label": "next_step",
+      "beat_job": "Give one concrete action to take the fix home: save, try it today, or follow for the series.",
+      "beat_role": "cta"
+    }
+  ],
+  "retention_or_clarity_job": "Holds attention by widening the gap between the named pain and its release before closing it.",
+  "avoid_when": [
+    "The idea has no genuine pain point; manufactured agitation reads as manipulative.",
+    "The audience is already anxious about the topic and needs reassurance, not agitation."
+  ]
+}

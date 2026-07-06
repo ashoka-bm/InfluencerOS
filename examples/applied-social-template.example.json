@@ -7,22 +7,27 @@
     {
       "beat_label": "hook",
       "idea_application": "Luna names the two-minute pre-meeting constraint beside the laptop.",
-      "viewer_question_answered": "Is this for my situation right now?"
+      "viewer_question_answered": "Is this for my situation right now?",
+      "beat_role": "hook",
+      "hook_category": "problem_solution"
     },
     {
       "beat_label": "problem",
       "idea_application": "The laptop clock and tense shoulders show the viewer has no time for a full workout.",
-      "viewer_question_answered": "Why should I care?"
+      "viewer_question_answered": "Why should I care?",
+      "beat_role": "retain"
     },
     {
       "beat_label": "solution",
       "idea_application": "Luna demonstrates three standing movements that fit beside the desk.",
-      "viewer_question_answered": "What exactly do I do?"
+      "viewer_question_answered": "What exactly do I do?",
+      "beat_role": "retain"
     },
     {
       "beat_label": "payoff",
       "idea_application": "Luna returns to the laptop visibly calmer and more upright.",
-      "viewer_question_answered": "What do I get from trying this?"
+      "viewer_question_answered": "What do I get from trying this?",
+      "beat_role": "payoff"
     }
   ],
   "idea_promotion_id": "idea_promotion_luna_fit_001"

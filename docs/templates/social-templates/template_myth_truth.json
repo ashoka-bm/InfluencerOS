@@ -1,0 +1,43 @@
+{
+  "social_template_id": "template_myth_truth",
+  "name": "Myth to Truth",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_carousel",
+    "format_article",
+    "format_thread"
+  ],
+  "best_for": [
+    "widely repeated advice the creator can credibly correct",
+    "topics where the audience's current belief is costing them results",
+    "authority-building content backed by evidence or experience"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "myth",
+      "beat_job": "State the popular belief confidently enough that believers stop to defend it.",
+      "beat_role": "hook",
+      "hook_category": "contrarian"
+    },
+    {
+      "beat_label": "stakes",
+      "beat_job": "Show what the myth quietly costs the people who follow it, so the correction matters.",
+      "beat_role": "retain"
+    },
+    {
+      "beat_label": "truth",
+      "beat_job": "Deliver the correction with its proof: the evidence, mechanism, or firsthand result.",
+      "beat_role": "payoff"
+    },
+    {
+      "beat_label": "takeaway",
+      "beat_job": "Give the one behavior to change now that the viewer knows better.",
+      "beat_role": "cta"
+    }
+  ],
+  "retention_or_clarity_job": "Challenging a held belief creates friction the viewer stays to resolve.",
+  "avoid_when": [
+    "The myth is a strawman nobody actually believes; the correction lands on air.",
+    "The creator cannot back the correction; an unproven contrarian take erodes the persona's credibility."
+  ]
+}

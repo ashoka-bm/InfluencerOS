@@ -47,6 +47,14 @@
       "type": "string",
       "minLength": 1
     },
+    "intended_emotion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "core_message": {
+      "type": "string",
+      "minLength": 1
+    },
     "approved_platforms": {
       "type": "array",
       "items": {

@@ -1,0 +1,43 @@
+{
+  "social_template_id": "template_listicle",
+  "name": "Listicle",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_carousel",
+    "format_article",
+    "format_thread"
+  ],
+  "best_for": [
+    "topics that decompose into parallel, self-contained items",
+    "save-worthy reference content",
+    "ideas with one standout item that can anchor the ending"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "count_promise",
+      "beat_job": "Promise a specific number of concrete takeaways and hint that one of them is unexpected.",
+      "beat_role": "hook",
+      "hook_category": "bold_promise"
+    },
+    {
+      "beat_label": "items",
+      "beat_job": "Deliver the items in rising order of usefulness so each one earns the next.",
+      "beat_role": "retain"
+    },
+    {
+      "beat_label": "best_item",
+      "beat_job": "Land the strongest or most surprising item last so the promise resolves at the peak.",
+      "beat_role": "payoff"
+    },
+    {
+      "beat_label": "keep_it",
+      "beat_job": "Tell the viewer to save the list or comment which item they are trying first.",
+      "beat_role": "cta"
+    }
+  ],
+  "retention_or_clarity_job": "Numbered progress plus an escalating order keeps the viewer counting toward the best item.",
+  "avoid_when": [
+    "The items are not genuinely parallel; a disguised narrative reads better as a story template.",
+    "Every item is equally flat; without a peak item the ending lands on nothing."
+  ]
+}

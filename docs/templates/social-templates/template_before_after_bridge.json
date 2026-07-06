@@ -1,0 +1,44 @@
+{
+  "social_template_id": "template_before_after_bridge",
+  "name": "Before-After-Bridge",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_carousel",
+    "format_story_sequence",
+    "format_article",
+    "format_thread"
+  ],
+  "best_for": [
+    "transformations that can be shown, not just claimed",
+    "ideas where the end state is more persuasive than the method",
+    "aspirational content that must stay credible"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "before",
+      "beat_job": "Show the current frustrating state so plainly the viewer says 'that is me right now'.",
+      "beat_role": "hook",
+      "hook_category": "identity_call_out"
+    },
+    {
+      "beat_label": "after",
+      "beat_job": "Show the desired end state early enough that staying feels like the only way to learn the route.",
+      "beat_role": "retain"
+    },
+    {
+      "beat_label": "bridge",
+      "beat_job": "Walk the specific path from before to after; the method is the reward for staying.",
+      "beat_role": "payoff"
+    },
+    {
+      "beat_label": "invite",
+      "beat_job": "Invite the viewer to cross the bridge themselves: save the steps or start with step one today.",
+      "beat_role": "cta"
+    }
+  ],
+  "retention_or_clarity_job": "Creates an open loop by showing the destination before revealing the route.",
+  "avoid_when": [
+    "The transformation cannot be honestly evidenced; an unearned after-state burns trust.",
+    "The change is incremental rather than visible; a subtle delta undercuts the contrast this template depends on."
+  ]
+}

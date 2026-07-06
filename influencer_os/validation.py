@@ -71,6 +71,36 @@ REQUIRED_CREATIVE_STAGES = {
     "cta",
 }
 
+# The Content Beat Spine (ADR 0024): the one closed template vocabulary.
+# HOOK → RETAIN → PAYOFF → CTA are the content stages; packaging is the
+# pre-hook stage (thumbnail/caption). Emotion is a per-beat attribute, not
+# a stage.
+BEAT_ROLES = ["hook", "retain", "payoff", "cta", "packaging"]
+
+# Every template must at least land a hook and a payoff; retain/cta/packaging
+# beats are template-specific.
+REQUIRED_BEAT_ROLES = {"hook", "payoff"}
+
+# Typed hook taxonomy (ADR 0024 Decision B): the 8 AOS categories plus the
+# three web-validated additions from the cross-OS comparison.
+HOOK_CATEGORIES = [
+    "identity_call_out",
+    "pattern_interrupt",
+    "contrarian",
+    "result_first",
+    "curiosity_gap",
+    "direct_challenge",
+    "confession",
+    "timeliness",
+    "problem_solution",
+    "reveal_teaser",
+    "bold_promise",
+]
+
+# The intent fields captured at the idea origin and carried verbatim through
+# promotion (ADR 0024: schema-optional, skill-required).
+INTENT_FIELDS = ("intended_emotion", "core_message")
+
 # Access methods for the ADR 0022 key-gated research-acquisition connectors.
 # Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
 # is active) and need not set `approval_required`.
@@ -433,6 +463,12 @@ def _matches_type(value, type_name):
 
 
 def validate_record_semantics(schema_name, record):
+    if schema_name == "social-template":
+        validate_beat_spine(record, "beat_sequence", "SocialTemplate", require_coverage=True)
+    if schema_name == "applied-social-template":
+        validate_beat_spine(
+            record, "applied_beats", "AppliedSocialTemplate", require_coverage=False
+        )
     if schema_name == "output-package":
         validate_required_stages(record, "creative_performance_map", "OutputPackage")
         validate_output_package_assets(record)
@@ -445,6 +481,67 @@ def validate_record_semantics(schema_name, record):
         validate_research_search_plan_semantics(record)
     if schema_name == "research-source-yield":
         validate_research_source_yield_semantics(record)
+
+
+def validate_beat_spine(record, field_name, record_name, require_coverage):
+    """Content Beat Spine semantics (ADR 0024, Creative Direction slice 1).
+
+    The schema pins beat_role to the closed enum; this closes the gaps the
+    schema cannot express: a template must land at least a hook and a payoff
+    (require_coverage), and hook_category may only annotate a hook-role beat.
+    Applied templates skip the coverage check — a legitimate application may
+    drop a template's cta/packaging beat, and the learning loop records the
+    absence as a `not_used` stage finding instead.
+    """
+    beats = [
+        beat for beat in record.get(field_name, []) if isinstance(beat, dict)
+    ]
+    for index, beat in enumerate(beats):
+        if "hook_category" in beat and beat.get("beat_role") != "hook":
+            raise ValidationError(
+                f"{record_name}.{field_name}[{index}]: hook_category is only "
+                f"allowed on hook-role beats, got beat_role "
+                f"{beat.get('beat_role')!r}"
+            )
+    if require_coverage:
+        observed_roles = {beat.get("beat_role") for beat in beats}
+        missing = REQUIRED_BEAT_ROLES - observed_roles
+        if missing:
+            raise ValidationError(
+                f"{record_name}.{field_name}: template beats skip required "
+                f"spine role(s) {sorted(missing)!r}"
+            )
+
+
+def validate_intent_carry_forward(promotion, entry):
+    """Intent captured at the idea origin survives promotion verbatim
+    (ADR 0024). A promotion may neither drop, invent, nor rewrite
+    intended_emotion / core_message relative to its source entry."""
+    promotion_id = promotion.get("idea_promotion_id")
+    entry_id = entry.get("idea_queue_entry_id")
+    for field in INTENT_FIELDS:
+        entry_value = entry.get(field)
+        promotion_value = promotion.get(field)
+        if entry_value == promotion_value:
+            continue
+        if entry_value is None:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} carries {field} "
+                f"{promotion_value!r} but its source entry {entry_id} has "
+                "none; intent is captured at the idea origin, never invented "
+                "at promotion"
+            )
+        if promotion_value is None:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} drops {field} "
+                f"{entry_value!r} from its source entry {entry_id}; "
+                "promotion must carry the entry's intent verbatim"
+            )
+        raise ValidationError(
+            f"Idea promotion {promotion_id} rewrites {field} from "
+            f"{entry_value!r} to {promotion_value!r}; promotion must carry "
+            f"the source entry {entry_id} intent verbatim"
+        )
 
 
 def validate_required_stages(record, field_name, record_name):

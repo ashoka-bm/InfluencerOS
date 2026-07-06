@@ -16,6 +16,7 @@ from influencer_os.validation import (
     ValidationError,
     load_json,
     validate_file,
+    validate_intent_carry_forward,
     validate_record,
 )
 
@@ -150,6 +151,10 @@ def check_promotion_entry_links(promotion, entry):
             f"Idea promotion {promotion_id} is active but queue entry "
             f"{entry_id} does not list it in linked_idea_promotion_ids"
         )
+    # Intent survives promotion verbatim (ADR 0024). Superseded/cancelled
+    # promotions keep their historical snapshot while the entry evolves, so
+    # the carry-forward check binds only the active promotion.
+    validate_intent_carry_forward(promotion, entry)
 
 
 def check_promotion_created_projects(promotion, projects_by_id):

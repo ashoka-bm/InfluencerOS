@@ -33,7 +33,8 @@ is always `user`).
 
 Present the full package before writing anything:
 
-- the idea: title, hook, premise, and `intended_payoff`,
+- the idea: title, hook, premise, `intended_payoff`, and the intent pair
+  (`intended_emotion`, `core_message`) from the entry,
 - approved platforms and approved formats — split production-supported
   formats from not-yet-supported ones,
 - the schedule slot(s) the idea fills, or that it is a wildcard,
@@ -58,6 +59,11 @@ only when the user volunteers one.
   shape, and its `source_finding_ids` into `research_finding_ids`
   (empty is allowed when the idea came from evidence without a material
   findings update). Later research must never rewrite these.
+- Copy the entry's `intended_emotion` and `core_message` onto the
+  promotion verbatim (ADR 0024) — never drop, invent, or reword them at
+  promotion time; validation fails a promotion whose intent contradicts
+  its source entry. If the entry predates intent capture and has neither,
+  add them to the entry first (with the user), then promote.
 - `approved_by: user`, `approved_on` today, `promotion_status: active`,
   and `project_ids_created` listing the planned project ids up front —
   the projects are constructed immediately after, and a project's

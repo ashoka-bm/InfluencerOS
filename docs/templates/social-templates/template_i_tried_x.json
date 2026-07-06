@@ -1,0 +1,43 @@
+{
+  "social_template_id": "template_i_tried_x",
+  "name": "I Tried X",
+  "compatible_format_ids": [
+    "format_short_form_video",
+    "format_story_sequence",
+    "format_article",
+    "format_thread"
+  ],
+  "best_for": [
+    "firsthand experiments the persona can plausibly run",
+    "trends or methods the audience is curious about but has not risked trying",
+    "verdict content where honesty is the differentiator"
+  ],
+  "beat_sequence": [
+    {
+      "beat_label": "experiment",
+      "beat_job": "Declare the experiment and its constraint: what was tried, for how long, at what cost.",
+      "beat_role": "hook",
+      "hook_category": "curiosity_gap"
+    },
+    {
+      "beat_label": "experience",
+      "beat_job": "Walk the attempt honestly, including the friction points, so the verdict feels earned.",
+      "beat_role": "retain"
+    },
+    {
+      "beat_label": "verdict",
+      "beat_job": "Deliver the result and the honest verdict: worth it, not worth it, or worth it only if.",
+      "beat_role": "payoff"
+    },
+    {
+      "beat_label": "your_turn",
+      "beat_job": "Tell the viewer whether to try it and ask what they want tested next.",
+      "beat_role": "cta"
+    }
+  ],
+  "retention_or_clarity_job": "The viewer stays because someone else absorbed the risk and the verdict is withheld until the end.",
+  "avoid_when": [
+    "The persona could not credibly have run the experiment; a fabricated trial breaks trust and boundaries.",
+    "The result is a flat 'it was fine'; without a clear verdict the payoff dissolves."
+  ]
+}

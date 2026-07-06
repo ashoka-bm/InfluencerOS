@@ -36,6 +36,16 @@ Write only `research/idea-queue/` and queue-level warnings in
 - Every entry states an `intended_payoff` — the first clear statement of
   what success would mean — and a `hook`, premise, topic cluster, platform
   and format recommendations, and `schedule_fit_type`.
+- Every new entry also captures the intent pair (ADR 0024; schema-optional,
+  skill-required — never skip them on a new entry):
+  - `intended_emotion`: the feeling the audience walks away with, one
+    short phrase.
+  - `core_message`: the one sentence the audience should repeat to someone
+    else.
+  Derive both with a "So What?" chain: state the idea, ask "so what?"
+  until the answer stops changing — the last stable answer is the core
+  message, and the feeling it leaves is the intended emotion. Downstream
+  plans resolve these by reference; they are captured here, once.
 - `evidence_refs` use the structured shape
   (`research_run_id`, `evidence_id`, `metric_snapshot_ids`,
   `video_understanding_pack_ids`); each ref must resolve inside the run it

@@ -45,7 +45,8 @@
         "required": [
           "beat_label",
           "idea_application",
-          "viewer_question_answered"
+          "viewer_question_answered",
+          "beat_role"
         ],
         "properties": {
           "beat_label": {
@@ -59,6 +60,26 @@
           "viewer_question_answered": {
             "type": "string",
             "minLength": 1
+          },
+          "beat_role": {
+            "type": "string",
+            "enum": ["hook", "retain", "payoff", "cta", "packaging"]
+          },
+          "hook_category": {
+            "type": "string",
+            "enum": [
+              "identity_call_out",
+              "pattern_interrupt",
+              "contrarian",
+              "result_first",
+              "curiosity_gap",
+              "direct_challenge",
+              "confession",
+              "timeliness",
+              "problem_solution",
+              "reveal_teaser",
+              "bold_promise"
+            ]
           }
         }
       }

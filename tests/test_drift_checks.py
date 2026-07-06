@@ -57,6 +57,18 @@ FORMAT_PROPERTY_NAMES = {
 # (youtube_shorts et al.), which closes in the production build-out.
 ENUM_EXEMPT_PROPERTIES = {("output-package", "platform")}
 
+# The Content Beat Spine (ADR 0024): every beat_role / hook_category enum
+# copy across schemas must match the canonical constants in validation.py.
+BEAT_ROLES = ["hook", "retain", "payoff", "cta", "packaging"]
+HOOK_CATEGORIES = [
+    "identity_call_out", "pattern_interrupt", "contrarian", "result_first",
+    "curiosity_gap", "direct_challenge", "confession", "timeliness",
+    "problem_solution", "reveal_teaser", "bold_promise",
+]
+BEAT_SPINE_SCHEMAS = ("social-template", "applied-social-template")
+BEAT_ROLE_PROPERTY_NAMES = {"beat_role"}
+HOOK_CATEGORY_PROPERTY_NAMES = {"hook_category"}
+
 # The canonical read order lives once in AGENTS.md (ADR 0019). This list is the
 # drift check's fixed expectation: removing a doc from AGENTS.md fails here.
 REQUIRED_READ_ORDER_DOCS = (
@@ -285,17 +297,12 @@ def skill_body(skill_name):
 
 
 class ResearchEnumDriftTests(unittest.TestCase):
-    def iter_platform_enums(self, node, path=""):
+    def iter_enums_by_names(self, node, kinds, path=""):
         """Yield (location, kind, enum-or-None) for every pinned-name
         property. None means the property carries no enum — that fails the
         drift check unless the (schema, property) pair is exempt, so deleting
         an enum cannot silently drop the pin."""
         if isinstance(node, dict):
-            kinds = (
-                (PLATFORM_PROPERTY_NAMES, "platform"),
-                (CONTENT_TYPE_PROPERTY_NAMES, "content_type"),
-                (FORMAT_PROPERTY_NAMES, "format"),
-            )
             for prop_name, prop_schema in node.get("properties", {}).items():
                 target = prop_schema
                 if isinstance(target, dict) and isinstance(target.get("items"), dict):
@@ -306,10 +313,18 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     if prop_name in names:
                         yield f"{path}.{prop_name}", kind, target.get("enum")
             for key, child in node.items():
-                yield from self.iter_platform_enums(child, f"{path}.{key}")
+                yield from self.iter_enums_by_names(child, kinds, f"{path}.{key}")
         elif isinstance(node, list):
             for index, child in enumerate(node):
-                yield from self.iter_platform_enums(child, f"{path}[{index}]")
+                yield from self.iter_enums_by_names(child, kinds, f"{path}[{index}]")
+
+    def iter_platform_enums(self, node, path=""):
+        kinds = (
+            (PLATFORM_PROPERTY_NAMES, "platform"),
+            (CONTENT_TYPE_PROPERTY_NAMES, "content_type"),
+            (FORMAT_PROPERTY_NAMES, "format"),
+        )
+        yield from self.iter_enums_by_names(node, kinds, path)
 
     def test_every_research_schema_matches_the_canonical_enums(self):
         expected = {
@@ -336,6 +351,39 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     f"{location} diverges from the canonical ADR 0020 {kind} enum",
                 )
         self.assertTrue(all(found_any.values()), "drift check found no research enums to pin")
+
+    def test_every_beat_spine_schema_matches_the_canonical_enums(self):
+        expected = {"beat_role": BEAT_ROLES, "hook_category": HOOK_CATEGORIES}
+        found_any = {"beat_role": False, "hook_category": False}
+        for schema_name in BEAT_SPINE_SCHEMAS:
+            schema = json.loads((ROOT / "schemas" / f"{schema_name}.schema.json").read_text())
+            for location, kind, values in self.iter_enums_by_names(
+                schema,
+                (
+                    (BEAT_ROLE_PROPERTY_NAMES, "beat_role"),
+                    (HOOK_CATEGORY_PROPERTY_NAMES, "hook_category"),
+                ),
+                schema_name,
+            ):
+                self.assertIsNotNone(
+                    values, f"{location} names a spine property but carries no enum"
+                )
+                found_any[kind] = True
+                self.assertEqual(
+                    values,
+                    expected[kind],
+                    f"{location} diverges from the canonical ADR 0024 {kind} enum",
+                )
+        self.assertTrue(all(found_any.values()), "drift check found no spine enums to pin")
+
+    def test_beat_spine_code_constants_match_the_canonical_enums(self):
+        from influencer_os.validation import BEAT_ROLES as CODE_BEAT_ROLES
+        from influencer_os.validation import HOOK_CATEGORIES as CODE_HOOK_CATEGORIES
+        from influencer_os.validation import REQUIRED_BEAT_ROLES
+
+        self.assertEqual(CODE_BEAT_ROLES, BEAT_ROLES)
+        self.assertEqual(CODE_HOOK_CATEGORIES, HOOK_CATEGORIES)
+        self.assertTrue(REQUIRED_BEAT_ROLES <= set(BEAT_ROLES))
 
     def test_code_constants_match_the_canonical_enums(self):
         # The surface-mapping platform list and the production-supported
