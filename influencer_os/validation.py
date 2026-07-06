@@ -897,8 +897,26 @@ def validate_research_source_yield_semantics(record):
 
 TEXT_FORMAT_IDS = {"format_article", "format_thread"}
 
+# Upload-ready roles that carry media (ADR 0023 slice 4): once a package's
+# generation_status leaves planned_not_generated, these must bind to a
+# generation-asset-manifest row. Text roles are exempt.
+MEDIA_UPLOAD_ROLES = {"video", "image", "thumbnail"}
+
 
 def validate_output_package_assets(record):
+    generation_status = record.get("provider_boundary", {}).get("generation_status")
+    if generation_status and generation_status != "planned_not_generated":
+        for index, asset in enumerate(record.get("upload_ready", [])):
+            if (
+                asset.get("asset_role") in MEDIA_UPLOAD_ROLES
+                and "generation_manifest_ref" not in asset
+            ):
+                raise ValidationError(
+                    f"OutputPackage.upload_ready[{index}]: media assets must "
+                    "carry generation_manifest_ref once generation_status is "
+                    f"{generation_status!r} (ADR 0023 slice 4)"
+                )
+
     upload_asset_ids = [asset["upload_asset_id"] for asset in record.get("upload_ready", [])]
     duplicate_asset_ids = sorted(
         asset_id for asset_id in set(upload_asset_ids) if upload_asset_ids.count(asset_id) > 1

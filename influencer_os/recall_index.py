@@ -45,6 +45,9 @@ UNIQUE_RECORD_TYPES = frozenset({
     "published-post-record",
     "analytics-snapshot",
     "performance-summary",
+    "generation-approval-record",
+    "generation-asset",
+    "quality-review",
 })
 
 INDEX_COLUMNS = (
@@ -197,6 +200,44 @@ def collect_index_rows(workspace_dir, scope=None):
                 add_row(project_id, "project", manifest_path,
                         _hash_bytes(manifest_path.read_bytes()),
                         project_id=project_id)
+
+    # Phase 3 generation records (ADR 0023 slice 4): approval records and
+    # manifest ledger rows, validated through the same shared seams the
+    # project validator runs so a schema-invalid or unbound record fails
+    # closed here too.
+    if projects_dir.exists():
+        from influencer_os.generation import (
+            validate_project_generation_assets,
+            validate_project_generation_records,
+        )
+
+        for project_dir in sorted(
+            path for path in projects_dir.iterdir() if path.is_dir()
+        ):
+            manifest_path = project_dir / "project.json"
+            if not manifest_path.exists():
+                continue
+            manifest = load_json(manifest_path)
+            project_id = manifest.get("project_id")
+            approvals, _warnings = validate_project_generation_records(
+                project_dir, manifest
+            )
+            for record_id in approvals:
+                record_path = (
+                    project_dir / "generation" / "approval-records" / f"{record_id}.json"
+                )
+                add_row(record_id, "generation-approval-record", record_path,
+                        _hash_bytes(record_path.read_bytes()),
+                        project_id=project_id)
+            rows_by_id = validate_project_generation_assets(
+                project_dir, manifest, approvals
+            )
+            ledger_path = project_dir / "generation" / "asset-manifest.json"
+            if rows_by_id:
+                ledger_hash = _hash_bytes(ledger_path.read_bytes())
+                for asset_id in rows_by_id:
+                    add_row(asset_id, "generation-asset", ledger_path,
+                            ledger_hash, project_id=project_id)
 
     # Phase 2 learning records (slice 5): the shared anchoring walk fails
     # closed on schema-invalid, misnamed, or unanchored records; `validate

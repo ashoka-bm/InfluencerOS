@@ -97,6 +97,48 @@ def populate_project_records(project_dir):
     copy_example_record("base-video-generation-plan.example.json", project_dir / "plan" / "generation-plan.json")
 
 
+# Deterministic artifact bytes whose hashes the example manifest records.
+GENERATION_FIXTURE_ARTIFACTS = {
+    "tiny-reset-video-001.mp4": b"tiny-reset-video-001\n",
+    "tiny-reset-thumb-001.png": b"tiny-reset-thumb-001\n",
+}
+
+
+def seed_generation_fixtures(project_dir):
+    """Generation provenance for a packaged fixture project (ADR 0023): the
+    executed approval record, the artifact files, and the manifest ledger
+    the example output package's generation_manifest_refs resolve to."""
+    project_dir = Path(project_dir)
+    assets_dir = project_dir / "generation" / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    for name, content in GENERATION_FIXTURE_ARTIFACTS.items():
+        (assets_dir / name).write_bytes(content)
+
+    approval = json.loads(
+        (ROOT / "examples" / "generation-approval-record.example.json").read_text()
+    )
+    approval["status"] = "executed"
+    approval["executed_at"] = "2026-07-06T16:06:01"
+    approval["resulting_asset_ids"] = ["gen_asset_luna_tiny_reset_video_001"]
+    approvals_dir = project_dir / "generation" / "approval-records"
+    approvals_dir.mkdir(parents=True, exist_ok=True)
+    (approvals_dir / f"{approval['generation_approval_record_id']}.json").write_text(
+        json.dumps(approval, indent=2) + "\n"
+    )
+
+    copy_example_record(
+        "generation-asset-manifest.example.json",
+        project_dir / "generation" / "asset-manifest.json",
+    )
+
+    # The approval record binds only to a generation-ready-or-later project,
+    # and a project with generated assets has honestly reached `generated`.
+    rewrite_json(
+        project_dir / "project.json",
+        lambda project: project.update(status="generated"),
+    )
+
+
 def text_production_plan(unit_type):
     if unit_type == "article":
         return {
@@ -723,6 +765,7 @@ class CliTests(unittest.TestCase):
     def test_register_output_package_command_copies_assets_and_marks_project_packaged(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
             package_path = Path(temp_dir) / "output-package.json"
             copy_example_record("output-package.example.json", package_path)
             package = json.loads(package_path.read_text())
@@ -1191,6 +1234,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
     def test_validate_project_accepts_packaged_project_with_matching_output_package(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
             package = json.loads((ROOT / "examples" / "output-package.example.json").read_text())
             copy_example_record(
                 "output-package.example.json",

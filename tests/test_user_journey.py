@@ -249,6 +249,12 @@ class PhaseOneUserJourneyTests(unittest.TestCase):
             run_cli("validate", "queue", workspace_dir)
             run_cli("validate", "project", project_dir)
 
+            # Generation provenance (ADR 0023): the example package's media
+            # refs resolve through the seeded approval record + manifest.
+            from tests.test_cli import seed_generation_fixtures
+
+            seed_generation_fixtures(project_dir)
+
             asset_root = run_root / "package-assets"
             seed_upload_ready_assets(asset_root)
             run_cli(

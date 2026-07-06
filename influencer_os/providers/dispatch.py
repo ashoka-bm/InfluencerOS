@@ -200,8 +200,47 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
 
     calls = []
     for request in requested:
+        requested_at = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         metadata = adapter(request, assets_dir, record)
-        calls.append({**metadata, "asset_id": request["asset_id"], "request": request})
+        completed_at = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        calls.append(
+            {
+                **metadata,
+                "asset_id": request["asset_id"],
+                "request": request,
+                "requested_at": requested_at,
+                "completed_at": completed_at,
+            }
+        )
+
+    # Provenance ledger rows before consumption (ADR 0023 Decision 4): if
+    # the append fails, the record stays `executing` — an honest crash state
+    # that refuses re-dispatch — instead of executed-without-provenance.
+    from influencer_os.generation import _sha256_file, append_manifest_rows
+
+    rows = []
+    for call in calls:
+        artifact_path = Path(call["artifact_path"])
+        rows.append(
+            {
+                "asset_id": call["asset_id"],
+                "origin": "generated",
+                "asset_kind": call["request"]["asset_kind"],
+                "approval_record_id": approval_record_id,
+                "plan_prompt_ref": call["request"]["prompt_ref"],
+                "provider_call": {
+                    "provider_id": call["provider_id"],
+                    "model": call["model"],
+                    "params_hash": call["params_hash"],
+                    "requested_at": call["requested_at"],
+                    "completed_at": call["completed_at"],
+                },
+                "artifact_path": str(artifact_path.relative_to(project_dir)),
+                "content_hash": _sha256_file(artifact_path),
+                "recorded_at": call["completed_at"],
+            }
+        )
+    append_manifest_rows(project_dir, rows, project=project)
 
     # Phase two: consume the record (single-use by construction, Decision 2).
     record["status"] = "executed"

@@ -20,6 +20,7 @@ from tests.test_cli import (
     copy_example_record,
     rewrite_json,
     scaffold_project_workspace,
+    seed_generation_fixtures,
     switch_project_to_text_format,
     write_upload_ready_assets,
 )
@@ -31,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def scaffold_packaged_project(temp_dir):
     """A packaged project with the example Output Package registered."""
     workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+    seed_generation_fixtures(project_dir)
     package_path = Path(temp_dir) / "output-package.json"
     copy_example_record("output-package.example.json", package_path)
     package = json.loads(package_path.read_text())

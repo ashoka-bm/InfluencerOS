@@ -565,6 +565,125 @@ class ImportGeneratedAssetTests(unittest.TestCase):
                 )
 
 
+class ProvenanceLedgerTests(unittest.TestCase):
+    def test_dispatch_appends_generated_manifest_rows(self):
+        from influencer_os.generation import load_asset_manifest
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            record_path, record = stage_approval_record(temp_dir)
+            record_generation_approval(project_dir, record_path)
+            calls = dispatch_generation(
+                project_dir, record["generation_approval_record_id"], config=BASE_CONFIG
+            )
+            manifest = load_asset_manifest(project_dir)
+            self.assertEqual(len(manifest["rows"]), 1)
+            row = manifest["rows"][0]
+            self.assertEqual(row["origin"], "generated")
+            self.assertEqual(
+                row["approval_record_id"], record["generation_approval_record_id"]
+            )
+            self.assertEqual(row["provider_call"]["provider_id"], "mock")
+            validate_project(project_dir)
+
+    def test_orphan_asset_file_fails_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            assets_dir = project_dir / "generation" / "assets"
+            assets_dir.mkdir(parents=True, exist_ok=True)
+            (assets_dir / "smuggled.bin").write_bytes(b"no provenance\n")
+            with self.assertRaisesRegex(ValidationError, "no (asset manifest|manifest row)"):
+                validate_project(project_dir)
+
+    def test_manifest_row_with_missing_artifact_fails_at_rest(self):
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            (project_dir / "generation" / "assets" / "tiny-reset-thumb-001.png").unlink()
+            with self.assertRaisesRegex(ValidationError, "does not resolve"):
+                validate_project(project_dir)
+
+    def test_tampered_artifact_fails_hash_check(self):
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            (project_dir / "generation" / "assets" / "tiny-reset-thumb-001.png").write_bytes(
+                b"tampered\n"
+            )
+            with self.assertRaisesRegex(ValidationError, "does not match the recorded hash"):
+                validate_project(project_dir)
+
+    def test_generated_row_requires_executed_resolving_approval(self):
+        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            approval_path = (
+                project_dir
+                / "generation"
+                / "approval-records"
+                / "gen_approval_luna_tiny_reset_001.json"
+            )
+
+            def revert(record):
+                record["status"] = "approved"
+                record.pop("executed_at", None)
+                record.pop("resulting_asset_ids", None)
+            rewrite(approval_path, revert)
+            with self.assertRaisesRegex(ValidationError, "not executed"):
+                validate_project(project_dir)
+
+    def test_packaged_media_ref_must_resolve_to_a_row(self):
+        from tests.test_analytics import scaffold_published_project
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_published_project(temp_dir)
+            package_path = project_dir / "output-package" / "output-package.json"
+            rewrite_json(
+                package_path,
+                lambda package: package["upload_ready"][0].update(
+                    generation_manifest_ref="gen_asset_never_manifested"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "does not[\\s\\S]*resolve to an asset-manifest row"):
+                validate_project(project_dir)
+
+    def test_generated_package_requires_media_refs(self):
+        package = load_example("output-package")
+        del package["upload_ready"][0]["generation_manifest_ref"]
+        with self.assertRaisesRegex(ValidationError, "must[\\s\\S]*carry generation_manifest_ref"):
+            validate_record("output-package", package)
+
+    def test_planned_package_needs_no_refs(self):
+        package = load_example("output-package")
+        for asset in package["upload_ready"]:
+            asset.pop("generation_manifest_ref", None)
+        package["provider_boundary"]["generation_status"] = "planned_not_generated"
+        package["provider_boundary"]["provider_calls_made"] = False
+        validate_record("output-package", package)
+
+    def test_rebuild_index_covers_generation_records(self):
+        from influencer_os.recall_index import rebuild_index, resolve_record_id
+        from tests.test_cli import seed_generation_fixtures
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
+            db_path = Path(temp_dir) / "index.sqlite"
+            rebuild_index(workspace_dir, db_path=db_path)
+            approval_rows = resolve_record_id(db_path, "gen_approval_luna_tiny_reset_001")
+            self.assertEqual(len(approval_rows), 1)
+            self.assertEqual(approval_rows[0]["record_type"], "generation-approval-record")
+            asset_rows = resolve_record_id(db_path, "gen_asset_luna_tiny_reset_video_001")
+            self.assertEqual(len(asset_rows), 1)
+            self.assertEqual(asset_rows[0]["record_type"], "generation-asset")
+
+
 class ListProvidersCliTests(unittest.TestCase):
     def test_list_providers_reports_exact_approval(self):
         result = subprocess.run(

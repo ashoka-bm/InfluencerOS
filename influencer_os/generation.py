@@ -401,6 +401,99 @@ def validate_project_generation_records(project_dir, project):
     return records_by_id, warnings
 
 
+def validate_project_generation_assets(project_dir, project, approval_records_by_id):
+    """Bidirectional asset ↔ manifest reconciliation (ADR 0023 slice 4).
+
+    Every file under generation/assets/ has exactly one ledger row; every
+    row's artifact exists with a matching content hash; a generated row's
+    approval record resolves, is executed, and lists the asset; a generated
+    row's plan prompt resolves. Returns rows keyed by asset_id.
+    """
+    project_dir = Path(project_dir)
+    manifest_path = project_dir / MANIFEST_PATH
+    assets_dir = project_dir / ASSETS_DIR
+    asset_files = (
+        {path.name for path in assets_dir.iterdir() if path.is_file() or path.is_symlink()}
+        if assets_dir.exists()
+        else set()
+    )
+
+    if not manifest_path.exists():
+        if asset_files:
+            raise ValidationError(
+                f"generation/assets/ contains files with no asset manifest: "
+                f"{sorted(asset_files)}"
+            )
+        return {}
+
+    manifest = load_json(manifest_path)
+    try:
+        validate_record("generation-asset-manifest", manifest)
+    except ValidationError as exc:
+        raise ValidationError(f"{manifest_path}: {exc}") from None
+    if manifest["project_id"] != project["project_id"]:
+        raise ValidationError(
+            f"asset manifest project_id {manifest['project_id']!r} does not "
+            f"match project {project['project_id']!r}"
+        )
+    if manifest["creator_profile_id"] != project["creator_profile_id"]:
+        raise ValidationError(
+            "asset manifest creator_profile_id does not match the project"
+        )
+
+    rows_by_id = {}
+    manifest_filenames = set()
+    for row in manifest["rows"]:
+        asset_id = row["asset_id"]
+        artifact_path = project_dir / row["artifact_path"]
+        filename = Path(row["artifact_path"]).name
+        manifest_filenames.add(filename)
+        if artifact_path.is_symlink() or not artifact_path.is_file():
+            raise ValidationError(
+                f"asset manifest row {asset_id}: artifact does not resolve "
+                f"to a regular file: {row['artifact_path']!r}"
+            )
+        if _sha256_file(artifact_path) != row["content_hash"]:
+            raise ValidationError(
+                f"asset manifest row {asset_id}: artifact content does not "
+                f"match the recorded hash: {row['artifact_path']!r}"
+            )
+        if row["origin"] == "generated":
+            approval = approval_records_by_id.get(row["approval_record_id"])
+            if approval is None:
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: approval record "
+                    f"{row['approval_record_id']!r} does not resolve"
+                )
+            if approval["status"] != "executed":
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: approval record "
+                    f"{row['approval_record_id']!r} is {approval['status']!r}, "
+                    "not executed"
+                )
+            if asset_id not in approval.get("resulting_asset_ids", []):
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: approval record "
+                    f"{row['approval_record_id']!r} does not list this asset "
+                    "in resulting_asset_ids"
+                )
+            prompt_file = row["plan_prompt_ref"].split("#", 1)[0]
+            if not (project_dir / prompt_file).is_file():
+                raise ValidationError(
+                    f"asset manifest row {asset_id}: plan_prompt_ref does "
+                    f"not resolve to a file: {row['plan_prompt_ref']!r}"
+                )
+        rows_by_id[asset_id] = row
+
+    orphans = sorted(asset_files - manifest_filenames)
+    if orphans:
+        raise ValidationError(
+            "generation/assets/ contains files with no manifest row "
+            f"(provenance is mandatory): {orphans}"
+        )
+    return rows_by_id
+
+
 def validate_reference_approval_records(workspace_dir, reference_library):
     """At-rest checks for references/approval-records/*.json plus the
     Reference Library parity rule: a source_ref that claims an approval

@@ -639,10 +639,15 @@ class ReviewRecordTests(unittest.TestCase):
         # well-formed block-status review present at packaging time does not
         # stop register_output_package.
         from influencer_os.projects import register_output_package
-        from tests.test_cli import copy_example_record, write_upload_ready_assets
+        from tests.test_cli import (
+            copy_example_record,
+            seed_generation_fixtures,
+            write_upload_ready_assets,
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
+            seed_generation_fixtures(project_dir)
 
             def mutate(review):
                 review["approval_status"] = "block"

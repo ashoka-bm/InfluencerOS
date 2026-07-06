@@ -16,7 +16,7 @@
         "completed_at": "2026-07-06T16:06:01"
       },
       "artifact_path": "generation/assets/tiny-reset-video-001.mp4",
-      "content_hash": "89e6c98d92887913cadf06b2adb97f26cde4849b3f786850e387550fdab836ed",
+      "content_hash": "d7ab57cefba62d7ba0c996ea2d3f4bf3652646f27e80d8af4dcf0b87fef257ed",
       "notes": "Mock base video for the tiny reset; deterministic fixture bytes.",
       "recorded_at": "2026-07-06T16:06:01"
     },
@@ -29,10 +29,12 @@
         "tool_or_provider": "external-image-tool",
         "license": "operator-generated, full usage rights",
         "attribution": "none required",
-        "warnings": ["provider terms reviewed 2026-07-06"]
+        "warnings": [
+          "provider terms reviewed 2026-07-06"
+        ]
       },
       "artifact_path": "generation/assets/tiny-reset-thumb-001.png",
-      "content_hash": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+      "content_hash": "82f93302918dd534ba687b5980764a5ae3cc574c0ac6ca309e2c757bea99c5ed",
       "recorded_at": "2026-07-06T16:20:00"
     }
   ]

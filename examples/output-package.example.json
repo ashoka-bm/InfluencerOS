@@ -35,14 +35,16 @@
       "asset_role": "video",
       "path": "output-package/upload-ready/luna-tiny-reset.mp4",
       "media_type": "video/mp4",
-      "notes": "Final universal vertical video file for manual upload."
+      "notes": "Final universal vertical video file for manual upload.",
+      "generation_manifest_ref": "gen_asset_luna_tiny_reset_video_001"
     },
     {
       "upload_asset_id": "upload_asset_luna_tiny_reset_thumbnail",
       "asset_role": "thumbnail",
       "path": "output-package/upload-ready/luna-tiny-reset-thumbnail.png",
       "media_type": "image/png",
-      "notes": "Thumbnail or first-frame candidate showing the laptop-day constraint."
+      "notes": "Thumbnail or first-frame candidate showing the laptop-day constraint.",
+      "generation_manifest_ref": "gen_asset_luna_tiny_reset_thumb_001"
     },
     {
       "upload_asset_id": "upload_asset_luna_tiny_reset_caption",

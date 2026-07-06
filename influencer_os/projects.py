@@ -1329,10 +1329,20 @@ def _research_pack_location(pack_id, context):
 
 
 def _validate_project_records(project_dir, project, workspace_dir, promotion=None):
+    from influencer_os.generation import (
+        validate_project_generation_assets,
+        validate_project_generation_records,
+    )
+
     applied_template = None
     production_plan = None
     generation_plan = None
     output_package = None
+
+    # Generation provenance validates first: the packaged block below
+    # resolves upload-ready generation_manifest_refs against the ledger.
+    approval_records, generation_warnings = validate_project_generation_records(project_dir, project)
+    manifest_rows = validate_project_generation_assets(project_dir, project, approval_records)
 
     # Plan records are required at planning+ but validated whenever they
     # exist (slice 2 review finding): a plan written prematurely on a
@@ -1465,10 +1475,18 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
             )
         _validate_upload_ready_files(project_dir, output_package)
         _resolve_source_refs(output_package["source_refs"], workspace_dir, "OutputPackage source_refs")
+        # Generation provenance binding (ADR 0023 slice 4): every upload-ready
+        # generation_manifest_ref resolves to a ledger row, so a packaged
+        # media asset traces asset -> approval record -> plan transitively.
+        for asset in output_package.get("upload_ready", []):
+            manifest_ref = asset.get("generation_manifest_ref")
+            if manifest_ref is not None and manifest_ref not in manifest_rows:
+                raise ValueError(
+                    f"OutputPackage.upload_ready[{asset['upload_asset_id']}] "
+                    f"generation_manifest_ref {manifest_ref!r} does not "
+                    "resolve to an asset-manifest row"
+                )
 
-    from influencer_os.generation import validate_project_generation_records
-
-    _, generation_warnings = validate_project_generation_records(project_dir, project)
     review_warnings = generation_warnings + _validate_review_records(project_dir, project)
     published_records = _validate_published_records(project_dir, project, output_package)
     analytics_records = _validate_analytics_records(project_dir, project, output_package, published_records)
