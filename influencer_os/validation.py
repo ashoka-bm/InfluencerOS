@@ -116,6 +116,11 @@ CONTENT_MODALITIES = ("text", "image", "video", "audio")
 # Advisory platform-fit vocabulary for the platform_fit ProjectWarning.
 PLATFORM_FIT_LEVELS = ("native", "subtype", "analog", "none")
 
+# Review roles with a built reviewer skill. The schema enum carries the full
+# decided vocabulary (creator_fit and fact_check are approved for the reviews
+# second slice), but a record claiming an unbuilt review ran fails closed.
+BUILT_REVIEW_ROLES = {"hook_payoff"}
+
 # Access methods for the ADR 0022 key-gated research-acquisition connectors.
 # Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
 # is active) and need not set `approval_required`.
@@ -543,6 +548,13 @@ def validate_review_record_semantics(record):
     a blocking-severity finding to waive.
     """
     review_id = record.get("review_record_id", "<unknown>")
+    review_role = record.get("review_role")
+    if review_role is not None and review_role not in BUILT_REVIEW_ROLES:
+        raise ValidationError(
+            f"review record {review_id}: review_role {review_role!r} is "
+            "approved but unbuilt (reviews second slice); a record may not "
+            "claim an unbuilt review ran"
+        )
     execution = record.get("reviewer_execution", {})
     mode = execution.get("execution_mode")
     if mode == "fallback_separated_pass" and "fallback_reason" not in execution:

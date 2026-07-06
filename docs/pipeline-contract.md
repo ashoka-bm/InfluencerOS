@@ -14,6 +14,7 @@ creator.profile
   -> project
   -> format-specific template application
   -> format-specific production plan
+  -> creative review (advisory), after a plan is drafted (ADR 0024; docs/gates-and-reviews.md)
   -> output.record, when generation or import creates an artifact
 ```
 
@@ -211,6 +212,7 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Selected Content Idea (deprecated) | `schemas/selected-content-idea.schema.json` | `examples/selected-content-idea.example.json` |
 | Social Template | `schemas/social-template.schema.json` | `examples/social-template.example.json` |
 | Applied Social Template | `schemas/applied-social-template.schema.json` | `examples/applied-social-template.example.json` |
+| Review Record | `schemas/review-record.schema.json` | `examples/review-record.example.json` |
 | Micro-Journey Video Plan | `schemas/micro-journey-video-plan.schema.json` | `examples/micro-journey-video-plan.example.json` |
 | Carousel Plan | `schemas/carousel-plan.schema.json` | `examples/carousel-plan.example.json` |
 | Single Image Post Plan | `schemas/single-image-post-plan.schema.json` | `examples/single-image-post-plan.example.json` |

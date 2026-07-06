@@ -1533,11 +1533,27 @@ def _validate_review_records(project_dir, project):
             _ensure_contained_file(
                 artifact_path, project_dir, f"Review record {review_id} artifact ref {ref!r}"
             )
-        if review["approval_status"] == "block" and "human_waiver" not in review:
+        # Must-acknowledge advisories key on the findings, not only the
+        # status: an unwaived blocking-severity finding warns regardless of
+        # approval_status (slice 4 review finding), and a block
+        # recommendation warns even without one.
+        has_blocking_finding = any(
+            finding.get("severity") == "blocking"
+            for finding in review["findings"]
+        )
+        needs_acknowledgement = (
+            review["approval_status"] == "block" or has_blocking_finding
+        )
+        if needs_acknowledgement and "human_waiver" not in review:
+            what = (
+                "carries an unwaived blocking-severity finding"
+                if has_blocking_finding
+                else "recommends block"
+            )
             warnings.append(
                 f"warning: review {review_id} ({review['review_role']}) "
-                "recommends block — advisory only; creative reviews never "
-                "halt the pipeline (ADR 0024)"
+                f"{what} — advisory only; creative reviews never halt the "
+                "pipeline, but the human must revise or waive (ADR 0024)"
             )
     return warnings
 

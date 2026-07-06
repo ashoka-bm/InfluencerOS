@@ -609,6 +609,56 @@ class ReviewRecordTests(unittest.TestCase):
             advisory = [w for w in result["warnings"] if "advisory only" in w]
             self.assertEqual(len(advisory), 1)
 
+    def test_unbuilt_review_role_fails_closed(self):
+        # Slice 4 review finding: the schema enum carries the decided
+        # vocabulary, but a record may not claim an unbuilt review ran.
+        for role in ("creator_fit", "fact_check"):
+            review = load_example("review-record")
+            review["review_role"] = role
+            with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
+                validate_record("review-record", review)
+
+    def test_unwaived_blocking_finding_warns_regardless_of_status(self):
+        # Slice 4 review finding: the must-acknowledge advisory keys on the
+        # finding severity, not only on a block approval_status.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+
+            def mutate(review):
+                review["approval_status"] = "revise"
+                review["findings"][0]["severity"] = "blocking"
+            self.write_review(project_dir, mutate=mutate)
+            result = validate_project(project_dir)
+            advisory = [
+                w for w in result["warnings"] if "blocking-severity finding" in w
+            ]
+            self.assertEqual(len(advisory), 1)
+
+    def test_block_review_does_not_stop_packaging(self):
+        # End-to-end exit-criterion 6 probe (slice 4 review finding): a
+        # well-formed block-status review present at packaging time does not
+        # stop register_output_package.
+        from influencer_os.projects import register_output_package
+        from tests.test_cli import copy_example_record, write_upload_ready_assets
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_project_workspace(temp_dir)
+
+            def mutate(review):
+                review["approval_status"] = "block"
+                review["findings"][0]["severity"] = "blocking"
+            self.write_review(project_dir, mutate=mutate)
+
+            package_path = Path(temp_dir) / "output-package.json"
+            copy_example_record("output-package.example.json", package_path)
+            package = json.loads(package_path.read_text())
+            asset_root = Path(temp_dir) / "source-assets"
+            write_upload_ready_assets(asset_root, package)
+            register_output_package(project_dir, package_path, asset_root=asset_root)
+            self.assertTrue(
+                (project_dir / "output-package" / "output-package.json").exists()
+            )
+
     def test_dangling_artifact_ref_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)

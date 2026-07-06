@@ -162,7 +162,7 @@ A human approval that can block the pipeline until granted. InfluencerOS has two
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.
 
 **Review Record**:
-The record a Review produces. It names the artifact under review, the reviewing role, the upstream context the reviewer was given, what matched and what drifted, findings with severity, a recommended revision, and an advisory status of approve, revise, or block. Only a human may waive a blocking finding.
+The record a Review produces (lean v1 shape, `schemas/review-record.schema.json`). It names the artifact refs under review, the reviewing role, spine-keyed findings with severity and recommended revisions, how the reviewer ran (`reviewer_execution`), and an advisory status of approve, revise, or block. Only a human may waive a blocking finding. Matched/drifted tracking is deferred until the Creator-Fit Critique ships.
 
 **Pass**:
 A bounded editorial rewrite of an artifact, such as a Clear Writing Pass or a Human Voice Pass, that returns improved text and a change trace. A Pass emits no Review Record, makes no judgment, and never blocks.
