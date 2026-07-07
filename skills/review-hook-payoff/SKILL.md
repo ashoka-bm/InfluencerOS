@@ -22,9 +22,12 @@ sequences this as a distinct step and feeds you an explicit packet:
   `core_message` from the locked Idea Promotion,
 - nothing else — not the authoring conversation.
 
-Record how you ran in `reviewer_execution`: `bounded_sub_agent` when a
-bounded sub-agent produced the findings, else `fallback_separated_pass`
-with a `fallback_reason` saying why the bounded path was unavailable.
+Record how you ran in `reviewer_execution`: `source_skill:
+"review-hook-payoff"`, plus `execution_mode: bounded_sub_agent` when a
+bounded sub-agent produced the findings, else
+`execution_mode: fallback_separated_pass` with a `fallback_reason` saying
+why the bounded path was unavailable. Both `execution_mode` and
+`source_skill` are schema-required.
 
 ## What To Judge
 
