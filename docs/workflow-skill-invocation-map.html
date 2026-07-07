@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InfluencerOS Skill Invocation Map</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --ink: #172033;
+      --muted: #5f6b7a;
+      --line: #ccd5df;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #b45309;
+      --rose: #be123c;
+      --slate: #334155;
+      --teal-soft: #e5f4f0;
+      --blue-soft: #e9efff;
+      --amber-soft: #fbefd9;
+      --rose-soft: #fde8ee;
+      --slate-soft: #eef2f6;
+      --shadow: 0 14px 35px rgba(23, 32, 51, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 880px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .kicker,
+    .status strong {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 800px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .status p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .doc-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .doc-nav a {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section {
+      margin-top: 32px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      max-width: 700px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .phase,
+    .card,
+    .note {
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .phase {
+      min-height: 175px;
+      position: relative;
+    }
+
+    .phase::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .phase:last-child::after {
+      display: none;
+    }
+
+    .phase h3,
+    .card h3,
+    .note h3 {
+      margin-top: 7px;
+    }
+
+    .phase p,
+    .card p,
+    .note p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .setup {
+      border-color: var(--slate);
+      background: var(--slate-soft);
+    }
+
+    .research {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .gate {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .generation {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .blocking {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .map {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .map th,
+    .map td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .map th {
+      background: #eef2f6;
+      font-size: 12px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .map tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .chain {
+      padding: 18px;
+      background: var(--ink);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .chain .kicker,
+    .chain p {
+      color: #d7dee9;
+    }
+
+    .chain-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .chain-flow span {
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .08);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 980px) {
+      header,
+      .flow,
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .phase::after {
+        display: none;
+      }
+
+      .map {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <span class="kicker">Skill invocation map</span>
+        <h1>From nothing to an idea to a finished piece of content</h1>
+        <p class="lede">This is the current operator path through InfluencerOS. The conductor skill sequences the work; each stage loads its own instruction file, context row, schema, and CLI gate where applicable.</p>
+        <nav class="doc-nav" aria-label="Workflow documents">
+          <a href="workflow-overview.html">Workflow overview</a>
+          <a href="workflow-format-script-decisions.html">Format and script decisions</a>
+          <a href="workflow-generation-os.html">Generation OS workflow</a>
+          <a href="os-construction/skill-registry.md">Skill registry</a>
+          <a href="os-construction/context-matrix.md">Context matrix</a>
+        </nav>
+      </div>
+      <aside class="status">
+        <strong>Invocation rule</strong>
+        <p>From the repo root, load <code>skills/&lt;skill&gt;/SKILL.md</code>. From a Creator Workspace, load <code>.claude/skills/&lt;skill&gt;/SKILL.md</code> plus any sibling <code>SKILL.local.md</code>.</p>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>High-Level Chain</h2>
+        <p>The first two phases create the creator and discover opportunities. The middle phases select and plan one content unit. The final phases package the artifact and optionally register performance evidence.</p>
+      </div>
+      <div class="flow">
+        <article class="phase setup">
+          <span class="kicker">00</span>
+          <h3>Create creator foundation</h3>
+          <p><code>create-influencer</code> runs setup subskills and validates readiness.</p>
+        </article>
+        <article class="phase research">
+          <span class="kicker">01</span>
+          <h3>Research current patterns</h3>
+          <p><code>influencer-os</code> routes to <code>create-research-findings</code>.</p>
+        </article>
+        <article class="phase research">
+          <span class="kicker">02</span>
+          <h3>Create ideas</h3>
+          <p><code>manage-idea-queue</code> writes scored queue entries.</p>
+        </article>
+        <article class="phase gate">
+          <span class="kicker">03</span>
+          <h3>Approve one idea</h3>
+          <p><code>promote-idea</code> creates the human-approved promotion and project.</p>
+        </article>
+        <article class="phase">
+          <span class="kicker">04</span>
+          <h3>Plan the piece</h3>
+          <p><code>apply-social-template</code> then <code>create-production-plan</code>.</p>
+        </article>
+        <article class="phase generation">
+          <span class="kicker">05</span>
+          <h3>Package final content</h3>
+          <p>Generate or import assets if needed, review quality, then <code>create-output-package</code>.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Exact Step Map</h2>
+        <p>This table names the instruction file that owns each step, the records it writes, and the gate or validation seam that keeps the handoff honest.</p>
+      </div>
+      <table class="map">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Workflow step</th>
+            <th>Invoked skill or instruction</th>
+            <th>Main context loaded</th>
+            <th>Writes or updates</th>
+            <th>Gate / validation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>0</td>
+            <td>Start from no creator workspace</td>
+            <td><code>skills/create-influencer/SKILL.md</code></td>
+            <td>User intake, source files, reference media, setup templates.</td>
+            <td>Creator Workspace scaffold, copied sources, setup checklist.</td>
+            <td>Whole-foundation approval before <code>content_ready</code>.</td>
+          </tr>
+          <tr>
+            <td>0a</td>
+            <td>Draft creator identity foundation</td>
+            <td><code>create-identity</code>, <code>create-soul</code>, <code>create-personal-brand</code>, <code>create-voice-samples</code></td>
+            <td>Accepted intake, interview answers, source provenance.</td>
+            <td><code>brand_context/identity.md</code>, <code>soul.md</code>, <code>personal-brand.md</code>, <code>voice-samples.md</code>.</td>
+            <td>User review of generated or imported foundation claims.</td>
+          </tr>
+          <tr>
+            <td>0b</td>
+            <td>Create operational creator files</td>
+            <td><code>create-creator-profile</code>, <code>create-runtime-context</code>, <code>create-reference-library</code></td>
+            <td>Accepted foundation, content mediums, reference requirements.</td>
+            <td><code>creator-profile.json</code>, <code>context/</code>, <code>references/reference-library.json</code>, provider-neutral reference prompts.</td>
+            <td><code>python3 -m influencer_os validate workspace &lt;workspace&gt;</code>.</td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td>Conduct content workflow</td>
+            <td><code>skills/influencer-os/SKILL.md</code></td>
+            <td>Context matrix rows for social research, idea generation, promotion, planning, generation, packaging.</td>
+            <td>Delegates to producer skills. Keeps sequencing and provenance intact.</td>
+            <td>Halt rule if a required skill is planned or missing.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Research current opportunities</td>
+            <td><code>skills/create-research-findings/SKILL.md</code></td>
+            <td>Creator Profile, content schedule, existing findings, research intelligence, optional creator memory.</td>
+            <td><code>research/runs/</code>, evidence JSONL, metric snapshots, source-yield ledgers, findings and intelligence files.</td>
+            <td>Research is dated, cited, and platform-scoped. Provider-backed acquisition needs approval.</td>
+          </tr>
+          <tr>
+            <td>2a</td>
+            <td>Inspect real videos when research uses them</td>
+            <td><code>influencer-os</code> inline video-understanding instructions; optional external <code>watch</code> tool</td>
+            <td>Public video URLs or user-provided local files.</td>
+            <td><code>research/video-understanding-packs/</code> observations.</td>
+            <td>Whisper/API fallback, first-run installs, and batches require explicit approval.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Turn research into candidate ideas</td>
+            <td><code>skills/manage-idea-queue/SKILL.md</code></td>
+            <td>Research Findings, evidence refs, Creator Profile, content schedule, creator memory.</td>
+            <td><code>research/idea-queue/</code> entries with hook, premise, payoff, evidence, platform and format recommendations, scores.</td>
+            <td>Queue entries must trace to evidence and creator fit.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Promote one idea into production</td>
+            <td><code>skills/promote-idea/SKILL.md</code></td>
+            <td>Queue entry, findings, evidence refs, Creator Profile, content schedule.</td>
+            <td><code>research/idea-promotions/</code>, project directory, project manifest, evidence brief, queue status updates.</td>
+            <td>Human Idea Promotion Gate. The user approves platforms, formats, payoff, and carry-forward elements.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Choose production structure</td>
+            <td><code>skills/apply-social-template/SKILL.md</code></td>
+            <td>Project, locked promotion, queue entry, evidence brief, Creator Profile, template library.</td>
+            <td><code>projects/&lt;slug&gt;/plan/applied-template.json</code>.</td>
+            <td>Template target format must stay inside the project's approved target formats.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Decide exact format plan, subtype, and script-like material</td>
+            <td><code>skills/create-production-plan/SKILL.md</code></td>
+            <td>Project, applied template, locked promotion, evidence brief, Creator Profile, brand context, references, research evidence.</td>
+            <td><code>plan/production-plan.json</code>. For video, also <code>plan/generation-plan.json</code>.</td>
+            <td><code>validate record</code> and <code>validate project</code>. Plan must match project content unit and target format.</td>
+          </tr>
+          <tr>
+            <td>6a</td>
+            <td>Review plan quality and tighten text</td>
+            <td><code>review-hook-payoff</code>, optional <code>clear-writing-pass</code>, optional <code>human-voice-pass</code></td>
+            <td>Drafted plan, applied template, locked promotion, voice samples, brand context.</td>
+            <td>ReviewRecord under <code>reviews/</code>. Passes return rewritten text and change trace in conversation.</td>
+            <td>Advisory only. These reviews do not block packaging.</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Approve provider-backed generation when needed</td>
+            <td><code>skills/request-generation-approval/SKILL.md</code></td>
+            <td>Base Video Generation Plan or Reference Library asset plan, provider registry, provider boundary.</td>
+            <td><code>generation/approval-records/gen_approval_*.json</code> or <code>references/approval-records/</code>.</td>
+            <td>Human Generation Approval Gate. Approval must name the exact call or bounded batch.</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Create or bring in media assets</td>
+            <td><code>dispatch_generation</code> through provider boundary, or <code>skills/import-generated-asset/SKILL.md</code></td>
+            <td>Approved generation record, project manifest, operator provenance answers for imports.</td>
+            <td><code>generation/assets/</code> and <code>generation/asset-manifest.json</code>.</td>
+            <td>No approval, no provider call. Imports record source, tool, license, attribution, and warnings honestly.</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>Run provider-safety quality gate</td>
+            <td><code>skills/review-generated-assets/SKILL.md</code></td>
+            <td>Asset manifest, artifact files, production and generation plans, approved Reference Library assets, Creator Profile boundaries.</td>
+            <td><code>generation/quality-reviews/quality_review_*.json</code>.</td>
+            <td>Blocking for generation-sourced media. Failing or missing QualityReview blocks packaging.</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Assemble finished upload-ready content</td>
+            <td><code>skills/create-output-package/SKILL.md</code></td>
+            <td>Project, applied template, production plan, generation plan when present, locked promotion, Reference Library, final assets and text files.</td>
+            <td><code>output-package/output-package.json</code> and <code>output-package/upload-ready/</code>.</td>
+            <td><code>register-output-package</code> copies files, marks Project <code>packaged</code>, and rolls back if validation fails.</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td>Finished piece of content</td>
+            <td>No new skill. State is validated output package.</td>
+            <td>Project records and packaged local files.</td>
+            <td>Project status is <code>packaged</code>; Output Package status is <code>upload_ready</code>.</td>
+            <td><code>python3 -m influencer_os validate project &lt;project-dir&gt;</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>After Finished Content</h2>
+        <p>These steps are not required to make a finished content package. They close the performance loop after a human publishes and metrics exist.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <span class="kicker">Publication</span>
+          <h3><code>register-published-post</code></h3>
+          <p>Records a post a human already published or scheduled. It never posts by itself.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Analytics</span>
+          <h3><code>ingest-analytics</code></h3>
+          <p>Adds manual or CSV Analytics Snapshot records against live Published Post Records.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Interpretation</span>
+          <h3><code>create-performance-summary</code></h3>
+          <p>Maps performance evidence to packaging, hook, body retention, payoff, and CTA.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Learning</span>
+          <h3><code>distill-creator-learning</code></h3>
+          <p>Writes evidence-linked creator lessons into memory so future research and ideas improve.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Memory write</span>
+          <h3><code>memory-write</code></h3>
+          <p>Optionally promotes a durable fact into <code>context/MEMORY.md</code> with the size cap enforced.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Session close</span>
+          <h3><code>wrap-up</code></h3>
+          <p>Captures process learnings and reconciles skill or context documentation after deliverables.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Instruction Sources Loaded Around The Skills</h2>
+        <p>These files tell the agent what context to read and which local rules override the base skill.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <span class="kicker">Conductor</span>
+          <h3><code>skills/influencer-os/SKILL.md</code></h3>
+          <p>Owns sequencing, provenance, halt rules, provider boundary behavior, and routing to producer skills.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Context loading</span>
+          <h3><code>docs/os-construction/context-matrix.md</code></h3>
+          <p>Names which creator and OS files to load for each workflow row: setup, research, planning, packaging, analytics, and learning.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Skill registry</span>
+          <h3><code>docs/os-construction/skill-registry.md</code></h3>
+          <p>Lists triggers, reads, writes, and override support for every repo-owned skill.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Product language</span>
+          <h3><code>CONTEXT.md</code></h3>
+          <p>Defines Creator, Project, Social Post Format, Format Subtype, Output Package, gates, reviews, passes, and warnings.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Runtime override</span>
+          <h3><code>SKILL.local.md</code></h3>
+          <p>Optional creator-specific or OS-specific corrections. Local rules override base skill rules for that scope only.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">Validation</span>
+          <h3><code>schemas/</code> plus CLI</h3>
+          <p>Schemas define record shape. CLI write gates and <code>validate project</code> enforce cross-record references.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="chain">
+        <span class="kicker">Minimal current path</span>
+        <h2>Nothing to finished content, compressed</h2>
+        <p>This is the shortest complete path when generation uses existing/imported assets or the built-in mock adapter.</p>
+        <div class="chain-flow" aria-label="Minimal path">
+          <span>create-influencer</span>
+          <span>create-research-findings</span>
+          <span>manage-idea-queue</span>
+          <span>promote-idea</span>
+          <span>apply-social-template</span>
+          <span>create-production-plan</span>
+          <span>request-generation-approval or import-generated-asset</span>
+          <span>review-generated-assets</span>
+          <span>create-output-package</span>
+          <span>validate project</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

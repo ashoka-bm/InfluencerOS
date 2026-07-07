@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generation OS Workflow</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --ink: #192333;
+      --muted: #5d6978;
+      --line: #ccd4dd;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #b45309;
+      --rose: #be123c;
+      --teal-soft: #e5f4f0;
+      --blue-soft: #e9efff;
+      --amber-soft: #fbefd9;
+      --rose-soft: #fde8ee;
+      --shadow: 0 14px 35px rgba(25, 35, 51, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 840px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .kicker,
+    .status strong {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 780px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .status p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .doc-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .doc-nav a {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section {
+      margin-top: 32px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      max-width: 650px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .stage,
+    .record,
+    .rule {
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .stage {
+      min-height: 180px;
+      position: relative;
+    }
+
+    .stage::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .stage:last-child::after {
+      display: none;
+    }
+
+    .stage h3,
+    .record h3,
+    .rule h3 {
+      margin-top: 7px;
+    }
+
+    .stage p,
+    .record p,
+    .rule p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .approval {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .asset {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .quality {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .package {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .records {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .rules {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .trace {
+      padding: 18px;
+      background: var(--ink);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .trace .kicker,
+    .trace p {
+      color: #d7dee9;
+    }
+
+    .trace-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .trace-flow span {
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .08);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 960px) {
+      header,
+      .flow,
+      .records,
+      .rules {
+        grid-template-columns: 1fr;
+      }
+
+      .stage::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <span class="kicker">Phase 3 workflow</span>
+        <h1>Generation OS: exact approval, provenance, and blocking quality review</h1>
+        <p class="lede">Phase 3 adds the provider-safety spine between production planning and output packaging. It does not install a paid provider by default; the mock adapter is the only built-in adapter.</p>
+        <nav class="doc-nav" aria-label="Workflow documents">
+          <a href="workflow-overview.html">Workflow overview</a>
+          <a href="workflow-skill-invocation-map.html">Skill invocation map</a>
+          <a href="workflow-format-script-decisions.html">Format and script decisions</a>
+          <a href="provider-boundary.md">Provider boundary</a>
+          <a href="gates-and-reviews.md">Gates and reviews</a>
+        </nav>
+      </div>
+      <aside class="status">
+        <strong>Boundary rule</strong>
+        <p>Key presence is never approval. Every generation call or bounded batch needs a GenerationApprovalRecord that matches the exact provider, model, plan refs, prompt refs, and requested assets.</p>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Phase 3 Flow</h2>
+        <p>The media path can start with dispatch or import. Both paths must land in the same manifest and pass the same packaging gate.</p>
+      </div>
+      <div class="flow">
+        <article class="stage">
+          <span class="kicker">Input</span>
+          <h3>Generation-ready plan</h3>
+          <p>The project has a production plan. Short-form video also has <code>plan/generation-plan.json</code>.</p>
+        </article>
+        <article class="stage approval">
+          <span class="kicker">Human gate</span>
+          <h3>Record exact approval</h3>
+          <p><code>request-generation-approval</code> packages the exact call or bounded batch. The approval statement is captured verbatim.</p>
+        </article>
+        <article class="stage asset">
+          <span class="kicker">Asset entry</span>
+          <h3>Dispatch or import</h3>
+          <p>Dispatch consumes an approved record. Import brings in existing user-provided or externally generated media.</p>
+        </article>
+        <article class="stage asset">
+          <span class="kicker">Ledger</span>
+          <h3>Write asset manifest</h3>
+          <p>Every file in <code>generation/assets/</code> gets a row with origin, file hash, artifact path, and provenance.</p>
+        </article>
+        <article class="stage quality">
+          <span class="kicker">Blocking review</span>
+          <h3>QualityReview</h3>
+          <p>Generated and imported media must pass identity, continuity, technical, and creator-boundary checks.</p>
+        </article>
+        <article class="stage package">
+          <span class="kicker">Package gate</span>
+          <h3>Register Output Package</h3>
+          <p>Upload-ready media must cite a manifest row and a passing QualityReview before packaging succeeds.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Files Phase 3 Adds</h2>
+        <p>All Phase 3 state stays inside the Project's <code>generation/</code> subtree, except reference-library approvals for reusable reference assets.</p>
+      </div>
+      <div class="records">
+        <article class="record approval">
+          <span class="kicker">Approval</span>
+          <h3><code>generation/approval-records/</code></h3>
+          <p>One JSON file per approval. Status moves through <code>draft</code>, <code>approved</code>, <code>executing</code>, <code>executed</code>, or <code>cancelled</code>.</p>
+        </article>
+        <article class="record asset">
+          <span class="kicker">Artifacts</span>
+          <h3><code>generation/assets/</code></h3>
+          <p>Flat directory for generated, imported, or user-provided media files. Subdirectories and symlink escapes fail validation.</p>
+        </article>
+        <article class="record asset">
+          <span class="kicker">Provenance</span>
+          <h3><code>generation/asset-manifest.json</code></h3>
+          <p>The ledger binds assets to approval records, provider call metadata, plan prompt refs, import source, license, warnings, and file hashes.</p>
+        </article>
+        <article class="record quality">
+          <span class="kicker">Review</span>
+          <h3><code>generation/quality-reviews/</code></h3>
+          <p>QualityReview records name the manifest rows they cover. Packaging requires a passing review for each generation-sourced media asset.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Safety Rules</h2>
+        <p>These are validator-enforced where possible, not just operator notes.</p>
+      </div>
+      <div class="rules">
+        <article class="rule approval">
+          <span class="kicker">Exact approval</span>
+          <h3>No approval, no call</h3>
+          <p><code>dispatch_generation</code> requires an approved record id. It refuses missing, draft, cancelled, executing, or already executed records.</p>
+        </article>
+        <article class="rule approval">
+          <span class="kicker">Single use</span>
+          <h3>Approvals cannot be reused</h3>
+          <p>Dispatch flips <code>approved</code> to <code>executing</code> before adapter work and then to <code>executed</code>. Regeneration needs a new record.</p>
+        </article>
+        <article class="rule approval">
+          <span class="kicker">Hard stop</span>
+          <h3>Kill switch wins</h3>
+          <p><code>INFLUENCER_OS_DISABLE_PAID_CONNECTORS</code> disables generation dispatch even when an approval record exists.</p>
+        </article>
+        <article class="rule asset">
+          <span class="kicker">Import honesty</span>
+          <h3>Unknown rights stay unknown</h3>
+          <p>Imported assets record source, tool, license, attribution, and warnings. Unknown license becomes a warning, not a guessed right.</p>
+        </article>
+        <article class="rule asset">
+          <span class="kicker">Manifest parity</span>
+          <h3>Files and rows reconcile</h3>
+          <p>An orphan file, dangling manifest row, tampered hash, unresolved approval, or wrong artifact path fails project validation.</p>
+        </article>
+        <article class="rule quality">
+          <span class="kicker">Blocking gate</span>
+          <h3>Media cannot skip review</h3>
+          <p>Generated and imported media need a passing QualityReview before they can appear as upload-ready media. Text roles are exempt.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="trace">
+        <span class="kicker">Packaging provenance</span>
+        <h2>What validation proves for a packaged media asset</h2>
+        <p>The Output Package must resolve the media asset through the generation ledger before it can ship.</p>
+        <div class="trace-flow" aria-label="Generation provenance chain">
+          <span>upload_ready[]</span>
+          <span>generation_manifest_ref</span>
+          <span>asset-manifest row</span>
+          <span>artifact path</span>
+          <span>content hash</span>
+          <span>approval or import source</span>
+          <span>plan prompt ref</span>
+          <span>QualityReview pass</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

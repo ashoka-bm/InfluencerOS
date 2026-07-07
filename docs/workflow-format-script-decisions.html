@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Format And Script Decision Workflow</title>
+  <style>
+    :root {
+      --bg: #f5f7f9;
+      --ink: #172033;
+      --muted: #5f6b7a;
+      --line: #ccd5df;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --purple: #6d28d9;
+      --amber: #b45309;
+      --rose: #be123c;
+      --teal-soft: #e5f4f0;
+      --blue-soft: #e9efff;
+      --purple-soft: #f0eafe;
+      --amber-soft: #fbefd9;
+      --rose-soft: #fde8ee;
+      --shadow: 0 14px 35px rgba(23, 32, 51, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 840px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .kicker,
+    .status strong {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 780px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .status p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .doc-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .doc-nav a {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section {
+      margin-top: 32px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      max-width: 650px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .decision-ladder {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .step,
+    .route,
+    .gap,
+    .field {
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .step {
+      min-height: 170px;
+      position: relative;
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .step h3,
+    .route h3,
+    .gap h3,
+    .field h3 {
+      margin-top: 7px;
+    }
+
+    .step p,
+    .route p,
+    .gap p,
+    .field p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .recommend {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .approval {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .planning {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .script {
+      border-color: var(--purple);
+      background: var(--purple-soft);
+    }
+
+    .routes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .matrix th,
+    .matrix td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .matrix th {
+      background: #eef2f6;
+      font-size: 12px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .matrix tr:last-child td {
+      border-bottom: none;
+    }
+
+    .gap {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    @media (max-width: 960px) {
+      header,
+      .decision-ladder,
+      .routes,
+      .fields {
+        grid-template-columns: 1fr;
+      }
+
+      .step::after {
+        display: none;
+      }
+
+      .matrix {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <span class="kicker">Decision workflow</span>
+        <h1>Where format, subtype, outline, script, and prompts are decided</h1>
+        <p class="lede">InfluencerOS separates the content container from the craft subtype and from the actual production material. Broad format is approved before project creation. Subtype and script-like detail live in production planning.</p>
+        <nav class="doc-nav" aria-label="Workflow documents">
+          <a href="workflow-overview.html">Workflow overview</a>
+          <a href="workflow-skill-invocation-map.html">Skill invocation map</a>
+          <a href="workflow-generation-os.html">Generation OS workflow</a>
+          <a href="social-post-formats.md">Format shortlist</a>
+        </nav>
+      </div>
+      <aside class="status">
+        <strong>Important gap</strong>
+        <p>The current system has no first-class script record. Video scripts are implicit in the micro-journey plan, shots, and prompts. Article and thread copy starts in plan fields and becomes upload-ready package material later.</p>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Decision Ladder</h2>
+        <p>Each decision narrows the surface. Later steps may refine the craft, but they must stay inside the approved project format.</p>
+      </div>
+      <div class="decision-ladder">
+        <article class="step recommend">
+          <span class="kicker">Idea Queue</span>
+          <h3>Recommend formats</h3>
+          <p><code>format_recommendations</code> says which containers fit the idea: video, carousel, image, story, article, or thread.</p>
+        </article>
+        <article class="step approval">
+          <span class="kicker">Promotion gate</span>
+          <h3>Approve formats</h3>
+          <p><code>approved_formats</code> in the Idea Promotion locks the human-approved production surface.</p>
+        </article>
+        <article class="step">
+          <span class="kicker">Project</span>
+          <h3>Lock one content unit</h3>
+          <p><code>content_unit_type</code> picks the project route: <code>article</code>, <code>thread</code>, <code>short_form_video</code>, and so on.</p>
+        </article>
+        <article class="step planning">
+          <span class="kicker">Template</span>
+          <h3>Choose structure</h3>
+          <p><code>applied-template.json</code> maps the idea onto hook, retain, payoff, CTA, and optional packaging beats.</p>
+        </article>
+        <article class="step script">
+          <span class="kicker">Production plan</span>
+          <h3>Choose subtype and script material</h3>
+          <p><code>production-plan.json</code> carries subtype, outline, post copy, shot logic, prompt notes, and style constraints.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Routing Table</h2>
+        <p>The create-production-plan skill owns this routing. A project cannot route around a mismatch between content unit and target format.</p>
+      </div>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Project unit</th>
+            <th>Target format</th>
+            <th>Plan schema</th>
+            <th>Where script-like work lives</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>short_form_video</code></td>
+            <td><code>format_short_form_video</code></td>
+            <td><code>micro-journey-video-plan</code> plus <code>base-video-generation-plan</code></td>
+            <td>Hook, retain, payoff, CTA, shots, continuity requirements, scene requirements, and prompt sequence.</td>
+          </tr>
+          <tr>
+            <td><code>carousel</code></td>
+            <td><code>format_carousel</code></td>
+            <td><code>carousel-plan</code></td>
+            <td>First-slide hook, slide roles, visual beats, text overlays, viewer jobs, continuity, and generation notes.</td>
+          </tr>
+          <tr>
+            <td><code>single_image_post</code></td>
+            <td><code>format_single_image_post</code></td>
+            <td><code>single-image-post-plan</code></td>
+            <td>Central visual idea, composition, avatar or scene requirements, text overlay policy, and generation prompt.</td>
+          </tr>
+          <tr>
+            <td><code>story_sequence</code></td>
+            <td><code>format_story_sequence</code></td>
+            <td><code>story-sequence-plan</code></td>
+            <td>Frame-level moments, sequence arc, text or sticker notes, continuity, and generation notes.</td>
+          </tr>
+          <tr>
+            <td><code>article</code></td>
+            <td><code>format_article</code></td>
+            <td><code>article-plan</code></td>
+            <td>Working title, deck, thesis, sections, key points, evidence, voice and style constraints, CTA, and review notes.</td>
+          </tr>
+          <tr>
+            <td><code>thread</code></td>
+            <td><code>format_thread</code></td>
+            <td><code>thread-plan</code></td>
+            <td>Opening post, throughline, ordered posts, copy, evidence, reader jobs, voice and style constraints, CTA.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Subtype Rules</h2>
+        <p>Subtype is optional. It names the craft when the container alone is too broad.</p>
+      </div>
+      <div class="routes">
+        <article class="route">
+          <span class="kicker">Article</span>
+          <h3><code>format_subtype</code></h3>
+          <p>Allowed values: <code>essay</code>, <code>reported_feature</code>, <code>newsletter_dispatch</code>.</p>
+          <p>An op-ed currently has no dedicated enum. It should be treated as <code>essay</code> or omitted until the schema adds <code>op_ed</code>.</p>
+        </article>
+        <article class="route">
+          <span class="kicker">Carousel</span>
+          <h3><code>format_subtype</code></h3>
+          <p>Allowed values: <code>designed_slides</code>, <code>photo_set</code>.</p>
+          <p>The subtype decides whether the plan emphasizes graphic slide design or photo selection and sequencing.</p>
+        </article>
+        <article class="route">
+          <span class="kicker">Thread</span>
+          <h3><code>format_subtype</code></h3>
+          <p>Allowed values: <code>chain</code>, <code>single_post</code>.</p>
+          <p>The subtype decides whether the text expands across ordered posts or compresses into one throughline post.</p>
+        </article>
+        <article class="route">
+          <span class="kicker">Video</span>
+          <h3>No subtype enum yet</h3>
+          <p>Talking head, demo, POV, skit, explainer, challenge, and similar video types are currently represented by template choice, beat mapping, shot design, and generation prompts.</p>
+        </article>
+        <article class="route">
+          <span class="kicker">Image</span>
+          <h3>No subtype enum yet</h3>
+          <p>Craft is expressed through central visual idea, composition, avatar or scene requirements, overlay policy, and prompt.</p>
+        </article>
+        <article class="route">
+          <span class="kicker">Story</span>
+          <h3>No subtype enum yet</h3>
+          <p>Craft is expressed through frame roles, sequence arc, lightweight text or sticker notes, and continuity requirements.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>What Counts As The Script Today</h2>
+        <p>The current pipeline plans content before it writes a final asset. It does not yet store a standalone script file with its own schema.</p>
+      </div>
+      <div class="fields">
+        <article class="field script">
+          <span class="kicker">Short-form video</span>
+          <h3>Implicit script</h3>
+          <p><code>hook</code>, <code>retain.setup</code>, <code>retain.escalation</code>, <code>payoff</code>, <code>cta_or_loop</code>, and <code>shots[]</code> define the beat script.</p>
+        </article>
+        <article class="field script">
+          <span class="kicker">Generation prompt</span>
+          <h3>Provider-neutral prompt plan</h3>
+          <p><code>prompt_sequence[]</code> in the Base Video Generation Plan turns shots into provider-neutral prompts. It is still not approval to generate.</p>
+        </article>
+        <article class="field script">
+          <span class="kicker">Article</span>
+          <h3>Outline before final copy</h3>
+          <p><code>working_title</code>, <code>deck</code>, <code>thesis</code>, and <code>sections[]</code> define the article. Final text belongs in upload-ready package files.</p>
+        </article>
+        <article class="field script">
+          <span class="kicker">Thread</span>
+          <h3>Draft copy in the plan</h3>
+          <p><code>opening_post</code> and <code>posts[].copy</code> carry the thread draft directly in the production plan.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <article class="gap">
+        <span class="kicker">Recommended future contract</span>
+        <h2>Make scripts first-class when the workflow needs stricter authorship</h2>
+        <p>A future slice should add a dedicated script or draft artifact if operators need versioned voiceover scripts, article bodies, dialogue, narrated scenes, or platform-specific final copy before packaging. That would make the current implicit script layer explicit and reviewable.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

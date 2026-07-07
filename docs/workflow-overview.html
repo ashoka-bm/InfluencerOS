@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InfluencerOS Workflow Overview</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --ink: #18212f;
+      --muted: #5d6978;
+      --line: #cdd4dc;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #b45309;
+      --rose: #be123c;
+      --green-soft: #e7f4ef;
+      --blue-soft: #e8eefc;
+      --amber-soft: #fbefd9;
+      --rose-soft: #fde8ee;
+      --shadow: 0 14px 35px rgba(24, 33, 47, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 850px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      max-width: 780px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .status strong,
+    .kicker {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .status p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .doc-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .doc-nav a {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section {
+      margin-top: 32px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .node {
+      min-height: 150px;
+      padding: 15px;
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .node:nth-child(5n)::after,
+    .node:last-child::after {
+      display: none;
+    }
+
+    .node h3 {
+      margin-top: 7px;
+    }
+
+    .node p,
+    .record p,
+    .gate p,
+    .note p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .gate-node {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .review-node {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .generation-node {
+      border-color: var(--teal);
+      background: var(--green-soft);
+    }
+
+    .records-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .record,
+    .gate,
+    .note {
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .record code,
+    .gate code,
+    .note code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .gate-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .human {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .blocking {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .advisory {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .trace {
+      padding: 18px;
+      background: var(--ink);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .trace .kicker,
+    .trace p {
+      color: #d7dee9;
+    }
+
+    .trace-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .trace-flow span {
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .08);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 960px) {
+      header,
+      .pipeline,
+      .records-grid,
+      .gate-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .node::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <span class="kicker">InfluencerOS workflow</span>
+        <h1>From creator context to learning-backed future ideas</h1>
+        <p class="lede">InfluencerOS is a typed local pipeline. Each step writes a durable record, validates the next handoff, and keeps human approval at the risky boundaries.</p>
+        <nav class="doc-nav" aria-label="Workflow documents">
+          <a href="workflow-skill-invocation-map.html">Skill invocation map</a>
+          <a href="workflow-format-script-decisions.html">Format and script decisions</a>
+          <a href="workflow-generation-os.html">Generation OS workflow</a>
+          <a href="influencer-os-map.html">System map</a>
+        </nav>
+      </div>
+      <aside class="status">
+        <strong>Current state</strong>
+        <p>Planning, creative review, Generation OS, packaging, publication registration, analytics ingestion, performance summary, and learning distillation are built. Real paid generation adapters are not installed by default.</p>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Main Pipeline</h2>
+        <p>The chain starts with creator-specific context and ends with creator-specific learning. Automation, publishing, and provider calls stay behind explicit gates.</p>
+      </div>
+      <div class="pipeline">
+        <article class="node">
+          <span class="kicker">01 Context</span>
+          <h3>Creator profile and schedule</h3>
+          <p>Load the creator identity, audience, niche, content strategy, readiness, reference library, and schedule state.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">02 Evidence</span>
+          <h3>Research and video understanding</h3>
+          <p>Capture dated evidence. When real videos shape the idea, store timestamp-aware Video Understanding Packs.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">03 Backlog</span>
+          <h3>Idea Queue</h3>
+          <p>Add scored ideas with hook, premise, payoff, creator fit, evidence refs, schedule fit, and format recommendations.</p>
+        </article>
+        <article class="node gate-node">
+          <span class="kicker">04 Human gate</span>
+          <h3>Idea Promotion</h3>
+          <p>The user approves the promotion package. Approved platforms and formats become the production surface.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">05 Project</span>
+          <h3>Project creation</h3>
+          <p>A project locks one content unit type, source refs, acceptance criteria, reference assets, and status.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">06 Structure</span>
+          <h3>Applied Social Template</h3>
+          <p>Choose the content structure that pulls the audience from hook to retain to payoff to CTA.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">07 Plan</span>
+          <h3>Format-specific production plan</h3>
+          <p>Route to article, thread, carousel, story, image, or micro-journey video schema.</p>
+        </article>
+        <article class="node review-node">
+          <span class="kicker">08 Advisory</span>
+          <h3>Creative review and passes</h3>
+          <p>Review hook and payoff. Run clarity or voice passes when useful. These produce advice, not hard stops.</p>
+        </article>
+        <article class="node generation-node">
+          <span class="kicker">09 Generation OS</span>
+          <h3>Approval, assets, and quality</h3>
+          <p>Record exact generation approval, dispatch or import assets, write provenance, and run the blocking QualityReview.</p>
+        </article>
+        <article class="node">
+          <span class="kicker">10 Package and learn</span>
+          <h3>Output, publication, analytics, memory</h3>
+          <p>Register upload-ready assets, record human publication, ingest analytics, summarize performance, and distill lessons.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Primary Records</h2>
+        <p>These records are the workflow handoffs. Validation checks both the shape of each file and the references between files.</p>
+      </div>
+      <div class="records-grid">
+        <article class="record">
+          <span class="kicker">Research</span>
+          <h3>Evidence and findings</h3>
+          <p><code>research/runs/*</code>, Research Evidence, Metric Snapshots, source-yield ledgers, Research Findings, Video Understanding Packs.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Ideas</span>
+          <h3>Queue and promotion</h3>
+          <p><code>idea-queue-entry</code> captures candidates. <code>idea-promotion</code> locks the user-approved production intent.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Project</span>
+          <h3>Production plan set</h3>
+          <p><code>project.json</code>, <code>plan/applied-template.json</code>, <code>plan/production-plan.json</code>, and for video, <code>plan/generation-plan.json</code>.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Generation</span>
+          <h3>Approval and provenance</h3>
+          <p><code>generation/approval-records/</code>, <code>generation/assets/</code>, <code>generation/asset-manifest.json</code>, <code>generation/quality-reviews/</code>.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Package</span>
+          <h3>Upload-ready output</h3>
+          <p><code>output-package/output-package.json</code> plus local upload-ready media and text files.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Publish</span>
+          <h3>Publication record</h3>
+          <p><code>published/published-post-records/</code> records what a human already published or scheduled.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Analytics</span>
+          <h3>Snapshots and summary</h3>
+          <p>Analytics Snapshot records feed <code>performance-summary.json</code>, keyed to packaging, hook, retention, payoff, and CTA.</p>
+        </article>
+        <article class="record">
+          <span class="kicker">Memory</span>
+          <h3>Distilled lessons</h3>
+          <p>Evidence-linked lessons update creator memory only after performance evidence supports them.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Controls</h2>
+        <p>InfluencerOS separates gates, reviews, passes, and warnings so agents know what can block the pipeline.</p>
+      </div>
+      <div class="gate-grid">
+        <article class="gate human">
+          <span class="kicker">Human gate</span>
+          <h3>Idea Promotion</h3>
+          <p>Blocks project creation until the user approves the promotion package.</p>
+        </article>
+        <article class="gate human">
+          <span class="kicker">Human gate</span>
+          <h3>Generation approval</h3>
+          <p>Blocks image, video, audio, render, upload, paid, or irreversible provider calls until the exact call or bounded batch is approved.</p>
+        </article>
+        <article class="gate blocking">
+          <span class="kicker">Blocking review</span>
+          <h3>QualityReview</h3>
+          <p>Blocks packaging for generation-sourced media unless identity, continuity, technical, and creator-boundary checks pass.</p>
+        </article>
+        <article class="gate advisory">
+          <span class="kicker">Advisory review</span>
+          <h3>Hook/Payoff Review</h3>
+          <p>Flags creative issues. It may recommend revision or block, but it does not stop packaging by itself.</p>
+        </article>
+        <article class="gate advisory">
+          <span class="kicker">Advisory pass</span>
+          <h3>Writing and voice passes</h3>
+          <p>Rewrite for clarity or creator voice. The author decides what to keep.</p>
+        </article>
+        <article class="gate advisory">
+          <span class="kicker">Warning</span>
+          <h3>Project warnings</h3>
+          <p>Surface concerns such as platform fit or stale evidence without changing the project status.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="trace">
+        <span class="kicker">Traceability invariant</span>
+        <h2>Every final artifact should resolve upstream</h2>
+        <p>Packaging validation proves the chain from upload-ready material back to the project, production plan, promotion, research evidence, creator profile, and generation approval when media was generated or imported.</p>
+        <div class="trace-flow" aria-label="Traceability chain">
+          <span>Creator Profile</span>
+          <span>Research Evidence</span>
+          <span>Idea Queue Entry</span>
+          <span>Idea Promotion</span>
+          <span>Project</span>
+          <span>Template</span>
+          <span>Production Plan</span>
+          <span>Generation Approval</span>
+          <span>Asset Manifest</span>
+          <span>QualityReview</span>
+          <span>Output Package</span>
+          <span>Performance Summary</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
