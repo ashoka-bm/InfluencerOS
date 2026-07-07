@@ -1,8 +1,10 @@
 import argparse
 import datetime
+import json
 import sys
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import (
     DEFAULT_MEMORY_SECTION,
     EVIDENCE_STRENGTHS,
@@ -156,6 +158,7 @@ def main(argv=None):
     fetch_parser.add_argument("--max-posts", dest="max_posts", type=int, default=5, help="Max posts per LinkedIn profile (default 5).")
     fetch_parser.add_argument("--max-results", dest="max_results", type=int, default=10, help="Max YouTube search results or channel uploads (default 10).")
     fetch_parser.add_argument("--order", choices=["date", "relevance", "viewCount", "rating"], default="date", help="YouTube search order (default date).")
+    fetch_parser.add_argument("--run-dir", required=True, help="Existing research run directory used to persist the per-run paid-call budget.")
     fetch_parser.add_argument("--out", help="Write the fetch-result JSON here instead of stdout.")
     fetch_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
@@ -539,7 +542,8 @@ def main(argv=None):
             config = connector_env.get_config(
                 env_path=Path(args.env_file) if args.env_file else None
             )
-            budget = connector_env.CallBudget(config["MAX_CALLS"])
+            run_dir = Path(args.run_dir)
+            budget = _load_connector_budget(run_dir, config["MAX_CALLS"])
             try:
                 if args.connector == "reddit":
                     result = connector_fetch.fetch_reddit(
@@ -572,16 +576,19 @@ def main(argv=None):
                         max_posts=args.max_posts, days=args.days,
                     )
             except connector_fetch.ConnectorUnavailable as exc:
+                _save_connector_budget(run_dir, budget)
                 print(f"error: {exc}", file=sys.stderr)
                 print("Run `python3 -m influencer_os list-connectors` to see availability.", file=sys.stderr)
                 return 1
             except connector_http.HTTPError as exc:
+                _save_connector_budget(run_dir, budget)
                 # A provider fault (bad/expired key -> 401/403, 5xx after retries,
                 # or a malformed body) must degrade to a clean error, not a
                 # traceback: HTTPError is not in the outer handler's tuple.
                 print(f"error: provider request failed: {exc}", file=sys.stderr)
                 return 1
 
+            _save_connector_budget(run_dir, budget)
             validate_record_fn("research-fetch-result", result)
             payload = json_module.dumps(result, indent=2)
             if args.out:
@@ -715,6 +722,53 @@ def main(argv=None):
         return 1
 
     parser.error(f"Unhandled command: {args.command}")
+
+
+def _connector_budget_path(run_dir):
+    return Path(run_dir) / "connector-budget.json"
+
+
+def _load_connector_budget(run_dir, max_calls):
+    from influencer_os.connectors import env as connector_env
+
+    run_dir = Path(run_dir)
+    if not run_dir.exists() or not run_dir.is_dir():
+        raise FileNotFoundError(f"Missing research run directory: {run_dir}")
+    if run_dir.is_symlink():
+        raise ValueError(f"Research run directory must not be a symlink: {run_dir}")
+    budget_path = _connector_budget_path(run_dir)
+    if budget_path.is_symlink():
+        raise ValueError(f"Connector budget file must not be a symlink: {budget_path}")
+
+    calls_used = 0
+    if budget_path.exists():
+        try:
+            record = json.loads(budget_path.read_text())
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid connector budget file {budget_path}: {exc}") from None
+        calls_used = record.get("calls_used", 0)
+        stored_max = record.get("max_calls", max_calls)
+        if not isinstance(calls_used, int) or calls_used < 0:
+            raise ValueError(f"Invalid calls_used in connector budget: {calls_used!r}")
+        if not isinstance(stored_max, int) or stored_max < 0:
+            raise ValueError(f"Invalid max_calls in connector budget: {stored_max!r}")
+        max_calls = min(max_calls, stored_max)
+
+    budget = connector_env.CallBudget(max_calls)
+    budget.used = calls_used
+    return budget
+
+
+def _save_connector_budget(run_dir, budget):
+    write_json_atomic(
+        _connector_budget_path(run_dir),
+        {
+            "max_calls": budget.max_calls,
+            "calls_used": budget.used,
+            "remaining_calls": budget.remaining(),
+            "updated_at": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+    )
 
 
 if __name__ == "__main__":

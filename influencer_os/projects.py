@@ -4,6 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.research import validate_promotion_gate
 from influencer_os.validation import (
     RESEARCH_PLATFORMS,
@@ -557,7 +558,7 @@ def validate_project(project_path):
 def _write_json(path, record):
     # allow_nan=False: NaN/Infinity are not valid JSON; refuse to persist
     # them even if a caller slipped past validation.
-    path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(path, record)
 
 
 def _validate_output_package_matches_project(output_package, project):

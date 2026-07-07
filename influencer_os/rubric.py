@@ -12,6 +12,7 @@ import json
 import re
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.validation import (
     ROOT,
     ValidationError,
@@ -419,5 +420,5 @@ def mint_criterion(
 
     rubric["criteria"].append(criterion)
     validate_record("production-rubric", rubric)
-    rubric_path.write_text(json.dumps(rubric, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(rubric_path, rubric)
     return {"criterion_id": criterion_id, "rubric_path": str(rubric_path)}

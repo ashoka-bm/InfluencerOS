@@ -13,6 +13,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.research import (
     check_creator_scope,
     check_project_warning_pairing,
@@ -214,7 +215,7 @@ def rebuild_board(workspace_path):
     except ValidationError as exc:
         raise ValidationError(f"rebuilt board is invalid: {exc}") from None
     board_path.parent.mkdir(parents=True, exist_ok=True)
-    board_path.write_text(json.dumps(board, indent=2) + "\n")
+    write_json_atomic(board_path, board)
     return {
         "board_path": board_path,
         "card_count": len(cards),

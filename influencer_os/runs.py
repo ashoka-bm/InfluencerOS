@@ -4,6 +4,7 @@ import shutil
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.validation import ROOT, load_json, validate_record
 
 
@@ -61,4 +62,4 @@ def slugify(value):
 
 
 def write_json(path, data):
-    Path(path).write_text(json.dumps(data, indent=2) + "\n")
+    write_json_atomic(path, data)

@@ -557,6 +557,43 @@ class CliTests(unittest.TestCase):
             self.assertEqual((target_skill_dir / "references.md").read_text(), "# Reference\n")
             self.assertFalse((target_skill_dir / "SKILL.local.md").exists())
 
+    def test_sync_creator_runtime_refuses_symlinked_skill_root(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = Path(temp_dir) / "creator"
+            outside_dir = Path(temp_dir) / "outside-skills"
+            source_skills_dir = Path(temp_dir) / "source-skills"
+            source_skill_dir = source_skills_dir / "baseline"
+
+            workspace_dir.mkdir()
+            (workspace_dir / "creator-workspace.json").write_text("{}\n")
+            outside_dir.mkdir()
+            (workspace_dir / ".claude").mkdir()
+            (workspace_dir / ".claude" / "skills").symlink_to(outside_dir)
+            source_skill_dir.mkdir(parents=True)
+            (source_skill_dir / "SKILL.md").write_text("# Baseline\n")
+
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sync_creator_runtime(workspace_dir, source_skills_dir=source_skills_dir)
+
+    def test_sync_creator_runtime_refuses_symlinked_target_skill_dir(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = Path(temp_dir) / "creator"
+            outside_dir = Path(temp_dir) / "outside-skill"
+            source_skills_dir = Path(temp_dir) / "source-skills"
+            source_skill_dir = source_skills_dir / "baseline"
+            target_skills_dir = workspace_dir / ".claude" / "skills"
+
+            workspace_dir.mkdir()
+            (workspace_dir / "creator-workspace.json").write_text("{}\n")
+            outside_dir.mkdir()
+            target_skills_dir.mkdir(parents=True)
+            (target_skills_dir / "baseline").symlink_to(outside_dir)
+            source_skill_dir.mkdir(parents=True)
+            (source_skill_dir / "SKILL.md").write_text("# Baseline\n")
+
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sync_creator_runtime(workspace_dir, source_skills_dir=source_skills_dir)
+
     def test_init_project_creates_project_tree(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             init_creator_result = subprocess.run(

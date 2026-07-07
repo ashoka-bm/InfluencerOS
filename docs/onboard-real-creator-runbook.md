@@ -71,7 +71,7 @@ and read the parsed output (the parsers were built against mirrored response
 shapes; ADR 0022 "run 2" validates them live):
 
 ```bash
-INFLUENCER_OS_CONNECTOR_MAX_CALLS=3 python3 -m influencer_os research-fetch reddit "<topic>" --days 30
+INFLUENCER_OS_CONNECTOR_MAX_CALLS=3 python3 -m influencer_os research-fetch reddit "<topic>" --run-dir <creator-workspace>/research/runs/<research-run-id> --days 30
 ```
 
 Generation providers are separate and stricter: key presence is **never**

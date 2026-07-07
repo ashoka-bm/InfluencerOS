@@ -83,9 +83,11 @@ Keys live in the environment / `.env` only (gitignored); see `.env.example`.
 CLI seam: `python3 -m influencer_os list-connectors` shows availability;
 `python3 -m influencer_os research-fetch
 <reddit|x|firecrawl|linkedin|youtube-search|youtube-channel>
-"<topic-url-or-channel>"` runs one fetch and emits a result validated against
-`schemas/research-fetch-result.schema.json`. The `create-research-findings`
-skill curates candidates into `ResearchEvidence`/`MetricSnapshot` records.
+"<topic-url-or-channel>" --run-dir <research-run-dir>` runs one fetch, persists
+the paid-call budget under that run directory, and emits a result validated
+against `schemas/research-fetch-result.schema.json`. The
+`create-research-findings` skill curates candidates into
+`ResearchEvidence`/`MetricSnapshot` records.
 
 ## Planned / Deferred Adapters
 

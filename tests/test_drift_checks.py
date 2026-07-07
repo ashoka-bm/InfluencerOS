@@ -204,6 +204,39 @@ class AdapterDriftTests(unittest.TestCase):
                 )
 
 
+class RepositoryHygieneTests(unittest.TestCase):
+    def test_python_project_metadata_exists(self):
+        pyproject = ROOT / "pyproject.toml"
+        self.assertTrue(pyproject.exists(), "pyproject.toml is required for Python version and test metadata")
+        text = pyproject.read_text()
+        self.assertIn("requires-python", text)
+        self.assertIn("unittest", text)
+
+    def test_ci_runs_unit_and_example_validation_floor(self):
+        workflow_dir = ROOT / ".github" / "workflows"
+        workflows = list(workflow_dir.glob("*.yml")) + list(workflow_dir.glob("*.yaml"))
+        self.assertTrue(workflows, "a GitHub Actions workflow is required for the verification floor")
+        combined = "\n".join(path.read_text() for path in workflows)
+        self.assertIn("python3 -m unittest discover -s tests", combined)
+        self.assertIn("python3 -m influencer_os validate examples", combined)
+
+    def test_no_stale_youtube_approval_boundary_wording(self):
+        stale_phrases = (
+            "non-approved api_backed adapters such as\n        # youtube_data_api",
+            "non-approved api_backed adapters such as youtube_data_api",
+            "`youtube_data_api`) stays fully gated",
+            "YouTube as a research platform — remains `planned`",
+        )
+        files = (
+            ROOT / "influencer_os" / "validation.py",
+            ROOT / "docs" / "adr" / "0022-research-acquisition-connector-layer.md",
+        )
+        for path in files:
+            text = path.read_text()
+            for phrase in stale_phrases:
+                self.assertNotIn(phrase, text, f"{path} contains stale YouTube approval wording")
+
+
 class RealCreatorRunbookDriftTests(unittest.TestCase):
     """The day-1 runbook is the operator's entry point for real onboarding;
     it must exist and keep naming the release gate and the wipe warning."""

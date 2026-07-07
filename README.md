@@ -263,12 +263,12 @@ to canonical `ResearchEvidence`/`MetricSnapshot` records and is validated agains
 `schemas/research-fetch-result.schema.json` before it is emitted:
 
 ```bash
-python3 -m influencer_os research-fetch reddit "low-light houseplants" --days 30
-python3 -m influencer_os research-fetch x "creatine timing" --depth deep --out .tmp/x-fetch.json
-python3 -m influencer_os research-fetch firecrawl https://example.com/post
-python3 -m influencer_os research-fetch linkedin https://www.linkedin.com/in/<profile> --max-posts 5
-python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --days 30 --max-results 10 --out .tmp/youtube-fetch.json
-python3 -m influencer_os research-fetch youtube-channel "@deskwellness" --days 30 --max-results 10 --out .tmp/youtube-channel.json
+python3 -m influencer_os research-fetch reddit "low-light houseplants" --run-dir <research-run-dir> --days 30
+python3 -m influencer_os research-fetch x "creatine timing" --run-dir <research-run-dir> --depth deep --out .tmp/x-fetch.json
+python3 -m influencer_os research-fetch firecrawl https://example.com/post --run-dir <research-run-dir>
+python3 -m influencer_os research-fetch linkedin https://www.linkedin.com/in/<profile> --run-dir <research-run-dir> --max-posts 5
+python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --run-dir <research-run-dir> --days 30 --max-results 10 --out .tmp/youtube-fetch.json
+python3 -m influencer_os research-fetch youtube-channel "@deskwellness" --run-dir <research-run-dir> --days 30 --max-results 10 --out .tmp/youtube-channel.json
 ```
 
 The YouTube connector uses public YouTube Data API video/channel metadata and
@@ -279,7 +279,8 @@ YouTube smoke check:
 
 ```bash
 python3 -m influencer_os list-connectors
-python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --days 30 --max-results 3 --out .tmp/youtube-smoke.json
+mkdir -p .tmp/youtube-smoke-run
+python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --run-dir .tmp/youtube-smoke-run --days 30 --max-results 3 --out .tmp/youtube-smoke.json
 python3 -m influencer_os validate record research-fetch-result .tmp/youtube-smoke.json
 ```
 

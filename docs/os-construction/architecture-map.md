@@ -268,7 +268,7 @@ influencer_os/cli.py
   list-connectors [--env-file <path>]  -> connectors.registry.connector_status()
        reports each connector available|unavailable from env (env.py: key present,
        kill switch off, per-run call cap) — no provider call
-  research-fetch <connector> <target> [--depth|--days|--from-date|--to-date|--max-posts|--out|--env-file]
+  research-fetch <connector> <target> --run-dir <research-run-dir> [--depth|--days|--from-date|--to-date|--max-posts|--out|--env-file]
        -> connectors.fetch dispatch (fetch_reddit | fetch_x | fetch_firecrawl |
          fetch_linkedin) -> connector module (openai_reddit | xai_x |
          firecrawl_web | linkedin_apify) -> http.py provider call

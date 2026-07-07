@@ -14,6 +14,7 @@ import datetime
 import json
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.research import (
     _iter_jsonl_lines,
     load_workspace_scope,
@@ -229,4 +230,4 @@ def _record_pruned_ids(run_dir, evidence_ids, metric_ids):
         validate_record("research-run", manifest)
     except ValidationError as exc:
         raise ValidationError(f"pruned run manifest is invalid: {exc}") from None
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    write_json_atomic(manifest_path, manifest)

@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from influencer_os.connectors import env
+from influencer_os.json_io import write_json_atomic
 from influencer_os.providers.registry import get_provider, provider_status
 from influencer_os.validation import ValidationError, load_json, validate_record
 
@@ -239,7 +240,7 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
                 f"{record['status']!r} before dispatch could consume it"
             )
         record["status"] = "executing"
-        record_path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+        write_json_atomic(record_path, record)
     finally:
         lock_path.unlink(missing_ok=True)
 
@@ -291,5 +292,5 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     record["status"] = "executed"
     record["executed_at"] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     record["resulting_asset_ids"] = [call["asset_id"] for call in calls]
-    record_path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(record_path, record)
     return calls

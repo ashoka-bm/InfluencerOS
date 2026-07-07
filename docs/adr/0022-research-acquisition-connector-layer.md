@@ -66,16 +66,16 @@ Activation contract:
   committed). `.env` is already gitignored; `.env.example` documents the vars.
 
 Enforcement: the standing-approval split is implemented in the search-plan and
-source-yield validators and is **pinned to the four connector adapter IDs**
-above (`reddit_api_or_search`, `x_api`, `firecrawl_public_web`,
-`linkedin_apify`) using their expected access methods — not to `api_backed`/
-`scraping_api` at large. Those four may be `use_now` when `active` and need not
-set `approval_required`; every other gated adapter (`logged_in_browser`,
-`scheduled_job`, and non-approved api_backed adapters such as
-`youtube_data_api`) stays fully gated (never `use_now`, must require approval). Reddit thread enrichment is a free
-public reddit.com read and does not draw on the paid call budget; it is bounded
-separately by a per-run enrichment cap. Connector output is a workflow-boundary
-contract validated by `schemas/research-fetch-result.schema.json`.
+source-yield validators and is pinned to the exact approved connector adapter
+IDs using their expected access methods — not to `api_backed`/`scraping_api` at
+large. ADR 0027 adds `youtube_data_api` to that approved set. Standing-approved
+adapters may be `use_now` when `active` and need not set `approval_required`;
+every other gated adapter (`logged_in_browser`, `scheduled_job`, and
+unapproved api-backed/scraping adapters) stays fully gated (never `use_now`,
+must require approval). Reddit thread enrichment is a free public reddit.com
+read and does not draw on the paid call budget; it is bounded separately by a
+per-run enrichment cap. Connector output is a workflow-boundary contract
+validated by `schemas/research-fetch-result.schema.json`.
 
 Guardrails so standing approval is not unbounded:
 
@@ -123,8 +123,10 @@ Out of scope (unchanged by this ADR):
 - Publishing (`tool-zernio-social`) and any posting/scheduling — v1 deferral.
 - Generation/utility tools (image-search, screenshot, PDF, humanizer,
   standalone transcription) — later phases.
-- YouTube as a research platform — remains `planned` pending an ADR 0020 update;
-  video understanding stays with the `/watch` boundary.
+- YouTube transcript/caption downloads, owned-channel analytics, logged-in
+  access, and video-content understanding; ADR 0027 approves only public
+  YouTube Data API research metadata, while actual video understanding stays
+  with the `/watch` boundary.
 - TikTok discovery — no Agentic OS tool provides it; Firecrawl may render a
   public TikTok page as a partial fallback, but no dedicated TikTok connector is
   added.

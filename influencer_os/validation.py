@@ -1121,10 +1121,10 @@ def validate_research_search_plan_semantics(record):
                 "ResearchSearchPlan.adapters_considered: only active adapters "
                 "may have decision 'use_now'"
             )
-        # ADR 0022: only the exact standing-approved connectors are exempt from
-        # the gate. Every other gated access method (logged-in, scheduled, and
-        # any non-approved api_backed/scraping_api adapter such as
-        # youtube_data_api) may not be `use_now` and must require approval.
+        # ADR 0022/0027: only exact standing-approved connector+method pairs are
+        # exempt from the gate. Every other gated access method (logged-in,
+        # scheduled, and unapproved api_backed/scraping_api adapters) may not be
+        # `use_now` and must require approval.
         access_method = adapter.get("access_method")
         if access_method in GATED_RESEARCH_ACCESS_METHODS and not is_standing_approved_adapter(
             adapter.get("adapter_id"), access_method

@@ -4,6 +4,8 @@ No live provider calls: every provider entry point is exercised through its mock
 hook, mirroring how Agentic OS tests its acquisition scripts.
 """
 
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -825,9 +827,15 @@ class ResearchFetchCliTests(unittest.TestCase):
         from influencer_os.cli import main
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
             env_path.write_text("# no keys\n")
             with mock.patch.dict("os.environ", {}, clear=True):
-                code = main(["research-fetch", "reddit", "pothos", "--env-file", str(env_path)])
+                code = main([
+                    "research-fetch", "reddit", "pothos",
+                    "--run-dir", str(run_dir),
+                    "--env-file", str(env_path),
+                ])
         self.assertEqual(code, 1)
 
     def test_cli_provider_http_error_fails_cleanly(self):
@@ -837,13 +845,19 @@ class ResearchFetchCliTests(unittest.TestCase):
         from influencer_os.connectors import http
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
             env_path.write_text("OPENAI_API_KEY=sk-bad\n")
             with mock.patch.dict("os.environ", {}, clear=True), \
                     mock.patch(
                         "influencer_os.connectors.fetch.fetch_reddit",
                         side_effect=http.HTTPError("HTTP 401: Unauthorized", 401, "{}"),
                     ):
-                code = cli.main(["research-fetch", "reddit", "pothos", "--env-file", str(env_path)])
+                code = cli.main([
+                    "research-fetch", "reddit", "pothos",
+                    "--run-dir", str(run_dir),
+                    "--env-file", str(env_path),
+                ])
         self.assertEqual(code, 1)
 
     def test_cli_writes_validated_result_with_mocked_fetch(self):
@@ -866,18 +880,108 @@ class ResearchFetchCliTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
             env_path.write_text("OPENAI_API_KEY=sk-test\n")
             out_path = Path(tmp) / "result.json"
             with mock.patch.dict("os.environ", {}, clear=True), \
                     mock.patch("influencer_os.connectors.fetch.fetch_reddit", return_value=fake_result):
                 code = cli.main([
                     "research-fetch", "reddit", "pothos",
+                    "--run-dir", str(run_dir),
                     "--env-file", str(env_path), "--out", str(out_path),
                 ])
             self.assertEqual(code, 0)
             import json as json_module
             written = json_module.loads(out_path.read_text())
             self.assertEqual(written["connector"], "reddit_openai")
+
+    def test_cli_requires_run_dir_for_budgeted_fetches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("OPENAI_API_KEY=sk-test\n")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "research-fetch", "reddit", "pothos", "--env-file", str(env_path),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--run-dir", result.stderr)
+
+    def test_cli_persists_paid_call_budget_inside_run_dir(self):
+        from influencer_os import cli
+
+        def fake_fetch(topic, config, budget, **kwargs):
+            if not budget.spend():
+                return {
+                    "connector": "reddit_openai",
+                    "adapter_id": "reddit_api_or_search",
+                    "platform": "reddit",
+                    "topic": topic,
+                    "from_date": "2026-06-05",
+                    "to_date": "2026-07-05",
+                    "model": "",
+                    "candidates": [],
+                    "enriched_count": 0,
+                    "calls_used": budget.used,
+                    "truncated": False,
+                    "capped": True,
+                    "status": "no_results",
+                    "notes": ["paid call cap reached before search"],
+                }
+            return {
+                "connector": "reddit_openai",
+                "adapter_id": "reddit_api_or_search",
+                "platform": "reddit",
+                "topic": topic,
+                "from_date": "2026-06-05",
+                "to_date": "2026-07-05",
+                "model": "gpt-4o",
+                "candidates": [{"id": "R1", "url": "https://www.reddit.com/r/s/comments/a/t/"}],
+                "enriched_count": 0,
+                "calls_used": budget.used,
+                "truncated": False,
+                "capped": False,
+                "status": "ok",
+                "notes": [],
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
+            env_path.write_text(
+                "OPENAI_API_KEY=sk-test\nINFLUENCER_OS_CONNECTOR_MAX_CALLS=1\n"
+            )
+            first_out = Path(tmp) / "first.json"
+            second_out = Path(tmp) / "second.json"
+            with mock.patch.dict("os.environ", {}, clear=True), \
+                    mock.patch("influencer_os.connectors.fetch.fetch_reddit", side_effect=fake_fetch):
+                first_code = cli.main([
+                    "research-fetch", "reddit", "pothos",
+                    "--run-dir", str(run_dir),
+                    "--env-file", str(env_path), "--out", str(first_out),
+                ])
+                second_code = cli.main([
+                    "research-fetch", "reddit", "pothos",
+                    "--run-dir", str(run_dir),
+                    "--env-file", str(env_path), "--out", str(second_out),
+                ])
+
+            self.assertEqual(first_code, 0)
+            self.assertEqual(second_code, 0)
+            import json as json_module
+            self.assertFalse(json_module.loads(first_out.read_text())["capped"])
+            self.assertTrue(json_module.loads(second_out.read_text())["capped"])
+            budget = json_module.loads((run_dir / "connector-budget.json").read_text())
+            self.assertEqual(budget["calls_used"], 1)
 
 
 class YouTubeCliTests(unittest.TestCase):
@@ -901,12 +1005,15 @@ class YouTubeCliTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
             env_path.write_text("YOUTUBE_API_KEY=yt-key\n")
             out_path = Path(tmp) / "youtube.json"
             with mock.patch.dict("os.environ", {}, clear=True), \
                     mock.patch.object(fetch, "fetch_youtube_search", return_value=fake_result):
                 code = cli.main([
                     "research-fetch", "youtube-search", "desk stretch",
+                    "--run-dir", str(run_dir),
                     "--env-file", str(env_path), "--out", str(out_path),
                 ])
 
@@ -933,12 +1040,15 @@ class YouTubeCliTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
+            run_dir = Path(tmp) / "research-run"
+            run_dir.mkdir()
             env_path.write_text("YOUTUBE_API_KEY=yt-key\n")
             out_path = Path(tmp) / "youtube-channel.json"
             with mock.patch.dict("os.environ", {}, clear=True), \
                     mock.patch.object(fetch, "fetch_youtube_channel", return_value=fake_result):
                 code = cli.main([
                     "research-fetch", "youtube-channel", "@deskwellness",
+                    "--run-dir", str(run_dir),
                     "--env-file", str(env_path), "--out", str(out_path),
                 ])
 

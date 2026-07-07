@@ -17,6 +17,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from influencer_os.json_io import write_json_atomic
 from influencer_os.providers.registry import get_provider
 from influencer_os.validation import ValidationError, load_json, validate_record
 
@@ -86,8 +87,7 @@ def record_generation_approval(target_path, record_path):
             f"Generation approval already recorded: {destination}; supersede "
             "by cancelling it and recording a new approval"
         )
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(destination, record)
     return destination
 
 
@@ -193,17 +193,7 @@ def append_manifest_rows(project_dir, rows, project=None):
     manifest["rows"] = manifest["rows"] + list(rows)
     validate_record("generation-asset-manifest", manifest)
     manifest_path = project_dir / MANIFEST_PATH
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temp_name = tempfile.mkstemp(
-        dir=manifest_path.parent, prefix=".asset-manifest.", suffix=".tmp"
-    )
-    try:
-        with os.fdopen(descriptor, "w") as stream:
-            stream.write(json.dumps(manifest, indent=2, allow_nan=False) + "\n")
-        os.replace(temp_name, manifest_path)
-    except BaseException:
-        Path(temp_name).unlink(missing_ok=True)
-        raise
+    write_json_atomic(manifest_path, manifest)
     return manifest
 
 
@@ -405,7 +395,7 @@ def import_reference_asset(
         or f"imported from local file {source_path.name}",
     }
     validate_record("reference-library", library)
-    library_path.write_text(json.dumps(library, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(library_path, library)
     return destination
 
 

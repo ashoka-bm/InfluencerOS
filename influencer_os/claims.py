@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from influencer_os.creator_workspaces import DEFAULT_CREATOR_WORKSPACE_ROOT
+from influencer_os.json_io import write_json_atomic
 from influencer_os.rubric import EVENTS_LEDGER_RELATIVE, collect_criteria
 from influencer_os.validation import (
     ROOT,
@@ -160,7 +161,7 @@ def record_claim(claim_file, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT, clai
     destination = claims_dir / f"{claim['claim_id']}.json"
     if destination.exists():
         raise FileExistsError(f"Claim already recorded: {destination}")
-    destination.write_text(json.dumps(claim, indent=2, allow_nan=False) + "\n")
+    write_json_atomic(destination, claim)
     return {"claim_id": claim["claim_id"], "claim_path": str(destination)}
 
 

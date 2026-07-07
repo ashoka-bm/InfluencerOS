@@ -34,12 +34,68 @@
     "model": { "type": "string" },
     "candidates": {
       "type": "array",
+      "maxItems": 100,
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "url"],
         "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "url": { "type": "string", "pattern": "^https?://" }
+          "id": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "url": { "type": "string", "pattern": "^https?://", "maxLength": 2048 },
+          "title": { "type": "string", "maxLength": 300 },
+          "description": { "type": "string", "maxLength": 1000 },
+          "subreddit": { "type": "string", "maxLength": 80 },
+          "date": { "type": ["string", "null"], "format": "date" },
+          "why_relevant": { "type": "string", "maxLength": 500 },
+          "relevance": { "type": "number", "minimum": 0, "maximum": 1 },
+          "text": { "type": "string", "maxLength": 500 },
+          "author": { "type": "string", "maxLength": 200 },
+          "author_handle": { "type": "string", "maxLength": 80 },
+          "engagement": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "properties": {
+              "score": { "type": ["integer", "null"] },
+              "num_comments": { "type": ["integer", "null"] },
+              "upvote_ratio": { "type": ["number", "null"] },
+              "likes": { "type": ["integer", "null"] },
+              "reposts": { "type": ["integer", "null"] },
+              "replies": { "type": ["integer", "null"] },
+              "quotes": { "type": ["integer", "null"] },
+              "comments": { "type": ["integer", "null"] },
+              "views": { "type": ["integer", "null"] }
+            }
+          },
+          "top_comments": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "score": { "type": "integer" },
+                "author": { "type": "string", "maxLength": 80 },
+                "excerpt": { "type": "string", "maxLength": 200 }
+              }
+            }
+          },
+          "markdown": { "type": "string", "maxLength": 20000 },
+          "markdown_truncated": { "type": "boolean" },
+          "status_code": { "type": ["integer", "null"] },
+          "video_id": { "type": "string", "maxLength": 80 },
+          "channel_title": { "type": "string", "maxLength": 200 },
+          "channel_id": { "type": "string", "maxLength": 80 },
+          "channel_url": { "type": "string", "pattern": "^https?://", "maxLength": 2048 },
+          "thumbnail_url": { "type": "string", "pattern": "^https?://", "maxLength": 2048 },
+          "duration": { "type": "string", "maxLength": 40 },
+          "duration_seconds": { "type": ["integer", "null"], "minimum": 0 },
+          "is_short_candidate": { "type": "boolean" },
+          "tags": {
+            "type": "array",
+            "maxItems": 40,
+            "items": { "type": "string", "maxLength": 80 }
+          },
+          "category_id": { "type": "string", "maxLength": 40 }
         }
       }
     },

@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from influencer_os.generation import validate_reference_approval_records
+from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import validate_events_ledger, validate_promotions
@@ -441,6 +442,7 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
         raise FileNotFoundError(f"Missing source skills directory: {source_skills_dir}")
 
     target_skills_dir = workspace_dir / CREATOR_RUNTIME_SKILLS_DIR
+    _ensure_no_symlink_components(target_skills_dir, workspace_dir, "creator runtime skills directory")
     target_skills_dir.mkdir(parents=True, exist_ok=True)
 
     synced = []
@@ -455,6 +457,7 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
         target_skill_dir = target_skills_dir / source_skill_dir.name
         local_override = target_skill_dir / "SKILL.local.md"
         preserved_override = None
+        _ensure_no_symlink_components(target_skill_dir, workspace_dir, "creator runtime skill directory")
 
         if local_override.exists():
             preserved_override = local_override.read_bytes()
@@ -462,6 +465,7 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
 
         if target_skill_dir.exists():
             backup_dir = workspace_dir / SKILLS_BACKUP_DIR / source_skill_dir.name
+            _ensure_no_symlink_components(backup_dir, workspace_dir, "creator runtime skill backup directory")
             if backup_dir.exists():
                 shutil.rmtree(backup_dir)
             backup_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -486,6 +490,21 @@ def sync_creator_runtime(workspace_path, source_skills_dir=DEFAULT_SOURCE_SKILLS
         "preserved_overrides": preserved_overrides,
         "backed_up_skills": backed_up_skills,
     }
+
+
+def _ensure_no_symlink_components(path, workspace_dir, label):
+    workspace_dir = Path(workspace_dir)
+    path = Path(path)
+    try:
+        relative = path.relative_to(workspace_dir)
+    except ValueError:
+        raise ValueError(f"{label} must stay inside the workspace: {path}") from None
+
+    current = workspace_dir
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError(f"{current} is a symlink; {label} must be a real workspace path")
 
 
 def update_creators(workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT, source_skills_dir=DEFAULT_SOURCE_SKILLS_DIR):
@@ -932,9 +951,8 @@ def _write_text_if_missing(path, content):
 
 
 def _write_json_if_missing(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        path.write_text(json.dumps(data, indent=2) + "\n")
+        write_json_atomic(path, data)
 
 
 def _validate_workspace_record(workspace_dir, manifest, manifest_key, schema_name):

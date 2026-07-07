@@ -197,7 +197,7 @@ def parse_video_candidates(search_response: Dict[str, Any], details_response: Di
         duration = details.get("contentDetails", {}).get("duration", "")
         seconds = _duration_seconds(duration)
         thumbnail = snippet.get("thumbnails", {}).get("medium", {}).get("url", "")
-        candidates.append({
+        candidate = {
             "id": f"YT{len(candidates) + 1}",
             "video_id": video_id,
             "url": f"https://www.youtube.com/watch?v={video_id}",
@@ -207,7 +207,6 @@ def parse_video_candidates(search_response: Dict[str, Any], details_response: Di
             "channel_id": str(snippet.get("channelId", "")).strip(),
             "channel_url": f"https://www.youtube.com/channel/{snippet.get('channelId', '')}",
             "date": _date_from_rfc3339(snippet.get("publishedAt", "")),
-            "thumbnail_url": thumbnail,
             "duration": duration,
             "duration_seconds": seconds,
             "is_short_candidate": seconds is not None and seconds <= 180,
@@ -218,5 +217,8 @@ def parse_video_candidates(search_response: Dict[str, Any], details_response: Di
                 "likes": _safe_int(stats.get("likeCount")),
                 "comments": _safe_int(stats.get("commentCount")),
             },
-        })
+        }
+        if thumbnail:
+            candidate["thumbnail_url"] = thumbnail
+        candidates.append(candidate)
     return candidates

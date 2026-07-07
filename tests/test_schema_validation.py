@@ -504,6 +504,64 @@ class SchemaValidationTests(unittest.TestCase):
             validate_record("research-source-yield", invalid)
 
 
+class ResearchFetchResultSchemaTests(unittest.TestCase):
+    def valid_result(self):
+        return {
+            "connector": "reddit_openai",
+            "adapter_id": "reddit_api_or_search",
+            "platform": "reddit",
+            "topic": "pothos",
+            "from_date": "2026-06-05",
+            "to_date": "2026-07-05",
+            "model": "gpt-4o",
+            "candidates": [
+                {
+                    "id": "R1",
+                    "url": "https://www.reddit.com/r/s/comments/a/t/",
+                    "title": "Pothos help",
+                }
+            ],
+            "enriched_count": 1,
+            "calls_used": 1,
+            "truncated": False,
+            "capped": False,
+            "status": "ok",
+            "notes": [],
+        }
+
+    def test_fetch_candidate_rejects_unknown_payload_fields(self):
+        record = self.valid_result()
+        record["candidates"][0]["raw_provider_payload"] = {"secret": "not for this boundary"}
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-fetch-result", record)
+
+    def test_fetch_candidate_rejects_overlong_text(self):
+        record = self.valid_result()
+        record["candidates"][0]["title"] = "x" * 301
+
+        with self.assertRaises(ValidationError):
+            validate_record("research-fetch-result", record)
+
+
+class AtomicJsonWriteTests(unittest.TestCase):
+    def test_atomic_json_write_preserves_existing_file_when_replace_fails(self):
+        from influencer_os.json_io import write_json_atomic
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "record.json"
+            path.write_text('{"status": "approved"}\n')
+
+            def fail_replace(_source, _destination):
+                raise OSError("replace failed")
+
+            with self.assertRaises(OSError):
+                write_json_atomic(path, {"status": "executing"}, replace=fail_replace)
+
+            self.assertEqual(json.loads(path.read_text()), {"status": "approved"})
+            self.assertEqual(list(Path(temp_dir).glob(".*.tmp")), [])
+
+
 class ExampleCoverageDiscoveryTests(unittest.TestCase):
     PROBE_SCHEMA = {
         "$schema": "http://json-schema.org/draft-07/schema#",
