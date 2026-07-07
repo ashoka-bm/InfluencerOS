@@ -44,7 +44,8 @@ manifest status. Do not publish, schedule, upload, or call providers.
 
 ## Creative Performance Map
 
-Every package must include exactly useful entries for all five stages:
+Every package's map must contain one entry for each of the five stages —
+registration and `validate record` refuse a map missing any of them:
 
 - `packaging`
 - `hook`
