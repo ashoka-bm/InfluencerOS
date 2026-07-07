@@ -142,6 +142,33 @@ def scaffold_research_workspace(temp_dir):
     return workspace_dir
 
 
+def make_research_phase_only(workspace_dir):
+    """Keep the run, findings, and queue candidate without production state."""
+    shutil.rmtree(workspace_dir / "research" / "idea-promotions")
+    shutil.rmtree(workspace_dir / "projects")
+    shutil.rmtree(workspace_dir / "boards")
+    write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
+
+    entry_path = (
+        workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+    )
+    entry = json.loads(entry_path.read_text())
+    entry["status"] = "shortlisted"
+    entry.pop("linked_idea_promotion_ids", None)
+    entry.pop("linked_project_ids", None)
+    write_json(entry_path, entry)
+
+    queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    queue = json.loads(queue_path.read_text())
+    queue["entry_refs"] = [
+        {"idea_queue_entry_id": ENTRY_ID, "status": "shortlisted"}
+    ]
+    queue["status_counts"] = {"shortlisted": 1}
+    write_json(queue_path, queue)
+
+    return workspace_dir
+
+
 class ResearchStateValidationTests(unittest.TestCase):
     def test_full_research_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -647,6 +674,97 @@ class ResearchStateValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 parse_frontmatter(nested)
             self.assertIn("nested", str(ctx.exception))
+
+
+class ResearchPhaseContractTests(unittest.TestCase):
+    def test_offline_research_phase_contract_validates_without_promotion(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            run_dir = workspace_dir / "research" / "runs" / RUN_ID
+            promoted = load_example("research-source-yield")
+            write_jsonl(
+                run_dir / "source-yield.jsonl",
+                [promoted, background_yield(1)],
+            )
+
+            result = validate_research(workspace_dir)
+            checked = set(result["checked_paths"])
+            run = json.loads((run_dir / "research-run.json").read_text())
+            plan = json.loads((run_dir / "search-plan.json").read_text())
+            evidence = validate_jsonl_file("research-evidence", run_dir / "evidence.jsonl")
+            metrics = validate_jsonl_file(
+                "metric-snapshot", run_dir / "metric-snapshots.jsonl"
+            )
+            yields = validate_jsonl_file(
+                "research-source-yield", run_dir / "source-yield.jsonl"
+            )
+
+            self.assertEqual(result["warnings"], [])
+            self.assertNotIn(
+                "research/idea-promotions/idea_promotion_luna_fit_001.json",
+                checked,
+            )
+            self.assertFalse((workspace_dir / "projects").exists())
+            self.assertEqual(run["outputs"]["evidence_ids"], [evidence[0]["evidence_id"]])
+            self.assertEqual(
+                run["outputs"]["metric_snapshot_ids"],
+                [metrics[0]["metric_snapshot_id"]],
+            )
+            self.assertTrue(
+                set(run["platforms"]).issubset(set(plan["platforms"]))
+            )
+            self.assertTrue(any(y["outcome"] == "promoted_to_evidence" for y in yields))
+            self.assertTrue(any(y["outcome"] == "background_only" for y in yields))
+            for record in yields:
+                if record["outcome"] == "background_only":
+                    self.assertEqual(record["evidence_ids"], [])
+                    self.assertEqual(record["metric_snapshot_ids"], [])
+
+    def test_manual_research_eval_harness_runs_without_live_connectors(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text("INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1\n")
+            db_path = Path(temp_dir) / "research-eval.sqlite"
+
+            connector_result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "list-connectors",
+                    "--env-file",
+                    str(env_path),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(connector_result.returncode, 0, connector_result.stderr)
+            self.assertIn("0/5 available", connector_result.stdout)
+
+            commands = [
+                ("validate", "research", str(workspace_dir)),
+                ("rebuild-index", str(workspace_dir), "--db", str(db_path)),
+                ("prune", str(workspace_dir), "--retention-days", "30"),
+            ]
+            for command in commands:
+                with self.subTest(command=command):
+                    result = subprocess.run(
+                        [sys.executable, "-m", "influencer_os", *command],
+                        cwd=ROOT,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+            self.assertTrue(db_path.exists())
 
 
 class IdeaQueueValidationTests(unittest.TestCase):
