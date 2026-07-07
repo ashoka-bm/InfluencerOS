@@ -189,38 +189,45 @@ RESEARCH_PACK_LOCATIONS = (
 # Numeric platform limits (item caps, tier gates) deliberately stay
 # doc-side and are never validation thresholds. Guides, never gates: a
 # non-native best fit yields a platform_fit ProjectWarning and blocks
-# nothing.
+# nothing. The youtube column was added with ADR 0027 (Shorts are native
+# short-form video; community image posts give an analog for image
+# formats; stories/articles/threads have no YouTube surface).
 PLATFORM_FORMAT_FIT = {
     "format_short_form_video": {
         "instagram": "native", "tiktok": "native", "linkedin": "native",
         "x": "native", "facebook": "native", "substack": "native",
+        "youtube": "native",
         "reddit": "analog", "medium": "none",
     },
     "format_carousel": {
         "instagram": "native", "tiktok": "native", "linkedin": "native",
         "reddit": "native", "facebook": "native",
-        "x": "analog", "substack": "analog", "medium": "none",
+        "x": "analog", "substack": "analog", "youtube": "analog",
+        "medium": "none",
     },
     "format_single_image_post": {
         "instagram": "native", "linkedin": "native", "x": "native",
         "facebook": "native", "reddit": "native",
-        "tiktok": "analog", "substack": "analog", "medium": "none",
+        "tiktok": "analog", "substack": "analog", "youtube": "analog",
+        "medium": "none",
     },
     "format_story_sequence": {
         "instagram": "native", "facebook": "native",
         "x": "none", "tiktok": "none", "linkedin": "none",
         "reddit": "none", "substack": "none", "medium": "none",
+        "youtube": "none",
     },
     "format_article": {
         "substack": "native", "medium": "native", "linkedin": "native",
         "x": "native", "reddit": "native",
         "facebook": "analog", "tiktok": "none", "instagram": "none",
+        "youtube": "none",
     },
     "format_thread": {
         "x": "native",
         "linkedin": "subtype", "tiktok": "subtype",
         "reddit": "analog", "facebook": "analog", "substack": "analog",
-        "medium": "none", "instagram": "none",
+        "medium": "none", "instagram": "none", "youtube": "none",
     },
 }
 
@@ -1295,10 +1302,11 @@ def _validate_approval_surface(project, promotion):
     """A project stays within the locked promotion's approved surface.
 
     Formats share one vocabulary and must be a subset. platform_targets are
-    distribution surfaces: a surface that maps to an ADR 0020 research
-    platform must be approved; surfaces off the research set (youtube_*) are
-    legitimate targets for the universal format and stay exempt until the
-    surface vocabulary is closed in the production build-out.
+    distribution surfaces: a surface that maps to a canonical research
+    platform (ADR 0020 set plus youtube per ADR 0027, so youtube_* surfaces
+    now require youtube approval) must be approved; surfaces off the research
+    set are legitimate targets for the universal format and stay exempt until
+    the surface vocabulary is closed in the production build-out.
     """
     unapproved_formats = sorted(
         set(project["target_formats"]) - set(promotion["approved_formats"])

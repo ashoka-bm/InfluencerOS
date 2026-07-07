@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # $ref, so every research-module schema repeats these; this check pins each
 # copy to the one canonical list. Legacy compatibility records (social
 # research packs) are deliberately out of scope.
-RESEARCH_PLATFORMS = ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin"]
+RESEARCH_PLATFORMS = ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "youtube"]
 RESEARCH_CONTENT_TYPES = [
     "x_post", "x_thread",
     "instagram_reel", "instagram_post", "instagram_story", "instagram_carousel",
@@ -20,6 +20,7 @@ RESEARCH_CONTENT_TYPES = [
     "reddit_thread", "reddit_comment",
     "facebook_post", "facebook_reel",
     "linkedin_post", "linkedin_article",
+    "youtube_video", "youtube_short", "youtube_comment",
 ]
 RESEARCH_MODULE_SCHEMAS = (
     "creator-content-schedule", "research-run", "research-evidence", "metric-snapshot",
@@ -404,7 +405,7 @@ class ResearchEnumDriftTests(unittest.TestCase):
 
     def test_platform_fit_map_covers_every_format_and_platform(self):
         # The advisory capability map must classify all 6 formats across all
-        # 8 platforms with fit levels from the closed vocabulary — a missing
+        # 9 platforms with fit levels from the closed vocabulary — a missing
         # cell would silently skip the platform_fit advisory.
         from influencer_os.projects import PLATFORM_FORMAT_FIT
         from influencer_os.validation import PLATFORM_FIT_LEVELS
@@ -413,7 +414,7 @@ class ResearchEnumDriftTests(unittest.TestCase):
         for format_id, fits in PLATFORM_FORMAT_FIT.items():
             self.assertEqual(
                 sorted(fits), sorted(RESEARCH_PLATFORMS),
-                f"{format_id} capability row does not cover the 8 platforms",
+                f"{format_id} capability row does not cover the 9 platforms",
             )
             for platform, fit in fits.items():
                 self.assertIn(

@@ -9,7 +9,8 @@
   "core_message": "Two minutes beside the desk is enough to reset your body before a meeting.",
   "approved_platforms": [
     "instagram",
-    "tiktok"
+    "tiktok",
+    "youtube"
   ],
   "approved_formats": [
     "format_short_form_video"

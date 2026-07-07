@@ -323,19 +323,36 @@ class ResearchStateValidationTests(unittest.TestCase):
             validate_research(workspace_dir)  # must not raise
 
     def test_source_yield_rejects_unapproved_api_backed_adapter(self):
-        # youtube_data_api is api_backed but not standing-approved, so a yield
-        # record attesting the run used it must fail.
+        # instagram_logged_in_api is api_backed but not standing-approved, so a
+        # yield record attesting the run used it must fail.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             yield_path = workspace_dir / "research" / "runs" / RUN_ID / "source-yield.jsonl"
             record = load_example("research-source-yield")
             record["access_method"] = "api_backed"
-            record["adapter_id"] = "youtube_data_api"
+            record["adapter_id"] = "instagram_logged_in_api"
             write_jsonl(yield_path, [record])
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             self.assertIn("gated access method", str(ctx.exception))
+
+    def test_source_yield_allows_youtube_data_api_connector(self):
+        # ADR 0027: youtube_data_api is a standing-approved research connector.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_dir = workspace_dir / "research" / "runs" / RUN_ID
+            plan = json.loads((run_dir / "search-plan.json").read_text())
+            plan["platforms"].append("youtube")
+            write_json(run_dir / "search-plan.json", plan)
+            yield_path = run_dir / "source-yield.jsonl"
+            record = load_example("research-source-yield")
+            record["platform"] = "youtube"
+            record["access_method"] = "api_backed"
+            record["adapter_id"] = "youtube_data_api"
+            write_jsonl(yield_path, [record])
+
+            validate_research(workspace_dir)
 
     def test_source_yield_rejects_standing_approved_adapter_with_wrong_method(self):
         # Standing approval is pinned per (adapter_id, method): reddit_api_or_search
@@ -359,8 +376,11 @@ class ResearchStateValidationTests(unittest.TestCase):
         # Right adapter id, wrong method -> not standing approved.
         self.assertFalse(is_standing_approved_adapter("reddit_api_or_search", "scraping_api"))
         self.assertFalse(is_standing_approved_adapter("firecrawl_public_web", "api_backed"))
+        # ADR 0027 approved youtube_data_api, pinned to api_backed only.
+        self.assertTrue(is_standing_approved_adapter("youtube_data_api", "api_backed"))
+        self.assertFalse(is_standing_approved_adapter("youtube_data_api", "scraping_api"))
         # Unapproved adapter id.
-        self.assertFalse(is_standing_approved_adapter("youtube_data_api", "api_backed"))
+        self.assertFalse(is_standing_approved_adapter("instagram_logged_in_api", "api_backed"))
 
     def test_thin_evidence_material_run_warns(self):
         # A run that declares a material update but grounds it in a low share of

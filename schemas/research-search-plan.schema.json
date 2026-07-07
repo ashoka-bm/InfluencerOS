@@ -65,7 +65,8 @@
           "medium",
           "reddit",
           "facebook",
-          "linkedin"
+          "linkedin",
+          "youtube"
         ]
       },
       "minItems": 1
@@ -199,7 +200,8 @@
               "medium",
               "reddit",
               "facebook",
-              "linkedin"
+              "linkedin",
+              "youtube"
             ]
           },
           "query_intent": {
@@ -286,7 +288,8 @@
               "medium",
               "reddit",
               "facebook",
-              "linkedin"
+              "linkedin",
+              "youtube"
             ]
           },
           "url": {
@@ -339,7 +342,8 @@
               "medium",
               "reddit",
               "facebook",
-              "linkedin"
+              "linkedin",
+              "youtube"
             ]
           },
           "reason": {

@@ -53,7 +53,8 @@
                 "medium",
                 "reddit",
                 "facebook",
-                "linkedin"
+                "linkedin",
+                "youtube"
               ]
             },
             "minItems": 1

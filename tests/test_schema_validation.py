@@ -320,13 +320,41 @@ class SchemaValidationTests(unittest.TestCase):
         })
         validate_record("research-search-plan", valid)  # must not raise
 
+    def test_search_plan_allows_active_youtube_data_api_use_now(self):
+        # ADR 0027: youtube_data_api is standing-approved by key presence.
+        example = load_json("examples/research-search-plan.example.json")
+        valid = deepcopy(example)
+        valid["platforms"].append("youtube")
+        valid["adapters_considered"].append({
+            "adapter_id": "youtube_data_api",
+            "access_method": "api_backed",
+            "adapter_status": "active",
+            "auth_required": True,
+            "approval_required": False,
+            "decision": "use_now",
+            "reason": "YOUTUBE_API_KEY present; standing-approved public YouTube research connector.",
+        })
+        valid["planned_queries"].append({
+            "query_id": "query_luna_fit_youtube_001",
+            "platform": "youtube",
+            "query_intent": "trend_scan",
+            "query": "desk stretch routine",
+            "source_type": "search_term",
+            "purpose": "Check current YouTube video patterns around desk reset routines.",
+            "expected_signal": "Recent public videos with visible engagement and reusable hooks.",
+            "routing_basis": "Term from creator_profile.json desk wellness pillar.",
+            "term_basis": ["creator_profile"],
+        })
+
+        validate_record("research-search-plan", valid)
+
     def test_search_plan_rejects_non_approved_api_backed_use_now(self):
-        # youtube_data_api is api_backed but NOT a standing-approved ADR 0022
+        # instagram_logged_in_api is api_backed but NOT a standing-approved
         # connector, so active + use_now + approval false must still fail.
         example = load_json("examples/research-search-plan.example.json")
         invalid = deepcopy(example)
         invalid["adapters_considered"].append({
-            "adapter_id": "youtube_data_api",
+            "adapter_id": "instagram_logged_in_api",
             "access_method": "api_backed",
             "adapter_status": "active",
             "auth_required": True,

@@ -94,7 +94,7 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin"]
+            "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "youtube"]
           }
         },
         "content_mediums": {

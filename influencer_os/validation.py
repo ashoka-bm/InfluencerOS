@@ -102,11 +102,13 @@ HOOK_CATEGORIES = [
 # promotion (ADR 0024: schema-optional, skill-required).
 INTENT_FIELDS = ("intended_emotion", "core_message")
 
-# The canonical ADR 0020 8-platform set (Creative Direction Decision A:
-# per-file schema enums stay, but every copy — and every code copy — pins to
-# this one constant via the drift check).
+# The canonical research platform set (ADR 0020's 8 platforms plus youtube
+# per ADR 0027; Creative Direction Decision A: per-file schema enums stay,
+# but every copy — and every code copy — pins to this one constant via the
+# drift check).
 RESEARCH_PLATFORMS = (
     "x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin",
+    "youtube",
 )
 
 # The pure modality enum (ADR 0024): carousel/story_sequence are formats,
@@ -167,16 +169,17 @@ FULLY_GATED_ACCESS_METHODS = {
 # Union retained for callers that mean "any provider/heavy access method".
 GATED_RESEARCH_ACCESS_METHODS = STANDING_APPROVED_ACCESS_METHODS | FULLY_GATED_ACCESS_METHODS
 
-# The exact ADR 0022 connectors that key presence standing-approves, each pinned
-# to its expected access method (source of truth: connectors/registry.py).
-# Standing approval is per (adapter_id, method), not to the access method at
-# large: other api_backed/scraping_api adapters (e.g. youtube_data_api) stay
+# The exact connectors that key presence standing-approves (ADR 0022, extended
+# by ADR 0027), each pinned to its expected access method (source of truth:
+# connectors/registry.py). Standing approval is per (adapter_id, method), not
+# to the access method at large: other api_backed/scraping_api adapters stay
 # gated, and a standing-approved adapter paired with the wrong method is not.
 STANDING_APPROVED_ADAPTER_METHODS = {
     "reddit_api_or_search": "api_backed",
     "x_api": "api_backed",
     "firecrawl_public_web": "scraping_api",
     "linkedin_apify": "api_backed",
+    "youtube_data_api": "api_backed",
 }
 
 STANDING_APPROVED_ADAPTER_IDS = frozenset(STANDING_APPROVED_ADAPTER_METHODS)
