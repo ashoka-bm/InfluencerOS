@@ -854,25 +854,98 @@ class SkillProseDriftTests(unittest.TestCase):
     Every confirmed defect in that review lived inside prose that had
     drifted from code, schema, or canon; each test here pins one class."""
 
-    def test_skill_descriptions_quote_embedded_colons(self):
+    def test_skill_descriptions_are_safe_yaml_scalars(self):
         # F1: an unquoted `: ` inside a plain YAML scalar is invalid strict
         # YAML ("bad indentation of a mapping entry"); a strict frontmatter
         # loader drops or rejects the description — the skill's entire
-        # invocation surface. Stdlib has no YAML parser, so this lints the
-        # one observed failure shape instead of parsing.
+        # invocation surface. Stdlib has no YAML parser, so this is a
+        # conservative scalar lint: quoted scalars must be balanced with no
+        # unescaped inner quote; plain scalars must avoid the breakers
+        # (`: `, ` #`, unsafe leading indicator characters).
         for skill in sorted(skills_on_disk()):
             text = read_repo_text(f"skills/{skill}/SKILL.md")
             match = re.search(r"^description:[ \t]*(.+)$", text, flags=re.MULTILINE)
             self.assertIsNotNone(match, f"skills/{skill} has no description line")
             value = match.group(1).strip()
-            if value.startswith('"') or value.startswith("'"):
+            if value[0] in "\"'":
+                quote = value[0]
+                self.assertTrue(
+                    len(value) >= 2 and value.endswith(quote),
+                    f"skills/{skill} description quote is unbalanced",
+                )
+                inner = value[1:-1]
+                if quote == '"':
+                    self.assertNotRegex(
+                        inner,
+                        r'(?<!\\)"',
+                        f"skills/{skill} description holds an unescaped double "
+                        "quote inside a double-quoted scalar",
+                    )
+                else:
+                    self.assertNotIn(
+                        "'",
+                        inner.replace("''", ""),
+                        f"skills/{skill} description holds an unescaped single "
+                        "quote inside a single-quoted scalar",
+                    )
                 continue
             self.assertNotIn(
-                ": ",
-                value,
-                f"skills/{skill} description holds an unquoted ': ' — quote the "
-                "scalar so strict-YAML frontmatter loaders keep the description",
+                value[0],
+                "-?:,[]{}#&*!|>%@`",
+                f"skills/{skill} plain description starts with a YAML "
+                "indicator character — quote the scalar",
             )
+            for breaker, why in ((": ", "starts a nested mapping"), (" #", "starts a comment")):
+                self.assertNotIn(
+                    breaker,
+                    value,
+                    f"skills/{skill} description holds an unquoted {breaker!r} "
+                    f"({why}) — quote the scalar so strict-YAML frontmatter "
+                    "loaders keep the description",
+                )
+
+    def test_batch1_contract_fixes_stay_pinned(self):
+        # Batch 1 gpt-5.5 review follow-up: pin the specific contracts the
+        # mechanical fixes corrected so they cannot silently regress.
+        review_schema = json.loads(
+            (ROOT / "schemas" / "review-record.schema.json").read_text()
+        )
+        hook = read_repo_text("skills/review-hook-payoff/SKILL.md")
+        for field in review_schema["properties"]["reviewer_execution"]["required"]:
+            self.assertIn(
+                field,
+                hook,
+                f"review-hook-payoff no longer names schema-required "
+                f"reviewer_execution field {field!r}",
+            )
+        approval = read_repo_text("skills/request-generation-approval/SKILL.md")
+        for phrase in ("write-once", "`cancelled`", "record a fresh approval"):
+            self.assertIn(
+                phrase, approval,
+                f"request-generation-approval cancellation contract lost {phrase!r}",
+            )
+        package = read_repo_text("skills/create-output-package/SKILL.md")
+        for phrase in ("one entry for each of the five stages", "QualityReview"):
+            self.assertIn(
+                phrase, package,
+                f"create-output-package contract lost {phrase!r}",
+            )
+        for skill, schema in (
+            ("create-output-package", "output-package"),
+            ("register-published-post", "published-post-record"),
+            ("ingest-analytics", "analytics-snapshot"),
+            ("distill-production-learning", "improvement-claim"),
+        ):
+            self.assertIn(
+                f"schemas/{schema}.schema.json",
+                read_repo_text(f"skills/{skill}/SKILL.md"),
+                f"skills/{skill} no longer names its authoring schema",
+            )
+        self.assertIsNone(
+            frontmatter_dependencies("distill-production-learning"),
+            "distill-production-learning re-grew a dependencies list its "
+            "body does not route to",
+        )
 
     def test_skill_prose_repo_paths_exist(self):
         # Dead-pointer class: every docs/, schemas/, or examples/ path a
