@@ -22,6 +22,7 @@ from influencer_os.connectors import (
     openai_reddit,
     reddit_enrich,
     xai_x,
+    youtube_data,
 )
 
 DEFAULT_RECENCY_DAYS = 30
@@ -216,6 +217,57 @@ def fetch_linkedin(
     return _result("linkedin_apify", "linkedin_apify", "linkedin", profile_url,
                    from_date, to_date, model=None, candidates=kept, budget=budget,
                    enriched=len(kept), truncated=False, capped=False, notes=notes)
+
+
+def fetch_youtube_search(
+    topic: str,
+    config: Dict[str, Any],
+    budget: env.CallBudget,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    days: int = DEFAULT_RECENCY_DAYS,
+    max_results: int = 10,
+    order: str = "date",
+    mock_search_response: Optional[Dict] = None,
+    mock_details_response: Optional[Dict] = None,
+) -> Dict[str, Any]:
+    """Discover public YouTube videos for a creator-relevant topic.
+
+    Two quota-drawing calls: search.list for discovery, then one videos.list
+    batch for duration/statistics. Engagement arrives with the details call,
+    so every parsed candidate counts as enriched.
+    """
+    if not env.has_key(config, "YOUTUBE_API_KEY"):
+        raise ConnectorUnavailable(
+            "youtube_data_api requires YOUTUBE_API_KEY and the paid tier enabled"
+        )
+
+    from_date, to_date = _recency_window(from_date, to_date, days)
+    if not budget.spend():
+        return _result("youtube_data_api", "youtube_data_api", "youtube",
+                       topic, from_date, to_date, model=None, candidates=[],
+                       budget=budget, enriched=0, truncated=False, capped=True,
+                       notes=["paid call cap reached before YouTube search"])
+
+    raw_search = youtube_data.search_videos(
+        config["YOUTUBE_API_KEY"], topic, from_date, to_date,
+        max_results=max_results, order=order, mock_response=mock_search_response,
+    )
+    video_ids = youtube_data.video_ids_from_search(raw_search)
+    if video_ids and not budget.spend():
+        return _result("youtube_data_api", "youtube_data_api", "youtube",
+                       topic, from_date, to_date, model=None, candidates=[],
+                       budget=budget, enriched=0, truncated=False, capped=True,
+                       notes=["paid call cap reached before YouTube video details"])
+
+    raw_details = youtube_data.fetch_video_details(
+        config["YOUTUBE_API_KEY"], video_ids, mock_response=mock_details_response
+    )
+    candidates = youtube_data.parse_video_candidates(raw_search, raw_details)
+    return _result("youtube_data_api", "youtube_data_api", "youtube",
+                   topic, from_date, to_date, model=None, candidates=candidates,
+                   budget=budget, enriched=len(candidates), truncated=False,
+                   capped=False, notes=[])
 
 
 def _result(connector, adapter_id, platform, topic, from_date, to_date,

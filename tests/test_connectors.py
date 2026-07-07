@@ -93,10 +93,17 @@ class CallBudgetTests(unittest.TestCase):
 
 
 class RegistryTests(unittest.TestCase):
-    def test_all_four_connectors_present(self):
+    def test_all_research_connectors_present(self):
         ids = {c["adapter_id"] for c in registry.CONNECTORS}
         self.assertEqual(
-            ids, {"reddit_api_or_search", "x_api", "firecrawl_public_web", "linkedin_apify"}
+            ids,
+            {
+                "reddit_api_or_search",
+                "x_api",
+                "firecrawl_public_web",
+                "linkedin_apify",
+                "youtube_data_api",
+            },
         )
 
     def test_status_reflects_key_presence(self):
@@ -588,6 +595,50 @@ class FetchOtherConnectorsTests(unittest.TestCase):
             mock_response={"success": True, "data": {"markdown": "x", "metadata": {}}})
         self.assertTrue(result["capped"])
         self.assertEqual(result["candidates"], [])
+
+
+class YouTubeFetchTests(unittest.TestCase):
+    def test_fetch_youtube_search_returns_valid_result(self):
+        config = {"YOUTUBE_API_KEY": "yt-key"}
+        budget = env.CallBudget(5)
+        search_response = {
+            "items": [{
+                "id": {"videoId": "abc123xyz09"},
+                "snippet": {
+                    "title": "Desk stretch routine",
+                    "channelTitle": "Desk Wellness",
+                    "channelId": "UC123",
+                    "publishedAt": "2026-07-01T12:00:00Z",
+                },
+            }]
+        }
+        details_response = {
+            "items": [{
+                "id": "abc123xyz09",
+                "contentDetails": {"duration": "PT58S"},
+                "statistics": {"viewCount": "1200", "likeCount": "90", "commentCount": "12"},
+            }]
+        }
+
+        result = fetch.fetch_youtube_search(
+            "desk stretch routine",
+            config,
+            budget,
+            days=30,
+            mock_search_response=search_response,
+            mock_details_response=details_response,
+        )
+
+        self.assertEqual(result["connector"], "youtube_data_api")
+        self.assertEqual(result["adapter_id"], "youtube_data_api")
+        self.assertEqual(result["platform"], "youtube")
+        self.assertEqual(result["calls_used"], 2)
+        self.assertEqual(len(result["candidates"]), 1)
+        validate_record("research-fetch-result", result)
+
+    def test_fetch_youtube_requires_key(self):
+        with self.assertRaises(fetch.ConnectorUnavailable):
+            fetch.fetch_youtube_search("desk", {"YOUTUBE_API_KEY": None}, env.CallBudget(5))
 
 
 class SecretHandlingTests(unittest.TestCase):

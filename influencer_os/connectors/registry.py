@@ -49,6 +49,15 @@ CONNECTORS: List[Dict[str, Any]] = [
         "platform": "linkedin",
         "summary": "Public LinkedIn profile/post scraping via an Apify actor.",
     },
+    {
+        "connector": "youtube_data_api",
+        "adapter_id": "youtube_data_api",
+        "key": "YOUTUBE_API_KEY",
+        "provider": "youtube",
+        "access_method": "api_backed",
+        "platform": "youtube",
+        "summary": "Public YouTube video/channel discovery via YouTube Data API v3.",
+    },
 ]
 
 
