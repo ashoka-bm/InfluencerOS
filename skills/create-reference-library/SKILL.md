@@ -113,8 +113,10 @@ Do not rewrite these standard prompts inside the skill. Copy or adapt only the v
 
 Strongly recommend a user-provided person reference image for any image or video
 creator. If the user does not provide one, create a planned or prompted
-character identity asset instead and mark it as generated-from-intake or
-system-filled until the user approves a real generated result.
+character identity asset instead — `asset_status` stays `planned` or
+`prompted`, with the intake derivation recorded in `source`
+(`source_type: derived`) and `usage_notes` — until the user approves a real
+generated result.
 
 For video creators:
 
