@@ -105,12 +105,25 @@ def fetch_reddit(
 
     result_candidates: List[Dict[str, Any]] = []
     enriched = 0
+    attempted = 0
     for item in head:
         if enrich:
+            attempted += 1
             item = reddit_enrich.enrich_reddit_item(item, mock_thread_data=mock_thread_data)
-            enriched += 1
+            # Count successes, not attempts: a blocked reddit.com read returns
+            # the item unchanged (ADR 0022 run 2 found reddit.com answering
+            # direct JSON reads with HTTP 403, silently zeroing enrichment).
+            # Success means engagement metrics actually attached.
+            if "engagement" in item:
+                enriched += 1
         result_candidates.append(item)
     result_candidates.extend(tail)
+    if attempted and enriched < attempted:
+        notes.append(
+            f"enrichment failed for {attempted - enriched} of {attempted} "
+            "candidate(s); reddit.com may be blocking direct thread reads, "
+            "so visible metrics are missing for those candidates"
+        )
 
     return _result("reddit_openai", "reddit_api_or_search", "reddit",
                    topic, from_date, to_date, model=model, candidates=result_candidates,

@@ -336,6 +336,24 @@ class FetchRedditTests(unittest.TestCase):
         self.assertEqual(result["calls_used"], 1)  # enrichment is free; only the paid search counted
         self.assertTrue(any("limited to 1" in n for n in result["notes"]))
 
+    def test_blocked_enrichment_counts_zero_and_notes_failure(self):
+        # ADR 0022 run 2: reddit.com answered direct JSON reads with HTTP 403,
+        # enrichment silently returned items unchanged, yet enriched_count
+        # claimed every candidate. An empty mock simulates the blocked read.
+        text = ('{"items": [{"title": "t", '
+                '"url": "https://www.reddit.com/r/houseplants/comments/abc/t/", "relevance": 0.8}]}')
+        config = {"OPENAI_API_KEY": "sk"}
+        budget = env.CallBudget(5)
+        result = fetch.fetch_reddit(
+            "pothos root rot", config, budget,
+            mock_search_response=self._response(text), mock_model="gpt-4o",
+            mock_thread_data={},
+        )
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["enriched_count"], 0)
+        self.assertNotIn("engagement", result["candidates"][0])
+        self.assertTrue(any("enrichment failed for 1 of 1" in n for n in result["notes"]))
+
     def test_fetch_result_conforms_to_schema(self):
         text = ('{"items": [{"title": "t", '
                 '"url": "https://www.reddit.com/r/s/comments/z/t/", "relevance": 0.8}]}')
