@@ -243,21 +243,63 @@ vs measured analytics, feeding Creator Memory) and the Production Quality
 loop (creation friction feeding skill and routine updates), with a
 falsifiable criterion at every step.
 
-Status: Rescoped from "Automation OS" 2026-07-06 (ADR 0025) after the Phase 4
-readiness grilling session; temporal scheduling moved to the roadmap Deferred
-section with its own reopen conditions. Draft implementation plan:
-`docs/workflows/improvement-os-implementation-plan.md`; execution decisions
-D1–D6 pending operator approval.
+Status: Complete (2026-07-06). Rescoped from "Automation OS" (ADR 0025) after
+the Phase 4 readiness grilling session — temporal scheduling moved to the
+roadmap Deferred section. All five slices landed as three gpt-5.5-reviewed
+batches with fix batches; the six runnable exit criteria pass (see Current
+Verification). Blocking-criterion promotions remain future per-criterion ADRs
+per the gates-and-reviews checklist.
 
-Remaining:
+Completed:
 
-- Rubric substrate (Production Rubric, recurrence-keyed events on the
-  system-event ledger, `log-incident`, cite-or-mint validation).
-- Reflection trigger (event thresholds → advisory warnings and badges).
-- Distillation with falsifiable improvement claims.
-- Quantified Creative Performance Map predictions with per-stage
-  confirmed/refuted/unmeasurable scoring.
-- Criteria maturity ladder into the blocking quality checklist.
+- Slice 1 — Production Rubric substrate: `production-rubric` records with
+  scoped binary criteria (ids double as recurrence keys; maturity
+  minted/proven/blocking/retired; blocking requires a resolvable ADR ref),
+  friction fields on the system-event ledger (a rejection cites exactly one
+  of a criterion or unclassified — the Rubric Ratchet, enforced at the
+  writer and at rest through one shared seam), `log-incident` and
+  `mint-criterion` CLI, OS rubric seeded from the quality-review categories,
+  workspace rubric scaffolded by `init-creator` and required by the
+  workspace schema, friction-logging rules in the four producing skills,
+  enum drift pins.
+- Slice 2 — event-driven reflection trigger: reflection runs reuse the
+  dormant automation-run schema as declare-then-attest for reflection
+  itself (claimed event_ids reconcile both directions; failed runs must
+  attest none), unprocessed-friction thresholds (recurrence K, total N,
+  unclassified rubric-gap U; workspace-tunable, drift-pinned) surface
+  advisory warnings from `validate workspace` and `check-reflection` —
+  advisory by construction.
+- Slice 3 — improvement claims + `distill-production-learning`: claims name
+  target skill, criterion, baseline evidence, and a violation ceiling;
+  writes fail closed (criterion/evidence/skill/supersedes all resolve;
+  baseline must be the claim's own friction); violations counted
+  mechanically, a human closes (D5); the skill owns Loop B end-to-end and is
+  registered across conductor/registry/matrix/architecture map; `wrap-up`
+  gained the friction audit and claim close-out.
+- Slice 4 — falsifiable predictions: optional per-stage `prediction`
+  (metric, comparator, threshold) on the Creative Performance Map, scored
+  confirmed/refuted/unmeasurable in performance summaries; pairing
+  fail-closed both directions in the summary↔package seam; measured values
+  must come from a cited snapshot's matching metric (stage-keyed lookup);
+  visual and text fixtures probed.
+- Slice 5 — criteria maturity ladder: `rubric_criteria_results` beside the
+  closed quality checklist; unknown criteria fail closed; a failing blocking
+  criterion forbids a passing verdict at the seam while advisory criteria
+  gate nothing (never-blocks probe); blocking coverage is required for
+  passing coverage, criteria collected with the owning workspace's scope and
+  a missing creator rubric fails closed; the proven→blocking promotion path
+  is documented in `docs/gates-and-reviews.md`.
+- Review fixes: batch 1 (failed-run claims escaping reconciliation,
+  unresolved blocking_adr, optional rubric pin, multiline ledger messages +
+  maxLength joining the fail-closed validator subset), batch 2 (unbound
+  prediction scoring including a unit-mismatched exemplar; unbound claim
+  baselines), batch 3 (advisory rubric fails forcing failing verdicts
+  through the packaging gate; unscoped/skippable criteria collection).
+
+Deliberately deferred (by decision, not omission): cross-creator OS-scope
+criterion aggregation, creator-scoped claims, a closed prediction-metric
+vocabulary, and a board surface for reflection-due (plan §Deliberately
+Deferred Remainders); temporal scheduling per ADR 0025.
 
 ## Implemented Schema Contracts
 
@@ -275,6 +317,20 @@ Remaining:
   `article-plan.schema.json`, and `thread-plan.schema.json`.
 
 ## Current Verification
+
+Phase 4 (Improvement OS) closeout run (2026-07-06) — the six runnable exit
+criteria plus the fixture sweep and live CLI probes:
+
+```bash
+python3 -m unittest discover -s tests                       # 739 tests OK
+python3 -m influencer_os validate examples                  # 49 records
+python3 -m unittest tests.test_improvement_os               # EC 1-6 (61 tests)
+python3 -m unittest tests.test_drift_checks                 # enum/threshold pins
+for w in workspace-library/creators/*/; do python3 -m influencer_os validate workspace "$w"; done
+python3 -m influencer_os check-reflection <creator-workspace>   # reporting only
+python3 -m influencer_os check-claims                           # reporting only
+# scheduler scan: no cron/scheduler files ship (EC6) — PASS 2026-07-06
+```
 
 Phase 3 (Generation OS) closeout run (2026-07-06) — the five runnable exit
 criteria plus a live full-workflow replay (approval → mock dispatch → import

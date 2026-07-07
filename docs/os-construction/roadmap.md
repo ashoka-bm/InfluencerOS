@@ -291,9 +291,11 @@ measured analytics, feeding Creator Memory) and the Production Quality loop
 (creation friction feeding skill and routine updates) — with a falsifiable
 criterion at every step.
 
-Status: rescoped and planned at draft level (2026-07-06). Entry criteria
-verified and execution decisions pending approval in
-`docs/workflows/improvement-os-implementation-plan.md`.
+Status: complete (2026-07-06). All five slices landed as three
+gpt-5.5-reviewed batches with fix batches; the six runnable exit criteria
+pass (closeout run in `docs/os-construction/progress.md`). Per the locked
+decisions, blocking-criterion promotions remain future per-criterion ADRs,
+and temporal scheduling stays in the Deferred section below.
 
 Entry criteria (verified 2026-07-06):
 

@@ -2,11 +2,18 @@
 
 Last updated: 2026-07-06
 
-Status: **In execution.** The operator's 2026-07-06 directive to implement
+Status: **Complete (2026-07-06).** The operator's directive to implement
 this plan in well-sized, individually Codex-reviewed pieces approved D1–D6 on
-their recommendations (Phase 3 precedent). Executing as three batches
-(slices 1–2, 3–4, 5), each gated by a gpt-5.5 adversarial review and fix
-batch before it counts as merged.
+their recommendations (Phase 3 precedent). All five slices executed as three
+batches (slices 1–2, 3–4, 5), each gated by a gpt-5.5 adversarial review and
+fix batch: batch 1 fixed four findings (failed-run claims escaping
+reconciliation, unresolved blocking_adr, optional rubric pin, multiline
+messages), batch 2 fixed two High findings (unbound prediction scoring incl.
+a unit-mismatched exemplar, unbound claim baselines), batch 3 fixed two
+findings (advisory rubric fails forcing failing verdicts through the gate,
+unscoped/skippable criteria collection at the project seam). The closeout
+run (all six runnable exit criteria green, 739 tests, 49 examples, fixture
+sweep) is recorded in `docs/os-construction/progress.md`.
 
 ## Goal
 
