@@ -57,6 +57,11 @@ Write only `research/idea-queue/` and queue-level warnings in
 - Wildcard behavior is a schedule field (`schedule_fit_type: wildcard`),
   not a status. Check that new ideas are meaningfully distinct from recent
   posts instead of mechanically penalizing recently covered hot topics.
+- Capture the novelty angle and, when the idea travels across platforms,
+  why it adapts, inside `premise_summary` or `production_notes` — the
+  schema has no dedicated fields for them. Template and structure
+  selection happens at `apply-social-template` after promotion, never on
+  the queue entry.
 
 ## Status Flow
 

@@ -26,6 +26,10 @@ Use:
 - `approved`: accepted for downstream continuity use
 - `retired`: no longer used for new work
 
+When a generation call runs, record the generation date, tool, and any
+accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`,
+and leave the asset `generated` until the user explicitly approves the look.
+
 ## Required Asset Families
 
 Select based on content strategy:

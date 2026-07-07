@@ -1107,6 +1107,15 @@ class SkillProseDriftTests(unittest.TestCase):
         # only safe if a protocol change is a mechanically verified sweep:
         # normalizing each skill's own name away, every carrier of a
         # dialect must hold byte-identical block text.
+        # Normalize only the sanctioned skill-name slots; a block that
+        # mentions its own name anywhere else stays different on purpose,
+        # so an unexpected mention surfaces as divergence.
+        NAME_SLOTS = (
+            "log-learning context/learnings.md {skill} ",
+            "--source-id {skill} ",
+            "skills/{skill}/SKILL.local.md",
+        )
+
         def block(skill, heading):
             body = skill_body(skill)
             marker = f"\n## {heading}\n"
@@ -1116,9 +1125,18 @@ class SkillProseDriftTests(unittest.TestCase):
             cut = text.find("\n## ")
             if cut != -1:
                 text = text[:cut]
-            return text.replace(skill, "<skill>").strip()
+            for slot in NAME_SLOTS:
+                text = text.replace(
+                    slot.format(skill=skill), slot.format(skill="<skill>")
+                )
+            return text.strip()
+
+        # Bespoke Self-Update dialects; every other carrier must match one
+        # of the two shared forms exactly.
+        BESPOKE_SELF_UPDATE = {"memory-write", "wrap-up"}
 
         groups = {}
+        unclassified = set()
         for skill in sorted(skills_on_disk()):
             self_update = block(skill, "Self-Update")
             if self_update is not None:
@@ -1127,11 +1145,18 @@ class SkillProseDriftTests(unittest.TestCase):
                     groups.setdefault("self-update:producer", {})[skill] = self_update
                 elif first_line.startswith("When the user flags an issue with this skill"):
                     groups.setdefault("self-update:conductor", {})[skill] = self_update
-                # wrap-up and memory-write carry bespoke self-update text
+                else:
+                    unclassified.add(skill)
             friction = block(skill, "Friction Logging (ADR 0025)")
             if friction is not None:
                 groups.setdefault("friction-logging", {})[skill] = friction
 
+        self.assertEqual(
+            unclassified,
+            BESPOKE_SELF_UPDATE,
+            "a Self-Update block left the shared dialects; either restore "
+            "the shared first line or add the skill to the bespoke set here",
+        )
         self.assertGreaterEqual(
             len(groups.get("self-update:producer", {})), 10,
             "producer Self-Update carriers vanished; the dialect grouping is stale",

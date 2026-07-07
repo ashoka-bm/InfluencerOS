@@ -198,6 +198,13 @@ Carousel and story-sequence creators require sequence style, slide or frame visu
 
 Drafting files, reference requirements, prompts, shot lists, and generation plans is allowed. Image, video, audio, render, upload, bulk generation, or paid provider calls require explicit user approval for the exact call or batch.
 
+After any approved provider generation, update `progress/setup-checklist.md`,
+`context/MEMORY.md`, and the daily note in the same run — supersede every
+"no generation has been run" or "assets are prompt-staged only" claim, and
+track each reference asset in the checklist by its exact lifecycle status
+(never grouped wording like "completed or prompted"). Asset-level recording
+rules live in `create-reference-library`.
+
 ## Templates
 
 Canonical output shapes live under `docs/templates/creator-setup/`; each
@@ -210,8 +217,10 @@ templates live under `docs/templates/creator-setup/reference-prompts/`.
 pointers where a body section owns the rule. Read before every run; newest
 last.*
 
-- 2026-07-03: After any approved provider generation, update `progress/setup-checklist.md`, `context/MEMORY.md`, and the daily note in the same run — supersede every "no generation has been run" or "assets are prompt-staged only" claim. Stale no-generation notes conflicted with a generated identity plate in the Nia Sol run.
-- 2026-07-03: Track each reference asset in the setup checklist by its lifecycle status (planned / prompted / generated pending approval / approved); never use grouped wording like "completed or prompted". When a generation call runs, record the generation date, tool, and any accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`, and leave the asset `generated` until the user explicitly approves the look.
+- 2026-07-03: Post-generation state updates and per-asset lifecycle
+  tracking added after stale no-generation notes conflicted with a
+  generated identity plate (Nia Sol run) — see §Provider Boundary; asset
+  recording rules live in `create-reference-library` §Asset Status.
 - 2026-07-07: Added the guided-run interview and whole-foundation-approval
   contract — see §Normal-User E2E Contract and §Decision Interview.
 
