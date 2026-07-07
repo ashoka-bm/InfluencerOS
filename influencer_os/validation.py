@@ -527,6 +527,8 @@ def validate_record_semantics(schema_name, record):
         validate_rubric_semantics(record)
     if schema_name == "system-event":
         validate_system_event_semantics(record)
+    if schema_name == "improvement-claim":
+        validate_improvement_claim_semantics(record)
 
 
 def validate_beat_spine(record, field_name, record_name, require_coverage):
@@ -808,6 +810,25 @@ def validate_system_event_semantics(record):
             f"event {event_id}: recurrence_key must equal criterion_id when a "
             "criterion is cited (criterion ids are recurrence keys)"
         )
+
+
+def validate_improvement_claim_semantics(record):
+    """ImprovementClaim semantics (ADR 0025, D5): a closed claim records who
+    closed it and when; an open claim carries neither. Status is the human's
+    verdict — the mechanical count is reporting, never a writer."""
+    claim_id = record.get("claim_id", "<unknown>")
+    status = record.get("status")
+    closed_fields = [field for field in ("closed_on", "closed_by") if field in record]
+    if status == "open" and closed_fields:
+        raise ValidationError(
+            f"claim {claim_id}: open claims must not carry {closed_fields}"
+        )
+    if status in ("confirmed", "refuted", "withdrawn"):
+        missing = [f for f in ("closed_on", "closed_by") if f not in record]
+        if missing:
+            raise ValidationError(
+                f"claim {claim_id}: {status} claims require {missing}"
+            )
 
 
 def validate_generation_manifest_semantics(record):

@@ -18,6 +18,7 @@ dependencies:
   - ingest-analytics
   - create-performance-summary
   - distill-creator-learning
+  - distill-production-learning
 ---
 
 # InfluencerOS Flow
@@ -63,6 +64,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
 | `create-performance-summary` | PerformanceSummary from analytics evidence | [BUILT — Phase 2 slice 3] |
 | `distill-creator-learning` | Creator Memory lessons from performance evidence | [BUILT — Phase 2 slice 4] |
+| `distill-production-learning` | Friction events → approved skill updates with falsifiable claims | [BUILT — Phase 4 slice 3] |
 
 **Halt rule (ADR 0016/0017):** when a phase's owner skill is marked `[PLANNED]` and its folder does not exist under `skills/`, halt at that phase, tell the user which skill is missing and which roadmap slice builds it, and stop. Never improvise the phase from base knowledge and never pretend the skill ran. Each `[PLANNED]` marker is an open build obligation tracked in `docs/os-construction/skill-registry.md` (Missing Future Skills) and the roadmap phase slice lists.
 
@@ -88,6 +90,7 @@ Producer skills this conductor routes to (mirrors the `dependencies` frontmatter
 | Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [BUILT — Phase 2 slice 2] |
 | Post-pipeline: Performance summary | `create-performance-summary` | `Skill(skill: "create-performance-summary")` | [BUILT — Phase 2 slice 3] |
 | Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [BUILT — Phase 2 slice 4] |
+| Post-pipeline: Production reflection (on reflection-due warning) | `distill-production-learning` | `Skill(skill: "distill-production-learning")` | [BUILT — Phase 4 slice 3] |
 
 ## Video Understanding Requirements
 

@@ -1,0 +1,20 @@
+{
+  "claim_id": "claim_gen_identity_consistent_001",
+  "created_on": "2026-07-06",
+  "target_skill": "create-production-plan",
+  "criterion_id": "gen.identity.consistent",
+  "creator_slug": "luna-fit",
+  "baseline": {
+    "window_description": "Last 5 generation attempts for luna-fit desk-reset clips",
+    "violation_count": 3
+  },
+  "expectation": {
+    "window_description": "Next 3 generation attempts after the reference-plate prompt rule",
+    "max_violations": 0
+  },
+  "evidence_event_ids": [
+    "event_luna_fit_001"
+  ],
+  "status": "open",
+  "notes": "Added an explicit identity-plate reference rule to the plan prompt guidance."
+}

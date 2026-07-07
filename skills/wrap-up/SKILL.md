@@ -38,6 +38,16 @@ End-of-session checklist. Review what was done, collect feedback, apply fixes, v
 
 Default to one question: **"Anything to note before I wrap up?"**
 
+### 2a: Friction Audit (ADR 0025)
+
+If this session produced or reviewed drafts, prompts, or generated assets in
+a Creator Workspace, check for friction that went unlogged: rejections or
+churn the session saw but never recorded via `log-incident`. Log them now
+(cite-or-mint; `--unclassified` when the reason resists articulation). Then
+run `python3 -m influencer_os check-claims` — for any open claim whose
+window has elapsed, prompt the user to close it (confirm or refute; a
+refuted claim's fix reopens via a superseding claim).
+
 Expand to what-worked / what-didn't / which-skill-misbehaved only when several skills ran this session or the user wants to give detailed feedback.
 
 ## Step 3: Apply Changes

@@ -105,6 +105,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `ingest-analytics` | learning | AnalyticsSnapshots from manual/CSV entry. | [BUILT — Phase 2 slice 2] |
 | `create-performance-summary` | learning | PerformanceSummary from analytics evidence. | [BUILT — Phase 2 slice 3] |
 | `distill-creator-learning` | learning | Performance evidence → Creator Memory. | [BUILT — Phase 2 slice 4] |
+| `distill-production-learning` | improvement | Friction events → approved skill updates with falsifiable claims (ADR 0025). | [BUILT — Phase 4 slice 3] |
 | `wrap-up` | system | Session-end learnings, skill self-fix, registry reconcile, memory promote. | [BUILT — ADR 0016] |
 | `memory-write` | system | Bounded, deduped `context/MEMORY.md` writes (2,500-byte cap via CLI). | [BUILT — ADR 0016] |
 
@@ -191,6 +192,7 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   (learn)  Analytics ingestion        -> Skill(ingest-analytics)                                  [BUILT — Phase 2 slice 2]
   (learn)  Performance summary        -> Skill(create-performance-summary)                        [BUILT — Phase 2 slice 3]
   (learn)  Creator Memory             -> Skill(distill-creator-learning)                          [BUILT — Phase 2 slice 4]
+  (improve) Production reflection     -> Skill(distill-production-learning) (on reflection-due)   [BUILT — Phase 4 slice 3]
 
   Until a [PLANNED] owner exists on disk, the conductor halts at that phase and surfaces the
   missing skill (halt rule in skills/influencer-os/SKILL.md ## Dependencies).

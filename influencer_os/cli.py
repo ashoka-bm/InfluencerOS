@@ -182,6 +182,13 @@ def main(argv=None):
     reflection_parser = subparsers.add_parser("check-reflection", help="Report unprocessed friction events, per-recurrence-key counts, and reflection-trigger crossings (ADR 0025). Reporting only; mutates nothing and never blocks.")
     reflection_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
+    claim_parser = subparsers.add_parser("record-improvement-claim", help="Record a validated ImprovementClaim under context/improvement-claims/ (ADR 0025). The claim's criterion and evidence events must resolve against the named creator workspace.")
+    claim_parser.add_argument("claim_file", help="Path to an ImprovementClaim JSON file.")
+    claim_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
+
+    check_claims_parser = subparsers.add_parser("check-claims", help="Report each improvement claim's mechanically computed violations-since count and confirm/refute suggestion (ADR 0025, D5). The human closes claims; this never mutates.")
+    check_claims_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
+
     learning_parser = subparsers.add_parser("log-learning", help="Append a dated learning entry: per-skill for OS learnings files, evidence-linked creator lessons for a Creator Workspace memory/learnings.md.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
     learning_parser.add_argument("skill_name", help="Skill folder name for OS learnings, or the lesson topic (applies-to) for creator lessons.")
@@ -610,6 +617,36 @@ def main(argv=None):
                 print(warning)
             if not report["warnings"]:
                 print("No reflection thresholds crossed.")
+            return 0
+
+        if args.command == "record-improvement-claim":
+            from influencer_os.claims import record_claim
+
+            result = record_claim(args.claim_file, workspace_root=Path(args.workspace_root))
+            print(f"Recorded improvement claim: {result['claim_path']}")
+            print("Verify with check-claims after subsequent runs; a human closes the claim.")
+            return 0
+
+        if args.command == "check-claims":
+            from influencer_os.claims import check_claims
+
+            reports = check_claims(workspace_root=Path(args.workspace_root))
+            if not reports:
+                print("No improvement claims recorded.")
+                return 0
+            for report in reports:
+                if report["resolution"] == "workspace_missing":
+                    print(
+                        f"- {report['claim_id']} [{report['status']}] "
+                        f"{report['criterion_id']} -> workspace missing; resolution skipped"
+                    )
+                else:
+                    print(
+                        f"- {report['claim_id']} [{report['status']}] "
+                        f"{report['criterion_id']}: {report['violations_since']} violation(s) "
+                        f"since created (max {report['max_violations']}) "
+                        f"-> suggest {report['suggestion']}"
+                    )
             return 0
 
         if args.command == "log-learning":

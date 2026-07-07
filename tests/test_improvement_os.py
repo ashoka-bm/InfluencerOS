@@ -552,5 +552,152 @@ class ReflectionTriggerTests(WorkspaceScaffoldMixin, unittest.TestCase):
             validate_creator_workspace(self.workspace)
 
 
+class ImprovementClaimTests(WorkspaceScaffoldMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        claims_tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(claims_tmp.cleanup)
+        self.claims_dir = Path(claims_tmp.name) / "improvement-claims"
+        self.workspace_root = self.workspace.parent
+
+    def make_claim(self, **overrides):
+        claim = {
+            "claim_id": "claim_test_001",
+            "created_on": "2026-07-06",
+            "target_skill": "create-production-plan",
+            "criterion_id": "gen.identity.consistent",
+            "creator_slug": "luna-fit",
+            "baseline": {
+                "window_description": "Last 3 attempts",
+                "violation_count": 3,
+            },
+            "expectation": {
+                "window_description": "Next 3 attempts",
+                "max_violations": 0,
+            },
+            "evidence_event_ids": ["event_luna_fit_001"],
+            "status": "open",
+        }
+        claim.update(overrides)
+        return {key: value for key, value in claim.items() if value is not None}
+
+    def write_claim_file(self, claim):
+        path = self.workspace_root / f"{claim['claim_id']}-draft.json"
+        path.write_text(json.dumps(claim, indent=2) + "\n")
+        return path
+
+    def record(self, claim):
+        from influencer_os.claims import record_claim
+
+        return record_claim(
+            self.write_claim_file(claim),
+            workspace_root=self.workspace_root,
+            claims_dir=self.claims_dir,
+        )
+
+    def check(self):
+        from influencer_os.claims import check_claims
+
+        return check_claims(
+            workspace_root=self.workspace_root, claims_dir=self.claims_dir
+        )
+
+    def log_violation(self, event_id=None):
+        log_incident(
+            self.workspace,
+            event_type="rejection",
+            recurrence_key="gen.identity.consistent",
+            criterion_id="gen.identity.consistent",
+            message="Identity drift again.",
+            source_id="create-production-plan",
+            event_id=event_id,
+        )
+
+    def test_record_and_confirm_lifecycle(self):
+        self.log_violation("event_luna_fit_001")
+        self.record(self.make_claim())
+        report = self.check()[0]
+        self.assertEqual(report["resolution"], "resolved")
+        self.assertEqual(report["violations_since"], 0)
+        self.assertEqual(report["suggestion"], "confirmed")
+
+    def test_refuted_when_violations_exceed_ceiling(self):
+        self.log_violation("event_luna_fit_001")
+        self.record(self.make_claim())
+        self.log_violation()
+        report = self.check()[0]
+        self.assertEqual(report["violations_since"], 1)
+        self.assertEqual(report["suggestion"], "refuted")
+
+    def test_writer_fails_on_dangling_evidence(self):
+        with self.assertRaisesRegex(ValidationError, "do not resolve to"):
+            self.record(self.make_claim(evidence_event_ids=["event_luna_fit_777"]))
+
+    def test_writer_fails_on_unknown_criterion(self):
+        self.log_violation("event_luna_fit_001")
+        with self.assertRaisesRegex(ValidationError, "does not resolve against"):
+            self.record(self.make_claim(criterion_id="ghost.rule"))
+
+    def test_writer_fails_on_missing_workspace(self):
+        self.log_violation("event_luna_fit_001")
+        with self.assertRaises(FileNotFoundError):
+            self.record(self.make_claim(creator_slug="nobody-here"))
+
+    def test_writer_refuses_overwrite_and_dangling_supersedes(self):
+        self.log_violation("event_luna_fit_001")
+        self.record(self.make_claim())
+        with self.assertRaises(FileExistsError):
+            self.record(self.make_claim())
+        with self.assertRaisesRegex(ValidationError, "supersedes_claim_id"):
+            self.record(
+                self.make_claim(
+                    claim_id="claim_test_002",
+                    supersedes_claim_id="claim_test_777",
+                )
+            )
+
+    def test_target_skill_must_exist_on_disk(self):
+        self.log_violation("event_luna_fit_001")
+        with self.assertRaisesRegex(ValidationError, "does not resolve to a skill"):
+            self.record(self.make_claim(target_skill="not-a-real-skill"))
+
+    def test_missing_workspace_degrades_to_report(self):
+        from influencer_os.claims import load_claims
+
+        self.log_violation("event_luna_fit_001")
+        self.record(self.make_claim())
+        shutil.rmtree(self.workspace)
+        report = self.check()[0]
+        self.assertEqual(report["resolution"], "workspace_missing")
+        self.assertIsNone(report["suggestion"])
+        self.assertIn("claim_test_001", load_claims(self.claims_dir))
+
+    def test_closed_claim_semantics(self):
+        with self.assertRaisesRegex(ValidationError, "require"):
+            validate_record("improvement-claim", self.make_claim(status="refuted"))
+        with self.assertRaisesRegex(ValidationError, "must not carry"):
+            validate_record(
+                "improvement-claim",
+                self.make_claim(closed_on="2026-07-07", closed_by="user"),
+            )
+        validate_record(
+            "improvement-claim",
+            self.make_claim(
+                status="confirmed", closed_on="2026-07-07", closed_by="user"
+            ),
+        )
+
+    def test_filename_must_match_claim_id(self):
+        from influencer_os.claims import load_claims
+
+        self.claims_dir.mkdir(parents=True)
+        claim = self.make_claim()
+        (self.claims_dir / "claim_wrong_name.json").write_text(
+            json.dumps(claim, indent=2) + "\n"
+        )
+        with self.assertRaisesRegex(ValidationError, "filename must match"):
+            load_claims(self.claims_dir)
+
+
 if __name__ == "__main__":
     unittest.main()
