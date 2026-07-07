@@ -19,6 +19,7 @@ from influencer_os.connectors import (
     reddit_enrich,
     registry,
     xai_x,
+    youtube_data,
 )
 from influencer_os.validation import validate_record
 
@@ -463,6 +464,76 @@ class LinkedinParseTests(unittest.TestCase):
         self.assertEqual(linkedin_apify.days_to_posted_limit(7), "week")
         self.assertEqual(linkedin_apify.days_to_posted_limit(30), "month")
         self.assertEqual(linkedin_apify.days_to_posted_limit(90), "any")
+
+
+class YouTubeDataParseTests(unittest.TestCase):
+    def test_parse_video_search_results_extracts_video_candidates(self):
+        search_response = {
+            "items": [{
+                "id": {"videoId": "abc123xyz09"},
+                "snippet": {
+                    "title": "Desk stretch routine",
+                    "channelTitle": "Desk Wellness",
+                    "channelId": "UC123",
+                    "publishedAt": "2026-07-01T12:00:00Z",
+                    "description": "A short desk reset.",
+                    "thumbnails": {"medium": {"url": "https://i.ytimg.com/vi/abc123xyz09/mqdefault.jpg"}},
+                },
+            }]
+        }
+        video_response = {
+            "items": [{
+                "id": "abc123xyz09",
+                "snippet": {"tags": ["desk", "stretch"], "categoryId": "27"},
+                "contentDetails": {"duration": "PT58S"},
+                "statistics": {"viewCount": "1200", "likeCount": "90", "commentCount": "12"},
+            }]
+        }
+
+        items = youtube_data.parse_video_candidates(search_response, video_response)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], "YT1")
+        self.assertEqual(items[0]["video_id"], "abc123xyz09")
+        self.assertEqual(items[0]["url"], "https://www.youtube.com/watch?v=abc123xyz09")
+        self.assertEqual(items[0]["title"], "Desk stretch routine")
+        self.assertEqual(items[0]["channel_title"], "Desk Wellness")
+        self.assertEqual(items[0]["channel_id"], "UC123")
+        self.assertEqual(items[0]["date"], "2026-07-01")
+        self.assertEqual(items[0]["duration"], "PT58S")
+        self.assertTrue(items[0]["is_short_candidate"])
+        self.assertEqual(items[0]["engagement"]["views"], 1200)
+        self.assertEqual(items[0]["engagement"]["likes"], 90)
+        self.assertEqual(items[0]["engagement"]["comments"], 12)
+
+    def test_parse_video_candidates_survives_missing_statistics(self):
+        search_response = {
+            "items": [{
+                "id": {"videoId": "abc123xyz09"},
+                "snippet": {
+                    "title": "Desk stretch routine",
+                    "channelTitle": "Desk Wellness",
+                    "channelId": "UC123",
+                    "publishedAt": "2026-07-01T12:00:00Z",
+                },
+            }]
+        }
+        video_response = {"items": [{"id": "abc123xyz09", "contentDetails": {"duration": "PT4M10S"}}]}
+
+        items = youtube_data.parse_video_candidates(search_response, video_response)
+
+        self.assertEqual(items[0]["engagement"], {"views": None, "likes": None, "comments": None})
+        self.assertFalse(items[0]["is_short_candidate"])
+
+    def test_resolve_search_video_ids_ignores_non_video_results(self):
+        response = {
+            "items": [
+                {"id": {"channelId": "UC123"}},
+                {"id": {"videoId": "abc123xyz09"}},
+            ]
+        }
+
+        self.assertEqual(youtube_data.video_ids_from_search(response), ["abc123xyz09"])
 
 
 class FetchOtherConnectorsTests(unittest.TestCase):
