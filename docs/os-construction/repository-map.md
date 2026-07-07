@@ -50,7 +50,8 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 
 | Path | Role |
 | --- | --- |
-| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `register-published-post`, `add-analytics-snapshot`, `import-analytics-csv`, `init-run`, `rebuild-index`, `rebuild-lookup`, `query-lookup`, `rebuild-board`, `prune`, `memory-write`, `log-learning`, `list-connectors`, `research-fetch`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/full_validation.py` | Composed `validate all` release gate: workspace → research → queue → board → every project, layer-named errors, deduplicated warnings. |
+| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board`/`all` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `register-published-post`, `add-analytics-snapshot`, `import-analytics-csv`, `init-run`, `rebuild-index`, `rebuild-lookup`, `query-lookup`, `rebuild-board`, `prune`, `memory-write`, `log-learning`, `list-connectors`, `research-fetch`). It should call workflow helpers, not hold product rules. |
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |

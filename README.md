@@ -92,6 +92,25 @@ Creator setup can capture broader creator strategy inputs, including written sur
 python3 -m influencer_os validate examples
 ```
 
+## Validate A Whole Creator Workspace (Release Gate)
+
+Run every validator over one Creator Workspace in a single command — the
+workspace manifest and readiness gates, research state, idea queue, content
+board, and every project under `projects/`:
+
+```bash
+python3 -m influencer_os validate all workspace-library/creators/luna-fit
+```
+
+`validate all` is the alpha release gate: the scoped commands below
+(`validate workspace`, `validate research`, `validate queue`,
+`validate board`, `validate project`) each enforce their own layer, and only
+the composed run proves the full provenance chain. Layers that legitimately
+do not exist yet (no queue manifest before the first research run, no board
+before `rebuild-board`) are reported as skipped, queue entries without a
+manifest fail, and the summary line counts the warnings so advisory findings
+cannot scroll away unseen.
+
 ## Initialize A Creator Workspace
 
 ```bash

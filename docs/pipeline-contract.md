@@ -274,6 +274,12 @@ The agent may recommend a social template for the chosen idea. If the user does 
 
 Provider-backed generation requires explicit approval for the exact call or batch.
 
+The release gate for a Creator Workspace is `validate all <creator-workspace>`:
+one composed run of the workspace, research, queue, board, and per-project
+validators. The scoped `validate` targets each enforce one layer; only the
+composed command proves the full provenance chain, so alpha readiness and any
+"the workspace validates" claim mean `validate all` passes, not a subset.
+
 ## V1 Research Rule
 
 Social trends change quickly. Research output should preserve dated evidence and

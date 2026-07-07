@@ -22,6 +22,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.boards import rebuild_board, validate_board
+from influencer_os.full_validation import validate_all
 from influencer_os.analytics import import_analytics_csv
 from influencer_os.projects import init_project, validate_project
 from influencer_os.projects import add_analytics_snapshot, register_output_package, register_published_post
@@ -38,7 +39,7 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board"], help="Validation target.")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "all"], help="Validation target ('all' composes workspace, research, queue, board, and every project — the alpha release gate).")
     validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue/board validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
@@ -255,6 +256,23 @@ def main(argv=None):
                 result = validate_board(args.path)
                 print(f"Validated content board: {result['board_path']}")
                 print(f"Checked {result['card_count']} board cards.")
+                return 0
+            if args.target == "all":
+                if not args.path:
+                    raise ValueError("validate all requires a creator workspace path")
+                result = validate_all(args.path)
+                print(f"Validated full chain: {result['workspace_path']}")
+                for layer, summary in result["layers"]:
+                    print(f"  {layer}: {summary}")
+                for layer, reason in result["skipped"]:
+                    print(f"  {layer}: skipped ({reason})")
+                print(
+                    f"Layers passed: {len(result['layers'])}; "
+                    f"skipped: {len(result['skipped'])}; "
+                    f"warnings: {len(result['warnings'])}."
+                )
+                for warning in result["warnings"]:
+                    print(warning, file=sys.stderr)
                 return 0
             return 0
 

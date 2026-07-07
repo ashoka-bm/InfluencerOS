@@ -202,6 +202,7 @@ python3 -m influencer_os validate record <schema-name> <record-path>
 python3 -m influencer_os validate research <creator-workspace>
 python3 -m influencer_os validate queue <creator-workspace>
 python3 -m influencer_os validate board <creator-workspace>
+python3 -m influencer_os validate all <creator-workspace>
 python3 -m influencer_os init-creator <workspace-manifest> [--workspace-root <dir>]
 python3 -m influencer_os import-intake <source-file> --creator-workspace <path> --source-type <type> --notes "<note>" [--source-id <id>] [--imported-on YYYY-MM-DD]
 python3 -m influencer_os set-intake-status <creator-workspace> <source-id> <drafted|reviewed>
