@@ -55,9 +55,10 @@ python3 -m influencer_os record-generation-approval <creator-workspace> <record.
 - Every requested asset's `prompt_ref` must point into the approved
   `plan_ref` file; a prompt from anywhere else is unapproved content and
   both the writer and dispatch refuse it.
-- Never edit a recorded approval; cancel (`status: cancelled` via a new
-  write is not allowed — ask the user, then supersede with a new record and
-  mark the old one cancelled in the same session) and record fresh.
+- Approval records are write-once; never edit a recorded approval's
+  content. To change one: ask the user, flip the old record's `status` to
+  `cancelled` (the one permitted mutation, valid only while the record
+  carries no execution fields), then record a fresh approval.
 
 ## Boundaries
 
