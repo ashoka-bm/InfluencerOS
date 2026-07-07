@@ -172,6 +172,40 @@ class ValidateAllTests(unittest.TestCase):
                 validate_all(workspace_dir)
             self.assertIn("[project project_luna_tiny_reset_001]", str(ctx.exception))
 
+    def test_malformed_json_fails_with_layer_name(self):
+        # json.JSONDecodeError is a ValueError, so the layer wrapper names
+        # the layer instead of letting a traceback escape (Codex review).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            (workspace_dir / "creator-profile.json").write_text("{not json")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_all(workspace_dir)
+            self.assertIn("[workspace]", str(ctx.exception))
+
+    def test_non_object_project_manifest_fails_closed(self):
+        # A JSON-valid but non-object project.json must be a ValidationError,
+        # never an AttributeError escaping the layer wrapper (Codex review).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_full_workspace(temp_dir)
+            (project_dir / "project.json").write_text("[]\n")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_all(workspace_dir)
+            self.assertIn("must be a JSON object", str(ctx.exception))
+
+    def test_orphan_project_folder_fails(self):
+        # A projects/ subfolder without a manifest is invisible to the glob;
+        # the composed gate must reject it rather than skip it (Codex review).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            (workspace_dir / "projects" / "half-created").mkdir()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_all(workspace_dir)
+            self.assertIn("without a project.json manifest", str(ctx.exception))
+            self.assertIn("projects/half-created", str(ctx.exception))
+
     def test_cli_validate_all(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)

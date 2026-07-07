@@ -75,6 +75,18 @@ def validate_all(workspace_path):
         skipped.append(("board", "no content board yet (run rebuild-board)"))
 
     manifests = _run_layer("projects", collect_project_manifests, workspace_dir)
+    projects_dir = workspace_dir / "projects"
+    if projects_dir.exists():
+        manifest_dirs = {path.parent for path, _record in manifests.values()}
+        orphans = sorted(
+            str(path.relative_to(workspace_dir))
+            for path in projects_dir.iterdir()
+            if path.is_dir() and path not in manifest_dirs
+        )
+        if orphans:
+            raise ValidationError(
+                f"[projects] project folders without a project.json manifest: {orphans}"
+            )
     project_count = 0
     for project_id, (project_manifest_path, _record) in sorted(manifests.items()):
         result = _run_layer(

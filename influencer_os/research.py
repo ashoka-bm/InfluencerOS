@@ -116,6 +116,11 @@ def collect_project_manifests(workspace_dir):
                 record = load_json(manifest_path)
             except json.JSONDecodeError as exc:
                 raise ValidationError(f"{manifest_path}: invalid JSON: {exc}") from None
+            if not isinstance(record, dict):
+                raise ValidationError(
+                    f"{manifest_path}: project manifest must be a JSON object, "
+                    f"not {type(record).__name__}"
+                )
             project_id = record.get("project_id")
             if not isinstance(project_id, str) or not project_id:
                 raise ValidationError(
