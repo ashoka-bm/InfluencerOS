@@ -48,7 +48,8 @@
               "reddit",
               "facebook",
               "linkedin",
-              "youtube"
+              "youtube",
+              "public_web"
             ]
           },
           "creator_profile_id": {

@@ -178,6 +178,35 @@ class SchemaValidationTests(unittest.TestCase):
 
         validate_record("research-evidence", evidence)
 
+    def test_public_web_metric_snapshot_validates_without_youtube_claim(self):
+        snapshot = deepcopy(load_json("examples/metric-snapshot.example.json"))
+        snapshot.update(
+            metric_snapshot_id="metric_snapshot_luna_fit_public_web_001",
+            evidence_id="evidence_luna_fit_public_web_001",
+            platform="public_web",
+            visible_metrics={
+                "other": "No social engagement metrics captured; public web source only."
+            },
+            observed_age="Public page available as of capture date.",
+            velocity_estimate="unknown",
+            reference_creator_baseline="not applicable",
+            outperformance_note="No platform performance claim.",
+        )
+
+        validate_record("metric-snapshot", snapshot)
+        self.assertNotEqual(snapshot["platform"], "youtube")
+
+    def test_public_web_search_term_validates_without_youtube_claim(self):
+        terms = deepcopy(load_json("examples/research-search-terms.example.json"))
+        terms["items"][0]["platform"] = "public_web"
+        terms["items"][0]["rationale"] = (
+            "Grounds public-web source discovery without claiming native "
+            "YouTube evidence."
+        )
+
+        validate_record("research-search-terms", terms)
+        self.assertNotEqual(terms["items"][0]["platform"], "youtube")
+
     def test_project_source_refs_allow_public_web_without_youtube_claim(self):
         project = deepcopy(load_json("examples/project.example.json"))
         source_refs = project["source_refs"]

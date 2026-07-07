@@ -1134,6 +1134,27 @@ ARCHITECTURE. Verification: 527 tests pass (1 added), 43 examples validate,
 22 drift checks pass, the stale-path scan passes, and `.tmp/slice6-verify.sh`
 passes end to end.
 
+Guided E2E fixture repair (2026-07-07): reviewed the disposable
+`workspace-library/creators/e2e-luna-fit-2026-07-07` run data after the
+normal-user E2E/sub-agent exercise. The fixture validated, but the review found
+five data-quality gaps and fixed them in-place: validation-based foundation
+approval was replaced with an explicit `progress/setup-interview.md` approval
+record; a phase checklist now names phase, next artifact, validation command,
+and gate type; public-web Mayo/NIH/CCOHS source provenance now stays
+`public_web` through research evidence, metric snapshots, source-yield records,
+research search terms, and the project source cache instead of being mislabeled
+as YouTube evidence; promotion wording now records explicit approval after
+reviewing the package instead of preauthorization; an advisory hook/payoff
+ReviewRecord exists before generation approval; the project and board now sit
+at `ready_for_generation`; and `.DS_Store` noise was removed from the ignored
+fixture. The schema layer was hardened so public-web provenance validates for
+`MetricSnapshot.platform` and `ResearchSearchTerms.items[].platform`, with drift
+pins and regression tests. Verification: `python3 -m unittest discover -s tests`
+passes (787 tests), `python3 -m influencer_os validate examples` validates 49
+example records, and `python3 -m influencer_os validate all
+workspace-library/creators/e2e-luna-fit-2026-07-07` passes with 5 layers, 0
+skipped, 0 warnings.
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **Run 2 (live connector smoke, ADR 0022) completed 2026-07-07** with `INFLUENCER_OS_CONNECTOR_MAX_CALLS=3` per connector: `reddit_openai` discovery works live (12-17 candidates per topic, 1 paid call, parsed shapes match the mirrored parser), but reddit.com answers the free direct-JSON enrichment reads with HTTP 403 "Blocked" — the enrichment leg never attaches engagement metrics live. Found and fixed in the same batch: `enriched_count` counted attempts, not successes, so the fetch result claimed full enrichment while attaching nothing; it now counts only candidates with engagement attached and notes the failures (regression test `test_blocked_enrichment_counts_zero_and_notes_failure`). `youtube_data_api` works live (5 candidates, 2 paid calls, engagement present). `firecrawl_web` works on public article URLs but reddit.com also blocks it (HTTP 403 at the Firecrawl layer). `x_xai` fails with HTTP 403 `permission-denied` — the xAI team account has no credits; operator action: purchase credits at console.x.ai, then re-run one bounded fetch. `linkedin_apify` untested (no `APIFY_API_KEY`). Consequence for research quality: Reddit evidence currently carries discovery relevance but no visible metrics, so evidence strength for Reddit sources stays capped until an alternative engagement path (e.g. authenticated Reddit API) is approved in its own ADR. **Remaining before any automation decision:** exercise the full manual research-intelligence loop (run → findings → intelligence updates) against a real creator using the working connectors.
