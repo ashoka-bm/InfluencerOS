@@ -113,7 +113,8 @@ between them and halts at every human gate.
 - Promotion: `promote-idea` — **the human approval gate**. Nothing enters
   production without an explicit user-approved promotion package.
 - Production planning: `apply-social-template` and `create-production-plan`.
-- Packaging: `register-output-package`.
+- Packaging: `create-output-package` (its CLI seam is
+  `python3 -m influencer_os register-output-package`).
 
 Keep the projections fresh as records change:
 

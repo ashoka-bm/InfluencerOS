@@ -193,16 +193,56 @@ class RealCreatorRunbookDriftTests(unittest.TestCase):
         self.assertIn("irreversible", text)
         self.assertIn(".env.example", text)
 
-    def test_runbook_cli_commands_exist(self):
+    # Pinned to the argparse choices in influencer_os/cli.py; a drift here
+    # means either the CLI or the runbook changed without the other.
+    VALIDATE_TARGETS = {
+        "examples", "workspace", "project", "record", "research",
+        "queue", "board", "all",
+    }
+    FETCH_CONNECTORS = {
+        "reddit", "x", "firecrawl", "linkedin", "youtube-search",
+        "youtube-channel",
+    }
+    RUNBOOK_PRODUCER_SKILLS = {
+        "create-influencer",
+        "create-research-findings",
+        "manage-idea-queue",
+        "promote-idea",
+        "apply-social-template",
+        "create-production-plan",
+        "create-output-package",
+    }
+
+    def test_runbook_cli_invocations_are_real_command_forms(self):
         text = read_repo_text("docs/onboard-real-creator-runbook.md")
-        named = set(re.findall(r"python3 -m influencer_os (\S+)", text))
+        invocations = re.findall(r"python3 -m influencer_os ([a-z-]+)(?:\s+(\S+))?", text)
+        self.assertTrue(invocations, "runbook names no CLI invocations")
         parser_source = (ROOT / "influencer_os" / "cli.py").read_text()
-        for command in named:
+        for command, first_arg in invocations:
             self.assertIn(
                 f'"{command}"',
                 parser_source,
                 f"runbook names a CLI command that does not exist: {command}",
             )
+            if command == "validate":
+                self.assertIn(
+                    first_arg,
+                    self.VALIDATE_TARGETS,
+                    f"runbook names an unknown validate target: {first_arg}",
+                )
+            if command == "research-fetch":
+                self.assertIn(
+                    first_arg,
+                    self.FETCH_CONNECTORS,
+                    f"runbook names an unknown connector: {first_arg}",
+                )
+
+    def test_runbook_names_real_producer_skills(self):
+        text = read_repo_text("docs/onboard-real-creator-runbook.md")
+        on_disk = skills_on_disk()
+        for skill in sorted(self.RUNBOOK_PRODUCER_SKILLS):
+            self.assertIn(f"`{skill}`", text, f"runbook no longer names skill {skill}")
+            self.assertIn(skill, on_disk, f"runbook names a skill not on disk: {skill}")
 
 
 class SkillRegistryDriftTests(unittest.TestCase):
