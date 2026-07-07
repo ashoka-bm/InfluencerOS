@@ -13,8 +13,6 @@ Use [docs/templates/creator-setup/creator-profile.template.json](docs/templates/
 
 `creator-profile.json` is the operational summary for automation. It is not the full identity, soul, or brand file.
 
-It should be compact enough for agents to load routinely and strong enough to support research, ideas, scripts, production plans, and output packaging.
-
 ## Inputs
 
 Read:
@@ -61,4 +59,8 @@ Ask only for schema-blocking gaps:
 
 ## Completion Criteria
 
-Complete when `python3 -m influencer_os validate workspace <creator-workspace>` can validate the Creator Profile once paired with a valid workspace manifest and Reference Library.
+Complete when
+`python3 -m influencer_os validate record creator-profile <creator-workspace>/creator-profile.json`
+passes and every `file_refs` and `reference_refs` path exists in the
+workspace. Drafts require user acceptance before any readiness status
+changes; validation is not approval.

@@ -29,6 +29,8 @@ Use:
 When a generation call runs, record the generation date, tool, and any
 accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`,
 and leave the asset `generated` until the user explicitly approves the look.
+Plan drafts require user acceptance before any readiness status changes;
+validation is not approval.
 
 ## Required Asset Families
 

@@ -19,14 +19,15 @@ It may include private creative guidance that should influence content but not b
 
 Target 1,100-1,700 words. Hard maximum 2,200 words unless the user explicitly asks for a long-form psychology bible.
 
-Keep:
+The template owns the section list; `validate workspace` enforces its
+required headings and a 350-word floor. Size guides for the largest
+sections:
 
 - Runtime Capsule: under 200 words
 - Values: 5-8 values
 - Belief Matrix: 12-24 beliefs grouped by theme
 - Emotional Logic: 5-8 compact rules
-- Triggers: 5-8 items
-- Soothers: 5-8 items
+- Triggers And Soothers: 5-8 items each
 - Behavior Under Stress: 4-6 bullets
 - Audience Emotional Contract: 5-8 bullets
 - Inner Material Not For Direct Publication: only what materially guides content
@@ -69,4 +70,7 @@ Ask only for gaps that block emotional consistency:
 
 ## Completion Criteria
 
-Complete when the file follows the template sections, stays inside the size budget, and an agent can use it to choose emotional angles, avoid off-persona hooks, preserve trust, and distinguish public expression from private creative guidance.
+Complete when the file follows the template sections, stays inside the size
+budget, has no placeholders, and `validate workspace` reports no soul.md
+heading or word-floor failures. Drafts require user acceptance before any
+readiness status changes; validation is not approval.

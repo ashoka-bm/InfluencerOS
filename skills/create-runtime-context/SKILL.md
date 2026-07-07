@@ -25,9 +25,11 @@ Rich material belongs in `brand_context/`, `references/`, `sources/`, or `memory
 
 ## Size Budgets
 
-- `context/SOUL.md`: under 3 KB.
-- `context/USER.md`: under 1.5 KB.
-- `context/MEMORY.md`: under 2.5 KB.
+Enforced byte caps (`validate workspace` checks them):
+
+- `context/SOUL.md`: 3,072 bytes.
+- `context/USER.md`: 1,536 bytes.
+- `context/MEMORY.md`: 2,500 bytes (matches the `memory-write` cap).
 
 ## Inputs
 
@@ -50,4 +52,7 @@ Read:
 
 ## Completion Criteria
 
-Complete when all three files exist, stay within size budget, contain no placeholders, and point agents to the lazy-loaded files needed for deeper work.
+Complete when all three files exist, contain no placeholders, point agents
+to the lazy-loaded files needed for deeper work, and `validate workspace`
+reports no context byte-cap violations. Drafts require user acceptance
+before any readiness status changes; validation is not approval.

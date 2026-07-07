@@ -42,14 +42,21 @@ Capture 5-10 samples across relevant modes:
 - newsletter or article line
 - brand integration line, when commercial content is in scope
 
-## Mark Confidence
+## Mark Source And Confidence
 
-Label each sample:
+Two per-sample labels, matching the template:
 
-- `user_provided`: written or approved by the user
-- `source_extracted`: extracted from real source material
-- `generated_from_intake`: drafted by the LLM and awaiting replacement
+- Source: where the sample came from — real published or user-written
+  material is `user_provided`; LLM drafts awaiting replacement are
+  `generated_from_intake` (the file-level Status rolls these up as
+  `user_provided | generated_from_intake | mixed`).
+- Confidence: `high | medium | low` — how strongly the sample represents
+  the creator's actual voice.
 
 ## Completion Criteria
 
-Complete when each sample has exact text, source/context, content mode, why it represents the voice, and confidence.
+Complete when 5-10 samples exist — each with exact text, source, content
+mode, why it represents the voice, and confidence — the file stays inside
+the size budget, and `validate workspace` reports no voice-sample floor
+failures (minimum 5 samples, 200 words). Drafts require user acceptance
+before any readiness status changes; validation is not approval.

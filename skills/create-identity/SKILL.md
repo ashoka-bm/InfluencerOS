@@ -19,7 +19,9 @@ It is not the place for the full psychology model, brand strategy, content calen
 
 Target 900-1,400 words. Hard maximum 1,800 words unless the user explicitly asks for a long-form identity bible.
 
-Keep:
+The template owns the section list; `validate workspace` enforces its
+required headings and a 300-word floor. Size guides for the largest
+sections:
 
 - Runtime Capsule: under 200 words
 - Identity Snapshot: 6-9 bullets
@@ -68,4 +70,8 @@ Ask only for gaps that block continuity:
 
 ## Completion Criteria
 
-Complete when the file follows the template sections, stays inside the size budget, has no placeholders, source notes are present, and an agent can use it to avoid breaking biography, public role, relationships, and recurring-world continuity.
+Complete when the file follows the template sections, stays inside the size
+budget, has no placeholders, source notes are present, and
+`validate workspace` reports no identity.md heading or word-floor failures.
+Drafts require user acceptance before any readiness status changes;
+validation is not approval.
