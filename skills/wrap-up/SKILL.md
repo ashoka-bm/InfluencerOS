@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: "End-of-session self-improvement loop for InfluencerOS (ADR 0016, adapts meta-wrap-up). Triggers when the user signals session end (\"thanks\", \"that's it\", \"done for today\", \"wrap up\", \"we're done\") or when a session produced deliverables. Reviews deliverables, collects feedback, appends dated per-skill learnings, fixes skills directly, reconciles the skill registry and context matrix, and promotes durable facts to MEMORY.md. Does NOT trigger for a mid-conversation \"thanks\" that clearly means \"thanks, now do X\"."
+description: "End-of-session self-improvement loop. Triggers when the user signals session end (\"thanks\", \"that's it\", \"done for today\", \"wrap up\", \"we're done\") or when a session produced deliverables. Does NOT trigger for a mid-conversation \"thanks\" that clearly means \"thanks, now do X\"."
 dependencies:
   - memory-write
 ---

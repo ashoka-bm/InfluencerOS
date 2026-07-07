@@ -1,6 +1,6 @@
 ---
 name: memory-write
-description: "Saves durable facts to a MEMORY.md file (ADR 0016, adapts meta-memory-write). Triggers on \"remember this\", \"note that\", \"save this to memory\", \"update memory\", \"forget about X\". Adds one deduplicated fact under the right section via the bounded CLI writer, which enforces the 2,500-byte cap before every write. Does NOT trigger for learnings updates (handled by wrap-up) or one-off in-conversation reminders."
+description: "Saves one durable fact to a MEMORY.md file via the bounded CLI writer (2,500-byte cap). Triggers on \"remember this\", \"note that\", \"save this to memory\", \"update memory\", \"forget about X\". Does NOT trigger for learnings updates (wrap-up's job) or one-off in-conversation reminders."
 ---
 
 # Memory Write

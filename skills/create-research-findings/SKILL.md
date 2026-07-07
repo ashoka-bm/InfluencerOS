@@ -1,6 +1,6 @@
 ---
 name: create-research-findings
-description: "Use to run a platform-scoped research run and maintain the creator's rolling Research Findings: capture dated JSONL evidence and metric snapshots, update findings.md only on material findings, promote stable findings, and maintain research intelligence."
+description: Use for platform-scoped research runs — scheduled needs, wildcard discovery, watchlist checks, urgent trend checks, hashtag or search-term checks, queue refresh — maintaining the creator's rolling Research Findings and research intelligence.
 ---
 
 # Create Research Findings

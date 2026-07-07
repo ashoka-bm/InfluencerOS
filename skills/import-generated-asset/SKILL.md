@@ -1,6 +1,6 @@
 ---
 name: import-generated-asset
-description: Use when media generated outside InfluencerOS (a provider web UI export, a user-supplied file) needs to enter a Project or the Reference Library with full provenance. Wraps the import-generated-asset CLI; captures origin, tool, and license honestly — an unknown license is recorded as a warning, never guessed.
+description: Use when media generated outside InfluencerOS — a provider web-UI export or a user-supplied file — needs to enter a Project or the Reference Library with full provenance.
 ---
 
 # Import Generated Asset

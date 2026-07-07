@@ -1,6 +1,6 @@
 ---
 name: review-generated-assets
-description: "Use after generation or import and before packaging to run the blocking QualityReview on generation/ media: walk the closed checklist (identity consistency, continuity with plan, technical conformance, creator boundary compliance) against the asset manifest, plan, and Reference Library, and write the QualityReview record the packaging gate requires."
+description: Use after generation or import and before packaging for the blocking QualityReview on generation/ media — the record the packaging gate requires.
 ---
 
 # Review Generated Assets

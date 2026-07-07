@@ -1,6 +1,6 @@
 ---
 name: create-reference-library
-description: Use to create references/reference-library.json and provider-neutral prompt files for character, location, outfit, object, video style, voice, and brand assets.
+description: Use to plan references/reference-library.json and provider-neutral prompt files for the creator's continuity assets.
 ---
 
 # Create Reference Library

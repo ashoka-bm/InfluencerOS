@@ -1,6 +1,6 @@
 ---
 name: review-hook-payoff
-description: "Use after a production plan is drafted and before the generation-approval gate to run the advisory Hook/Payoff Review on any of the six plan types: judge whether the hook earns attention and the payoff delivers the promised value, then write a ReviewRecord. Advisory only; never blocks."
+description: Use after a production plan is drafted and before the generation-approval gate for the advisory Hook/Payoff Review (ADR 0024) of any of the six plan types.
 ---
 
 # Review Hook/Payoff

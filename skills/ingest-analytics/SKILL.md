@@ -1,6 +1,6 @@
 ---
 name: ingest-analytics
-description: Use after a Project has registered Published Post Records to ingest platform performance data as AnalyticsSnapshots through manual entry or the neutral InfluencerOS CSV template. Records observed metrics honestly; never calls platform APIs.
+description: Use after a Project has live Published Post Records to ingest platform performance data as AnalyticsSnapshots — manual entry or the neutral CSV template.
 ---
 
 # Ingest Analytics

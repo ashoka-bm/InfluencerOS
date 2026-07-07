@@ -1,6 +1,6 @@
 ---
 name: create-output-package
-description: Use after a Project has an AppliedSocialTemplate and format-specific production plan to register an OutputPackage, copy upload-ready files into the project, preserve provenance, and mark the Project packaged without publishing or calling providers.
+description: Use after a Project has an AppliedSocialTemplate and a format-specific production plan to register the OutputPackage and mark the Project packaged.
 ---
 
 # Create Output Package

@@ -1,6 +1,6 @@
 ---
 name: create-production-plan
-description: Use after an AppliedSocialTemplate exists to route a Project to its exact format-specific production plan schema, including article and thread text plans, and to draft a provider-neutral BaseVideoGenerationPlan only when short-form video generation is planned.
+description: Use after an AppliedSocialTemplate exists to route a Project to its format-specific production plan schema and draft a provider-neutral BaseVideoGenerationPlan when short-form video generation is planned.
 ---
 
 # Create Production Plan

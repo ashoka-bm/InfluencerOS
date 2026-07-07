@@ -1,6 +1,6 @@
 ---
 name: create-performance-summary
-description: Use after a published Project has mature AnalyticsSnapshots to author the PerformanceSummary that maps observed results to the five attribution stages (packaging, hook, body retention, payoff, CTA). Interprets evidence against the Performance Benchmark Rubric; never invents metrics.
+description: Use after a published Project has mature AnalyticsSnapshots to author the PerformanceSummary mapping observed results to the five attribution stages.
 ---
 
 # Create Performance Summary

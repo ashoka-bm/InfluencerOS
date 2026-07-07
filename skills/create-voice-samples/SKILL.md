@@ -1,6 +1,6 @@
 ---
 name: create-voice-samples
-description: "Use to create voice-samples.md: 5-10 gold-standard creator voice examples with source, mode, reason, and confidence."
+description: Use to extract or curate brand_context/voice-samples.md — 5-10 gold-standard creator voice examples.
 ---
 
 # Create Voice Samples

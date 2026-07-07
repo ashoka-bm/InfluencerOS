@@ -1,6 +1,6 @@
 ---
 name: create-runtime-context
-description: "Use to create tiny always-loaded creator context files: context/SOUL.md, context/USER.md, and context/MEMORY.md."
+description: Use to create the tiny always-loaded creator context files — context/SOUL.md, context/USER.md, and context/MEMORY.md — after the rich foundation files exist.
 ---
 
 # Create Runtime Context

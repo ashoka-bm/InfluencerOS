@@ -1,6 +1,6 @@
 ---
 name: apply-social-template
-description: "Use after a human-approved Idea Promotion creates a Project and before production planning: choose a format-compatible social template or production structure, adapt it to the promoted idea, and write the AppliedSocialTemplate record."
+description: Use to choose and apply a format-compatible social template or production structure to a promoted idea — after Idea Promotion creates a Project, before production planning — writing the AppliedSocialTemplate.
 ---
 
 # Apply Social Template

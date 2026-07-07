@@ -1,6 +1,6 @@
 ---
 name: register-published-post
-description: Use after a human has manually published a packaged Project's Output Package on a platform to record the publication as a PublishedPostRecord and move the Project to published. Records what already happened; never publishes, uploads, or schedules.
+description: Use after a human has manually published a packaged Project's Output Package to record the publication as a PublishedPostRecord and move the Project to published.
 ---
 
 # Register Published Post

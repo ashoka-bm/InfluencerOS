@@ -1,6 +1,6 @@
 ---
 name: human-voice-pass
-description: "Use on drafted article, thread, caption, or script text to run the advisory Human-Voice Pass: strip AI tells and restore the creator's actual voice using the Creator Profile and voice samples. Returns rewritten text plus a change trace; writes no record and never blocks."
+description: Use on drafted article, thread, caption, or script text for the advisory Human-Voice Pass — strip AI tells and restore the creator's actual voice.
 ---
 
 # Human-Voice Pass

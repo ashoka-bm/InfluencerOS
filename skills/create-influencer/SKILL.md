@@ -1,6 +1,6 @@
 ---
 name: create-influencer
-description: Use to run the full Creator Setup workflow from intake through accepted creator foundation, workspace files, reference requirements, provider-neutral prompts, and readiness checklist.
+description: Use when the user wants to create, set up, or onboard a new influencer or creator — from existing files, a guided interview, or minimal basic information.
 dependencies:
   - create-identity
   - create-soul

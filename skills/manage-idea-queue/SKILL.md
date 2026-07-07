@@ -1,6 +1,6 @@
 ---
 name: manage-idea-queue
-description: "Use to create and maintain the creator's scored Idea Queue: add evidence-linked entries from research findings, rescore and stale entries as research changes, keep the queue manifest and Content Board consistent, and present ideas by goal. Never promotes."
+description: Use to add evidence-linked ideas to the creator's scored Idea Queue, rescore or mark entries stale as research changes, and present ideas by goal. Never promotes — promotion is promote-idea's human gate.
 ---
 
 # Manage Idea Queue

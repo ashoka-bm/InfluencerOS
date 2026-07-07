@@ -1,6 +1,6 @@
 ---
 name: create-creator-profile
-description: Use to create creator-profile.json as the schema-backed operational summary from accepted runtime context, brand_context files, and reference-library.json.
+description: Use to draft or refresh creator-profile.json — the schema-backed operational summary distilled from the accepted brand_context foundation and reference library.
 ---
 
 # Create Creator Profile

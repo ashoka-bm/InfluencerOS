@@ -1,6 +1,6 @@
 ---
 name: create-soul
-description: "Use to turn creator intake material into soul.md: values, beliefs, emotional logic, triggers, soothers, behavior under stress, and audience emotional contract."
+description: Use to draft or revise brand_context/soul.md — the creator's psychology file of values, beliefs, emotional logic, and the audience emotional contract.
 ---
 
 # Create Soul

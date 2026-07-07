@@ -1,6 +1,6 @@
 ---
 name: create-personal-brand
-description: "Use to turn creator intake material into personal-brand.md: positioning, audience, content strategy, pillars, surface strategy, monetization, disclosure, and boundaries."
+description: Use to draft or revise brand_context/personal-brand.md — positioning, audience, content strategy, surfaces, monetization, and boundaries.
 ---
 
 # Create Personal Brand

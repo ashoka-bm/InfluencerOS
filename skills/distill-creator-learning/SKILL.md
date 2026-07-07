@@ -1,6 +1,6 @@
 ---
 name: distill-creator-learning
-description: Use after one or more PerformanceSummary records exist to distill durable, evidence-linked creator lessons into memory/learnings.md and optionally promote a proven durable fact to context/MEMORY.md. Judges evidence strength honestly (ADR 0008 — never overfit to one post); never invents lessons without resolvable evidence.
+description: Use after PerformanceSummary records exist to distill durable, evidence-linked creator lessons into memory/learnings.md and optionally promote a proven fact to the workspace context/MEMORY.md.
 dependencies:
   - memory-write
 ---

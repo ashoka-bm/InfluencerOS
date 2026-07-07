@@ -1,6 +1,6 @@
 ---
 name: create-identity
-description: "Use to turn creator intake material into identity.md: biography, origin, public role, continuity facts, recurring world, voice examples, and contradiction checks."
+description: Use to draft or revise brand_context/identity.md — the creator's continuity production bible of biography, origin, public role, recurring world, and contradiction checks.
 ---
 
 # Create Identity
