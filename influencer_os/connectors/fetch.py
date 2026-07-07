@@ -270,6 +270,79 @@ def fetch_youtube_search(
                    capped=False, notes=[])
 
 
+def fetch_youtube_channel(
+    channel: str,
+    config: Dict[str, Any],
+    budget: env.CallBudget,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    days: int = DEFAULT_RECENCY_DAYS,
+    max_results: int = 10,
+    mock_resolve_response: Optional[Dict] = None,
+    mock_channel_response: Optional[Dict] = None,
+    mock_playlist_response: Optional[Dict] = None,
+    mock_details_response: Optional[Dict] = None,
+) -> Dict[str, Any]:
+    """Fetch a reference channel's latest uploads within the recency window.
+
+    `channel` is a UC… channel id or an @handle. Quota-drawing calls: one
+    channels.list resolution for handles, then channels.list + playlistItems
+    for the uploads playlist, then one videos.list batch for statistics.
+    """
+    if not env.has_key(config, "YOUTUBE_API_KEY"):
+        raise ConnectorUnavailable(
+            "youtube_data_api requires YOUTUBE_API_KEY and the paid tier enabled"
+        )
+
+    from_date, to_date = _recency_window(from_date, to_date, days)
+    api_key = config["YOUTUBE_API_KEY"]
+    notes: List[str] = []
+
+    def capped(note):
+        return _result("youtube_data_api", "youtube_data_api", "youtube",
+                       channel, from_date, to_date, model=None, candidates=[],
+                       budget=budget, enriched=0, truncated=False, capped=True,
+                       notes=[note])
+
+    channel_id = channel if youtube_data.is_channel_id(channel) else None
+    if channel_id is None:
+        if not budget.spend():
+            return capped("paid call cap reached before YouTube channel resolution")
+        channel_id = youtube_data.resolve_channel(
+            api_key, channel, mock_response=mock_resolve_response
+        )
+        if not channel_id:
+            return _result("youtube_data_api", "youtube_data_api", "youtube",
+                           channel, from_date, to_date, model=None, candidates=[],
+                           budget=budget, enriched=0, truncated=False, capped=False,
+                           notes=[f"channel not found for {channel!r}"])
+
+    # channels.list (uploads playlist) + playlistItems.list.
+    if not budget.spend(2):
+        return capped("paid call cap reached before YouTube channel uploads fetch")
+    raw_playlist = youtube_data.fetch_channel_uploads(
+        api_key, channel_id, max_results=max_results,
+        mock_channel_response=mock_channel_response,
+        mock_playlist_response=mock_playlist_response,
+    )
+    search_shaped = youtube_data.search_items_from_playlist(raw_playlist)
+    video_ids = youtube_data.video_ids_from_search(search_shaped)
+    if video_ids and not budget.spend():
+        return capped("paid call cap reached before YouTube video details")
+
+    raw_details = youtube_data.fetch_video_details(
+        api_key, video_ids, mock_response=mock_details_response
+    )
+    candidates = youtube_data.parse_video_candidates(search_shaped, raw_details)
+    kept = [c for c in candidates if _passes_recency(c.get("date"), from_date)]
+    if len(candidates) - len(kept):
+        notes.append(f"dropped {len(candidates) - len(kept)} candidate(s) older than {from_date}")
+    return _result("youtube_data_api", "youtube_data_api", "youtube",
+                   channel, from_date, to_date, model=None, candidates=kept,
+                   budget=budget, enriched=len(kept), truncated=False,
+                   capped=False, notes=notes)
+
+
 def _result(connector, adapter_id, platform, topic, from_date, to_date,
             model, candidates, budget, enriched, truncated, capped, notes):
     return {

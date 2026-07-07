@@ -4,7 +4,7 @@ This module fetches public video/channel metadata for research runs. It does
 not fetch transcripts, use OAuth, call YouTube Analytics, publish, or schedule.
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
@@ -21,6 +21,20 @@ def _get(path: str, params: Dict[str, Any], timeout: int = 20) -> Dict[str, Any]
 
 def rfc3339_start(date_text: str) -> str:
     return f"{date_text}T00:00:00Z"
+
+
+def rfc3339_end_exclusive(date_text: str) -> str:
+    """Inclusive research to_date -> exclusive next-midnight API boundary.
+
+    publishedBefore is a date-time cut-off, so the boundary must be the NEXT
+    day's midnight or the window silently drops the to_date's videos.
+    """
+    next_day = date.fromisoformat(date_text) + timedelta(days=1)
+    return f"{next_day.isoformat()}T00:00:00Z"
+
+
+def is_channel_id(value: str) -> bool:
+    return value.startswith("UC") and len(value) == 24
 
 
 def search_videos(
@@ -42,7 +56,7 @@ def search_videos(
         "type": "video",
         "order": order,
         "publishedAfter": rfc3339_start(from_date),
-        "publishedBefore": rfc3339_start(to_date),
+        "publishedBefore": rfc3339_end_exclusive(to_date),
         "maxResults": min(max_results, 50),
         "regionCode": region_code,
         "relevanceLanguage": relevance_language,
@@ -68,7 +82,7 @@ def fetch_video_details(
 
 
 def resolve_channel(api_key: str, handle_or_id: str, mock_response: Optional[Dict[str, Any]] = None) -> Optional[str]:
-    if handle_or_id.startswith("UC") and len(handle_or_id) == 24:
+    if is_channel_id(handle_or_id):
         return handle_or_id
     if mock_response is None:
         response = _get("channels", {
@@ -108,6 +122,18 @@ def fetch_channel_uploads(
         "maxResults": min(max_results, 50),
         "key": api_key,
     })
+
+
+def search_items_from_playlist(response: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapt playlistItems.list uploads into search.list-shaped items so the
+    channel path can reuse video_ids_from_search/parse_video_candidates."""
+    items = []
+    for item in response.get("items", []):
+        snippet = item.get("snippet", {})
+        video_id = snippet.get("resourceId", {}).get("videoId")
+        if video_id:
+            items.append({"id": {"videoId": video_id}, "snippet": snippet})
+    return {"items": items}
 
 
 def video_ids_from_search(response: Dict[str, Any]) -> List[str]:

@@ -244,6 +244,7 @@ python3 -m influencer_os research-fetch x "creatine timing" --depth deep --out .
 python3 -m influencer_os research-fetch firecrawl https://example.com/post
 python3 -m influencer_os research-fetch linkedin https://www.linkedin.com/in/<profile> --max-posts 5
 python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --days 30 --max-results 10 --out .tmp/youtube-fetch.json
+python3 -m influencer_os research-fetch youtube-channel "@deskwellness" --days 30 --max-results 10 --out .tmp/youtube-channel.json
 ```
 
 The YouTube connector uses public YouTube Data API video/channel metadata and

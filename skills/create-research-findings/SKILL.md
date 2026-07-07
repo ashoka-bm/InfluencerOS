@@ -77,8 +77,9 @@ Usage inside a run:
   `list-connectors` shows it available; otherwise mark it
   `skip_this_run`/`future_connector` and fall back to public web.
 - Fetch with
-  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin|youtube-search> "<topic-or-url>" --out .tmp/<run-id>-<connector>.json`,
-  e.g. `python3 -m influencer_os research-fetch youtube-search "<topic>" --days 30 --max-results 10 --out .tmp/<run-id>-youtube.json`.
+  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin|youtube-search|youtube-channel> "<topic-url-or-channel>" --out .tmp/<run-id>-<connector>.json`,
+  e.g. `python3 -m influencer_os research-fetch youtube-search "<topic>" --days 30 --max-results 10 --out .tmp/<run-id>-youtube.json`
+  or `python3 -m influencer_os research-fetch youtube-channel "@<handle-or-UC-id>" --days 30 --out .tmp/<run-id>-youtube-channel.json`.
   The result validates against `schemas/research-fetch-result.schema.json` and
   is a transient candidate list, never canonical state.
 - Curate: promote only creator-fit candidates into `evidence.jsonl`; map real

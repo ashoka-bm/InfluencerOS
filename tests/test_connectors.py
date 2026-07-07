@@ -542,6 +542,42 @@ class YouTubeDataParseTests(unittest.TestCase):
 
         self.assertEqual(youtube_data.video_ids_from_search(response), ["abc123xyz09"])
 
+    def test_search_window_includes_the_full_to_date_day(self):
+        # to_date is an inclusive research date; publishedBefore is an exclusive
+        # date-time boundary, so it must be the NEXT day's midnight or the
+        # window silently drops the requested end date's videos.
+        captured = {}
+
+        def fake_get(url, **kwargs):
+            captured["url"] = url
+            return {"items": []}
+
+        with mock.patch.object(youtube_data.http, "get", side_effect=fake_get):
+            youtube_data.search_videos("yt-key", "desk", "2026-06-07", "2026-07-07")
+
+        self.assertIn("publishedAfter=2026-06-07T00%3A00%3A00Z", captured["url"])
+        self.assertIn("publishedBefore=2026-07-08T00%3A00%3A00Z", captured["url"])
+
+    def test_search_items_from_playlist_adapts_upload_items(self):
+        response = {
+            "items": [
+                {"snippet": {
+                    "title": "Latest upload",
+                    "channelTitle": "Desk Wellness",
+                    "channelId": "UC123",
+                    "publishedAt": "2026-07-01T12:00:00Z",
+                    "resourceId": {"videoId": "abc123xyz09"},
+                }},
+                {"snippet": {"title": "no video id"}},
+            ]
+        }
+
+        adapted = youtube_data.search_items_from_playlist(response)
+
+        self.assertEqual(len(adapted["items"]), 1)
+        self.assertEqual(adapted["items"][0]["id"], {"videoId": "abc123xyz09"})
+        self.assertEqual(adapted["items"][0]["snippet"]["title"], "Latest upload")
+
 
 class FetchOtherConnectorsTests(unittest.TestCase):
     def _response(self, text):
@@ -639,6 +675,91 @@ class YouTubeFetchTests(unittest.TestCase):
     def test_fetch_youtube_requires_key(self):
         with self.assertRaises(fetch.ConnectorUnavailable):
             fetch.fetch_youtube_search("desk", {"YOUTUBE_API_KEY": None}, env.CallBudget(5))
+
+    def _channel_mocks(self):
+        return {
+            "mock_channel_response": {
+                "items": [{"contentDetails": {"relatedPlaylists": {"uploads": "UU123"}}}]
+            },
+            "mock_playlist_response": {
+                "items": [{"snippet": {
+                    "title": "Latest upload",
+                    "channelTitle": "Desk Wellness",
+                    "channelId": "UC1234567890123456789012",
+                    "publishedAt": "2026-07-01T12:00:00Z",
+                    "resourceId": {"videoId": "abc123xyz09"},
+                }}]
+            },
+            "mock_details_response": {
+                "items": [{
+                    "id": "abc123xyz09",
+                    "contentDetails": {"duration": "PT58S"},
+                    "statistics": {"viewCount": "1200", "likeCount": "90", "commentCount": "12"},
+                }]
+            },
+        }
+
+    def test_fetch_youtube_channel_by_id_returns_valid_result(self):
+        config = {"YOUTUBE_API_KEY": "yt-key"}
+        budget = env.CallBudget(5)
+
+        result = fetch.fetch_youtube_channel(
+            "UC1234567890123456789012", config, budget,
+            from_date="2026-06-07", to_date="2026-07-07",
+            **self._channel_mocks(),
+        )
+
+        self.assertEqual(result["connector"], "youtube_data_api")
+        self.assertEqual(result["platform"], "youtube")
+        # channels.list + playlistItems.list + videos.list; no handle resolution.
+        self.assertEqual(result["calls_used"], 3)
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertEqual(result["candidates"][0]["video_id"], "abc123xyz09")
+        self.assertEqual(result["candidates"][0]["engagement"]["views"], 1200)
+        validate_record("research-fetch-result", result)
+
+    def test_fetch_youtube_channel_resolves_handle_and_spends_a_call(self):
+        config = {"YOUTUBE_API_KEY": "yt-key"}
+        budget = env.CallBudget(5)
+
+        result = fetch.fetch_youtube_channel(
+            "@deskwellness", config, budget,
+            from_date="2026-06-07", to_date="2026-07-07",
+            mock_resolve_response={"items": [{"id": "UC1234567890123456789012"}]},
+            **self._channel_mocks(),
+        )
+
+        self.assertEqual(result["calls_used"], 4)
+        self.assertEqual(len(result["candidates"]), 1)
+        validate_record("research-fetch-result", result)
+
+    def test_fetch_youtube_channel_drops_uploads_outside_window(self):
+        config = {"YOUTUBE_API_KEY": "yt-key"}
+        mocks = self._channel_mocks()
+        mocks["mock_playlist_response"]["items"][0]["snippet"]["publishedAt"] = "2026-01-01T12:00:00Z"
+
+        result = fetch.fetch_youtube_channel(
+            "UC1234567890123456789012", config, env.CallBudget(5),
+            from_date="2026-06-07", to_date="2026-07-07", **mocks,
+        )
+
+        self.assertEqual(result["candidates"], [])
+        self.assertEqual(result["status"], "no_results")
+        self.assertTrue(any("older than" in note for note in result["notes"]))
+
+    def test_fetch_youtube_channel_unresolved_handle_is_no_results(self):
+        config = {"YOUTUBE_API_KEY": "yt-key"}
+
+        result = fetch.fetch_youtube_channel(
+            "@nobody", config, env.CallBudget(5),
+            from_date="2026-06-07", to_date="2026-07-07",
+            mock_resolve_response={"items": []},
+        )
+
+        self.assertEqual(result["candidates"], [])
+        self.assertEqual(result["status"], "no_results")
+        self.assertTrue(any("channel not found" in note for note in result["notes"]))
+        validate_record("research-fetch-result", result)
 
 
 class SecretHandlingTests(unittest.TestCase):
@@ -767,6 +888,38 @@ class YouTubeCliTests(unittest.TestCase):
                     mock.patch.object(fetch, "fetch_youtube_search", return_value=fake_result):
                 code = cli.main([
                     "research-fetch", "youtube-search", "desk stretch",
+                    "--env-file", str(env_path), "--out", str(out_path),
+                ])
+
+            self.assertEqual(code, 0)
+            self.assertTrue(out_path.exists())
+
+    def test_research_fetch_youtube_channel_writes_output(self):
+        from influencer_os import cli
+        fake_result = {
+            "connector": "youtube_data_api",
+            "adapter_id": "youtube_data_api",
+            "platform": "youtube",
+            "topic": "@deskwellness",
+            "from_date": "2026-06-07",
+            "to_date": "2026-07-07",
+            "model": "",
+            "candidates": [{"id": "YT1", "url": "https://www.youtube.com/watch?v=abc123xyz09"}],
+            "enriched_count": 1,
+            "calls_used": 4,
+            "truncated": False,
+            "capped": False,
+            "status": "ok",
+            "notes": [],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("YOUTUBE_API_KEY=yt-key\n")
+            out_path = Path(tmp) / "youtube-channel.json"
+            with mock.patch.dict("os.environ", {}, clear=True), \
+                    mock.patch.object(fetch, "fetch_youtube_channel", return_value=fake_result):
+                code = cli.main([
+                    "research-fetch", "youtube-channel", "@deskwellness",
                     "--env-file", str(env_path), "--out", str(out_path),
                 ])
 
