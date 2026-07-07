@@ -30,6 +30,24 @@ Read (context matrix — Performance summary row):
 Write only `performance-summary.json` at the project root. Never mutate
 Project status, snapshots, published records, or the package.
 
+## Authoring Steps
+
+1. Read the package's Creative Performance Map, the published records, and
+   all snapshots; note which metrics are null and which snapshots are
+   provisional.
+2. Author `performance-summary.json` against
+   `schemas/performance-summary.schema.json` (example:
+   `examples/performance-summary.example.json`), satisfying every contract
+   section below: Summary Contract, Prediction Scoring, Performance
+   Benchmark Rubric, Stage Remediation Mapping, Lessons And Evidence
+   Strength, and Semantic Lookup Call.
+3. Validate:
+
+```bash
+python3 -m influencer_os validate record performance-summary <creator-workspace>/projects/<project-slug>/performance-summary.json
+python3 -m influencer_os validate project <creator-workspace>/projects/<project-slug>
+```
+
 ## Summary Contract
 
 - `evidence_refs` must resolve inside this project: `output_package_id` to
@@ -64,6 +82,20 @@ Project status, snapshots, published records, or the package.
 - A metric the platform never reported (`null`) is *unmeasured*: write the
   stage finding as unmeasured with `confidence: low`, never as zero or as a
   guessed value.
+
+## Prediction Scoring (ADR 0025)
+
+For every map stage that carries a `prediction`, the stage finding must
+record `prediction_result`:
+
+- `confirmed` / `refuted`: set `measured_value` to the observed metric; the
+  validator recomputes `measured_value <comparator> threshold` and the
+  result must agree — the arithmetic decides, not the narrative.
+- `unmeasurable`: the platform did not report the metric; record
+  `prediction_result_reason` and no measured value.
+- Never score a stage the package did not predict, and never skip a stage it
+  did. Refuted predictions are learning, not failures — say what the miss
+  teaches in `interpretation`.
 
 ## Performance Benchmark Rubric
 
@@ -123,21 +155,6 @@ stage whose metrics were unmeasured — recommend measuring it.
   partner terms, unreleased plans). Raw metrics stay out of the lookup by
   construction either way.
 
-## Authoring Steps
-
-1. Read the package's Creative Performance Map, the published records, and
-   all snapshots; note which metrics are null and which snapshots are
-   provisional.
-2. Author `performance-summary.json` against
-   `schemas/performance-summary.schema.json` (example:
-   `examples/performance-summary.example.json`).
-3. Validate:
-
-```bash
-python3 -m influencer_os validate record performance-summary <creator-workspace>/projects/<project-slug>/performance-summary.json
-python3 -m influencer_os validate project <creator-workspace>/projects/<project-slug>
-```
-
 ## Boundaries
 
 - Never invent, extrapolate, or average metrics that were not recorded in
@@ -151,21 +168,6 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 ## Rules
 
 *Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
-
-
-## Prediction Scoring (ADR 0025)
-
-For every map stage that carries a `prediction`, the stage finding must
-record `prediction_result`:
-
-- `confirmed` / `refuted`: set `measured_value` to the observed metric; the
-  validator recomputes `measured_value <comparator> threshold` and the
-  result must agree — the arithmetic decides, not the narrative.
-- `unmeasurable`: the platform did not report the metric; record
-  `prediction_result_reason` and no measured value.
-- Never score a stage the package did not predict, and never skip a stage it
-  did. Refuted predictions are learning, not failures — say what the miss
-  teaches in `interpretation`.
 
 ## Self-Update
 

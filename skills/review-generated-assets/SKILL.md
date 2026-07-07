@@ -43,6 +43,17 @@ Each item is `pass`, `fail`, or `not_applicable` with honest notes:
 `not_applicable` honestly — it keeps the gate meaningful across formats,
 it is not a soft pass.
 
+## Rubric Criteria Results (ADR 0025)
+
+Walk the Production Rubric (OS `context/production-rubric.json` + creator
+`production-rubric.json`) alongside the closed checklist. Record a
+`rubric_criteria_results` entry per relevant criterion (pass / fail /
+not_applicable with a note). Every `blocking` criterion in scope MUST be
+addressed — a review that skips one cannot produce passing coverage — and a
+failing blocking criterion forbids a passing verdict. Minted and proven
+criteria are advisory: record them when they inform the judgment, and log a
+rejection against them when they drove one.
+
 ## Record Rules
 
 - `scope_asset_ids` name manifest rows (validation resolves them); one
@@ -66,17 +77,6 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
   advisory creative reviews, ADR 0024); only an ADR changes that.
 - Do not review creative quality (hook strength, payoff) here — that is
   `review-hook-payoff`; this gate is provider-safety and conformance.
-
-## Rubric Criteria Results (ADR 0025)
-
-Walk the Production Rubric (OS `context/production-rubric.json` + creator
-`production-rubric.json`) alongside the closed checklist. Record a
-`rubric_criteria_results` entry per relevant criterion (pass / fail /
-not_applicable with a note). Every `blocking` criterion in scope MUST be
-addressed — a review that skips one cannot produce passing coverage — and a
-failing blocking criterion forbids a passing verdict. Minted and proven
-criteria are advisory: record them when they inform the judgment, and log a
-rejection against them when they drove one.
 
 ## Friction Logging (ADR 0025)
 
