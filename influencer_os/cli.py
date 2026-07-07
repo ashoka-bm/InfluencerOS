@@ -146,13 +146,15 @@ def main(argv=None):
     import_asset_parser.add_argument("--approval-record", help="Reference route only: the gen_approval_ record that authorized the generation, when one exists.")
 
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
-    fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin"], help="Connector to run.")
-    fetch_parser.add_argument("target", help="Topic (reddit/x), page URL (firecrawl), or profile URL (linkedin).")
+    fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin", "youtube-search"], help="Connector to run.")
+    fetch_parser.add_argument("target", help="Topic (reddit/x/youtube-search), page URL (firecrawl), or profile URL (linkedin).")
     fetch_parser.add_argument("--depth", choices=["quick", "default", "deep"], default="default", help="Discovery depth for reddit/x.")
     fetch_parser.add_argument("--days", type=int, default=30, help="Recency window in days (default 30).")
     fetch_parser.add_argument("--from-date", dest="from_date", help="Window start YYYY-MM-DD; overrides --days with --to-date.")
     fetch_parser.add_argument("--to-date", dest="to_date", help="Window end YYYY-MM-DD.")
     fetch_parser.add_argument("--max-posts", dest="max_posts", type=int, default=5, help="Max posts per LinkedIn profile (default 5).")
+    fetch_parser.add_argument("--max-results", dest="max_results", type=int, default=10, help="Max YouTube search results (default 10).")
+    fetch_parser.add_argument("--order", choices=["date", "relevance", "viewCount", "rating"], default="date", help="YouTube search order (default date).")
     fetch_parser.add_argument("--out", help="Write the fetch-result JSON here instead of stdout.")
     fetch_parser.add_argument("--env-file", help="Path to a .env file; defaults to the repo .env.")
 
@@ -533,6 +535,13 @@ def main(argv=None):
                     )
                 elif args.connector == "firecrawl":
                     result = connector_fetch.fetch_firecrawl(args.target, config, budget)
+                elif args.connector == "youtube-search":
+                    result = connector_fetch.fetch_youtube_search(
+                        args.target, config, budget,
+                        from_date=args.from_date, to_date=args.to_date,
+                        days=args.days, max_results=args.max_results,
+                        order=args.order,
+                    )
                 else:
                     result = connector_fetch.fetch_linkedin(
                         args.target, config, budget,

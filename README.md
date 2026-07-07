@@ -223,9 +223,10 @@ installs, and video batches require explicit approval.
 
 An env-gated research-acquisition connector tier (ADR 0022) can pull evidence
 that built-in `WebSearch`/`WebFetch` cannot reach — Reddit threads and X posts
-with engagement metrics, JS-rendered public pages, and public LinkedIn posts.
-Each connector is **available only when its provider key is set** in `.env`
-(`OPENAI_API_KEY`, `XAI_API_KEY`, `FIRECRAWL_API_KEY`, `APIFY_API_KEY`); with no
+with engagement metrics, JS-rendered public pages, public LinkedIn posts, and
+public YouTube videos with view/like/comment counts. Each connector is
+**available only when its provider key is set** in `.env` (`OPENAI_API_KEY`,
+`XAI_API_KEY`, `FIRECRAWL_API_KEY`, `APIFY_API_KEY`, `YOUTUBE_API_KEY`); with no
 key it reports `unavailable` and research falls back to the built-ins. List
 availability without making any provider call:
 
@@ -242,7 +243,12 @@ python3 -m influencer_os research-fetch reddit "low-light houseplants" --days 30
 python3 -m influencer_os research-fetch x "creatine timing" --depth deep --out .tmp/x-fetch.json
 python3 -m influencer_os research-fetch firecrawl https://example.com/post
 python3 -m influencer_os research-fetch linkedin https://www.linkedin.com/in/<profile> --max-posts 5
+python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --days 30 --max-results 10 --out .tmp/youtube-fetch.json
 ```
+
+The YouTube connector uses public YouTube Data API video/channel metadata and
+visible statistics only. It does not fetch transcripts, call YouTube Analytics,
+publish, schedule, or use logged-in access (ADR 0027).
 
 Key presence is standing approval for this research tier only — no per-run
 prompt — bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and

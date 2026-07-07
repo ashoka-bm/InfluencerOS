@@ -740,6 +740,40 @@ class ResearchFetchCliTests(unittest.TestCase):
             self.assertEqual(written["connector"], "reddit_openai")
 
 
+class YouTubeCliTests(unittest.TestCase):
+    def test_research_fetch_youtube_search_writes_output(self):
+        from influencer_os import cli
+        fake_result = {
+            "connector": "youtube_data_api",
+            "adapter_id": "youtube_data_api",
+            "platform": "youtube",
+            "topic": "desk stretch",
+            "from_date": "2026-06-07",
+            "to_date": "2026-07-07",
+            "model": "",
+            "candidates": [{"id": "YT1", "url": "https://www.youtube.com/watch?v=abc123xyz09"}],
+            "enriched_count": 1,
+            "calls_used": 2,
+            "truncated": False,
+            "capped": False,
+            "status": "ok",
+            "notes": [],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text("YOUTUBE_API_KEY=yt-key\n")
+            out_path = Path(tmp) / "youtube.json"
+            with mock.patch.dict("os.environ", {}, clear=True), \
+                    mock.patch.object(fetch, "fetch_youtube_search", return_value=fake_result):
+                code = cli.main([
+                    "research-fetch", "youtube-search", "desk stretch",
+                    "--env-file", str(env_path), "--out", str(out_path),
+                ])
+
+            self.assertEqual(code, 0)
+            self.assertTrue(out_path.exists())
+
+
 class ConnectorDriftTests(unittest.TestCase):
     def test_provider_keys_derive_from_registry(self):
         self.assertEqual(env.provider_keys(), [c["key"] for c in registry.CONNECTORS])
