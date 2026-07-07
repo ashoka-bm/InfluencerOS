@@ -1,6 +1,6 @@
 ---
 name: promote-idea
-description: Use to promote a human-approved Idea Queue Entry into production: present the full promotion package for explicit approval, write the locked IdeaPromotion record, create one or more Projects for production-supported formats, flip the entry, and keep the manifest and projections consistent. Owns the human-approval gate.
+description: "Use to promote a human-approved Idea Queue Entry into production: present the full promotion package for explicit approval, write the locked IdeaPromotion record, create one or more Projects for production-supported formats, flip the entry, and keep the manifest and projections consistent. Owns the human-approval gate."
 ---
 
 # Promote Idea

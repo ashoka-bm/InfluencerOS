@@ -1,6 +1,6 @@
 ---
 name: create-identity
-description: Use to turn creator intake material into identity.md: biography, origin, public role, continuity facts, recurring world, voice examples, and contradiction checks.
+description: "Use to turn creator intake material into identity.md: biography, origin, public role, continuity facts, recurring world, voice examples, and contradiction checks."
 ---
 
 # Create Identity

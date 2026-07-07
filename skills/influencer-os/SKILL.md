@@ -1,6 +1,6 @@
 ---
 name: influencer-os
-description: Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, creating provider-neutral generation plans, and registering output packages.
+description: "Use for InfluencerOS work: choosing a creator profile, researching current platform-scoped content opportunities, updating research findings and the idea queue, promoting approved ideas into projects, creating production plans, creating provider-neutral generation plans, and registering output packages."
 dependencies:
   - create-research-findings
   - manage-idea-queue

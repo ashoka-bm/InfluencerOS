@@ -1,6 +1,6 @@
 ---
 name: clear-writing-pass
-description: Use on drafted article, thread, caption, or plan text to run the advisory Clear-Writing Pass: a bounded editorial rewrite that removes clutter, filler, and hedging while preserving meaning. Returns rewritten text plus a change trace; writes no record and never blocks.
+description: "Use on drafted article, thread, caption, or plan text to run the advisory Clear-Writing Pass: a bounded editorial rewrite that removes clutter, filler, and hedging while preserving meaning. Returns rewritten text plus a change trace; writes no record and never blocks."
 ---
 
 # Clear-Writing Pass

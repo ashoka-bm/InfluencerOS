@@ -1,6 +1,6 @@
 ---
 name: create-soul
-description: Use to turn creator intake material into soul.md: values, beliefs, emotional logic, triggers, soothers, behavior under stress, and audience emotional contract.
+description: "Use to turn creator intake material into soul.md: values, beliefs, emotional logic, triggers, soothers, behavior under stress, and audience emotional contract."
 ---
 
 # Create Soul
