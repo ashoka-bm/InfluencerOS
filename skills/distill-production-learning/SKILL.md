@@ -1,8 +1,6 @@
 ---
 name: distill-production-learning
 description: Use when a reflection-due warning fires (check-reflection / validate workspace) to convert unprocessed friction events into human-approved skill and routine updates, each carrying a falsifiable ImprovementClaim, then attest exactly what was processed in a reflection run. Owns Loop B of the Improvement OS (ADR 0025) — OS-scoped learning from creation friction; creator lessons stay with distill-creator-learning.
-dependencies:
-  - memory-write
 ---
 
 # Distill Production Learning
@@ -52,8 +50,10 @@ signal. Never run on a clock; the trigger is evidence (ADR 0025).
    `python3 -m influencer_os log-learning context/learnings.md <skill> "<change>"`.
 5. **Record each claim** with
    `python3 -m influencer_os record-improvement-claim <claim.json>` —
-   evidence event ids are the bracketed events; the writer resolves them
-   against the workspace.
+   author against `schemas/improvement-claim.schema.json` (complete
+   example: `examples/improvement-claim.example.json`); evidence event ids
+   are the bracketed events; the writer resolves them against the
+   workspace.
 6. **Attest the reflection run last.** Write
    `<creator-workspace>/system/reflection-runs/<automation_run_id>.json`
    (automation-run schema, `job_type: "reflection"`) whose `event_ids` list

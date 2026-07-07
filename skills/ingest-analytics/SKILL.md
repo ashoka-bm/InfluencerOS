@@ -60,7 +60,9 @@ Record these in snapshot `notes` so a summary never over-reads early data:
 
 ## Commands
 
-Manual or derived entry from a full JSON record:
+Manual or derived entry from a full JSON record — author against
+`schemas/analytics-snapshot.schema.json` (complete example:
+`examples/analytics-snapshot.example.json`):
 
 ```bash
 python3 -m influencer_os add-analytics-snapshot <analytics-snapshot.json> --project <creator-workspace>/projects/<project-slug>

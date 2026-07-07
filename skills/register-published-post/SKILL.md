@@ -48,7 +48,9 @@ and the Project manifest status.
 
 ## Registration Command
 
-Stage the PublishedPostRecord JSON, then register:
+Stage the PublishedPostRecord JSON — author against
+`schemas/published-post-record.schema.json` (complete example:
+`examples/published-post-record.example.json`) — then register:
 
 ```bash
 python3 -m influencer_os register-published-post <published-post-record.json> --project <creator-workspace>/projects/<project-slug>

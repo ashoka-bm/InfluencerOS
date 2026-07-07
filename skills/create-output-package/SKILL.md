@@ -25,6 +25,10 @@ manifest status. Do not publish, schedule, upload, or call providers.
 
 ## Package Contract
 
+Author against `schemas/output-package.schema.json` (complete example:
+`examples/output-package.example.json`); the rules below are the
+cross-record invariants the schema cannot express.
+
 - `project_id`, `creator_profile_id`, and `source_refs.idea_promotion_id`
   must match the Project.
 - `universal_core.format_id` must match the Project's single target format.
@@ -41,6 +45,10 @@ manifest status. Do not publish, schedule, upload, or call providers.
 - Text packages (`format_article`, `format_thread`) may use `null` for
   `thumbnail_or_first_frame_asset_id`; visual packages must point to an
   upload-ready asset.
+- Any media asset drawn from `generation/asset-manifest.json` must be
+  covered by a passing QualityReview before registration —
+  `review-generated-assets` owns that gate, and registration refuses
+  unreviewed generation media (text roles are exempt).
 
 ## Creative Performance Map
 
