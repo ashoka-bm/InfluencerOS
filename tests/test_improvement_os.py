@@ -817,6 +817,18 @@ class PredictionPairingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "predicted nothing"):
                 validate_project(project_dir)
 
+    def test_prediction_holds_comparators(self):
+        from influencer_os.validation import ValidationError, prediction_holds
+
+        self.assertTrue(prediction_holds(0.8, ">=", 0.8))
+        self.assertTrue(prediction_holds(0.8, "<=", 0.8))
+        self.assertTrue(prediction_holds(0.9, ">", 0.8))
+        self.assertFalse(prediction_holds(0.8, ">", 0.8))
+        self.assertTrue(prediction_holds(0.7, "<", 0.8))
+        self.assertFalse(prediction_holds(0.8, "<", 0.8))
+        with self.assertRaisesRegex(ValidationError, "unknown prediction comparator"):
+            prediction_holds(0.8, "==", 0.8)
+
     def test_confirmed_must_agree_with_arithmetic(self):
         # The cited snapshot's hook retention_3s_pct is 0.74; raising the
         # threshold to 0.8 makes the honest verdict refuted, so a confirmed

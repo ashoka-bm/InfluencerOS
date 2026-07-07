@@ -274,6 +274,15 @@ The agent may recommend a social template for the chosen idea. If the user does 
 
 Provider-backed generation requires explicit approval for the exact call or batch.
 
+A Project's locked Idea Promotion is a **historical snapshot**: `validate
+project` checks that the promotion exists, belongs to the same creator, and
+lists the project, but it does not require the promotion to still be
+`active`. A project whose promotion was later superseded or cancelled remains
+a valid record of what was approved at lock time; the entry-side lifecycle
+checks (`validate research`/`validate queue`) are where supersede and cancel
+consistency is enforced. This is a deliberate rule, not an omission
+(alpha-readiness decision D5, 2026-07-07).
+
 The release gate for a Creator Workspace is `validate all <creator-workspace>`:
 one composed run of the workspace, research, queue, board, and per-project
 validators. The scoped `validate` targets each enforce one layer; only the

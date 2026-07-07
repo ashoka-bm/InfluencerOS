@@ -353,6 +353,7 @@ class FetchRedditTests(unittest.TestCase):
         self.assertEqual(result["enriched_count"], 0)
         self.assertNotIn("engagement", result["candidates"][0])
         self.assertTrue(any("enrichment failed for 1 of 1" in n for n in result["notes"]))
+        validate_record("research-fetch-result", result)  # note must stay schema-valid
 
     def test_fetch_result_conforms_to_schema(self):
         text = ('{"items": [{"title": "t", '
