@@ -1,6 +1,6 @@
 ---
 name: create-performance-summary
-description: Use after a published Project has mature AnalyticsSnapshots to author the PerformanceSummary mapping observed results to the five attribution stages.
+description: Use after a published Project has mature AnalyticsSnapshots for the post postmortem — author the PerformanceSummary mapping observed results to the five attribution stages.
 ---
 
 # Create Performance Summary

@@ -246,7 +246,7 @@ Text: "If your next meeting starts in two minutes, good. That is the whole conta
 - Voice signal: calm, practical, second person.
 - Content mode: short-form hook
 - Source: source_luna_fit_breakdown_001
-- Confidence: generated_from_intake
+- Confidence: low
 
 ### 2. Chair Reset
 
@@ -256,7 +256,7 @@ Text: "Keep the chair. Keep the socks. We are only asking your shoulders to reme
 - Voice signal: warm image, ordinary setup.
 - Content mode: voiceover
 - Source: source_luna_fit_breakdown_001
-- Confidence: generated_from_intake
+- Confidence: low
 
 ### 3. Safety Boundary
 
@@ -266,7 +266,7 @@ Text: "If this hurts, stop and ask someone qualified. Internet confidence is not
 - Voice signal: direct, caring, plain.
 - Content mode: comment reply
 - Source: source_luna_fit_breakdown_001
-- Confidence: generated_from_intake
+- Confidence: low
 
 ### 4. Caption
 
@@ -276,7 +276,7 @@ Text: "Tiny counts when tiny is what you can repeat. Save the reset you will act
 - Voice signal: concise encouragement.
 - Content mode: caption
 - Source: source_luna_fit_breakdown_001
-- Confidence: generated_from_intake
+- Confidence: low
 
 ### 5. Close
 
@@ -286,7 +286,7 @@ Text: "That was not a workout audition. That was a reset. Drink water and go bac
 - Voice signal: body-neutral, calming, slightly playful.
 - Content mode: video close
 - Source: source_luna_fit_breakdown_001
-- Confidence: generated_from_intake
+- Confidence: low
 """,
 }
 
@@ -461,7 +461,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
                 "- Voice signal: Calm, practical, second person.\n"
                 "- Content mode: caption\n"
                 "- Source: source_luna_fit_breakdown_001\n"
-                "- Confidence: generated_from_intake\n"
+                "- Confidence: low\n"
             )
 
             with self.assertRaises(ValidationError) as ctx:

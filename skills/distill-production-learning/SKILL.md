@@ -1,6 +1,6 @@
 ---
 name: distill-production-learning
-description: Use when a reflection-due warning fires (check-reflection / validate workspace) to convert unprocessed friction events into human-approved skill updates carrying falsifiable ImprovementClaims. Owns Loop B of the Improvement OS (ADR 0025) — creator lessons stay with distill-creator-learning.
+description: Use when a reflection-due warning fires (check-reflection / validate workspace) to bracket friction events into human-approved skill updates carrying falsifiable ImprovementClaims, and to close improvement claims whose windows elapsed. Owns Loop B of the Improvement OS (ADR 0025) — creator lessons stay with distill-creator-learning.
 ---
 
 # Distill Production Learning

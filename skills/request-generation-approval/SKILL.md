@@ -1,6 +1,6 @@
 ---
 name: request-generation-approval
-description: Use at the Generation Approval Gate to assemble the exact provider call or bounded batch for the user to approve and record it as a GenerationApprovalRecord. The gate stays human.
+description: Use at the Generation Approval Gate to assemble the exact provider call or bounded batch — for a Base Video Generation Plan or a Reference Library asset entry — for the user to approve and record as a GenerationApprovalRecord. The gate stays human.
 ---
 
 # Request Generation Approval

@@ -1,6 +1,6 @@
 ---
 name: distill-creator-learning
-description: Use after PerformanceSummary records exist to distill durable, evidence-linked creator lessons into memory/learnings.md and optionally promote a proven fact to the workspace context/MEMORY.md.
+description: Use after PerformanceSummary records exist to distill durable, evidence-linked creator lessons into memory/learnings.md, consolidate lessons across posts, and optionally promote a proven fact to the workspace context/MEMORY.md.
 dependencies:
   - memory-write
 ---
