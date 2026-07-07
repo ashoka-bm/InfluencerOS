@@ -18,8 +18,10 @@ Read (context matrix — Template application row):
   Research Findings needed to understand the payoff.
 - Creator Profile and relevant brand context for audience, boundaries, and
   voice fit.
-- Social template library entries or an existing creator-specific structure
-  when one is already approved.
+- The social template library — canonical IDs and beat sequences in
+  `docs/social-template-library.md`, seeded preset records under
+  `docs/templates/social-templates/` — or an existing approved
+  creator-specific structure.
 
 Write only `plan/applied-template.json` inside the Project.
 

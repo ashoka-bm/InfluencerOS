@@ -187,17 +187,10 @@ surface.
 
 Templates should improve retention and clarity without turning every idea into the same post. Use the template after idea selection, because one idea can support multiple structures and formats.
 
-Useful starter templates:
-
-- `hook_problem_solution`,
-- `before_process_payoff`,
-- `constraint_countdown_result`,
-- `myth_truth_demo`,
-- `mistake_fix_result`,
-- `three_steps_payoff`,
-- `expectation_reality`,
-- `challenge_attempt_result`,
-- `reveal_explain_apply`.
+Canonical template IDs and beat sequences live in
+`docs/social-template-library.md` (seeded preset records under
+`docs/templates/social-templates/`); `apply-social-template` owns selection
+and adaptation. Do not restate template IDs here.
 
 ## Micro-Journey Requirements
 
