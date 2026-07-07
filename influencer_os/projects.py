@@ -917,17 +917,37 @@ def _validate_performance_summary(project_dir, project, output_package, publishe
 
     _validate_summary_source_material_refs(project_dir, evidence_refs["source_material_refs"])
     _validate_summary_spine_alignment(summary, applied_template)
-    _validate_summary_predictions(summary, output_package)
+    _validate_summary_predictions(summary, output_package, analytics_records)
     return []
 
 
-def _validate_summary_predictions(summary, output_package):
+def _prediction_metric_values(analytics_records, cited_ids, stage, metric):
+    """The values a prediction may legally be scored against: the named
+    metric in the cited snapshots' universal metrics or the matching stage's
+    attribution metrics. Stage-keyed lookup means a payoff prediction can
+    never borrow a hook number."""
+    values = set()
+    for snapshot_id in cited_ids:
+        snapshot = analytics_records[snapshot_id]
+        candidates = (
+            snapshot.get("metrics", {}).get(metric),
+            snapshot.get("attribution_metrics", {}).get(stage, {}).get(metric),
+        )
+        for value in candidates:
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                values.add(value)
+    return values
+
+
+def _validate_summary_predictions(summary, output_package, analytics_records):
     """Loop A pairing, fail-closed both directions (ADR 0025, D4): a
     predicted map stage must be scored, a scored stage must have a
     prediction to score, and confirmed/refuted must agree with the
-    comparator recomputed over measured_value. A conditional obligation
-    invites the condition to be lied about, so the summary never decides
-    for itself whether a prediction existed — the package's map does."""
+    comparator recomputed over measured_value. The measured value itself
+    must come from a cited snapshot's matching metric (batch-2 review,
+    High): the summary never gets to invent the number it scores against,
+    and a metric the cited snapshots do not report must be scored
+    unmeasurable — no more, no less."""
     from influencer_os.validation import prediction_holds
 
     predictions = {
@@ -935,6 +955,7 @@ def _validate_summary_predictions(summary, output_package):
         for stage in output_package.get("creative_performance_map", [])
         if "prediction" in stage
     }
+    cited_ids = summary["evidence_refs"]["analytics_snapshot_ids"]
     for finding in summary.get("stage_findings", []):
         stage = finding["stage"]
         prediction = predictions.get(stage)
@@ -951,7 +972,25 @@ def _validate_summary_predictions(summary, output_package):
                 "recorded but the Output Package predicted nothing for this "
                 "stage"
             )
+        if result is None:
+            continue
+        metric_values = _prediction_metric_values(
+            analytics_records, cited_ids, stage, prediction["metric"]
+        )
         if result in ("confirmed", "refuted"):
+            if not metric_values:
+                raise ValueError(
+                    f"Performance summary stage {stage}: predicted metric "
+                    f"{prediction['metric']!r} does not resolve in any cited "
+                    "snapshot; record prediction_result 'unmeasurable'"
+                )
+            if finding["measured_value"] not in metric_values:
+                raise ValueError(
+                    f"Performance summary stage {stage}: measured_value "
+                    f"{finding['measured_value']} must equal a cited "
+                    f"snapshot's {prediction['metric']!r} value "
+                    f"(saw {sorted(metric_values)})"
+                )
             holds = prediction_holds(
                 finding["measured_value"],
                 prediction["comparator"],
@@ -965,6 +1004,13 @@ def _validate_summary_predictions(summary, output_package):
                     f"{prediction['threshold']} is {str(holds).lower()}, so "
                     f"prediction_result must be {expected!r}, got {result!r}"
                 )
+        if result == "unmeasurable" and metric_values:
+            raise ValueError(
+                f"Performance summary stage {stage}: predicted metric "
+                f"{prediction['metric']!r} resolves in the cited snapshots "
+                f"({sorted(metric_values)}); score it instead of recording "
+                "unmeasurable"
+            )
 
 
 def _validate_summary_spine_alignment(summary, applied_template):

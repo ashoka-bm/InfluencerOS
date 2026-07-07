@@ -569,7 +569,7 @@ class ImprovementClaimTests(WorkspaceScaffoldMixin, unittest.TestCase):
             "creator_slug": "luna-fit",
             "baseline": {
                 "window_description": "Last 3 attempts",
-                "violation_count": 3,
+                "violation_count": 1,
             },
             "expectation": {
                 "window_description": "Next 3 attempts",
@@ -660,6 +660,55 @@ class ImprovementClaimTests(WorkspaceScaffoldMixin, unittest.TestCase):
         self.log_violation("event_luna_fit_001")
         with self.assertRaisesRegex(ValidationError, "does not resolve to a skill"):
             self.record(self.make_claim(target_skill="not-a-real-skill"))
+
+    def test_evidence_citing_another_criterion_fails(self):
+        # Batch-2 review (High): a claim's baseline must be its own
+        # friction, not any valid ledger event.
+        log_incident(
+            self.workspace,
+            event_type="rejection",
+            recurrence_key="gen.plan.continuity",
+            criterion_id="gen.plan.continuity",
+            message="Continuity break, unrelated to identity.",
+            source_id="create-production-plan",
+            event_id="event_luna_fit_001",
+        )
+        with self.assertRaisesRegex(ValidationError, "not the claim's"):
+            self.record(self.make_claim())
+
+    def test_unclassified_and_bare_incident_evidence_allowed(self):
+        # The distilled-criterion flow: criterion minted at reflection time,
+        # baseline events predate it (unclassified rejection + bare incident).
+        log_incident(
+            self.workspace,
+            event_type="rejection",
+            recurrence_key="vibe.cluster.identity",
+            unclassified=True,
+            message="Face felt wrong; could not articulate yet.",
+            source_id="review-generated-assets",
+            event_id="event_luna_fit_001",
+        )
+        log_incident(
+            self.workspace,
+            event_type="incident",
+            recurrence_key="vibe.cluster.identity",
+            message="Two regenerations before an acceptable face.",
+            source_id="review-generated-assets",
+            event_id="event_luna_fit_002",
+            iteration_count=2,
+        )
+        claim = self.make_claim(
+            evidence_event_ids=["event_luna_fit_001", "event_luna_fit_002"],
+        )
+        claim["baseline"]["violation_count"] = 2
+        self.record(claim)
+
+    def test_baseline_count_must_match_evidence_set(self):
+        self.log_violation("event_luna_fit_001")
+        claim = self.make_claim()
+        claim["baseline"]["violation_count"] = 3
+        with self.assertRaisesRegex(ValidationError, "must equal the evidence event count"):
+            self.record(claim)
 
     def test_missing_workspace_degrades_to_report(self):
         from influencer_os.claims import load_claims
@@ -769,11 +818,15 @@ class PredictionPairingTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_confirmed_must_agree_with_arithmetic(self):
+        # The cited snapshot's hook retention_3s_pct is 0.74; raising the
+        # threshold to 0.8 makes the honest verdict refuted, so a confirmed
+        # score with the true measurement is dishonest arithmetic.
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir, validate_project = self.scaffold(
                 temp_dir,
-                summary_mutate=lambda s: self.set_hook_result(
-                    s, result="confirmed", measured=42.0
+                package_mutate=lambda p: self.set_hook_prediction(
+                    p,
+                    {"metric": "retention_3s_pct", "comparator": ">=", "threshold": 0.8},
                 ),
             )
             with self.assertRaisesRegex(ValueError, "must be 'refuted'"):
@@ -784,23 +837,69 @@ class PredictionPairingTests(unittest.TestCase):
             project_dir, validate_project = self.scaffold(
                 temp_dir,
                 summary_mutate=lambda s: self.set_hook_result(
-                    s, result="refuted", measured=63.5
+                    s, result="refuted", measured=0.74
                 ),
             )
             with self.assertRaisesRegex(ValueError, "must be 'confirmed'"):
                 validate_project(project_dir)
 
-    def test_unmeasurable_with_reason_passes(self):
+    def test_measured_value_must_come_from_cited_snapshots(self):
+        # Batch-2 review (High): the summary never invents the number it
+        # scores against — 0.9 appears in no cited snapshot.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                summary_mutate=lambda s: self.set_hook_result(
+                    s, result="confirmed", measured=0.9
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "must equal a cited snapshot"):
+                validate_project(project_dir)
+
+    def test_unmeasurable_with_unresolvable_metric_passes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                package_mutate=lambda p: self.set_hook_prediction(
+                    p,
+                    {"metric": "watch_time_total_min", "comparator": ">=", "threshold": 3},
+                ),
+                summary_mutate=lambda s: self.set_hook_result(
+                    s,
+                    result="unmeasurable",
+                    reason="No cited snapshot reports total watch time.",
+                ),
+            )
+            validate_project(project_dir)
+
+    def test_unmeasurable_with_resolvable_metric_fails(self):
+        # A metric the cited snapshots DO report cannot be dodged.
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir, validate_project = self.scaffold(
                 temp_dir,
                 summary_mutate=lambda s: self.set_hook_result(
                     s,
                     result="unmeasurable",
-                    reason="Platform export lacked 3s retention this week.",
+                    reason="Pretending the metric is missing.",
                 ),
             )
-            validate_project(project_dir)
+            with self.assertRaisesRegex(ValueError, "score it instead"):
+                validate_project(project_dir)
+
+    def test_confirmed_with_unresolvable_metric_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                package_mutate=lambda p: self.set_hook_prediction(
+                    p,
+                    {"metric": "watch_time_total_min", "comparator": ">=", "threshold": 3},
+                ),
+                summary_mutate=lambda s: self.set_hook_result(
+                    s, result="confirmed", measured=4.0
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "does not resolve in any cited"):
+                validate_project(project_dir)
 
     def test_unmeasurable_requires_reason(self):
         summary = json.loads(

@@ -5,8 +5,8 @@
   "criterion_id": "gen.identity.consistent",
   "creator_slug": "luna-fit",
   "baseline": {
-    "window_description": "Last 5 generation attempts for luna-fit desk-reset clips",
-    "violation_count": 3
+    "window_description": "Identity-drift rejections bracketed on 2026-07-06",
+    "violation_count": 1
   },
   "expectation": {
     "window_description": "Next 3 generation attempts after the reference-plate prompt rule",

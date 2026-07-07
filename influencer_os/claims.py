@@ -86,18 +86,51 @@ def count_violations(claim, workspace_dir):
 
 
 def _resolve_claim_against_workspace(claim, workspace_dir, context):
-    ledger_ids = {record["event_id"] for record in _read_ledger_records(workspace_dir)}
-    dangling = sorted(set(claim["evidence_event_ids"]) - ledger_ids)
-    if dangling:
-        raise ValidationError(
-            f"{context}: evidence_event_ids {dangling} do not resolve to "
-            f"ledger events in {workspace_dir}"
-        )
+    # Batch-2 review (High): resolve against the VALIDATED ledger — scope
+    # pinned to the workspace creator, schema-valid lines, criteria
+    # resolving — never the raw id set, and require the baseline to actually
+    # be this claim's friction: each evidence event must be a friction event
+    # that either cites the claim's criterion or is an unclassified
+    # rejection (the distilled-criterion flow), and the declared baseline
+    # count must equal the evidence set.
+    from influencer_os.research import load_workspace_scope, validate_events_ledger
+    from influencer_os.validation import FRICTION_EVENT_TYPES
+
+    scope = load_workspace_scope(workspace_dir)
+    validate_events_ledger(workspace_dir, scope)
     criteria = collect_criteria(workspace_dir)
     if claim["criterion_id"] not in criteria:
         raise ValidationError(
             f"{context}: criterion {claim['criterion_id']!r} does not resolve "
             "against the OS or creator rubric"
+        )
+    events_by_id = {
+        record["event_id"]: record for record in _read_ledger_records(workspace_dir)
+    }
+    dangling = sorted(set(claim["evidence_event_ids"]) - set(events_by_id))
+    if dangling:
+        raise ValidationError(
+            f"{context}: evidence_event_ids {dangling} do not resolve to "
+            f"ledger events in {workspace_dir}"
+        )
+    for event_id in claim["evidence_event_ids"]:
+        event = events_by_id[event_id]
+        if event.get("event_type") not in FRICTION_EVENT_TYPES:
+            raise ValidationError(
+                f"{context}: evidence event {event_id!r} is not a friction "
+                "event; a claim's baseline is rejections/incidents only"
+            )
+        cited = event.get("criterion_id")
+        if cited is not None and cited != claim["criterion_id"]:
+            raise ValidationError(
+                f"{context}: evidence event {event_id!r} cites criterion "
+                f"{cited!r}, not the claim's {claim['criterion_id']!r}"
+            )
+    declared = claim["baseline"]["violation_count"]
+    if declared != len(claim["evidence_event_ids"]):
+        raise ValidationError(
+            f"{context}: baseline.violation_count {declared} must equal the "
+            f"evidence event count ({len(claim['evidence_event_ids'])})"
         )
 
 
