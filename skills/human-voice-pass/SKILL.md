@@ -16,8 +16,7 @@ The fix restores the creator's *actual* voice — never a generic "human"
 register:
 
 - Read the Creator Profile voice/style constraints, `brand_context/`
-  identity, and `context/voice-samples.md` (or the workspace's voice
-  sample file) before editing.
+  identity, and `brand_context/voice-samples.md` before editing.
 - Match the creator's sentence rhythm, vocabulary range, warmth, and
   directness as evidenced in the samples; when samples conflict with the
   profile, the profile's stated constraints win.
