@@ -69,19 +69,10 @@ novice user, guided run, or similar, do not preload missing answers from the
 coordinator or test prompt unless they are explicitly user-provided seed facts.
 Use the onboarding briefing above and present exactly three onboarding paths.
 
-For every missing or ambiguous foundation input:
-
-- ask one concrete question at a time;
-- present the recommended answer with a short reason before asking for a
-  decision;
-- allow exactly these responses: accept, revise, skip, or system-fill;
-- distinguish generated/system-filled answers from user-provided answers;
-- persist the decision in `progress/setup-interview.md` or
-  `progress/setup-checklist.md`.
-
-Each persisted interview row must include: question, recommendation, rationale,
-answer, answer source, and acceptance status. Answer source must be one of
-`user_provided`, `imported`, `generated_from_intake`, or `system_filled`.
+Run the Decision Interview below for every missing or ambiguous foundation
+input — its mechanics and persisted-row contract live there once — and
+distinguish generated/system-filled answers from user-provided answers in
+the persisted rows.
 
 Before setting readiness to `content_ready` or `generation_ready`, present a
 whole-foundation review package covering the Creator Profile, identity, soul,
@@ -117,11 +108,13 @@ Use a Grill With Docs style Decision Interview whenever intake leaves gaps:
 
 - ask one concrete question at a time;
 - show the recommended answer first, with a short reason;
-- allow four responses: accept, revise, skip for now, or system-fill;
+- allow exactly these responses: accept, revise, skip, or system-fill;
 - ask only questions that affect foundation files, content strategy, reference
   requirements, safety boundaries, or readiness;
-- carry forward the source of each answer: `user_provided`, `imported`,
-  `generated_from_intake`, or `system_filled`;
+- persist each decision in `progress/setup-interview.md` or
+  `progress/setup-checklist.md`; every row carries question, recommendation,
+  rationale, answer, answer source (`user_provided`, `imported`,
+  `generated_from_intake`, or `system_filled`), and acceptance status;
 - do not redefine audience or niche silently. If they were system-filled, keep
   them in the review set and require acceptance before readiness.
 
@@ -158,19 +151,8 @@ platforms. Map those platforms into content mediums and setup blockers:
 Use the actual intended mediums as the authority. Platform names inform likely
 needs, but the accepted content strategy decides the blockers.
 
-Reference requirements by medium:
-
-- **Text**: voice samples, editorial rules, publication style, audience language,
-  topic/pillar strategy, and disclosure rules.
-- **Image**: person/avatar policy, recommended user reference image or generated
-  identity prompt, character/headshot identity assets, image style, brand visual
-  system, and any recurring object or outfit references.
-- **Audio or music**: voice sample or synthetic voice style note when spoken
-  identity matters, pronunciation/tone boundaries, sonic identity notes, and
-  rights/disclosure constraints.
-- **Video**: all image requirements plus default video/photo style, primary
-  filming locations, recurring shot families, wardrobe/outfit references,
-  recurring collaborators/characters, and signature objects.
+Per-medium reference requirements are the Medium-Based Blockers below (one
+home); asset-level staging detail lives in `create-reference-library`.
 
 Setup is not generation-ready for a selected medium until every required
 reference material for that medium is user-provided, approved, or prompt-staged
@@ -205,7 +187,8 @@ Image creators require image policy, brand or visual system reference, image sty
 
 Video creators require character identity plate, location reference, outfit or wardrobe reference, default video/photo style card, brand reference, and shot/motion constraints.
 
-The default video/photo style card is a reusable `@video_style_reference`. It locks the creator's camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, and social-native finish. It may include recurring shot families, but specific shot lists belong to downstream project planning.
+The default video/photo style card is a reusable `@video_style_reference`;
+its controls and scope rules live in `create-reference-library`.
 
 Voiceover creators require a voice sample or accepted synthetic voice style note plus pronunciation and tone boundaries.
 
@@ -217,31 +200,20 @@ Drafting files, reference requirements, prompts, shot lists, and generation plan
 
 ## Templates
 
-Use these output shapes:
-
-- `docs/templates/creator-setup/identity.md`
-- `docs/templates/creator-setup/soul.md`
-- `docs/templates/creator-setup/personal-brand.md`
-- `docs/templates/creator-setup/voice-samples.md`
-- `docs/templates/creator-setup/context/SOUL.md`
-- `docs/templates/creator-setup/context/USER.md`
-- `docs/templates/creator-setup/context/MEMORY.md`
-- `docs/templates/creator-setup/creator-profile.template.json`
-- `docs/templates/creator-setup/reference-library.template.json`
-- `docs/templates/creator-setup/reference-prompts/standard-character-asset-prompts.md`
-- `docs/templates/creator-setup/reference-prompts/standard-video-photo-style-prompt.md`
-- `docs/templates/creator-setup/reference-prompts/standard-outfit-reference-prompt.md`
-- `docs/templates/creator-setup/reference-prompts/standard-location-reference-prompts.md`
-- `docs/templates/creator-setup/reference-prompts/standard-object-reference-prompts.md`
+Canonical output shapes live under `docs/templates/creator-setup/`; each
+subskill names its own template, and the standard reference-prompt
+templates live under `docs/templates/creator-setup/reference-prompts/`.
 
 ## Rules
 
-*Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
+*Dated corrections from wrap-up feedback (ADR 0016). Entries are changelog
+pointers where a body section owns the rule. Read before every run; newest
+last.*
 
-- 2026-07-03: Baseline established; no corrections recorded yet.
 - 2026-07-03: After any approved provider generation, update `progress/setup-checklist.md`, `context/MEMORY.md`, and the daily note in the same run — supersede every "no generation has been run" or "assets are prompt-staged only" claim. Stale no-generation notes conflicted with a generated identity plate in the Nia Sol run.
 - 2026-07-03: Track each reference asset in the setup checklist by its lifecycle status (planned / prompted / generated pending approval / approved); never use grouped wording like "completed or prompted". When a generation call runs, record the generation date, tool, and any accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`, and leave the asset `generated` until the user explicitly approves the look.
-- 2026-07-07: Normal-user E2E and guided setup runs must ask missing inputs one at a time, log question/recommendation/rationale/answer/source/acceptance status in `progress/setup-interview.md` or `progress/setup-checklist.md`, and require explicit whole-foundation approval before `content_ready` or `generation_ready`; validation alone is not approval.
+- 2026-07-07: Added the guided-run interview and whole-foundation-approval
+  contract — see §Normal-User E2E Contract and §Decision Interview.
 
 ## Self-Update
 
