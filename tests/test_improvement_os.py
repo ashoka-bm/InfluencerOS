@@ -11,7 +11,14 @@ from pathlib import Path
 
 from influencer_os.creator_workspaces import init_creator, validate_creator_workspace
 from influencer_os.research import load_workspace_scope, validate_events_ledger
-from influencer_os.rubric import collect_criteria, log_incident, mint_criterion
+from influencer_os.rubric import (
+    DEFAULT_REFLECTION_THRESHOLDS,
+    REFLECTION_RUNS_DIR_RELATIVE,
+    collect_criteria,
+    log_incident,
+    mint_criterion,
+    reflection_report,
+)
 from influencer_os.validation import ValidationError, validate_record
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -341,6 +348,150 @@ class RubricSubstrateTests(WorkspaceScaffoldMixin, unittest.TestCase):
         criteria = collect_criteria(self.workspace, scope=self.scope())
         self.assertIn("creator.test.rule", criteria)
         self.assertIn("gen.identity.consistent", criteria)
+
+
+class ReflectionTriggerTests(WorkspaceScaffoldMixin, unittest.TestCase):
+    def log_incidents(self, count, key="gen.prompt.churn", unclassified=False):
+        for index in range(count):
+            log_incident(
+                self.workspace,
+                event_type="rejection" if unclassified else "incident",
+                recurrence_key=key if key else f"cluster.key_{index}",
+                unclassified=unclassified,
+                message=f"Friction sample {index}.",
+                source_id="create-production-plan",
+            )
+
+    def write_reflection_run(self, run_id, event_ids, run_status="completed", **overrides):
+        run = {
+            "automation_run_id": run_id,
+            "job_id": "job_reflection_luna_fit",
+            "job_type": "reflection",
+            "started_on": "2026-07-06T18:00:00",
+            "completed_on": "2026-07-06T18:10:00",
+            "run_status": run_status,
+            "creator_profile_id": "creator_luna_fit",
+            "material_update": True,
+            "linked_research_run_ids": [],
+            "event_ids": event_ids,
+        }
+        run.update(overrides)
+        runs_dir = self.workspace / REFLECTION_RUNS_DIR_RELATIVE
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        (runs_dir / f"{run_id}.json").write_text(json.dumps(run, indent=2) + "\n")
+        return run
+
+    def test_recurrence_threshold_fires_and_stays_advisory(self):
+        self.log_incidents(3)
+        result = validate_creator_workspace(self.workspace)
+        fired = [w for w in result["warnings"] if "reflection due" in w]
+        self.assertTrue(fired, result["warnings"])
+        self.assertIn("gen.prompt.churn", fired[0])
+        report = reflection_report(self.workspace)
+        self.assertEqual(report["recurrence_counts"]["gen.prompt.churn"], 3)
+
+    def test_under_threshold_stays_silent(self):
+        self.log_incidents(2)
+        result = validate_creator_workspace(self.workspace)
+        self.assertFalse([w for w in result["warnings"] if "reflection due" in w])
+
+    def test_claimed_events_do_not_count(self):
+        self.log_incidents(3)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001",
+            ["event_luna_fit_001", "event_luna_fit_002", "event_luna_fit_003"],
+        )
+        result = validate_creator_workspace(self.workspace)
+        self.assertFalse([w for w in result["warnings"] if "reflection due" in w])
+        report = reflection_report(self.workspace)
+        self.assertEqual(report["unprocessed_count"], 0)
+        self.assertEqual(report["claimed_count"], 3)
+
+    def test_failed_runs_claim_nothing(self):
+        self.log_incidents(3)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001",
+            ["event_luna_fit_001", "event_luna_fit_002", "event_luna_fit_003"],
+            run_status="failed",
+            last_error="reflection crashed mid-way",
+        )
+        result = validate_creator_workspace(self.workspace)
+        self.assertTrue([w for w in result["warnings"] if "reflection due" in w])
+
+    def test_unprocessed_total_threshold_fires(self):
+        self.log_incidents(10, key=None)
+        report = reflection_report(self.workspace)
+        self.assertEqual(report["unprocessed_count"], 10)
+        self.assertTrue(
+            [w for w in report["warnings"] if "10 unprocessed friction" in w]
+        )
+
+    def test_unclassified_gap_signal_fires(self):
+        self.log_incidents(3, key=None, unclassified=True)
+        report = reflection_report(self.workspace)
+        self.assertEqual(report["unclassified_count"], 3)
+        self.assertTrue([w for w in report["warnings"] if "rubric gap" in w])
+
+    def test_workspace_thresholds_override_defaults(self):
+        manifest_path = self.workspace / "creator-workspace.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["reflection_thresholds"] = {"recurrence_k": 2}
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        self.log_incidents(2)
+        report = reflection_report(self.workspace)
+        self.assertEqual(report["thresholds"]["recurrence_k"], 2)
+        self.assertEqual(
+            report["thresholds"]["unprocessed_n"],
+            DEFAULT_REFLECTION_THRESHOLDS["unprocessed_n"],
+        )
+        self.assertTrue([w for w in report["warnings"] if "reflection due" in w])
+
+    def test_dangling_claimed_event_fails_at_rest(self):
+        self.log_incidents(1)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001", ["event_luna_fit_999"]
+        )
+        with self.assertRaisesRegex(ValidationError, "does not exist on the ledger"):
+            validate_creator_workspace(self.workspace)
+
+    def test_double_claimed_event_fails_at_rest(self):
+        self.log_incidents(1)
+        self.write_reflection_run("automation_run_luna_fit_r001", ["event_luna_fit_001"])
+        self.write_reflection_run("automation_run_luna_fit_r002", ["event_luna_fit_001"])
+        with self.assertRaisesRegex(ValidationError, "claimed by both"):
+            validate_creator_workspace(self.workspace)
+
+    def test_reflection_run_filename_must_match_id(self):
+        self.log_incidents(1)
+        run = self.write_reflection_run(
+            "automation_run_luna_fit_r001", ["event_luna_fit_001"]
+        )
+        runs_dir = self.workspace / REFLECTION_RUNS_DIR_RELATIVE
+        (runs_dir / "automation_run_luna_fit_r001.json").rename(
+            runs_dir / "automation_run_luna_fit_wrong.json"
+        )
+        with self.assertRaisesRegex(ValidationError, "filename must match"):
+            validate_creator_workspace(self.workspace)
+
+    def test_reflection_run_wrong_job_type_fails(self):
+        self.log_incidents(1)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001",
+            ["event_luna_fit_001"],
+            job_type="scheduled_research",
+        )
+        with self.assertRaisesRegex(ValidationError, "must have job_type"):
+            validate_creator_workspace(self.workspace)
+
+    def test_reflection_run_foreign_creator_fails(self):
+        self.log_incidents(1)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001",
+            ["event_luna_fit_001"],
+            creator_profile_id="creator_other",
+        )
+        with self.assertRaisesRegex(ValidationError, "does not match the owning"):
+            validate_creator_workspace(self.workspace)
 
 
 if __name__ == "__main__":

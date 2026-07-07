@@ -325,6 +325,24 @@
           "minLength": 1
         }
       }
+    },
+    "reflection_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recurrence_k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unprocessed_n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unclassified_n": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   }
 }

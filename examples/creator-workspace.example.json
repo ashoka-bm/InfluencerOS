@@ -61,5 +61,10 @@
     "visibility": "private_local",
     "provider_calls_require_approval": true,
     "secrets_policy": "Keep secrets in .env or tool-managed auth only; never store API keys in workspace records."
+  },
+  "reflection_thresholds": {
+    "recurrence_k": 3,
+    "unprocessed_n": 10,
+    "unclassified_n": 3
   }
 }

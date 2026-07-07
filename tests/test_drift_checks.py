@@ -613,3 +613,14 @@ class ImprovementOsDriftTests(unittest.TestCase):
             self.assertIn("## Friction Logging", text, skill)
             self.assertIn("log-incident", text, skill)
             self.assertIn("cite-or-mint", text, skill)
+
+    def test_reflection_threshold_keys_match_the_schema(self):
+        from influencer_os.rubric import DEFAULT_REFLECTION_THRESHOLDS
+
+        workspace_schema = json.loads(
+            (ROOT / "schemas" / "creator-workspace.schema.json").read_text()
+        )
+        schema_keys = set(
+            workspace_schema["properties"]["reflection_thresholds"]["properties"]
+        )
+        self.assertEqual(schema_keys, set(DEFAULT_REFLECTION_THRESHOLDS))

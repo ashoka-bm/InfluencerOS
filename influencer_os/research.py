@@ -310,6 +310,16 @@ def validate_events_ledger(workspace_dir, scope):
                     f"{source_event!r} which does not resolve to a ledger event"
                 )
         checked.append(rubric_module.WORKSPACE_RUBRIC_FILENAME)
+
+    # Reflection runs reconcile against the ledger both directions at rest
+    # (ADR 0025): a claiming run may not cite a nonexistent event, and no
+    # event is processed twice.
+    reflection_runs = rubric_module.load_reflection_runs(workspace_dir, scope=scope)
+    rubric_module.reconcile_reflection_runs(
+        reflection_runs, seen_event_ids, context=workspace_dir
+    )
+    if reflection_runs:
+        checked.append(str(rubric_module.REFLECTION_RUNS_DIR_RELATIVE))
     return checked
 
 

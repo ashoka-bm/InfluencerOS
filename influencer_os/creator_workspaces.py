@@ -9,6 +9,7 @@ from influencer_os.generation import validate_reference_approval_records
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import validate_events_ledger, validate_promotions
+from influencer_os.rubric import reflection_report
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
 
@@ -185,6 +186,7 @@ STANDARD_DIRECTORIES = [
     "research/idea-promotions",
     "boards",
     "system",
+    "system/reflection-runs",
     "projects",
     "memory/daily",
     "progress",
@@ -601,6 +603,18 @@ def validate_creator_workspace(workspace_path):
     )
 
     warnings = list(promotion_warnings)
+    # Reflection trigger (ADR 0025): advisory only, by construction — the
+    # report is computed after every failing check above, and a crossed
+    # threshold appends a warning, never raises.
+    warnings.extend(
+        reflection_report(
+            workspace_dir,
+            scope={
+                "creator_profile_id": manifest["creator_profile_id"],
+                "creator_slug": manifest["creator_slug"],
+            },
+        )["warnings"]
+    )
     # Audio is a selectable modality with no v1 production-plan schema
     # (ADR 0024): dangling by design, so selecting it warns instead of
     # silently implying supported standalone-audio production.

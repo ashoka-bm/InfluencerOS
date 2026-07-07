@@ -179,6 +179,9 @@ def main(argv=None):
     mint_parser.add_argument("--from-event", dest="minted_from_event_id", help="Ledger event id this criterion was distilled from.")
     mint_parser.add_argument("--notes", help="Optional criterion notes.")
 
+    reflection_parser = subparsers.add_parser("check-reflection", help="Report unprocessed friction events, per-recurrence-key counts, and reflection-trigger crossings (ADR 0025). Reporting only; mutates nothing and never blocks.")
+    reflection_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
     learning_parser = subparsers.add_parser("log-learning", help="Append a dated learning entry: per-skill for OS learnings files, evidence-linked creator lessons for a Creator Workspace memory/learnings.md.")
     learning_parser.add_argument("learnings_file", help="Path to the learnings file.")
     learning_parser.add_argument("skill_name", help="Skill folder name for OS learnings, or the lesson topic (applies-to) for creator lessons.")
@@ -586,6 +589,27 @@ def main(argv=None):
                 notes=args.notes,
             )
             print(f"Minted criterion {result['criterion_id']} -> {result['rubric_path']}")
+            return 0
+
+        if args.command == "check-reflection":
+            from influencer_os.rubric import reflection_report
+
+            report = reflection_report(args.creator_workspace)
+            thresholds = report["thresholds"]
+            print(
+                f"Unprocessed friction events: {report['unprocessed_count']} "
+                f"(threshold {thresholds['unprocessed_n']}); "
+                f"unclassified: {report['unclassified_count']} "
+                f"(threshold {thresholds['unclassified_n']}); "
+                f"processed: {report['claimed_count']} across "
+                f"{report['run_count']} reflection run(s)"
+            )
+            for key, count in sorted(report["recurrence_counts"].items()):
+                print(f"- {key}: {count} (threshold {thresholds['recurrence_k']})")
+            for warning in report["warnings"]:
+                print(warning)
+            if not report["warnings"]:
+                print("No reflection thresholds crossed.")
             return 0
 
         if args.command == "log-learning":
