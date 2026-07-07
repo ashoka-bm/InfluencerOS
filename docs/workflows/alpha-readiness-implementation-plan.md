@@ -2,7 +2,17 @@
 
 Last updated: 2026-07-07
 
-Status: **Drafted, awaiting operator approval of the decisions below.**
+Status: **Executed (2026-07-07).** All five decisions (D1-D5) were approved
+as recommended and all four batches landed the same day, each with a
+gpt-5.5 (Codex) review and same-batch fixes: Batch 1 `validate all`
+(commits `bedd701`, `75b26ce`), Batch 2 runbook + env hygiene (`818cb8d`,
+`a77fa0a`), Batch 3 connector smoke runs closing ADR 0022 run 2 with the
+reddit enrichment-count fix (`59dc1f9`), Batch 4 minor hardening plus the
+capstone stale-doc fix (`2512779`, `2b283cd`). Suite: 778 tests pass.
+Run-2 outcomes and remaining operator actions (xAI credits, Apify key,
+manual loop against a real creator) are recorded in
+`docs/os-construction/progress.md` Next Work Queue item 1.
+
 Produced by the 2026-07-07 pre-alpha review (three independent audit passes:
 code gaps, operational readiness, contract enforcement), with every finding
 re-verified against the code before entering this plan.

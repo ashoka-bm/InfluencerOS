@@ -11,6 +11,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 - Phases 0-3 plus the Creative Direction workstream are complete (2026-07-06): parity hardening, Planning OS, Learning OS, ADR 0024 creative model (spine, intent, advisory platform model, advisory reviews), and ADR 0023 Generation OS (provider registry, approval records, provenance ledger, blocking quality gate — mock adapter only). Closeout runs live in `docs/os-construction/progress.md`.
 - Research-acquisition connectors (ADR 0022 + 0027, influencer_os/connectors/) pull Reddit/X/Firecrawl/LinkedIn/YouTube evidence; env-gated and dormant until a provider key is set. Key presence is standing approval for the research tier only (call cap + kill switch); generation calls keep exact approval. Exercise the manual research-intelligence loop against real creator runs before scheduled automation.
 - The first real (paid) generation provider adapter is deliberately unpicked (ADR 0023 Decision 3): the operator chooses it, and it lands as its own approved batch following the adapter contract. Scheduled/unattended generation stays Phase 4.
+- validate all <creator-workspace> is the alpha release gate (composed workspace/research/queue/board/projects run); the runbook for real onboarding is docs/onboard-real-creator-runbook.md. ADR 0022 run 2 (2026-07-07): reddit discovery + youtube + firecrawl work live; reddit.com blocks free enrichment reads (metrics missing); xAI needs credits; Apify unkeyed.
 
 ## Environment Notes
 
