@@ -953,3 +953,150 @@ class PredictionPairingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaturityLadderTests(unittest.TestCase):
+    """ADR 0025 slice 5: blocking criteria join the quality gate's coverage
+    requirement; minted/proven criteria gate nothing (the never-blocks
+    probe). Uses the Phase 3 generation fixtures and the shared
+    validate_project_quality_reviews seam that both validate project and
+    register-output-package call."""
+
+    def scaffold_reviews(self, temp_dir, review_mutate=None):
+        from tests.test_cli import rewrite_json, seed_generation_fixtures
+        from tests.test_published_posts import scaffold_project_workspace
+
+        _, project_dir = scaffold_project_workspace(temp_dir)
+        seed_generation_fixtures(project_dir)
+        if review_mutate is not None:
+            rewrite_json(
+                project_dir
+                / "generation"
+                / "quality-reviews"
+                / "quality_review_luna_tiny_reset_001.json",
+                review_mutate,
+            )
+        from influencer_os.generation import (
+            validate_project_generation_assets,
+            validate_project_generation_records,
+        )
+
+        project = json.loads((project_dir / "project.json").read_text())
+        approvals, _ = validate_project_generation_records(project_dir, project)
+        rows = validate_project_generation_assets(project_dir, project, approvals)
+        return project_dir, project, rows
+
+    def run_seam(self, project_dir, project, rows, blocking=frozenset(), known=None):
+        from influencer_os.generation import validate_project_quality_reviews
+
+        known_criteria = known if known is not None else {"gen.identity.consistent"} | set(blocking)
+        return validate_project_quality_reviews(
+            project_dir,
+            project,
+            rows,
+            known_criteria=known_criteria,
+            blocking_criteria=set(blocking),
+        )
+
+    def add_rubric_result(self, criterion_id, result="pass"):
+        def mutate(review):
+            review.setdefault("rubric_criteria_results", []).append(
+                {
+                    "criterion_id": criterion_id,
+                    "result": result,
+                    "notes": f"Walked {criterion_id} for the ladder test.",
+                }
+            )
+        return mutate
+
+    def test_minted_and_proven_criteria_never_gate(self):
+        # The never-blocks probe: with no blocking criteria, a review that
+        # records no rubric results still produces passing coverage.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(temp_dir)
+            passing, warnings = self.run_seam(project_dir, project, rows)
+            self.assertTrue(passing)
+            self.assertFalse([w for w in warnings if "blocking" in w])
+
+    def test_uncovered_blocking_criterion_removes_passing_coverage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(temp_dir)
+            passing, warnings = self.run_seam(
+                project_dir, project, rows, blocking={"gen.identity.consistent"}
+            )
+            self.assertEqual(passing, set())
+            self.assertTrue([w for w in warnings if "blocking rubric criteria" in w])
+
+    def test_covered_blocking_criterion_restores_passing_coverage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(
+                temp_dir,
+                review_mutate=self.add_rubric_result("gen.identity.consistent"),
+            )
+            passing, warnings = self.run_seam(
+                project_dir, project, rows, blocking={"gen.identity.consistent"}
+            )
+            self.assertTrue(passing)
+            self.assertFalse([w for w in warnings if "blocking rubric criteria" in w])
+
+    def test_not_applicable_counts_as_coverage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(
+                temp_dir,
+                review_mutate=self.add_rubric_result(
+                    "gen.identity.consistent", result="not_applicable"
+                ),
+            )
+            passing, _ = self.run_seam(
+                project_dir, project, rows, blocking={"gen.identity.consistent"}
+            )
+            self.assertTrue(passing)
+
+    def test_unknown_criterion_in_results_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(
+                temp_dir, review_mutate=self.add_rubric_result("ghost.rule")
+            )
+            with self.assertRaisesRegex(ValidationError, "unknown rubric criteria"):
+                self.run_seam(project_dir, project, rows, known={"gen.identity.consistent"})
+
+    def test_failing_rubric_result_forbids_passing_verdict(self):
+        review = json.loads(
+            (ROOT / "examples" / "quality-review.example.json").read_text()
+        )
+        review.setdefault("rubric_criteria_results", []).append(
+            {
+                "criterion_id": "gen.identity.consistent",
+                "result": "fail",
+                "notes": "Identity drift against the plate.",
+            }
+        )
+        with self.assertRaisesRegex(ValidationError, "failing checklist or rubric item"):
+            validate_record("quality-review", review)
+
+    def test_duplicate_rubric_results_fail(self):
+        review = json.loads(
+            (ROOT / "examples" / "quality-review.example.json").read_text()
+        )
+        entry = {
+            "criterion_id": "gen.identity.consistent",
+            "result": "pass",
+            "notes": "Walked once.",
+        }
+        review["rubric_criteria_results"] = [entry, dict(entry)]
+        with self.assertRaisesRegex(ValidationError, "duplicate rubric criteria"):
+            validate_record("quality-review", review)
+
+    def test_verdict_fail_justified_by_rubric_fail_alone(self):
+        review = json.loads(
+            (ROOT / "examples" / "quality-review.example.json").read_text()
+        )
+        review["rubric_criteria_results"] = [
+            {
+                "criterion_id": "gen.identity.consistent",
+                "result": "fail",
+                "notes": "Identity drift against the plate.",
+            }
+        ]
+        review["overall_verdict"] = "fail"
+        validate_record("quality-review", review)

@@ -99,6 +99,36 @@
     "reviewed_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "rubric_criteria_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion_id",
+          "result",
+          "notes"
+        ],
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.]*$"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "not_applicable"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     }
   }
 }

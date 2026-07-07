@@ -601,7 +601,7 @@ def validate_project_generation_assets(project_dir, project, approval_records_by
     return rows_by_id
 
 
-def validate_project_quality_reviews(project_dir, project, manifest_rows):
+def validate_project_quality_reviews(project_dir, project, manifest_rows, known_criteria=None, blocking_criteria=None):
     """At-rest checks for generation/quality-reviews/*.json (slice 5).
 
     Returns (passing_asset_ids, warnings). The QualityReview is the one
@@ -611,6 +611,14 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
     current hash, and when several current-content reviews cover the same
     asset the latest `reviewed_at` verdict decides — a stale pass never
     outlives a re-imported artifact or a newer failing review.
+
+    Maturity ladder (ADR 0025 slice 5): when `blocking_criteria` is given,
+    a review yields passing coverage only if its `rubric_criteria_results`
+    address every blocking criterion (a `fail` already forbids a passing
+    verdict via record semantics). A review written before a criterion was
+    promoted stays a valid record but stops counting as passing coverage —
+    what is *required* changed, not what was checked then. `known_criteria`
+    fail-closes results citing criteria that do not exist.
     """
     project_dir = Path(project_dir)
     reviews_dir = project_dir / QUALITY_REVIEWS_DIR
@@ -655,6 +663,28 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
                     f"quality review {review_id} scopes assets with no "
                     f"manifest row: {dangling}"
                 )
+            review_rubric_ids = {
+                item["criterion_id"]
+                for item in review.get("rubric_criteria_results", [])
+            }
+            if known_criteria is not None:
+                unknown = sorted(review_rubric_ids - set(known_criteria))
+                if unknown:
+                    raise ValidationError(
+                        f"quality review {review_id} records results for "
+                        f"unknown rubric criteria: {unknown}"
+                    )
+            missing_blocking = (
+                sorted(set(blocking_criteria) - review_rubric_ids)
+                if blocking_criteria
+                else []
+            )
+            if missing_blocking:
+                warnings.append(
+                    f"warning: quality review {review_id} does not address "
+                    f"blocking rubric criteria {missing_blocking}; it cannot "
+                    "produce passing coverage until it does (ADR 0025)"
+                )
             reviews_found = True
             for entry in review["scope_assets"]:
                 asset_id = entry["asset_id"]
@@ -662,14 +692,18 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows):
                 if entry["content_hash"] != row["content_hash"]:
                     # Stale coverage: the artifact changed since this review.
                     continue
-                candidate = (review["reviewed_at"], review["overall_verdict"])
+                candidate = (
+                    review["reviewed_at"],
+                    review["overall_verdict"],
+                    not missing_blocking,
+                )
                 if asset_id not in latest_by_asset or candidate[0] >= latest_by_asset[asset_id][0]:
                     latest_by_asset[asset_id] = candidate
 
     passing_asset_ids = {
         asset_id
-        for asset_id, (_reviewed_at, verdict) in latest_by_asset.items()
-        if verdict == "pass"
+        for asset_id, (_reviewed_at, verdict, covered) in latest_by_asset.items()
+        if verdict == "pass" and covered
     }
 
     if manifest_rows and not reviews_found and project.get("status") == "generated":

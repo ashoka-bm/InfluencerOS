@@ -723,13 +723,24 @@ def validate_quality_review_semantics(record):
         raise ValidationError(
             f"quality review {review_id}: duplicate scope asset ids {duplicated!r}"
         )
+    rubric_results = record.get("rubric_criteria_results", [])
+    rubric_ids = [item.get("criterion_id") for item in rubric_results]
+    duplicated_criteria = sorted({c for c in rubric_ids if rubric_ids.count(c) > 1})
+    if duplicated_criteria:
+        raise ValidationError(
+            f"quality review {review_id}: duplicate rubric criteria results "
+            f"{duplicated_criteria!r}"
+        )
     results = [item.get("result") for item in record.get("checklist", [])]
-    has_failing = "fail" in results
+    rubric_result_values = [item.get("result") for item in rubric_results]
+    # Verdict agreement extends over the rubric results (ADR 0025 slice 5):
+    # a failing blocking criterion is a failing item like any other.
+    has_failing = "fail" in results or "fail" in rubric_result_values
     verdict = record.get("overall_verdict")
     if verdict == "pass" and has_failing:
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'pass' with a "
-            "failing checklist item"
+            "failing checklist or rubric item"
         )
     if verdict == "pass" and "pass" not in results:
         raise ValidationError(
@@ -740,7 +751,7 @@ def validate_quality_review_semantics(record):
     if verdict == "fail" and not has_failing:
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'fail' requires at "
-            "least one failing checklist item"
+            "least one failing checklist or rubric item"
         )
 
 

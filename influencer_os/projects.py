@@ -1445,8 +1445,21 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     # resolves upload-ready generation_manifest_refs against the ledger.
     approval_records, generation_warnings = validate_project_generation_records(project_dir, project)
     manifest_rows = validate_project_generation_assets(project_dir, project, approval_records)
+    # Maturity ladder (ADR 0025 slice 5): blocking criteria join the quality
+    # gate's coverage requirement; minted/proven criteria change nothing here.
+    from influencer_os.rubric import collect_criteria
+
+    criteria_by_id = collect_criteria(workspace_dir)
     passing_quality_asset_ids, quality_warnings = validate_project_quality_reviews(
-        project_dir, project, manifest_rows
+        project_dir,
+        project,
+        manifest_rows,
+        known_criteria=set(criteria_by_id),
+        blocking_criteria={
+            criterion_id
+            for criterion_id, criterion in criteria_by_id.items()
+            if criterion["status"] == "blocking"
+        },
     )
     generation_warnings = generation_warnings + quality_warnings
 

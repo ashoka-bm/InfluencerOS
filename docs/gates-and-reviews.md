@@ -26,7 +26,19 @@ The canonical control contract for InfluencerOS (ADR 0024, Creative Direction sl
 
 **Real-world-risk carve-out:** a finding that the content makes a false claim about a real person, brand, or product is a **must-acknowledge advisory** — the reviewer sets `severity: blocking`, and the human must either revise the artifact or record a `human_waiver` on the Review Record. It is still not a hard block in v1; its realization as one is explicitly deferred to Phase 3.
 
-**Promotion rule:** making any creative Review blocking requires its own ADR. The checklist for such an ADR: name the review, the exact failure class that blocks, the waiver path, the falsifiable evidence that advisory mode was insufficient, and the divergence-test result.
+**Promotion rule:** making any creative Review blocking requires its own ADR.
+
+**Criteria maturity ladder (ADR 0025):** Production Rubric criteria mature
+`minted -> proven -> blocking` (with `retired` for criteria that no longer
+apply). Minted and proven criteria are advisory everywhere — they gate
+nothing. Promotion to `blocking` follows the same ADR checklist as a
+blocking review: the criterion gains a `blocking_adr` reference that must
+resolve to the recorded decision (validated at the rubric load seam), and
+from then on a QualityReview yields passing coverage for generation-sourced
+media only if its `rubric_criteria_results` address every blocking criterion
+in scope — a `fail` on one forbids a passing verdict. Reviews written before
+a promotion stay valid records but stop counting as passing coverage: what
+is required changed, not what was checked then. The checklist for such an ADR: name the review, the exact failure class that blocks, the waiver path, the falsifiable evidence that advisory mode was insufficient, and the divergence-test result.
 
 ## Reviewer Independence And Execution Modes
 

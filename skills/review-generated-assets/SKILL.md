@@ -67,6 +67,17 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 - Do not review creative quality (hook strength, payoff) here — that is
   `review-hook-payoff`; this gate is provider-safety and conformance.
 
+## Rubric Criteria Results (ADR 0025)
+
+Walk the Production Rubric (OS `context/production-rubric.json` + creator
+`production-rubric.json`) alongside the closed checklist. Record a
+`rubric_criteria_results` entry per relevant criterion (pass / fail /
+not_applicable with a note). Every `blocking` criterion in scope MUST be
+addressed — a review that skips one cannot produce passing coverage — and a
+failing blocking criterion forbids a passing verdict. Minted and proven
+criteria are advisory: record them when they inform the judgment, and log a
+rejection against them when they drove one.
+
 ## Friction Logging (ADR 0025)
 
 When the operator rejects a draft, prompt, or asset this skill produced — or
