@@ -1060,7 +1060,10 @@ class MaturityLadderTests(unittest.TestCase):
             with self.assertRaisesRegex(ValidationError, "unknown rubric criteria"):
                 self.run_seam(project_dir, project, rows, known={"gen.identity.consistent"})
 
-    def test_failing_rubric_result_forbids_passing_verdict(self):
+    def test_advisory_rubric_fail_never_forces_a_failing_verdict(self):
+        # Batch-3 review (High): honestly recording a minted/proven
+        # criterion as failing must not force a failing verdict — advisory
+        # criteria gate nothing, at the record level and at the seam.
         review = json.loads(
             (ROOT / "examples" / "quality-review.example.json").read_text()
         )
@@ -1068,11 +1071,85 @@ class MaturityLadderTests(unittest.TestCase):
             {
                 "criterion_id": "gen.identity.consistent",
                 "result": "fail",
-                "notes": "Identity drift against the plate.",
+                "notes": "Minor drift noted; advisory criterion, ships anyway.",
             }
         )
-        with self.assertRaisesRegex(ValidationError, "failing checklist or rubric item"):
-            validate_record("quality-review", review)
+        validate_record("quality-review", review)
+
+    def test_blocking_rubric_fail_with_passing_verdict_fails_at_seam(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(
+                temp_dir,
+                review_mutate=self.add_rubric_result(
+                    "gen.identity.consistent", result="fail"
+                ),
+            )
+            with self.assertRaisesRegex(ValidationError, "failing blocking criteria"):
+                self.run_seam(
+                    project_dir, project, rows, blocking={"gen.identity.consistent"}
+                )
+
+    def test_advisory_rubric_fail_keeps_passing_coverage_at_seam(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(
+                temp_dir,
+                review_mutate=self.add_rubric_result(
+                    "gen.identity.consistent", result="fail"
+                ),
+            )
+            passing, _ = self.run_seam(project_dir, project, rows)
+            self.assertTrue(passing)
+
+    def test_blocking_coverage_flows_through_validate_project(self):
+        # End-to-end (batch-3 review test gap): a blocking criterion in the
+        # OWNING workspace's rubric reaches the gate via validate_project.
+        from influencer_os.projects import validate_project
+        from tests.test_cli import rewrite_json
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, project, rows = self.scaffold_reviews(temp_dir)
+            workspace_dir = project_dir.parent.parent
+            rewrite_json(
+                workspace_dir / "production-rubric.json",
+                lambda rubric: rubric["criteria"].append(
+                    {
+                        "criterion_id": "creator.gate.blocking_probe",
+                        "statement": "The probe criterion blocks.",
+                        "status": "blocking",
+                        "origin": "distillation",
+                        "minted_on": "2026-07-06",
+                        "blocking_adr": "docs/adr/0025-improvement-os-feedback-loops.md",
+                    }
+                ),
+            )
+            result = validate_project(project_dir)
+            self.assertTrue(
+                [w for w in result["warnings"] if "blocking rubric criteria" in w]
+            )
+
+    def test_foreign_creator_rubric_fails_at_project_seam(self):
+        from influencer_os.projects import validate_project
+        from tests.test_cli import rewrite_json
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, _, _ = self.scaffold_reviews(temp_dir)
+            workspace_dir = project_dir.parent.parent
+            rewrite_json(
+                workspace_dir / "production-rubric.json",
+                lambda rubric: rubric.update(creator_profile_id="creator_other"),
+            )
+            with self.assertRaisesRegex(ValidationError, "does not match the owning"):
+                validate_project(project_dir)
+
+    def test_missing_creator_rubric_fails_at_project_seam(self):
+        from influencer_os.projects import validate_project
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, _, _ = self.scaffold_reviews(temp_dir)
+            workspace_dir = project_dir.parent.parent
+            (workspace_dir / "production-rubric.json").unlink()
+            with self.assertRaisesRegex(ValidationError, "Missing canonical creator rubric"):
+                validate_project(project_dir)
 
     def test_duplicate_rubric_results_fail(self):
         review = json.loads(

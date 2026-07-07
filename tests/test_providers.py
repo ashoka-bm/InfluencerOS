@@ -930,7 +930,7 @@ class QualityReviewTests(unittest.TestCase):
     def test_verdict_must_agree_with_items(self):
         review = load_example("quality-review")
         review["checklist"][0]["result"] = "fail"
-        with self.assertRaisesRegex(ValidationError, "failing checklist or rubric item"):
+        with self.assertRaisesRegex(ValidationError, "failing checklist item"):
             validate_record("quality-review", review)
         review["overall_verdict"] = "fail"
         validate_record("quality-review", review)

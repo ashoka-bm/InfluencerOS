@@ -733,14 +733,19 @@ def validate_quality_review_semantics(record):
         )
     results = [item.get("result") for item in record.get("checklist", [])]
     rubric_result_values = [item.get("result") for item in rubric_results]
-    # Verdict agreement extends over the rubric results (ADR 0025 slice 5):
-    # a failing blocking criterion is a failing item like any other.
-    has_failing = "fail" in results or "fail" in rubric_result_values
+    # Verdict agreement is status-aware (batch-3 review, High): only the
+    # closed checklist FORCES a failing verdict at the record level. A
+    # failing advisory (minted/proven) rubric result may coexist with a
+    # passing verdict — advisory criteria gate nothing — while a failing
+    # BLOCKING rubric result with a passing verdict is rejected at the
+    # project seam, which knows criterion statuses. A rubric fail may still
+    # JUSTIFY a failing verdict: the reviewer owns the judgment.
+    has_failing_checklist = "fail" in results
     verdict = record.get("overall_verdict")
-    if verdict == "pass" and has_failing:
+    if verdict == "pass" and has_failing_checklist:
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'pass' with a "
-            "failing checklist or rubric item"
+            "failing checklist item"
         )
     if verdict == "pass" and "pass" not in results:
         raise ValidationError(
@@ -748,7 +753,7 @@ def validate_quality_review_semantics(record):
             "least one passing checklist item; all-not_applicable reviews "
             "judge nothing"
         )
-    if verdict == "fail" and not has_failing:
+    if verdict == "fail" and not (has_failing_checklist or "fail" in rubric_result_values):
         raise ValidationError(
             f"quality review {review_id}: overall_verdict 'fail' requires at "
             "least one failing checklist or rubric item"

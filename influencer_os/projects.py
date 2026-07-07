@@ -1447,9 +1447,22 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     manifest_rows = validate_project_generation_assets(project_dir, project, approval_records)
     # Maturity ladder (ADR 0025 slice 5): blocking criteria join the quality
     # gate's coverage requirement; minted/proven criteria change nothing here.
-    from influencer_os.rubric import collect_criteria
+    # Batch-3 review (Medium): collect with the OWNING workspace's scope —
+    # a foreign creator's rubric must never gate this project — and fail
+    # closed on a missing canonical creator rubric, which would silently
+    # drop its blocking criteria from the gate.
+    from influencer_os.research import load_workspace_scope
+    from influencer_os.rubric import WORKSPACE_RUBRIC_FILENAME, collect_criteria
 
-    criteria_by_id = collect_criteria(workspace_dir)
+    workspace_rubric_path = Path(workspace_dir) / WORKSPACE_RUBRIC_FILENAME
+    if not workspace_rubric_path.exists():
+        raise ValidationError(
+            f"Missing canonical creator rubric: {workspace_rubric_path} — the "
+            "quality gate cannot compute blocking coverage without it (ADR 0025)"
+        )
+    criteria_by_id = collect_criteria(
+        workspace_dir, scope=load_workspace_scope(workspace_dir)
+    )
     passing_quality_asset_ids, quality_warnings = validate_project_quality_reviews(
         project_dir,
         project,

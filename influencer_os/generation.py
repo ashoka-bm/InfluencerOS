@@ -685,6 +685,21 @@ def validate_project_quality_reviews(project_dir, project, manifest_rows, known_
                     f"blocking rubric criteria {missing_blocking}; it cannot "
                     "produce passing coverage until it does (ADR 0025)"
                 )
+            if blocking_criteria:
+                # Status-aware verdict agreement (batch-3 review, High): a
+                # failing BLOCKING criterion with a passing verdict is a
+                # dishonest record; a failing advisory criterion is not.
+                failing_blocking = sorted(
+                    item["criterion_id"]
+                    for item in review.get("rubric_criteria_results", [])
+                    if item["result"] == "fail"
+                    and item["criterion_id"] in blocking_criteria
+                )
+                if failing_blocking and review["overall_verdict"] == "pass":
+                    raise ValidationError(
+                        f"quality review {review_id}: overall_verdict 'pass' "
+                        f"with failing blocking criteria {failing_blocking}"
+                    )
             reviews_found = True
             for entry in review["scope_assets"]:
                 asset_id = entry["asset_id"]
