@@ -67,7 +67,8 @@
         "soul",
         "personal_brand",
         "voice_samples",
-        "reference_library"
+        "reference_library",
+        "production_rubric"
       ],
       "properties": {
         "context_soul": {

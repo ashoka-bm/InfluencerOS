@@ -661,3 +661,20 @@ class ValidatorSubsetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaxLengthKeywordTests(unittest.TestCase):
+    """maxLength joined the supported subset for the ADR 0025 one-line
+    message cap; like every keyword it validates fail-closed."""
+
+    def test_string_longer_than_max_length_fails(self):
+        schema = {"type": "string", "maxLength": 5}
+        validate_schema_subset(schema, "12345")
+        with self.assertRaisesRegex(ValidationError, "longer than maxLength"):
+            validate_schema_subset(schema, "123456")
+
+    def test_max_length_must_be_an_integer(self):
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"type": "string", "maxLength": "5"}, "x")
+        with self.assertRaises(SchemaDefinitionError):
+            validate_schema_subset({"type": "string", "maxLength": True}, "x")

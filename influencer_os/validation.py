@@ -44,6 +44,7 @@ VALIDATION_KEYWORDS = {
     "format",
     "items",
     "maxItems",
+    "maxLength",
     "maximum",
     "minItems",
     "minLength",
@@ -288,6 +289,8 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0):
             raise ValidationError(f"{path}: string shorter than minLength")
+        if "maxLength" in schema and len(value) > schema["maxLength"]:
+            raise ValidationError(f"{path}: string longer than maxLength")
         if "pattern" in schema:
             pattern = schema["pattern"]
             # Python's `$` matches before a trailing newline under search;
@@ -414,7 +417,7 @@ def _require_keyword_shapes(schema, path):
                         f"got {type(member).__name__}"
                     )
 
-    for keyword in ("minLength", "minItems", "maxItems"):
+    for keyword in ("minLength", "maxLength", "minItems", "maxItems"):
         if keyword in schema:
             if isinstance(schema[keyword], bool) or not isinstance(schema[keyword], int):
                 raise SchemaDefinitionError(f"{path}: {keyword!r} must be an integer")
@@ -771,6 +774,12 @@ def validate_system_event_semantics(record):
     filesystem."""
     event_id = record.get("event_id", "<unknown>")
     event_type = record.get("event_type")
+    message = record.get("message", "")
+    if "\n" in message or "\r" in message:
+        raise ValidationError(
+            f"event {event_id}: message must be one line — verdicts are "
+            "durable, rejected material stays ephemeral (ADR 0025)"
+        )
     friction = event_type in FRICTION_EVENT_TYPES
     for field in ("recurrence_key", "criterion_id", "iteration_count", "unclassified"):
         if field in record and not friction:

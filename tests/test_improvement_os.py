@@ -339,6 +339,51 @@ class RubricSubstrateTests(WorkspaceScaffoldMixin, unittest.TestCase):
         )
         validate_creator_workspace(self.workspace)
 
+    def test_blocking_adr_must_resolve_to_a_file(self):
+        # Batch-1 review (Medium): the pairing rule alone let a hand-edited
+        # rubric block on a nonexistent ADR.
+        rubric_path = self.workspace / "production-rubric.json"
+        rubric = json.loads(rubric_path.read_text())
+        rubric["criteria"].append(
+            {
+                "criterion_id": "creator.test.ghost_blocking",
+                "statement": "Blocks on a decision that was never recorded.",
+                "status": "blocking",
+                "origin": "distillation",
+                "minted_on": "2026-07-06",
+                "blocking_adr": "docs/adr/9999-not-a-real-decision.md",
+            }
+        )
+        rubric_path.write_text(json.dumps(rubric, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "does not resolve to a file"):
+            validate_creator_workspace(self.workspace)
+
+    def test_multiline_message_fails_writer_and_at_rest(self):
+        # Batch-1 review (Low): a multiline message is how a rejected draft
+        # sneaks onto the durable ledger.
+        with self.assertRaisesRegex(ValidationError, "must be one line"):
+            log_incident(
+                self.workspace,
+                event_type="rejection",
+                recurrence_key="gen.identity.consistent",
+                criterion_id="gen.identity.consistent",
+                message="Rejected draft:\nHere is the entire draft text...",
+                source_id="create-production-plan",
+            )
+        self.append_ledger_line(make_event(message="line one\nline two"))
+        with self.assertRaisesRegex(ValidationError, "must be one line"):
+            validate_creator_workspace(self.workspace)
+
+    def test_manifest_without_production_rubric_fails(self):
+        # Batch-1 review (Medium): optional canonical_files.production_rubric
+        # made the Rubric Ratchet skippable by omission.
+        manifest_path = self.workspace / "creator-workspace.json"
+        manifest = json.loads(manifest_path.read_text())
+        del manifest["canonical_files"]["production_rubric"]
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        with self.assertRaisesRegex(ValidationError, "production_rubric"):
+            validate_creator_workspace(self.workspace)
+
     def test_collect_criteria_unions_both_scopes(self):
         mint_criterion(
             self.workspace,
@@ -411,12 +456,25 @@ class ReflectionTriggerTests(WorkspaceScaffoldMixin, unittest.TestCase):
         self.log_incidents(3)
         self.write_reflection_run(
             "automation_run_luna_fit_r001",
-            ["event_luna_fit_001", "event_luna_fit_002", "event_luna_fit_003"],
+            [],
             run_status="failed",
             last_error="reflection crashed mid-way",
         )
         result = validate_creator_workspace(self.workspace)
         self.assertTrue([w for w in result["warnings"] if "reflection due" in w])
+
+    def test_failed_run_attesting_claims_fails_at_rest(self):
+        # Batch-1 review (High): a failed run's event_ids used to skip both
+        # the dangling and double-claim checks entirely.
+        self.log_incidents(1)
+        self.write_reflection_run(
+            "automation_run_luna_fit_r001",
+            ["event_luna_fit_001"],
+            run_status="failed",
+            last_error="crashed after partial work",
+        )
+        with self.assertRaisesRegex(ValidationError, "must attest event_ids"):
+            validate_creator_workspace(self.workspace)
 
     def test_unprocessed_total_threshold_fires(self):
         self.log_incidents(10, key=None)

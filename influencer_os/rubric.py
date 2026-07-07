@@ -49,6 +49,17 @@ def load_rubric(path):
         validate_record("production-rubric", rubric)
     except ValidationError as exc:
         raise ValidationError(f"{path}: {exc}") from None
+    # blocking_adr must resolve to a real ADR file (batch-1 review, Medium):
+    # the pairing rule alone would let a hand-edited rubric block on a
+    # nonexistent decision. Filesystem resolution lives here at the load
+    # seam; record semantics stay filesystem-free.
+    for criterion in rubric.get("criteria", []):
+        adr_ref = criterion.get("blocking_adr")
+        if adr_ref is not None and not (ROOT / adr_ref).is_file():
+            raise ValidationError(
+                f"{path}: criterion {criterion['criterion_id']!r} cites "
+                f"blocking_adr {adr_ref!r} which does not resolve to a file"
+            )
     return rubric
 
 
@@ -160,6 +171,15 @@ def reconcile_reflection_runs(runs, ledger_event_ids, context=None):
     claimed = {}
     for run in runs:
         if run["run_status"] not in CLAIMING_RUN_STATUSES:
+            # Declare-then-attest (batch-1 review, High): a crashed run
+            # records last_error, never partial claims — otherwise its
+            # event_ids escape both the dangling and double-claim checks.
+            if run["event_ids"]:
+                raise ValidationError(
+                    f"{prefix}reflection run {run['automation_run_id']} is "
+                    f"{run['run_status']} but attests event_ids; a non-claiming "
+                    "run must attest event_ids: []"
+                )
             continue
         run_id = run["automation_run_id"]
         for event_id in run["event_ids"]:
