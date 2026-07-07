@@ -337,6 +337,22 @@ Completed:
   Transcripts/analytics/publishing stay out of scope; video-content analysis
   keeps the VideoUnderstandingPack boundary. Verification: 747 tests pass,
   49 examples validate.
+- Skill quality remediation (2026-07-07): a five-perspective review of all
+  28 `skills/*/SKILL.md` files (four Claude cluster reviews + a gpt-5.5
+  audit against the operator's writing-great-skills rubric) found seven
+  verified content defects — all inside duplicated prose — and one
+  repo-wide mechanical defect (14 frontmatters invalid under strict YAML).
+  Executed as three gpt-5.5-review-gated batches per
+  `docs/workflows/skill-quality-remediation-implementation-plan.md`:
+  mechanical fixes + 9 new skill-prose drift tests (frontmatter scalar
+  lint, path existence, vocabulary-vs-enum, template IDs, CLI forms,
+  shared-block byte-identity), conductor/parent de-duplication
+  (`influencer-os` 248→187 lines; producer record shapes live only with
+  their owners), and the description/completion-criteria pass (all 28
+  descriptions trimmed to registry-aligned trigger clauses; setup
+  subskills now name their machine checks and the acceptance gate).
+  Verification: 794 tests pass, 49 examples validate, all 28 frontmatters
+  parse under js-yaml.
 
 ## Implemented Schema Contracts
 

@@ -2,8 +2,22 @@
 
 Last updated: 2026-07-07
 
-Status: **Proposed (awaiting operator batch approval).** No fixes have been
-applied; this plan records the findings and the batched execution path.
+Status: **Complete (2026-07-07).** The operator approved the recommendations
+on D1-D7 and all three batches executed the same day, each gated by a
+gpt-5.5 adversarial review of the batch diff. Batch 1 (mechanical fixes +
+drift pins) landed with a clean review whose two suggestions (pin the fixed
+contracts; harden the scalar lint) were applied as a follow-up. Batch 2
+(structural de-duplication) had no HIGH findings; the review caught three
+conductor requirements orphaned by the strip (novelty angle, cross-platform
+travel, template selection) — now explicitly owned by `manage-idea-queue` —
+plus two Rules entries still restating operational text and two shared-block
+test weaknesses, all fixed. Batch 3 (descriptions + completion criteria) had
+no HIGH/MEDIUM findings; its three LOW fixes (fixture confidence vocabulary,
+a dropped Reference Library reach clause, four dropped registry trigger
+phrases) were applied. Closeout verification: 794 tests pass (785 pre-plan
++ 9 new skill-prose drift tests), 49 examples validate, all 28 frontmatters
+parse under strict YAML (js-yaml). Deferred items (behavioral gate evals;
+`cancel-generation-approval` CLI) keep their reopen conditions below.
 
 ## Goal
 
