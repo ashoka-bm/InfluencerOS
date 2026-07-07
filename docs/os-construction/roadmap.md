@@ -358,6 +358,10 @@ marketing material end to end. This is the first contact between the OS and
 real creator data and the first real (paid) provider adapter decision
 (Generation OS Decision 3).
 
+The 2026-07-07 pre-alpha review and the gap-closing batches (composed
+`validate all` release gate, day-1 runbook, connector smoke runs) live in
+`docs/workflows/alpha-readiness-implementation-plan.md`.
+
 ### Track 2 — Multi-entity onboarding (product/brand support, ADR 0026)
 
 Goal: onboard products and brands, not only avatar-led influencers, via a
