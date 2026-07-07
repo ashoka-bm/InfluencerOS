@@ -1099,3 +1099,54 @@ class SkillProseDriftTests(unittest.TestCase):
                         f"skills/{skill} names an unknown connector: {first_arg}",
                     )
         self.assertTrue(found_any, "no skill documents any CLI invocation")
+
+    def test_shared_skill_blocks_stay_identical(self):
+        # D4 (remediation plan): Self-Update and Friction Logging live
+        # inline in every carrier because runtime copies travel into
+        # creator workspaces without docs/. Inline-by-design duplication is
+        # only safe if a protocol change is a mechanically verified sweep:
+        # normalizing each skill's own name away, every carrier of a
+        # dialect must hold byte-identical block text.
+        def block(skill, heading):
+            body = skill_body(skill)
+            marker = f"\n## {heading}\n"
+            if marker not in body:
+                return None
+            text = body.split(marker, 1)[1]
+            cut = text.find("\n## ")
+            if cut != -1:
+                text = text[:cut]
+            return text.replace(skill, "<skill>").strip()
+
+        groups = {}
+        for skill in sorted(skills_on_disk()):
+            self_update = block(skill, "Self-Update")
+            if self_update is not None:
+                first_line = self_update.splitlines()[0]
+                if first_line.startswith("When corrected twice the same way"):
+                    groups.setdefault("self-update:producer", {})[skill] = self_update
+                elif first_line.startswith("When the user flags an issue with this skill"):
+                    groups.setdefault("self-update:conductor", {})[skill] = self_update
+                # wrap-up and memory-write carry bespoke self-update text
+            friction = block(skill, "Friction Logging (ADR 0025)")
+            if friction is not None:
+                groups.setdefault("friction-logging", {})[skill] = friction
+
+        self.assertGreaterEqual(
+            len(groups.get("self-update:producer", {})), 10,
+            "producer Self-Update carriers vanished; the dialect grouping is stale",
+        )
+        self.assertEqual(
+            sorted(groups.get("self-update:conductor", {})),
+            ["create-influencer", "influencer-os"],
+        )
+        self.assertGreaterEqual(len(groups.get("friction-logging", {})), 4)
+        for group_name, members in groups.items():
+            variants = {}
+            for skill, text in members.items():
+                variants.setdefault(text, []).append(skill)
+            self.assertEqual(
+                len(variants), 1,
+                f"{group_name} blocks diverge across carriers: "
+                + "; ".join(str(sorted(v)) for v in variants.values()),
+            )

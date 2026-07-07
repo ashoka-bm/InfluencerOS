@@ -84,4 +84,7 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 ## Self-Update
 
 When corrected twice the same way, record the lesson via
-`python3 -m influencer_os log-learning context/learnings.md register-published-post "<lesson>"`.
+`python3 -m influencer_os log-learning context/learnings.md register-published-post "<lesson>"`,
+run from the InfluencerOS repo root: repo paths (`docs/`, `schemas/`,
+`context/learnings.md`) resolve from there, never from a Creator
+Workspace runtime copy.

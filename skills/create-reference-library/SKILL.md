@@ -7,7 +7,7 @@ description: Use to create references/reference-library.json and provider-neutra
 
 Create `references/reference-library.json` and prompt files from creator setup materials.
 
-Use [docs/templates/creator-setup/reference-library.template.json](../../docs/templates/creator-setup/reference-library.template.json) and validate against [schemas/reference-library.schema.json](../../schemas/reference-library.schema.json).
+Use [docs/templates/creator-setup/reference-library.template.json](docs/templates/creator-setup/reference-library.template.json) and validate against [schemas/reference-library.schema.json](schemas/reference-library.schema.json).
 
 ## Purpose
 

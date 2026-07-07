@@ -90,4 +90,7 @@ python3 -m influencer_os log-incident <creator-workspace> --type rejection \
 ## Self-Update
 
 When corrected twice the same way, record the lesson via
-`python3 -m influencer_os log-learning context/learnings.md request-generation-approval "<lesson>"`.
+`python3 -m influencer_os log-learning context/learnings.md request-generation-approval "<lesson>"`,
+run from the InfluencerOS repo root: repo paths (`docs/`, `schemas/`,
+`context/learnings.md`) resolve from there, never from a Creator
+Workspace runtime copy.

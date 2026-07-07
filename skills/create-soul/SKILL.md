@@ -7,7 +7,7 @@ description: "Use to turn creator intake material into soul.md: values, beliefs,
 
 Create `brand_context/soul.md` from user input, source files, or a master creator bible.
 
-Use [docs/templates/creator-setup/soul.md](../../docs/templates/creator-setup/soul.md) as the output shape.
+Use [docs/templates/creator-setup/soul.md](docs/templates/creator-setup/soul.md) as the output shape.
 
 ## Purpose
 

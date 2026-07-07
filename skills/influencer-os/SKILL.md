@@ -183,5 +183,5 @@ When the user flags an issue with this skill mid-run or at wrap-up:
 
 - Scope-specific correction (one creator, or the OS persona) → record it in the applicable `SKILL.local.md`: the creator's runtime copy, or `skills/influencer-os/SKILL.local.md` for the OS persona.
 - System-wide correction → add a dated entry to `## Rules` above and fix the offending step in this file.
-- Log the change via `python3 -m influencer_os log-learning context/learnings.md influencer-os "<what changed>"` so it has a record.
+- Log the change via `python3 -m influencer_os log-learning context/learnings.md influencer-os "<what changed>"` so it has a record (run from the InfluencerOS repo root; `context/learnings.md` is the OS ledger, never a Creator Workspace file).
 - Promote a local rule into this base file only when repeated feedback shows it applies system-wide (ADR 0014).

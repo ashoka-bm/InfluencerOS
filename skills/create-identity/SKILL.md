@@ -7,7 +7,7 @@ description: "Use to turn creator intake material into identity.md: biography, o
 
 Create `brand_context/identity.md` from user input, source files, or a master creator bible.
 
-Use [docs/templates/creator-setup/identity.md](../../docs/templates/creator-setup/identity.md) as the output shape.
+Use [docs/templates/creator-setup/identity.md](docs/templates/creator-setup/identity.md) as the output shape.
 
 ## Purpose
 

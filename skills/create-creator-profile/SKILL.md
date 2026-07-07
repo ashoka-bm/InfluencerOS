@@ -7,7 +7,7 @@ description: Use to create creator-profile.json as the schema-backed operational
 
 Create `creator-profile.json` only after the foundation files are drafted or accepted.
 
-Use [docs/templates/creator-setup/creator-profile.template.json](../../docs/templates/creator-setup/creator-profile.template.json) and validate against [schemas/creator-profile.schema.json](../../schemas/creator-profile.schema.json).
+Use [docs/templates/creator-setup/creator-profile.template.json](docs/templates/creator-setup/creator-profile.template.json) and validate against [schemas/creator-profile.schema.json](schemas/creator-profile.schema.json).
 
 ## Purpose
 

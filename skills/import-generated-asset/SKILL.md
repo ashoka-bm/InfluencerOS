@@ -58,4 +58,7 @@ python3 -m influencer_os validate workspace <creator-workspace>
 ## Self-Update
 
 When corrected twice the same way, record the lesson via
-`python3 -m influencer_os log-learning context/learnings.md import-generated-asset "<lesson>"`.
+`python3 -m influencer_os log-learning context/learnings.md import-generated-asset "<lesson>"`,
+run from the InfluencerOS repo root: repo paths (`docs/`, `schemas/`,
+`context/learnings.md`) resolve from there, never from a Creator
+Workspace runtime copy.

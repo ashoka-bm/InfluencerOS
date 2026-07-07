@@ -7,7 +7,7 @@ description: "Use to create voice-samples.md: 5-10 gold-standard creator voice e
 
 Create `brand_context/voice-samples.md` from user-provided writing, transcripts, published content, interview answers, or generated foundation drafts.
 
-Use [docs/templates/creator-setup/voice-samples.md](../../docs/templates/creator-setup/voice-samples.md) as the output shape.
+Use [docs/templates/creator-setup/voice-samples.md](docs/templates/creator-setup/voice-samples.md) as the output shape.
 
 ## Purpose
 

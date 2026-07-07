@@ -7,7 +7,7 @@ description: "Use to turn creator intake material into personal-brand.md: positi
 
 Create `brand_context/personal-brand.md` from user input, source files, or a master creator bible.
 
-Use [docs/templates/creator-setup/personal-brand.md](../../docs/templates/creator-setup/personal-brand.md) as the output shape.
+Use [docs/templates/creator-setup/personal-brand.md](docs/templates/creator-setup/personal-brand.md) as the output shape.
 
 ## Purpose
 
