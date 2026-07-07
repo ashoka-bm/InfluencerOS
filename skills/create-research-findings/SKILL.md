@@ -99,7 +99,11 @@ Usage inside a run:
    and metric snapshots in `metric-snapshots.jsonl`
    (`schemas/metric-snapshot.schema.json`). Every record carries this run's
    `research_run_id` and a `platform` + `platform_content_type` from the closed
-   enums.
+   enums. Source evidence is not the same as target distribution platforms:
+   public-web pages, institutional articles, research articles, and manual
+   citations may use `platform: "public_web"` with
+   `platform_content_type` such as `public_web_page`,
+   `institutional_article`, or `research_article`.
 6. Write one `source-yield.jsonl` line per checked source or query outcome
    (`schemas/research-source-yield.schema.json`). Include low-yield and
    background-only attempts so future runs can avoid repeated source waste.
@@ -120,6 +124,10 @@ Usage inside a run:
 
 - Prefer real post URLs, named accounts, posting dates or observed ages,
   visible metrics, and creator-relative outperformance over trend articles.
+- Never label public-web pages, institutional sources, research articles, or
+  manual citation evidence as YouTube just to satisfy schema. Use public-web
+  source provenance and keep target distribution platforms separate in planning
+  records.
 - Store summaries and short quoted snippets (hooks), never full captions or
   transcripts by default.
 - Assign `visible_metric_signal` (source-yield) and `confidence` (evidence)
@@ -129,6 +137,10 @@ Usage inside a run:
   not credibility, so an isolated or `farther_field` hit does not earn
   `high` on metrics alone, and open-web/trend claims cap at `medium` until
   they resolve to a primary post.
+- Do not create metric snapshots for sources with no real visible metrics. If
+  only background/public-web evidence exists and no native platform metrics were
+  captured, ask the user whether to proceed with background-only evidence before
+  promoting findings or ideas.
 - Mark `confidence` and `limitations` honestly; flag thin evidence instead
   of hiding it behind confident findings.
 
@@ -187,6 +199,11 @@ evidence a queue entry, promotion, or project references.
   explicit user approval.
 - Fix validation failures before presenting results; never leave the
   workspace invalid.
+- 2026-07-07: Never label public-web or manual citation evidence as YouTube.
+  Record public-web source evidence separately from target distribution
+  platforms, avoid metric snapshots where there are no real visible metrics,
+  and ask the user whether to proceed when only background/public-web evidence
+  exists.
 
 ## Self-Update
 

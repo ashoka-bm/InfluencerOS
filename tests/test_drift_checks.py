@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # copy to the one canonical list. Legacy compatibility records (social
 # research packs) are deliberately out of scope.
 RESEARCH_PLATFORMS = ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "youtube"]
+RESEARCH_SOURCE_PLATFORMS = RESEARCH_PLATFORMS + ["public_web"]
 RESEARCH_CONTENT_TYPES = [
     "x_post", "x_thread",
     "instagram_reel", "instagram_post", "instagram_story", "instagram_carousel",
@@ -21,6 +22,9 @@ RESEARCH_CONTENT_TYPES = [
     "facebook_post", "facebook_reel",
     "linkedin_post", "linkedin_article",
     "youtube_video", "youtube_short", "youtube_comment",
+]
+RESEARCH_SOURCE_CONTENT_TYPES = RESEARCH_CONTENT_TYPES + [
+    "public_web_page", "institutional_article", "research_article",
 ]
 RESEARCH_MODULE_SCHEMAS = (
     "creator-content-schedule", "research-run", "research-evidence", "metric-snapshot",
@@ -58,6 +62,20 @@ FORMAT_PROPERTY_NAMES = {
 # platform adaptation targets the open distribution-surface vocabulary
 # (youtube_shorts et al.), which closes in the production build-out.
 ENUM_EXEMPT_PROPERTIES = {("output-package", "platform")}
+SOURCE_PROVENANCE_PLATFORM_LOCATIONS = {
+    "project.properties.source_refs.source_platforms",
+    "research-evidence.platform",
+    "research-run.platforms",
+    "research-search-plan.platforms",
+    "research-search-plan.properties.planned_queries.items.platform",
+    "research-search-plan.properties.planned_sources.items.platform",
+    "research-search-plan.properties.skipped_sources.items.platform",
+    "research-source-yield.platform",
+}
+SOURCE_PROVENANCE_CONTENT_TYPE_LOCATIONS = {
+    "project.properties.source_refs.source_platform_content_types",
+    "research-evidence.platform_content_type",
+}
 
 # The Content Beat Spine (ADR 0024): every beat_role / hook_category enum
 # copy across schemas must match the canonical constants in validation.py.
@@ -320,6 +338,78 @@ class CreatorSetupTemplateDriftTests(unittest.TestCase):
             )
 
 
+class GuidedE2EDriftTests(unittest.TestCase):
+    def test_create_influencer_normal_user_guidance_contract_is_pinned(self):
+        skill = read_repo_text("skills/create-influencer/SKILL.md").lower()
+        required = (
+            "normal-user e2e",
+            "normal/new user",
+            "do not preload missing answers",
+            "exactly three onboarding paths",
+            "ask one concrete question at a time",
+            "recommended answer",
+            "short reason",
+            "accept, revise, skip, or system-fill",
+            "progress/setup-interview.md",
+            "progress/setup-checklist.md",
+            "question",
+            "recommendation",
+            "rationale",
+            "answer source",
+            "user_provided",
+            "imported",
+            "generated_from_intake",
+            "system_filled",
+            "acceptance status",
+            "whole-foundation review package",
+            "content_ready",
+            "generation_ready",
+            "distinguish generated/system-filled answers from user-provided answers",
+        )
+        for phrase in required:
+            self.assertIn(phrase, skill, f"create-influencer missing guided E2E phrase: {phrase}")
+
+    def test_create_influencer_forbids_validation_based_preapproval(self):
+        skill = read_repo_text("skills/create-influencer/SKILL.md").lower()
+        self.assertIn("validation alone is not approval", skill)
+        self.assertIn("generic `approved if files validate`", skill)
+        self.assertIn("explicit user approval", skill)
+
+
+class ResearchProvenanceSkillDriftTests(unittest.TestCase):
+    def test_research_skill_forbids_public_web_as_youtube(self):
+        skill = read_repo_text("skills/create-research-findings/SKILL.md").lower()
+        required = (
+            "never label public-web",
+            "manual citation evidence as youtube",
+            "source evidence",
+            "target distribution platforms",
+            "only background/public-web evidence exists",
+            "ask the user whether to proceed",
+            "do not create metric snapshots",
+            "no real visible metrics",
+        )
+        for phrase in required:
+            self.assertIn(phrase, skill, f"create-research-findings missing provenance phrase: {phrase}")
+
+    def test_conductor_phase_checklist_and_creative_review_are_pinned(self):
+        skill = read_repo_text("skills/influencer-os/SKILL.md").lower()
+        required = (
+            "phase checklist",
+            "current phase",
+            "required next artifact",
+            "validation command",
+            "human gate",
+            "dry-run drafting step",
+            "provider boundary",
+            "after production planning",
+            "offer or run",
+            "advisory creative review",
+        )
+        for phrase in required:
+            self.assertIn(phrase, skill, f"influencer-os missing conductor phrase: {phrase}")
+
+
 class SkillCliInvocationDriftTests(unittest.TestCase):
     def test_promote_idea_names_real_init_project_invocation(self):
         # Slice 5 review: the skill taught a positional creator-workspace
@@ -409,6 +499,20 @@ class ResearchEnumDriftTests(unittest.TestCase):
                     )
                     continue
                 found_any[kind] = True
+                if location in SOURCE_PROVENANCE_PLATFORM_LOCATIONS:
+                    self.assertEqual(
+                        values,
+                        RESEARCH_SOURCE_PLATFORMS,
+                        f"{location} must allow public_web source provenance",
+                    )
+                    continue
+                if location in SOURCE_PROVENANCE_CONTENT_TYPE_LOCATIONS:
+                    self.assertEqual(
+                        values,
+                        RESEARCH_SOURCE_CONTENT_TYPES,
+                        f"{location} must allow public-web source content types",
+                    )
+                    continue
                 self.assertEqual(
                     values,
                     expected[kind],
@@ -467,8 +571,9 @@ class ResearchEnumDriftTests(unittest.TestCase):
 
     def test_platform_fit_map_covers_every_format_and_platform(self):
         # The advisory capability map must classify all 6 formats across all
-        # 9 platforms with fit levels from the closed vocabulary — a missing
-        # cell would silently skip the platform_fit advisory.
+        # distribution platforms with fit levels from the closed vocabulary.
+        # public_web is source provenance only and must not become a production
+        # platform target.
         from influencer_os.projects import PLATFORM_FORMAT_FIT
         from influencer_os.validation import PLATFORM_FIT_LEVELS
 

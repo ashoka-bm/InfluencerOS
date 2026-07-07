@@ -909,6 +909,92 @@ def add_second_run(workspace_dir, evidence_id="evidence_luna_fit_002", metric_id
     return run_dir
 
 
+def add_public_web_background_run(workspace_dir):
+    """Add a public-web evidence run with no metric snapshots."""
+    run_id = "research_run_luna_fit_public_web_001"
+    evidence_id = "evidence_luna_fit_public_web_001"
+    run = load_example("research-run")
+    run["research_run_id"] = run_id
+    run["platforms"] = ["public_web"]
+    run["material_update"] = False
+    run["outputs"] = {
+        "finding_ids": [],
+        "idea_queue_entry_ids": [],
+        "evidence_ids": [evidence_id],
+        "metric_snapshot_ids": [],
+        "research_intelligence_updates": [],
+    }
+    run_dir = Path(workspace_dir) / "research" / "runs" / run_id
+    write_json(run_dir / "research-run.json", run)
+
+    plan = load_example("research-search-plan")
+    plan["research_search_plan_id"] = "research_search_plan_luna_fit_public_web_001"
+    plan["research_run_id"] = run_id
+    plan["platforms"] = ["public_web"]
+    for query in plan["planned_queries"]:
+        query["platform"] = "public_web"
+        query["query"] = "desk stretching institutional guidance"
+        query["source_type"] = "ad_hoc"
+        query["purpose"] = "Collect background institutional context without social-platform metrics."
+        query["expected_signal"] = "Credible public-web background evidence."
+        query["term_basis"] = ["hypothesis"]
+    for planned_source in plan["planned_sources"]:
+        planned_source["platform"] = "public_web"
+        planned_source["source_type"] = "direct_url"
+        planned_source["url"] = "https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/stretching/art-20047931"
+        planned_source["reason"] = "Institutional background source for safe stretching context."
+        planned_source.pop("source_ref", None)
+    for skipped_source in plan["skipped_sources"]:
+        skipped_source["platform"] = "public_web"
+    write_json(run_dir / "search-plan.json", plan)
+
+    evidence = load_example("research-evidence")
+    evidence.update(
+        evidence_id=evidence_id,
+        research_run_id=run_id,
+        platform="public_web",
+        platform_content_type="institutional_article",
+        source_url="https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/stretching/art-20047931",
+        source_relationship="farther_field",
+        source_summary="Institutional article used as background context.",
+        signal_summary="Background stretching guidance, not native social performance evidence.",
+        confidence="medium",
+        limitations="No native platform metrics are available for this background source.",
+    )
+    evidence.pop("source_account", None)
+    evidence.pop("visible_metrics", None)
+    write_jsonl(run_dir / "evidence.jsonl", [evidence])
+
+    source_yield = load_example("research-source-yield")
+    source_yield.update(
+        research_source_yield_id="research_source_yield_luna_fit_public_web_001",
+        research_run_id=run_id,
+        source_key="public_web_mayo_stretching",
+        source_kind="direct_url",
+        platform="public_web",
+        adapter_id="manual_public_web",
+        access_method="public_web",
+        url=evidence["source_url"],
+        outcome="promoted_to_evidence",
+        yield_reason="Useful background source; no social metric snapshot created.",
+        evidence_ids=[evidence_id],
+        metric_snapshot_ids=[],
+        finding_ids=[],
+        idea_queue_entry_ids=[],
+        engagement_basis={
+            "visible_metric_signal": "none",
+            "cross_platform_validation": False,
+            "creator_fit": "medium",
+            "notes": "No visible social metrics; background context only.",
+        },
+        recommended_intelligence_action="none",
+    )
+    source_yield.pop("query_id", None)
+    source_yield.pop("source_plan_id", None)
+    write_jsonl(run_dir / "source-yield.jsonl", [source_yield])
+    return run_dir
+
+
 class RunScopeConsistencyTests(unittest.TestCase):
     def test_evidence_run_id_must_match_containing_run(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -937,6 +1023,28 @@ class RunScopeConsistencyTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             self.assertIn("does not match the containing run", str(ctx.exception))
+
+    def test_public_web_background_evidence_validates_without_metric_snapshots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_dir = add_public_web_background_run(workspace_dir)
+
+            result = validate_research(workspace_dir)
+            checked = set(result["checked_paths"])
+            self.assertIn(
+                str((run_dir / "evidence.jsonl").relative_to(workspace_dir)),
+                checked,
+            )
+            self.assertIn(
+                str((run_dir / "source-yield.jsonl").relative_to(workspace_dir)),
+                checked,
+            )
+            self.assertFalse((run_dir / "metric-snapshots.jsonl").exists())
+            source_yield = validate_jsonl_file(
+                "research-source-yield", run_dir / "source-yield.jsonl"
+            )[0]
+            self.assertEqual(source_yield["platform"], "public_web")
+            self.assertEqual(source_yield["metric_snapshot_ids"], [])
 
     def test_run_outputs_omitting_a_jsonl_id_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -67,7 +67,8 @@
         "reddit",
         "facebook",
         "linkedin",
-        "youtube"
+        "youtube",
+        "public_web"
       ]
     },
     "adapter_id": {

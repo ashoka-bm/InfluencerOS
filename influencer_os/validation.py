@@ -111,6 +111,23 @@ RESEARCH_PLATFORMS = (
     "youtube",
 )
 
+# Source provenance may include background public-web records. Keep this
+# separate from RESEARCH_PLATFORMS because the latter also drives production
+# platform-fit checks and approval surfaces.
+RESEARCH_SOURCE_PLATFORMS = RESEARCH_PLATFORMS + ("public_web",)
+RESEARCH_SOURCE_CONTENT_TYPES = (
+    "x_post", "x_thread",
+    "instagram_reel", "instagram_post", "instagram_story", "instagram_carousel",
+    "tiktok_video",
+    "substack_article", "substack_note",
+    "medium_article",
+    "reddit_thread", "reddit_comment",
+    "facebook_post", "facebook_reel",
+    "linkedin_post", "linkedin_article",
+    "youtube_video", "youtube_short", "youtube_comment",
+    "public_web_page", "institutional_article", "research_article",
+)
+
 # The pure modality enum (ADR 0024): carousel/story_sequence are formats,
 # not modalities. Audio is selectable but has no production-plan schema in
 # v1 — standalone-audio production warns.

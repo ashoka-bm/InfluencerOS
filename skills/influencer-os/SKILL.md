@@ -42,6 +42,21 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
 10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
 
+## Phase Checklist Contract
+
+During E2E, guided, or normal-user runs, maintain a phase checklist in the
+conversation or under `progress/`. Each checklist update must name:
+
+- current phase;
+- required next artifact;
+- validation command;
+- whether the next step is a human gate, dry-run drafting step, or provider
+  boundary.
+
+After production planning, offer or run the advisory creative review phase
+before presenting prompts as ready for generation approval. The advisory
+creative review does not replace the human generation approval gate.
+
 ## Dependencies
 
 Producer skills this conductor routes to (mirrors the `dependencies` frontmatter; kept in agreement with `docs/os-construction/architecture-map.md` by a drift check):
@@ -152,6 +167,13 @@ Each queue idea must include:
 - recommended template or structure IDs when relevant,
 - scores for evidence strength, viral potential, audience nurture value, creator fit, schedule fit, production readiness, urgency, and measurement clarity.
 
+Source evidence may come from social platforms, public-web pages,
+institutional articles, research articles, or manual citations. Keep source
+provenance separate from target distribution platforms: do not relabel
+public-web background evidence as YouTube or any social platform just because
+the planned output may target TikTok, Instagram, YouTube Shorts, or another
+surface.
+
 ## V1 Social Post Formats
 
 - `format_short_form_video`: vertical hook-to-payoff video.
@@ -213,6 +235,8 @@ Drafting ideas, prompts, plans, shot lists, and generation plans is allowed. Cal
 *Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
 
 - 2026-07-03: Baseline established; no corrections recorded yet.
+- 2026-07-07: E2E, guided, and normal-user runs must maintain a phase checklist with current phase, required next artifact, validation command, and human gate/dry-run drafting step/provider boundary classification. After production planning, offer or run advisory creative review before prompts are presented as ready.
+- 2026-07-07: Source evidence provenance is separate from target distribution platforms. Public-web and institutional background sources must stay `public_web` provenance rather than being mislabeled as YouTube or social evidence.
 
 ## Self-Update
 

@@ -62,6 +62,34 @@ The system-fill option is always available inside paths 1 and 2. If the user
 says "you decide," "fill it in," or equivalent, draft the missing answer from the
 accepted context, mark it as generated, and keep it in the review set.
 
+## Normal-User E2E Contract
+
+When the user asks to run setup as a **normal-user E2E**, **normal/new user**,
+novice user, guided run, or similar, do not preload missing answers from the
+coordinator or test prompt unless they are explicitly user-provided seed facts.
+Use the onboarding briefing above and present exactly three onboarding paths.
+
+For every missing or ambiguous foundation input:
+
+- ask one concrete question at a time;
+- present the recommended answer with a short reason before asking for a
+  decision;
+- allow exactly these responses: accept, revise, skip, or system-fill;
+- distinguish generated/system-filled answers from user-provided answers;
+- persist the decision in `progress/setup-interview.md` or
+  `progress/setup-checklist.md`.
+
+Each persisted interview row must include: question, recommendation, rationale,
+answer, answer source, and acceptance status. Answer source must be one of
+`user_provided`, `imported`, `generated_from_intake`, or `system_filled`.
+
+Before setting readiness to `content_ready` or `generation_ready`, present a
+whole-foundation review package covering the Creator Profile, identity, soul,
+personal brand, voice, reference plan, provider boundary, and remaining
+blockers. Wait for explicit user approval. Validation alone is not approval,
+and normal-user runs must not use a generic `approved if files validate` rule or
+any equivalent silent preauthorization.
+
 ## Output Contract
 
 Produce or update:
@@ -78,6 +106,7 @@ Produce or update:
 - `references/reference-library.json`
 - provider-neutral prompt files under `references/`
 - copied source files under `sources/`
+- `progress/setup-interview.md`
 - `progress/setup-checklist.md`
 
 The workflow is complete when the Creator Workspace is `content_ready` or `generation_ready` for the accepted content strategy.
@@ -212,6 +241,7 @@ Use these output shapes:
 - 2026-07-03: Baseline established; no corrections recorded yet.
 - 2026-07-03: After any approved provider generation, update `progress/setup-checklist.md`, `context/MEMORY.md`, and the daily note in the same run — supersede every "no generation has been run" or "assets are prompt-staged only" claim. Stale no-generation notes conflicted with a generated identity plate in the Nia Sol run.
 - 2026-07-03: Track each reference asset in the setup checklist by its lifecycle status (planned / prompted / generated pending approval / approved); never use grouped wording like "completed or prompted". When a generation call runs, record the generation date, tool, and any accepted prompt deviations in the asset's `usage_notes`, keep `prompt_path`, and leave the asset `generated` until the user explicitly approves the look.
+- 2026-07-07: Normal-user E2E and guided setup runs must ask missing inputs one at a time, log question/recommendation/rationale/answer/source/acceptance status in `progress/setup-interview.md` or `progress/setup-checklist.md`, and require explicit whole-foundation approval before `content_ready` or `generation_ready`; validation alone is not approval.
 
 ## Self-Update
 

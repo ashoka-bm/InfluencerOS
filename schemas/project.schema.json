@@ -127,7 +127,8 @@
               "reddit",
               "facebook",
               "linkedin",
-              "youtube"
+              "youtube",
+              "public_web"
             ]
           }
         },
@@ -154,7 +155,10 @@
               "linkedin_article",
               "youtube_video",
               "youtube_short",
-              "youtube_comment"
+              "youtube_comment",
+              "public_web_page",
+              "institutional_article",
+              "research_article"
             ]
           }
         }

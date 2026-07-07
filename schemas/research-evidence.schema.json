@@ -49,7 +49,8 @@
         "reddit",
         "facebook",
         "linkedin",
-        "youtube"
+        "youtube",
+        "public_web"
       ]
     },
     "platform_content_type": {
@@ -73,7 +74,10 @@
         "linkedin_article",
         "youtube_video",
         "youtube_short",
-        "youtube_comment"
+        "youtube_comment",
+        "public_web_page",
+        "institutional_article",
+        "research_article"
       ]
     },
     "captured_on": {

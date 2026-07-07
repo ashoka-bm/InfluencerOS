@@ -62,7 +62,8 @@
           "reddit",
           "facebook",
           "linkedin",
-          "youtube"
+          "youtube",
+          "public_web"
         ]
       },
       "minItems": 1

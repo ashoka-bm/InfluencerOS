@@ -161,6 +161,33 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_record("project", invalid)
 
+    def test_public_web_evidence_validates_with_honest_source_type(self):
+        evidence = deepcopy(load_json("examples/research-evidence.example.json"))
+        evidence.update(
+            evidence_id="evidence_luna_fit_public_web_001",
+            platform="public_web",
+            platform_content_type="institutional_article",
+            source_url="https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/stretching/art-20047931",
+            source_summary="Institutional background article about stretching basics.",
+            signal_summary="Background context only; not native social performance evidence.",
+            confidence="medium",
+            limitations="No native social engagement metrics were available.",
+        )
+        evidence.pop("source_account", None)
+        evidence.pop("visible_metrics", None)
+
+        validate_record("research-evidence", evidence)
+
+    def test_project_source_refs_allow_public_web_without_youtube_claim(self):
+        project = deepcopy(load_json("examples/project.example.json"))
+        source_refs = project["source_refs"]
+        source_refs["source_platforms"] = ["public_web"]
+        source_refs["source_platform_content_types"] = ["research_article"]
+
+        validate_record("project", project)
+        self.assertNotIn("youtube", source_refs["source_platforms"])
+        self.assertNotIn("youtube_video", source_refs["source_platform_content_types"])
+
     def test_output_package_requires_template_and_video_pack_refs(self):
         example = load_json("examples/output-package.example.json")
         for field in ("applied_social_template_id", "video_understanding_pack_ids"):
