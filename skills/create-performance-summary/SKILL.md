@@ -152,7 +152,6 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 
 *Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
 
-- 2026-07-05: Baseline established; no corrections recorded yet.
 
 ## Prediction Scoring (ADR 0025)
 

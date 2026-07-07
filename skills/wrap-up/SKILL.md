@@ -66,7 +66,7 @@ The writer dedups repeated lessons and keeps per-skill sections. Cross-skill or 
 
 If feedback points to a specific skill issue, edit the skill now — do not only log it:
 
-- System-wide correction → fix the offending step in `skills/<skill-name>/SKILL.md` and add a dated entry to its `## Rules`.
+- System-wide correction → fix the offending step in `skills/<skill-name>/SKILL.md` and add a dated entry to its `## Rules` (create the section, with its reading instruction, if the skill has none). Entries are changelog pointers — name the change and the section that owns it; the rule text itself lives once in the body.
 - Scope-specific correction (one creator, or the OS persona) → record it in the applicable `SKILL.local.md` instead.
 - After fixing, log what changed via `log-learning` so the change has a record.
 
@@ -98,7 +98,7 @@ OS-level facts go to root `context/MEMORY.md`; creator facts go to that workspac
 ## Step 4: Verify And Commit
 
 1. Run `python3 -m unittest discover -s tests` and `python3 -m influencer_os validate examples`.
-2. Commit and push per the `AGENTS.md` Git Rules (trunk-based, imperative subject, one logical change per commit). Never commit `workspace-library/`, creator media, generated works, or secrets.
+2. Commit and push per the `AGENTS.md` Git Rules (trunk-based, imperative subject, one logical change per commit); Step 1's never-commit flags apply.
 
 ## Session Summary
 
@@ -119,7 +119,6 @@ Committed: {hash} — {subject}
 
 *Dated corrections from feedback. Read before every run; newest last.*
 
-- 2026-07-03: Baseline established; no corrections recorded yet.
 
 ## Self-Update
 

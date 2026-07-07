@@ -199,11 +199,8 @@ evidence a queue entry, promotion, or project references.
   explicit user approval.
 - Fix validation failures before presenting results; never leave the
   workspace invalid.
-- 2026-07-07: Never label public-web or manual citation evidence as YouTube.
-  Record public-web source evidence separately from target distribution
-  platforms, avoid metric snapshots where there are no real visible metrics,
-  and ask the user whether to proceed when only background/public-web evidence
-  exists.
+- 2026-07-07: Tightened public-web provenance, metric-snapshot honesty, and
+  background-only evidence rules — the rule text lives in §Evidence Quality.
 
 ## Self-Update
 

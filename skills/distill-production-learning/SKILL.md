@@ -85,7 +85,7 @@ with `supersedes_claim_id`. Set `status`, `closed_on`, `closed_by: user`.
 - Blocking-criterion promotion is out of scope here: proven criteria reach
   the blocking checklist only through the gates-and-reviews ADR checklist.
 
-## Rules
+## Standing Rules
 
 - Bracket before proposing: no single-event skill edits unless the event is
   severity `urgent`.

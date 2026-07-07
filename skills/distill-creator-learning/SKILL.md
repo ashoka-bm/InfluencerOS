@@ -136,7 +136,6 @@ python3 -m influencer_os validate workspace <creator-workspace>
 
 *Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
 
-- 2026-07-06: Baseline established; no corrections recorded yet.
 
 ## Self-Update
 
