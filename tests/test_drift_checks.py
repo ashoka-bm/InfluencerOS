@@ -183,6 +183,28 @@ class AdapterDriftTests(unittest.TestCase):
                 )
 
 
+class RealCreatorRunbookDriftTests(unittest.TestCase):
+    """The day-1 runbook is the operator's entry point for real onboarding;
+    it must exist and keep naming the release gate and the wipe warning."""
+
+    def test_runbook_exists_and_names_the_release_gate(self):
+        text = read_repo_text("docs/onboard-real-creator-runbook.md")
+        self.assertIn("validate all", text)
+        self.assertIn("irreversible", text)
+        self.assertIn(".env.example", text)
+
+    def test_runbook_cli_commands_exist(self):
+        text = read_repo_text("docs/onboard-real-creator-runbook.md")
+        named = set(re.findall(r"python3 -m influencer_os (\S+)", text))
+        parser_source = (ROOT / "influencer_os" / "cli.py").read_text()
+        for command in named:
+            self.assertIn(
+                f'"{command}"',
+                parser_source,
+                f"runbook names a CLI command that does not exist: {command}",
+            )
+
+
 class SkillRegistryDriftTests(unittest.TestCase):
     def setUp(self):
         registry = read_repo_text(REGISTRY_PATH)

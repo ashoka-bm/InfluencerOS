@@ -125,6 +125,11 @@ workspace-library/creators/
 
 During the current build phase, creator workspaces initialized here are fixtures for testing setup, validation, generation gates, and workflow ergonomics. Do not treat their contents as permanent production data unless the user explicitly promotes a workspace out of test status.
 
+Onboarding a **real** creator is different: follow
+`docs/onboard-real-creator-runbook.md` — it covers the one-time fixture wipe,
+the backup discipline, connector smoke checks, and the `validate all` release
+gate.
+
 After authoring `creator-profile.json` and `references/reference-library.json`, validate the workspace with:
 
 ```bash

@@ -26,6 +26,7 @@ Use these product docs as durable references:
 - `docs/pipeline-contract.md`
 - `docs/provider-boundary.md`
 - `docs/gates-and-reviews.md`
+- `docs/onboard-real-creator-runbook.md`
 - `skills/influencer-os/SKILL.md`
 - `schemas/`
 
