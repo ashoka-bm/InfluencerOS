@@ -155,3 +155,11 @@ Out of scope (unchanged by this ADR):
   Reddit/X engagement metrics, which is the specific gap the loop-exercise hit.
 - Wait for a hosted/Automation-OS phase: rejected; the manual loop needs real
   source access now, before scheduled research is worth approving.
+
+## Supersession Note
+
+ADR 0027 adds `youtube_data_api` to the standing-approved research-acquisition
+connector set. The same guardrails apply: key presence is standing approval only
+for explicit research acquisition runs, bounded by the connector call cap and
+kill switch. YouTube Analytics, publishing, scheduled jobs, captions downloads,
+and logged-in access remain out of scope.

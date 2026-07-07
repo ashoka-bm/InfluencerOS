@@ -63,6 +63,13 @@ covers research acquisition only; generation calls stay behind exact approval.
 | `x_api` | `x_xai` | `api_backed` | `XAI_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (likes/reposts/replies) |
 | `firecrawl_public_web` | `firecrawl_web` | `scraping_api` | `FIRECRAWL_API_KEY` | `ResearchEvidence` (rendered public pages) |
 | `linkedin_apify` | `linkedin_apify` | `api_backed` | `APIFY_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (post reactions) |
+| `youtube_data_api` | `youtube_data_api` | `api_backed` | `YOUTUBE_API_KEY` | `ResearchEvidence` + `MetricSnapshot` (views/likes/comments) |
+
+`youtube_data_api` is active as a public research-acquisition connector only
+(ADR 0027). It searches public videos/channels and captures public
+metadata/statistics. It does not authorize logged-in YouTube access, YouTube
+Analytics API ingestion, caption downloads, publishing, scheduling, or
+transcript extraction.
 
 Activation env vars:
 
@@ -84,7 +91,6 @@ skill curates candidates into `ResearchEvidence`/`MetricSnapshot` records.
 | Adapter ID | Access method | Auth | Approval | Activation requirement |
 | --- | --- | --- | --- | --- |
 | `youtube_public_video` | `external_video_understanding` | no | conditional | Decide whether YouTube is a first-class research platform or a video-source adapter. |
-| `youtube_data_api` | `api_backed` | yes | yes | Add env/key policy, quota policy, retention rules, and ADR 0020 platform decision if treated as a platform. |
 | `instagram_logged_in_browser` | `logged_in_browser` | yes | yes | Add account ownership, private-data exclusion, session storage, and audit policy. |
 | `tiktok_logged_in_browser` | `logged_in_browser` | yes | yes | Add account ownership, private-data exclusion, session storage, and audit policy. |
 | `scheduled_research_refresh` | `scheduled_job` | varies | yes | Add Automation OS job definition, approval boundaries, and notification policy. |
@@ -115,16 +121,18 @@ These adapt the Agentic OS `str-trending-research` routing tables:
 - Search plans may name planned/deferred adapters, but only `active` adapters
   (including key-gated connectors whose env key is present) may have
   `decision: "use_now"`.
-- Standing approval is pinned to the four ADR 0022 connector adapter IDs
-  (`reddit_api_or_search`, `x_api`, `firecrawl_public_web`, `linkedin_apify`)
-  using their expected access methods, bounded by the call cap and kill switch.
-  Other api_backed/scraping_api adapters (e.g. `youtube_data_api`), logged-in
-  access, provider transcription, batch video, scheduled execution, and external
-  notifications still require explicit approval before use.
+- Standing approval is pinned to the five key-gated connector adapter IDs
+  (`reddit_api_or_search`, `x_api`, `firecrawl_public_web`, `linkedin_apify`,
+  and per ADR 0027 `youtube_data_api`) using their expected access methods,
+  bounded by the call cap and kill switch. Other api_backed/scraping_api
+  adapters, logged-in access, provider transcription, batch video, scheduled
+  execution, and external notifications still require explicit approval before
+  use.
 - Source-yield records should capture both useful and low-yield attempts.
 - `research/intelligence/sources.json` aggregate `yield_stats` must reconcile
   with `source-yield.jsonl` records that reference `source_intel_*` IDs.
 - A future connector must map output into existing canonical records rather
   than creating a parallel research store.
-- YouTube remains a planned adapter until ADR 0020 is updated or a new ADR
-  declares it a video-source adapter outside the research platform enum.
+- ADR 0027 activated `youtube_data_api` for public research acquisition;
+  `youtube_public_video` remains planned as a separate external
+  video-understanding boundary for actual video-content analysis.
