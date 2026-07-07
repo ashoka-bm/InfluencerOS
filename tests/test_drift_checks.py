@@ -70,6 +70,7 @@ SOURCE_PROVENANCE_PLATFORM_LOCATIONS = {
     "research-search-plan.properties.planned_queries.items.platform",
     "research-search-plan.properties.planned_sources.items.platform",
     "research-search-plan.properties.skipped_sources.items.platform",
+    "research-sources.properties.items.items.platform",
     "research-search-terms.properties.items.items.platform",
     "research-source-yield.platform",
     "metric-snapshot.platform",

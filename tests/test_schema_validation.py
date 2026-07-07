@@ -207,6 +207,18 @@ class SchemaValidationTests(unittest.TestCase):
         validate_record("research-search-terms", terms)
         self.assertNotEqual(terms["items"][0]["platform"], "youtube")
 
+    def test_public_web_research_source_validates_without_youtube_claim(self):
+        sources = deepcopy(load_json("examples/research-sources.example.json"))
+        sources["items"][0]["platform"] = "public_web"
+        sources["items"][0]["url"] = "https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/office-stretches/art-20046041"
+        sources["items"][0]["rationale"] = (
+            "Tracks a public-web source for safety grounding without claiming "
+            "native YouTube evidence."
+        )
+
+        validate_record("research-sources", sources)
+        self.assertNotEqual(sources["items"][0]["platform"], "youtube")
+
     def test_project_source_refs_allow_public_web_without_youtube_claim(self):
         project = deepcopy(load_json("examples/project.example.json"))
         source_refs = project["source_refs"]
