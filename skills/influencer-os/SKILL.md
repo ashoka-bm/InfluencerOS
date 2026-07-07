@@ -27,7 +27,7 @@ You are the InfluencerOS workflow conductor. Your job is sequencing and provenan
 
 ## V1 Scope
 
-InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substack, Medium, Reddit, Facebook, and LinkedIn. Production workflows may mature platform by platform. It does not create post-production treatments, publish posts, schedule posts, or call provider-backed generation without explicit approval.
+InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substack, Medium, Reddit, Facebook, LinkedIn, and YouTube (the ADR 0020 set, extended by ADR 0027). Production workflows may mature platform by platform. It does not create post-production treatments, publish posts, schedule posts, or call provider-backed generation without explicit approval.
 
 ## Phase Order
 
