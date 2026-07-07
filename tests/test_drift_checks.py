@@ -846,3 +846,183 @@ class ImprovementOsDriftTests(unittest.TestCase):
             "properties"
         ]["prediction_result"]["enum"]
         self.assertEqual(result_enum, list(PREDICTION_RESULTS))
+
+
+class SkillProseDriftTests(unittest.TestCase):
+    """Fleet-wide skill-prose pins from the 2026-07-07 skill review
+    (docs/workflows/skill-quality-remediation-implementation-plan.md).
+    Every confirmed defect in that review lived inside prose that had
+    drifted from code, schema, or canon; each test here pins one class."""
+
+    def test_skill_descriptions_quote_embedded_colons(self):
+        # F1: an unquoted `: ` inside a plain YAML scalar is invalid strict
+        # YAML ("bad indentation of a mapping entry"); a strict frontmatter
+        # loader drops or rejects the description — the skill's entire
+        # invocation surface. Stdlib has no YAML parser, so this lints the
+        # one observed failure shape instead of parsing.
+        for skill in sorted(skills_on_disk()):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            match = re.search(r"^description:[ \t]*(.+)$", text, flags=re.MULTILINE)
+            self.assertIsNotNone(match, f"skills/{skill} has no description line")
+            value = match.group(1).strip()
+            if value.startswith('"') or value.startswith("'"):
+                continue
+            self.assertNotIn(
+                ": ",
+                value,
+                f"skills/{skill} description holds an unquoted ': ' — quote the "
+                "scalar so strict-YAML frontmatter loaders keep the description",
+            )
+
+    def test_skill_prose_repo_paths_exist(self):
+        # Dead-pointer class: every docs/, schemas/, or examples/ path a
+        # skill names must exist. `../../` prefixes resolve to repo root
+        # from a skill folder and are normalized here.
+        pattern = re.compile(
+            r"(?:\.\./\.\./)?((?:docs|schemas|examples)/[A-Za-z0-9_./-]+)"
+        )
+        for skill in sorted(skills_on_disk()):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            for path in sorted(set(pattern.findall(text))):
+                cleaned = path.rstrip(".")
+                self.assertTrue(
+                    (ROOT / cleaned).exists(),
+                    f"skills/{skill} points at missing repo path {cleaned}",
+                )
+
+    def test_skill_workspace_file_paths_are_canonical(self):
+        # F4: a skill pointed at context/voice-samples.md — a file no
+        # scaffold creates, in the OS-persona scope instead of the creator
+        # scope. Workspace-file mentions must name a scaffolded foundation
+        # file, a known workspace/OS ledger, or a real repo-root file.
+        from influencer_os.creator_workspaces import FOUNDATION_FILES
+
+        known = set(FOUNDATION_FILES) | {
+            "memory/learnings.md",
+            "context/learnings.md",
+            "context/production-rubric.json",
+        }
+        pattern = re.compile(
+            r"\b((?:context|brand_context|memory)/[A-Za-z0-9_-]+\.(?:md|json))\b"
+        )
+        for skill in sorted(skills_on_disk()):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            for path in sorted(set(pattern.findall(text))):
+                self.assertTrue(
+                    path in known or (ROOT / path).exists(),
+                    f"skills/{skill} names non-canonical workspace file {path}",
+                )
+
+    def test_reference_library_status_vocabulary_matches_schema(self):
+        # F3: the skill once recommended `generated-from-intake` /
+        # `system-filled` — interview vocabulary, not asset_status values.
+        # The skill's Asset Status list must equal the schema enum exactly.
+        schema = json.loads(
+            (ROOT / "schemas" / "reference-library.schema.json").read_text()
+        )
+        enum = set(
+            schema["properties"]["assets"]["items"]["properties"]["asset_status"][
+                "enum"
+            ]
+        )
+        text = read_repo_text("skills/create-reference-library/SKILL.md")
+        section = text.split("## Asset Status")[1].split("\n## ")[0]
+        listed = set(re.findall(r"^- `([a-z_]+)`", section, flags=re.MULTILINE))
+        self.assertEqual(
+            listed,
+            enum,
+            "create-reference-library Asset Status list disagrees with the "
+            "reference-library schema enum",
+        )
+        for bad in ("generated-from-intake", "system-filled"):
+            self.assertNotIn(
+                bad,
+                text,
+                f"create-reference-library recommends {bad!r}, which no schema "
+                "field accepts (interview vocabulary leaked into the record contract)",
+            )
+
+    def test_template_ids_resolve_and_library_is_pointed_at(self):
+        # F2: the conductor carried an inline starter-template list whose IDs
+        # had drifted from docs/social-template-library.md (6 of 9 resolved
+        # to nothing). The library owns template IDs; skills may only name
+        # IDs it defines, and the two template-handling skills must point at
+        # the library rather than restate it.
+        library = read_repo_text("docs/social-template-library.md")
+        library_ids = set(re.findall(r"`(template_[a-z0-9_]+)`", library))
+        self.assertTrue(library_ids, "social-template-library defines no template IDs")
+        for skill in sorted(skills_on_disk()):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            for template_id in sorted(set(re.findall(r"\btemplate_[a-z0-9_]+\b", text))):
+                self.assertIn(
+                    template_id,
+                    library_ids,
+                    f"skills/{skill} names template id {template_id!r} that "
+                    "docs/social-template-library.md does not define",
+                )
+        for skill in ("influencer-os", "apply-social-template"):
+            self.assertIn(
+                "docs/social-template-library.md",
+                read_repo_text(f"skills/{skill}/SKILL.md"),
+                f"skills/{skill} does not point at the canonical template library",
+            )
+
+    def test_v1_scope_covers_every_research_platform(self):
+        # F8: the conductor's V1 Scope sentence and the AGENTS.md research
+        # rule both lagged ADR 0027 (YouTube). Display names key off the
+        # canonical platform list so a new platform fails loudly here until
+        # both sentences and this map are updated together.
+        display = {
+            "x": "X", "instagram": "Instagram", "tiktok": "TikTok",
+            "substack": "Substack", "medium": "Medium", "reddit": "Reddit",
+            "facebook": "Facebook", "linkedin": "LinkedIn", "youtube": "YouTube",
+        }
+        self.assertEqual(set(display), set(RESEARCH_PLATFORMS))
+        scope = skill_body("influencer-os").split("## V1 Scope")[1].split("\n## ")[0]
+        for platform in RESEARCH_PLATFORMS:
+            self.assertRegex(
+                scope,
+                rf"\b{display[platform]}\b",
+                f"influencer-os V1 Scope omits research platform {platform!r}",
+            )
+        agents = read_repo_text("AGENTS.md")
+        self.assertIn(
+            "ADR 0027",
+            agents,
+            "AGENTS.md research-scope rule does not acknowledge the ADR 0027 "
+            "platform extension",
+        )
+
+    def test_every_skill_cli_invocation_is_a_real_command_form(self):
+        # Fleet-wide version of the runbook CLI pin: every
+        # `python3 -m influencer_os <command>` snippet in any skill must name
+        # a real subcommand, and validate/research-fetch targets must exist.
+        parser_source = (ROOT / "influencer_os" / "cli.py").read_text()
+        found_any = False
+        for skill in sorted(skills_on_disk()):
+            text = read_repo_text(f"skills/{skill}/SKILL.md")
+            for command, first_arg in re.findall(
+                r"python3 -m influencer_os ([a-z][a-z-]*)(?:\s+(\S+))?", text
+            ):
+                found_any = True
+                self.assertIn(
+                    f'"{command}"',
+                    parser_source,
+                    f"skills/{skill} names a CLI command that does not exist: {command}",
+                )
+                first_arg = first_arg.strip("`.,;:)")
+                if first_arg.startswith("<"):
+                    continue  # documentation placeholder, not a literal target
+                if command == "validate":
+                    self.assertIn(
+                        first_arg,
+                        RealCreatorRunbookDriftTests.VALIDATE_TARGETS,
+                        f"skills/{skill} names an unknown validate target: {first_arg}",
+                    )
+                if command == "research-fetch":
+                    self.assertIn(
+                        first_arg,
+                        RealCreatorRunbookDriftTests.FETCH_CONNECTORS,
+                        f"skills/{skill} names an unknown connector: {first_arg}",
+                    )
+        self.assertTrue(found_any, "no skill documents any CLI invocation")
