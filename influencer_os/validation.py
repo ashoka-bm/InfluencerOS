@@ -126,6 +126,24 @@ CRITERION_STATUSES = ("minted", "proven", "blocking", "retired")
 CRITERION_ORIGINS = ("seed", "rejection", "distillation")
 FRICTION_EVENT_TYPES = ("rejection", "incident")
 
+# Loop A falsifiable predictions (ADR 0025, D4): a Creative Performance Map
+# stage may quantify its intended effect; the performance summary scores it
+# confirmed/refuted/unmeasurable with the comparator recomputed mechanically.
+PREDICTION_COMPARATORS = (">=", "<=", ">", "<")
+PREDICTION_RESULTS = ("confirmed", "refuted", "unmeasurable")
+
+
+def prediction_holds(measured_value, comparator, threshold):
+    if comparator == ">=":
+        return measured_value >= threshold
+    if comparator == "<=":
+        return measured_value <= threshold
+    if comparator == ">":
+        return measured_value > threshold
+    if comparator == "<":
+        return measured_value < threshold
+    raise ValidationError(f"unknown prediction comparator {comparator!r}")
+
 # Review roles with a built reviewer skill. The schema enum carries the full
 # decided vocabulary (creator_fit and fact_check are approved for the reviews
 # second slice), but a record claiming an unbuilt review ran fails closed.
@@ -509,6 +527,7 @@ def validate_record_semantics(schema_name, record):
         # reported as the duplicate than as the stage the repeat displaced.
         validate_unique_stages(record, "stage_findings", "PerformanceSummary")
         validate_required_stages(record, "stage_findings", "PerformanceSummary")
+        validate_stage_prediction_semantics(record)
     if schema_name == "project-warning":
         validate_platform_fit_warning_semantics(record)
     if schema_name == "review-record":
@@ -810,6 +829,51 @@ def validate_system_event_semantics(record):
             f"event {event_id}: recurrence_key must equal criterion_id when a "
             "criterion is cited (criterion ids are recurrence keys)"
         )
+
+
+def validate_stage_prediction_semantics(record):
+    """Record-shape half of the Loop A prediction contract (ADR 0025, D4):
+    confirmed/refuted require a numeric measured_value, unmeasurable requires
+    a reason and no measurement, and neither field appears without a
+    prediction_result. The cross-record half — pairing against the Output
+    Package's predictions and recomputing the comparator — lives in the
+    summary↔package match seam (projects), which has both records."""
+    for finding in record.get("stage_findings", []):
+        stage = finding.get("stage", "<unknown>")
+        result = finding.get("prediction_result")
+        has_measured = "measured_value" in finding
+        has_reason = "prediction_result_reason" in finding
+        if result is None:
+            if has_measured or has_reason:
+                raise ValidationError(
+                    f"PerformanceSummary stage {stage}: measured_value/"
+                    "prediction_result_reason require a prediction_result"
+                )
+            continue
+        if result in ("confirmed", "refuted"):
+            if not isinstance(finding.get("measured_value"), (int, float)) or isinstance(
+                finding.get("measured_value"), bool
+            ):
+                raise ValidationError(
+                    f"PerformanceSummary stage {stage}: {result} requires a "
+                    "numeric measured_value"
+                )
+            if has_reason:
+                raise ValidationError(
+                    f"PerformanceSummary stage {stage}: prediction_result_reason "
+                    "applies to unmeasurable results only"
+                )
+        if result == "unmeasurable":
+            if finding.get("measured_value") is not None:
+                raise ValidationError(
+                    f"PerformanceSummary stage {stage}: unmeasurable results "
+                    "carry no measured_value"
+                )
+            if not finding.get("prediction_result_reason"):
+                raise ValidationError(
+                    f"PerformanceSummary stage {stage}: unmeasurable requires "
+                    "prediction_result_reason"
+                )
 
 
 def validate_improvement_claim_semantics(record):

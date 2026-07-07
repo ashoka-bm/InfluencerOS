@@ -100,6 +100,16 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 - Do not move a Project past `packaged`; publication and analytics belong to
   Phase 2 workflows.
 
+## Predictions (ADR 0025)
+
+Each Creative Performance Map stage may quantify its intended effect with an
+optional `prediction` (`metric`, `comparator`, `threshold`) — the theory the
+performance summary will score confirmed or refuted. Predict when a baseline
+exists (prior analytics, a stable finding); early guesses are allowed and
+refuted guesses are learning, but never predict a metric the platform cannot
+report. A predicted stage MUST be scored in the performance summary, so only
+predict what you are prepared to measure.
+
 ## Friction Logging (ADR 0025)
 
 When the operator rejects a draft, prompt, or asset this skill produced — or

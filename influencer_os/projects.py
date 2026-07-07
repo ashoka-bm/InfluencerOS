@@ -917,7 +917,54 @@ def _validate_performance_summary(project_dir, project, output_package, publishe
 
     _validate_summary_source_material_refs(project_dir, evidence_refs["source_material_refs"])
     _validate_summary_spine_alignment(summary, applied_template)
+    _validate_summary_predictions(summary, output_package)
     return []
+
+
+def _validate_summary_predictions(summary, output_package):
+    """Loop A pairing, fail-closed both directions (ADR 0025, D4): a
+    predicted map stage must be scored, a scored stage must have a
+    prediction to score, and confirmed/refuted must agree with the
+    comparator recomputed over measured_value. A conditional obligation
+    invites the condition to be lied about, so the summary never decides
+    for itself whether a prediction existed — the package's map does."""
+    from influencer_os.validation import prediction_holds
+
+    predictions = {
+        stage["stage"]: stage["prediction"]
+        for stage in output_package.get("creative_performance_map", [])
+        if "prediction" in stage
+    }
+    for finding in summary.get("stage_findings", []):
+        stage = finding["stage"]
+        prediction = predictions.get(stage)
+        result = finding.get("prediction_result")
+        if prediction is not None and result is None:
+            raise ValueError(
+                f"Performance summary stage {stage}: the Output Package "
+                "predicted this stage; record prediction_result "
+                "(confirmed/refuted/unmeasurable)"
+            )
+        if prediction is None and result is not None:
+            raise ValueError(
+                f"Performance summary stage {stage}: prediction_result "
+                "recorded but the Output Package predicted nothing for this "
+                "stage"
+            )
+        if result in ("confirmed", "refuted"):
+            holds = prediction_holds(
+                finding["measured_value"],
+                prediction["comparator"],
+                prediction["threshold"],
+            )
+            expected = "confirmed" if holds else "refuted"
+            if result != expected:
+                raise ValueError(
+                    f"Performance summary stage {stage}: measured_value "
+                    f"{finding['measured_value']} {prediction['comparator']} "
+                    f"{prediction['threshold']} is {str(holds).lower()}, so "
+                    f"prediction_result must be {expected!r}, got {result!r}"
+                )
 
 
 def _validate_summary_spine_alignment(summary, applied_template):

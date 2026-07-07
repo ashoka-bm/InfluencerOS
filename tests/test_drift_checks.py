@@ -624,3 +624,21 @@ class ImprovementOsDriftTests(unittest.TestCase):
             workspace_schema["properties"]["reflection_thresholds"]["properties"]
         )
         self.assertEqual(schema_keys, set(DEFAULT_REFLECTION_THRESHOLDS))
+
+    def test_prediction_enums_match_code_constants(self):
+        from influencer_os.validation import PREDICTION_COMPARATORS, PREDICTION_RESULTS
+
+        package_schema = json.loads(
+            (ROOT / "schemas" / "output-package.schema.json").read_text()
+        )
+        comparator_enum = package_schema["properties"]["creative_performance_map"][
+            "items"
+        ]["properties"]["prediction"]["properties"]["comparator"]["enum"]
+        self.assertEqual(comparator_enum, list(PREDICTION_COMPARATORS))
+        summary_schema = json.loads(
+            (ROOT / "schemas" / "performance-summary.schema.json").read_text()
+        )
+        result_enum = summary_schema["properties"]["stage_findings"]["items"][
+            "properties"
+        ]["prediction_result"]["enum"]
+        self.assertEqual(result_enum, list(PREDICTION_RESULTS))

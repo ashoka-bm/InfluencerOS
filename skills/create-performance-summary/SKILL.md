@@ -154,6 +154,20 @@ python3 -m influencer_os validate project <creator-workspace>/projects/<project-
 
 - 2026-07-05: Baseline established; no corrections recorded yet.
 
+## Prediction Scoring (ADR 0025)
+
+For every map stage that carries a `prediction`, the stage finding must
+record `prediction_result`:
+
+- `confirmed` / `refuted`: set `measured_value` to the observed metric; the
+  validator recomputes `measured_value <comparator> threshold` and the
+  result must agree — the arithmetic decides, not the narrative.
+- `unmeasurable`: the platform did not report the metric; record
+  `prediction_result_reason` and no measured value.
+- Never score a stage the package did not predict, and never skip a stage it
+  did. Refuted predictions are learning, not failures — say what the miss
+  teaches in `interpretation`.
+
 ## Self-Update
 
 When corrected twice the same way, record the lesson via

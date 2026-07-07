@@ -699,5 +699,158 @@ class ImprovementClaimTests(WorkspaceScaffoldMixin, unittest.TestCase):
             load_claims(self.claims_dir)
 
 
+class PredictionPairingTests(unittest.TestCase):
+    """Loop A (ADR 0025, D4): the summary must score exactly the stages the
+    package predicted, and confirmed/refuted must agree with the recomputed
+    comparator. Uses the visual (short-form video) scaffold; the text-format
+    scaffold is probed separately below (one fixture per format class)."""
+
+    def scaffold(self, temp_dir, package_mutate=None, summary_mutate=None):
+        from influencer_os.projects import validate_project
+        from tests.test_cli import rewrite_json
+        from tests.test_performance_summary import (
+            scaffold_summarized_project,
+            write_summary,
+        )
+
+        _, project_dir = scaffold_summarized_project(temp_dir)
+        if package_mutate is not None:
+            rewrite_json(
+                project_dir / "output-package" / "output-package.json",
+                package_mutate,
+            )
+        if summary_mutate is not None:
+            write_summary(project_dir, mutate=summary_mutate)
+        return project_dir, validate_project
+
+    @staticmethod
+    def set_hook_prediction(package, prediction):
+        for stage in package["creative_performance_map"]:
+            if stage["stage"] == "hook":
+                if prediction is None:
+                    stage.pop("prediction", None)
+                else:
+                    stage["prediction"] = prediction
+
+    @staticmethod
+    def set_hook_result(summary, result=None, measured=None, reason=None):
+        for finding in summary["stage_findings"]:
+            if finding["stage"] == "hook":
+                for field in ("prediction_result", "measured_value", "prediction_result_reason"):
+                    finding.pop(field, None)
+                if result is not None:
+                    finding["prediction_result"] = result
+                if measured is not None or result == "unmeasurable":
+                    finding["measured_value"] = measured
+                if reason is not None:
+                    finding["prediction_result_reason"] = reason
+
+    def test_example_pair_validates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(temp_dir)
+            validate_project(project_dir)
+
+    def test_predicted_stage_without_result_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                summary_mutate=lambda s: self.set_hook_result(s, result=None),
+            )
+            with self.assertRaisesRegex(ValueError, "record prediction_result"):
+                validate_project(project_dir)
+
+    def test_result_without_prediction_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                package_mutate=lambda p: self.set_hook_prediction(p, None),
+            )
+            with self.assertRaisesRegex(ValueError, "predicted nothing"):
+                validate_project(project_dir)
+
+    def test_confirmed_must_agree_with_arithmetic(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                summary_mutate=lambda s: self.set_hook_result(
+                    s, result="confirmed", measured=42.0
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "must be 'refuted'"):
+                validate_project(project_dir)
+
+    def test_refuted_must_disagree_with_threshold(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                summary_mutate=lambda s: self.set_hook_result(
+                    s, result="refuted", measured=63.5
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "must be 'confirmed'"):
+                validate_project(project_dir)
+
+    def test_unmeasurable_with_reason_passes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir, validate_project = self.scaffold(
+                temp_dir,
+                summary_mutate=lambda s: self.set_hook_result(
+                    s,
+                    result="unmeasurable",
+                    reason="Platform export lacked 3s retention this week.",
+                ),
+            )
+            validate_project(project_dir)
+
+    def test_unmeasurable_requires_reason(self):
+        summary = json.loads(
+            (ROOT / "examples" / "performance-summary.example.json").read_text()
+        )
+        self.set_hook_result(summary, result="unmeasurable")
+        with self.assertRaisesRegex(ValidationError, "requires prediction_result_reason"):
+            validate_record("performance-summary", summary)
+
+    def test_confirmed_requires_numeric_measured_value(self):
+        summary = json.loads(
+            (ROOT / "examples" / "performance-summary.example.json").read_text()
+        )
+        self.set_hook_result(summary, result="confirmed", measured=None)
+        with self.assertRaisesRegex(ValidationError, "numeric measured_value"):
+            validate_record("performance-summary", summary)
+
+    def test_measured_value_without_result_fails(self):
+        summary = json.loads(
+            (ROOT / "examples" / "performance-summary.example.json").read_text()
+        )
+        self.set_hook_result(summary, result=None)
+        for finding in summary["stage_findings"]:
+            if finding["stage"] == "hook":
+                finding["measured_value"] = 63.5
+        with self.assertRaisesRegex(ValidationError, "require a prediction_result"):
+            validate_record("performance-summary", summary)
+
+    def test_text_format_package_predictions_pair(self):
+        # One fixture per format class (recorded learning): the pairing rule
+        # must hold for a text package too, where visual thumbnail rules
+        # differ. Article packages carry the same 5-stage map.
+        from influencer_os.projects import validate_project
+        from tests.test_cli import rewrite_json
+        from tests.test_published_posts import scaffold_packaged_article_project
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_packaged_article_project(temp_dir)
+            rewrite_json(
+                project_dir / "output-package" / "output-package.json",
+                lambda p: self.set_hook_prediction(
+                    p,
+                    {"metric": "read_through_pct", "comparator": ">", "threshold": 40},
+                ),
+            )
+            # No summary exists yet: a predicted package with no summary is
+            # fine (the summary WARN handles absence); the pairing fires once
+            # a summary omits the scored stage.
+            validate_project(project_dir)
+
+
 if __name__ == "__main__":
     unittest.main()

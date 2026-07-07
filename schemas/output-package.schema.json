@@ -291,6 +291,33 @@
           "notes": {
             "type": "string",
             "minLength": 1
+          },
+          "prediction": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "metric",
+              "comparator",
+              "threshold"
+            ],
+            "properties": {
+              "metric": {
+                "type": "string",
+                "minLength": 1
+              },
+              "comparator": {
+                "type": "string",
+                "enum": [
+                  ">=",
+                  "<=",
+                  ">",
+                  "<"
+                ]
+              },
+              "threshold": {
+                "type": "number"
+              }
+            }
           }
         }
       }

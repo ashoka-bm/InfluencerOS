@@ -28,7 +28,9 @@
       "stage": "hook",
       "result": "Strong three-second retention.",
       "interpretation": "Naming the familiar workday tension helped viewers understand the post immediately.",
-      "confidence": "medium"
+      "confidence": "medium",
+      "prediction_result": "confirmed",
+      "measured_value": 63.5
     },
     {
       "stage": "body_retention",

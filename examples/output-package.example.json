@@ -105,7 +105,12 @@
         "early_drop_off_pct"
       ],
       "variant_id": null,
-      "notes": "Hook starts with the shoulders-near-your-ears problem."
+      "notes": "Hook starts with the shoulders-near-your-ears problem.",
+      "prediction": {
+        "metric": "retention_3s_pct",
+        "comparator": ">=",
+        "threshold": 60
+      }
     },
     {
       "stage": "body_retention",
