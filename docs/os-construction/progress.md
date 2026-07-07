@@ -328,6 +328,15 @@ Completed:
 
 - ADR 0026 recorded (2026-07-07); `CONTEXT.md`, PRD scope, and the roadmap
   updated to multi-entity umbrella scope. No code changes yet.
+- ADR 0027 YouTube Data API research connector (2026-07-07): `youtube` joined
+  the canonical research platform set (with `youtube_video`/`youtube_short`/
+  `youtube_comment` content types across all pinned schema enum copies),
+  `youtube_data_api` is standing-approved and key-gated (`YOUTUBE_API_KEY`),
+  and `research-fetch youtube-search` emits validated fetch results. Live
+  smoke fetch validated against the real API (3 candidates, 2 paid calls).
+  Transcripts/analytics/publishing stay out of scope; video-content analysis
+  keeps the VideoUnderstandingPack boundary. Verification: 747 tests pass,
+  49 examples validate.
 
 ## Implemented Schema Contracts
 
