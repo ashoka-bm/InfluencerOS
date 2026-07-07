@@ -8,10 +8,22 @@ InfluencerOS is an agent operating system for creating short-form video concepts
 The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Idea Queue, and turn one promoted idea into format-specific production plans, starting with the universal short-form base video generation plan.
 
 **Creator**:
-The avatar, influencer, persona, or account identity that content is being created for. In v1, creator means the public-facing avatar/profile, not the human operator behind it.
+The umbrella term for any onboarded marketing subject that content is being created for — an avatar-led influencer, a product, or a brand/company (see Creator Type). It means the public-facing identity, not the human operator behind it. The `creator_*` vocabulary, workspace path, and CLI commands are umbrella names that span all three entity types (ADR 0026).
+
+**Creator Type**:
+The discriminator that says which kind of subject a Creator is: `influencer`, `product`, or `brand`. It determines which foundation documents and profile fields are required, enforced by the same status-gated readiness mechanism as the medium-based blockers (ADR 0013, ADR 0026). The shared spine — content strategy, audience/market, boundaries, goals, voice/tone, positioning — is required for every type; the persona documents (Identity, Soul File) and avatar visual-continuity references are required for `influencer` only.
+
+**Influencer**:
+The Creator Type for an avatar, persona, or account identity. Its foundation is persona-led: Identity (lore), Soul File (psychology), Personal Brand File, Voice Samples File, and avatar visual-continuity references (character plates, wardrobe, camera, locations).
+
+**Brand**:
+The Creator Type for a company or organization. Its foundation is a Brand Brief (mission, category, positioning, value proposition, market and competitors), Brand Guidelines (logo, palette, typography, visual system, imagery rules), and a Brand Voice guide. It has no persona psychology or lore; positioning and values replace Soul.
+
+**Product**:
+The Creator Type for a specific offering. Its foundation is an Offering document (features, benefits, USPs, use cases, pricing tier, proof points) plus inherited brand context (positioning, guidelines, voice) and product visual references (product shots, packaging). A product may name a `parent_brand_ref`; in v1 the parent brand's context is kept inline in the product workspace (ADR 0026).
 
 **Creator Profile**:
-The structured identity record for the creator. It includes niche, audience, persona, visual identity, boundaries, recurring traits, and creator goals. InfluencerOS treats niche and audience as inputs, not as guesses.
+The structured identity record for the creator. It always carries the Creator Type and the shared spine (niche/market, audience, positioning, content strategy, boundaries, goals). Persona fields (persona summary, voice cadence, visual identity) are required for the `influencer` type; product and brand types supply their type-specific foundation instead. InfluencerOS treats niche and audience as inputs, not as guesses.
 
 **Creator Workspace**:
 The ignored local folder for one creator's private identity, references, research history, projects, memory, analytics evidence, and progress. It lives under `workspace-library/creators/<creator-slug>/`.

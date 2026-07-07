@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -300,6 +300,34 @@ Deliberately deferred (by decision, not omission): cross-creator OS-scope
 criterion aggregation, creator-scoped claims, a closed prediction-metric
 vocabulary, and a board surface for reflection-due (plan §Deliberately
 Deferred Remainders); temporal scheduling per ADR 0025.
+
+### Post-Phase-4: Live Testing And Multi-Entity Onboarding
+
+Goal: exercise the completed OS against real data, and broaden onboarding from
+avatar-led influencers to products and brands.
+
+Status: opened 2026-07-07. All four build phases (0–4) plus Creative Direction
+are complete and were validated against disposable fixtures and the
+deterministic mock generation adapter only; nothing has yet run against real
+creator data or a real (paid) provider.
+
+Two parallel tracks (see the roadmap Post-Phase-4 section):
+
+- Track 1 — Live testing (influencers first): the influencer path works today.
+  Onboard real influencers, wire ADR 0022 research API keys (`.env`), exercise
+  the manual research-intelligence loop against real data (ADR 0022 "run 2"),
+  and decide the first real provider adapter (Generation OS Decision 3).
+- Track 2 — Multi-entity onboarding (ADR 0026): add a required `creator_type`
+  discriminator (`influencer | product | brand`) that conditions the required
+  foundation documents, reusing the medium-based blocker mechanism. "Creator"
+  becomes the umbrella term; the `creator_*` plumbing and the 41 downstream
+  schemas are unchanged. Build slices are tracked in
+  `docs/workflows/multi-entity-onboarding-implementation-plan.md`.
+
+Completed:
+
+- ADR 0026 recorded (2026-07-07); `CONTEXT.md`, PRD scope, and the roadmap
+  updated to multi-entity umbrella scope. No code changes yet.
 
 ## Implemented Schema Contracts
 

@@ -1,6 +1,6 @@
 # InfluencerOS Roadmap
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 This roadmap defines phase order, exit criteria, and implementation priorities. Progress status lives in `docs/os-construction/progress.md`.
 
@@ -33,6 +33,7 @@ Approved standing overrides:
 - `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers (ADR 0019),
 - research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep the exact-approval gate (ADR 0022),
 - Phase 4 is Improvement OS: feedback automation (event-triggered reflection with falsifiable criteria) replaces temporal scheduling, which is deferred (ADR 0025).
+- Creator is a multi-type umbrella entity: a required `creator_type` (`influencer | product | brand`) conditions which foundation documents and persona fields are required, reusing the medium-based blocker mechanism; the `creator_*` ID plumbing and downstream schemas are unchanged and a global rename is deferred (ADR 0026).
 
 ## Acceptance-Criteria Policy
 
@@ -333,6 +334,71 @@ Implementation slices, in the agreed build order:
    per-stage confirmed/refuted/unmeasurable in performance summaries.
 5. Criteria maturity ladder: advisory → proven → promoted into the blocking
    quality checklist via the gates-and-reviews ADR checklist.
+
+## Post-Phase-4: Live Testing And Multi-Entity Onboarding
+
+All four build phases (0–4) plus the Creative Direction workstream are
+complete. The full local-first pipeline — intake → research → ideas →
+promotion → production planning → generation (mock adapter) → packaging →
+publishing/analytics → learning → improvement loops — has been validated
+against disposable fixtures and a deterministic mock generation adapter only.
+The next stage is exercising it against reality.
+
+Status: in progress (opened 2026-07-07).
+
+Two parallel tracks:
+
+### Track 1 — Live testing (influencers first)
+
+The influencer path works today. Onboard one or more real influencers, wire
+the ADR 0022 research-acquisition API keys (`.env`, standing-approved by key
+presence, per-run call cap + kill switch), exercise the manual
+research-intelligence loop against real data (ADR 0022 "run 2"), and produce
+marketing material end to end. This is the first contact between the OS and
+real creator data and the first real (paid) provider adapter decision
+(Generation OS Decision 3).
+
+### Track 2 — Multi-entity onboarding (product/brand support, ADR 0026)
+
+Goal: onboard products and brands, not only avatar-led influencers, via a
+`creator_type` discriminator that conditions the required foundation
+documents. "Creator" becomes the umbrella term; the `creator_*` plumbing and
+the 41 downstream schemas are unchanged.
+
+Entry criteria:
+
+- ADR 0026 recorded (done, 2026-07-07).
+- The influencer path stays green throughout (no regression to the working
+  setup flow or the 739-test pipeline).
+
+Exit criteria (target outcomes; runnable rewrite lands in the implementation
+plan):
+
+- `creator-profile.json` carries a required `creator_type`
+  (`influencer | product | brand`), defaulting to `influencer` for existing
+  fixtures.
+- Foundation-document and persona-field requirements are conditional on
+  `creator_type`, enforced at readiness by the same mechanism as the
+  medium-based blockers; persona fields are required for `influencer` only.
+- Brand foundation docs (brand brief, brand guidelines, brand voice) and
+  product foundation docs (offering + inherited brand context) are produced by
+  type-aware setup skills; `create-identity`/`create-soul` run for influencers
+  only.
+- A product may carry an advisory `parent_brand_ref`; parent-brand context is
+  inline in v1 (no cross-workspace resolution).
+- The downstream research/ideas/generation/analytics pipeline is unchanged; a
+  brand or product workspace validates and can produce an Output Package.
+
+Implementation slices (build order to be detailed in
+`docs/workflows/multi-entity-onboarding-implementation-plan.md`):
+
+1. `creator_type` discriminator + schema-optional persona fields + validator
+   default.
+2. Type-conditional foundation-doc table + readiness enforcement (extend the
+   ADR 0013 blocker mechanism).
+3. Type-aware setup conductor + brand/product foundation subskills.
+4. Product `parent_brand_ref` (advisory) + a brand and a product fixture
+   validating end to end.
 
 ## Deferred: Temporal Scheduling (former Automation OS scope)
 

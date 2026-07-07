@@ -4,7 +4,7 @@ Last updated: 2026-07-02
 
 ## Problem Statement
 
-The repo needs to become a dependable Agentic OS adaptation for avatar-led creator content planning without drifting into a generic content tool, a platform publisher, or a partial reimplementation of Agentic OS.
+The repo needs to become a dependable Agentic OS adaptation for creator content planning — avatar-led influencers and, per ADR 0026, products and brands — without drifting into a generic content tool, a platform publisher, or a partial reimplementation of Agentic OS.
 
 The user has already purchased and installed an Agentic OS reference. InfluencerOS should copy that architecture closely unless the domain requires an explicit adaptation. Any deviation from Agentic OS must be surfaced, documented, and approved by the user before implementation.
 
@@ -12,7 +12,7 @@ The immediate problem is uncertainty: the repo has useful InfluencerOS-specific 
 
 ## Solution
 
-InfluencerOS will be built as a local-first, file-first Agentic OS adaptation for creating researched, creator-fit content plans and generation-ready output packages for avatar-led creators.
+InfluencerOS will be built as a local-first, file-first Agentic OS adaptation for creating researched, subject-fit content plans and generation-ready output packages. "Creator" is the umbrella term for the onboarded subject; per ADR 0026 a Creator may be an avatar-led influencer, a product, or a brand, distinguished by a `creator_type` discriminator that conditions the required foundation documents.
 
 The system will copy Agentic OS closely in structure:
 
@@ -101,6 +101,7 @@ The system will enforce alignment through durable planning docs, ADRs, visual ma
 - Creator Workspace propagation is built as CLI subcommands; skills propagate now and scripts/settings/hooks/cron templates stay gated until their subsystem is approved (ADR 0018).
 - `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers and `context/SOUL.md` is the sole identity (ADR 0019).
 - Research and idea generation use platform-scoped Research Findings, Idea Queue, and Idea Promotion instead of Content Idea Set and Selected Content Idea records (ADR 0020).
+- The onboarded entity is multi-type. "Creator" is the umbrella term; a required `creator_type` discriminator (`influencer | product | brand`) conditions which foundation documents and persona fields are required, reusing the medium-based blocker mechanism. The `creator_*` ID plumbing and downstream schemas are unchanged; a global rename is deferred (ADR 0026).
 - Product behavior is schema-backed. Each workflow stage must have explicit inputs, outputs, provenance, validation, and gates.
 - The highest implementation seam is the file-first workspace plus validation CLI. Prefer tests at that seam over low-level helper tests.
 - Provider calls are not part of planning. Provider-backed generation, render, upload, paid, and irreversible actions require exact user approval.
