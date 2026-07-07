@@ -8,7 +8,8 @@
   "platforms": [
     "instagram",
     "tiktok",
-    "reddit"
+    "reddit",
+    "youtube"
   ],
   "decision_basis": {
     "creator_fit_summary": "Luna serves office workers who need practical, low-friction movement ideas that stay gentle and non-shaming.",
@@ -54,11 +55,11 @@
     {
       "adapter_id": "youtube_data_api",
       "access_method": "api_backed",
-      "adapter_status": "planned",
+      "adapter_status": "active",
       "auth_required": true,
-      "approval_required": true,
-      "decision": "future_connector",
-      "reason": "YouTube is useful before go-live but is not in the ADR 0020 research platform set yet."
+      "approval_required": false,
+      "decision": "use_now",
+      "reason": "YOUTUBE_API_KEY present; public YouTube metadata is standing-approved for research acquisition."
     },
     {
       "adapter_id": "instagram_logged_in_browser",
@@ -98,6 +99,20 @@
         "creator_profile",
         "prior_queue"
       ]
+    },
+    {
+      "query_id": "query_luna_fit_youtube_001",
+      "platform": "youtube",
+      "query_intent": "trend_scan",
+      "query": "walking pad desk setup",
+      "source_type": "watchlist_topic",
+      "purpose": "Check recent YouTube video packaging and visible engagement around desk setup patterns.",
+      "expected_signal": "Recent public videos with high visible metrics and reusable title/thumbnail/hook framing.",
+      "routing_basis": "Term from Luna's office-worker audience and prior queue entry idea_queue_entry_luna_fit_001; YouTube chosen for public video packaging signals.",
+      "term_basis": [
+        "creator_profile",
+        "prior_queue"
+      ]
     }
   ],
   "planned_sources": [
@@ -111,10 +126,6 @@
     }
   ],
   "skipped_sources": [
-    {
-      "name": "youtube_data_api",
-      "reason": "Planned pre-go-live connector; not active in the ADR 0020 research platform set."
-    },
     {
       "name": "instagram_logged_in_browser",
       "platform": "instagram",
@@ -134,7 +145,7 @@
     }
   ],
   "future_connector_notes": [
-    "Before go-live, revisit YouTube as a first-class platform or a video-source adapter with an ADR 0020 update.",
+    "ADR 0027 activated youtube_data_api for public research acquisition; youtube_public_video stays a future video-source adapter.",
     "Before go-live, decide whether logged-in Instagram and TikTok are allowed, which accounts they use, and what data may be stored.",
     "Scheduled research should consume this search-plan and source-yield shape instead of inventing a separate planning contract."
   ]

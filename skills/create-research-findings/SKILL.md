@@ -66,6 +66,8 @@ acquisition — no per-run prompt — bounded by a per-run paid-call cap and the
   public web/JS pages.
 - `linkedin_apify` (`linkedin_apify`, needs `APIFY_API_KEY`): public LinkedIn
   profile posts.
+- `youtube_data_api` (`youtube_data_api`, needs `YOUTUBE_API_KEY`): public
+  YouTube video/channel discovery with visible views, likes, and comments.
 
 Usage inside a run:
 
@@ -75,15 +77,22 @@ Usage inside a run:
   `list-connectors` shows it available; otherwise mark it
   `skip_this_run`/`future_connector` and fall back to public web.
 - Fetch with
-  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin> "<topic-or-url>" --out .tmp/<run-id>-<connector>.json`.
+  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin|youtube-search> "<topic-or-url>" --out .tmp/<run-id>-<connector>.json`,
+  e.g. `python3 -m influencer_os research-fetch youtube-search "<topic>" --days 30 --max-results 10 --out .tmp/<run-id>-youtube.json`.
   The result validates against `schemas/research-fetch-result.schema.json` and
   is a transient candidate list, never canonical state.
 - Curate: promote only creator-fit candidates into `evidence.jsonl`; map real
-  engagement (`score`/`num_comments`, `likes`/`reposts`/`replies`) into
-  `metric-snapshots.jsonl` records; judge tiers by the Signal Tier Rubric as
-  usual. Record one `source-yield.jsonl` line per connector query with the
-  connector's `adapter_id` and access method, including low-yield outcomes,
-  and note `capped`/`truncated` results honestly.
+  engagement (`score`/`num_comments`, `likes`/`reposts`/`replies`,
+  `views`/`likes`/`comments`) into `metric-snapshots.jsonl` records; judge
+  tiers by the Signal Tier Rubric as usual. Record one `source-yield.jsonl`
+  line per connector query with the connector's `adapter_id` and access
+  method, including low-yield outcomes, and note `capped`/`truncated` results
+  honestly.
+- Use YouTube for topic/trend discovery, reference-channel latest uploads, and
+  public video metadata. Do not treat titles/descriptions as full video
+  understanding: if the actual video content matters, create a
+  VideoUnderstandingPack through the existing video-understanding boundary
+  (no transcripts, YouTube Analytics, or logged-in access via this connector).
 5. Capture one `evidence.jsonl` line per real post/article/creator inspected
    when it produces material evidence (`schemas/research-evidence.schema.json`)
    and metric snapshots in `metric-snapshots.jsonl`

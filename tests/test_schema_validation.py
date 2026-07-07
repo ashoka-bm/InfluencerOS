@@ -296,10 +296,16 @@ class SchemaValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 validate_examples(root=temp_root)
 
-    def test_search_plan_rejects_planned_adapter_used_now(self):
+    def test_search_plan_rejects_non_active_adapter_used_now(self):
+        # The deferred logged-in adapter flipped to use_now must fail: only
+        # active adapters may be used now.
         example = load_json("examples/research-search-plan.example.json")
         invalid = deepcopy(example)
-        invalid["adapters_considered"][3]["decision"] = "use_now"
+        adapter = next(
+            a for a in invalid["adapters_considered"]
+            if a["adapter_id"] == "instagram_logged_in_browser"
+        )
+        adapter["decision"] = "use_now"
 
         with self.assertRaises(ValidationError):
             validate_record("research-search-plan", invalid)
