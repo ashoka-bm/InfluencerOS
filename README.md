@@ -250,6 +250,18 @@ The YouTube connector uses public YouTube Data API video/channel metadata and
 visible statistics only. It does not fetch transcripts, call YouTube Analytics,
 publish, schedule, or use logged-in access (ADR 0027).
 
+YouTube smoke check:
+
+```bash
+python3 -m influencer_os list-connectors
+python3 -m influencer_os research-fetch youtube-search "desk stretch routine" --days 30 --max-results 3 --out .tmp/youtube-smoke.json
+python3 -m influencer_os validate record research-fetch-result .tmp/youtube-smoke.json
+```
+
+Expected: `youtube_data_api` is available when `YOUTUBE_API_KEY` is set, and the
+fetch result validates. The `.tmp/` output is transient candidate data; curate
+only useful candidates into research records.
+
 Key presence is standing approval for this research tier only — no per-run
 prompt — bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and
 a global kill switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`). Generation
