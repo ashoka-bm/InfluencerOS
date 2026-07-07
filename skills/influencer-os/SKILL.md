@@ -59,53 +59,37 @@ creative review does not replace the human generation approval gate.
 
 ## Dependencies
 
-Producer skills this conductor routes to (mirrors the `dependencies` frontmatter; kept in agreement with `docs/os-construction/architecture-map.md` by a drift check):
-
-| Skill | Produces | Status |
-| --- | --- | --- |
-| `create-research-findings` | Research Findings backed by dated evidence | [BUILT — Phase 1 slice 4] |
-| `manage-idea-queue` | Scored Idea Queue entries | [BUILT — Phase 1 slice 4] |
-| `promote-idea` | Human-approved Idea Promotion + Projects | [BUILT — Phase 1 slice 5] |
-| `apply-social-template` | Applied Social Template | [BUILT — Phase 1 slice 6] |
-| `create-production-plan` | Format-specific production plan + Base Video Generation Plan | [BUILT — Phase 1 slice 6] |
-| `review-hook-payoff` | Advisory Hook/Payoff ReviewRecord (never blocks) | [BUILT — Creative Direction slice 4] |
-| `clear-writing-pass` | Clarity rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
-| `human-voice-pass` | Creator-voice rewrite + change trace (no record) | [BUILT — Creative Direction slice 4] |
-| `request-generation-approval` | GenerationApprovalRecord packaging the exact approved call/batch (gate stays human) | [BUILT — Phase 3 slice 2] |
-| `import-generated-asset` | Externally generated/user media imported with manifest provenance | [BUILT — Phase 3 slice 3] |
-| `review-generated-assets` | Blocking QualityReview between generation and packaging | [BUILT — Phase 3 slice 5] |
-| `create-output-package` | Output Package + provenance | [BUILT — Phase 1 slice 7] |
-| `register-published-post` | PublishedPostRecord + Project published status | [BUILT — Phase 2 slice 1] |
-| `ingest-analytics` | AnalyticsSnapshots from manual/CSV entry | [BUILT — Phase 2 slice 2] |
-| `create-performance-summary` | PerformanceSummary from analytics evidence | [BUILT — Phase 2 slice 3] |
-| `distill-creator-learning` | Creator Memory lessons from performance evidence | [BUILT — Phase 2 slice 4] |
-| `distill-production-learning` | Friction events → approved skill updates with falsifiable claims | [BUILT — Phase 4 slice 3] |
+Producer skills this conductor routes to are exactly the `dependencies`
+frontmatter (kept in agreement with
+`docs/os-construction/architecture-map.md` by a drift check). Each
+producer's own skill file states what it reads, writes, and validates; the
+Phase Owners table below maps every phase to its owner and invocation.
 
 **Halt rule (ADR 0016/0017):** when a phase's owner skill is marked `[PLANNED]` and its folder does not exist under `skills/`, halt at that phase, tell the user which skill is missing and which roadmap slice builds it, and stop. Never improvise the phase from base knowledge and never pretend the skill ran. Each `[PLANNED]` marker is an open build obligation tracked in `docs/os-construction/skill-registry.md` (Missing Future Skills) and the roadmap phase slice lists.
 
 ## Phase Owners
 
-| Phase | Owner | Invocation | Status |
-| --- | --- | --- | --- |
-| 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — | [BUILT] |
-| 2. Video Understanding Pack | `influencer-os` (inline, v1) | — | [BUILT] |
-| 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` | [BUILT] |
-| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` | [BUILT] |
-| 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` | [BUILT] |
-| 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` | [BUILT] |
-| 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` | [BUILT] |
-| 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` | [BUILT] |
-| 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` | [BUILT] |
-| 9b. Creative review (advisory, after plan drafting) | `review-hook-payoff`; editorial rewrites via `clear-writing-pass` / `human-voice-pass` | `Skill(skill: "review-hook-payoff")`, `Skill(skill: "clear-writing-pass")`, `Skill(skill: "human-voice-pass")` | [BUILT — Creative Direction slice 4] |
-| 10. Generation Approval Gate | user (exact-call approval); `request-generation-approval` packages the exact call/batch as a GenerationApprovalRecord | `Skill(skill: "request-generation-approval")` | [BUILT gate + record — Phase 3 slice 2] |
-| 10b. External media import (no provider call) | `import-generated-asset` | `Skill(skill: "import-generated-asset")` | [BUILT — Phase 3 slice 3] |
-| 10c. Quality gate (blocking, before packaging) | `review-generated-assets` | `Skill(skill: "review-generated-assets")` | [BUILT — Phase 3 slice 5] |
-| Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` | [BUILT] |
-| Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` | [BUILT — Phase 2 slice 1] |
-| Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` | [BUILT — Phase 2 slice 2] |
-| Post-pipeline: Performance summary | `create-performance-summary` | `Skill(skill: "create-performance-summary")` | [BUILT — Phase 2 slice 3] |
-| Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` | [BUILT — Phase 2 slice 4] |
-| Post-pipeline: Production reflection (on reflection-due warning) | `distill-production-learning` | `Skill(skill: "distill-production-learning")` | [BUILT — Phase 4 slice 3] |
+| Phase | Owner | Invocation |
+| --- | --- | --- |
+| 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — |
+| 2. Video Understanding Pack | `influencer-os` (inline, v1) | — |
+| 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` |
+| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` |
+| 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` |
+| 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` |
+| 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` |
+| 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` |
+| 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` |
+| 9b. Creative review (advisory, after plan drafting) | `review-hook-payoff`; editorial rewrites via `clear-writing-pass` / `human-voice-pass` | `Skill(skill: "review-hook-payoff")`, `Skill(skill: "clear-writing-pass")`, `Skill(skill: "human-voice-pass")` |
+| 10. Generation Approval Gate | user (exact-call approval); `request-generation-approval` packages the exact call/batch as a GenerationApprovalRecord | `Skill(skill: "request-generation-approval")` |
+| 10b. External media import (no provider call) | `import-generated-asset` | `Skill(skill: "import-generated-asset")` |
+| 10c. Quality gate (blocking, before packaging) | `review-generated-assets` | `Skill(skill: "review-generated-assets")` |
+| Post-pipeline: Output Package | `create-output-package` | `Skill(skill: "create-output-package")` |
+| Post-pipeline: Publication registration | `register-published-post` | `Skill(skill: "register-published-post")` |
+| Post-pipeline: Analytics ingestion | `ingest-analytics` | `Skill(skill: "ingest-analytics")` |
+| Post-pipeline: Performance summary | `create-performance-summary` | `Skill(skill: "create-performance-summary")` |
+| Post-pipeline: Learning distillation | `distill-creator-learning` | `Skill(skill: "distill-creator-learning")` |
+| Post-pipeline: Production reflection (on reflection-due warning) | `distill-production-learning` | `Skill(skill: "distill-production-learning")` |
 
 ## Video Understanding Requirements
 
@@ -146,33 +130,18 @@ Tool boundary:
 - Delete disposable working files after the pack is created unless the user is
   actively asking follow-up questions about the same video.
 
-## Idea Queue Requirements
+## Record Requirements
 
-Each queue idea must include:
+Producer skills own their record shapes; consult them instead of restating
+field lists here:
 
-- hook,
-- premise,
-- intended payoff,
-- source platform and platform content type when derived from a source pattern,
-- recommended platform or platform variants,
-- recommended format or format variants,
-- audience reason,
-- creator fit,
-- intended emotion and core message (ADR 0024),
-- trend evidence,
-- evidence reference IDs from Research Findings, Research Evidence, Metric Snapshots, and Video Understanding Packs when used,
-- novelty angle,
-- production complexity,
-- why it can travel or adapt across platforms when applicable,
-- recommended template or structure IDs when relevant,
-- scores for evidence strength, viral potential, audience nurture value, creator fit, schedule fit, production readiness, urgency, and measurement clarity.
-
-Source evidence may come from social platforms, public-web pages,
-institutional articles, research articles, or manual citations. Keep source
-provenance separate from target distribution platforms: do not relabel
-public-web background evidence as YouTube or any social platform just because
-the planned output may target TikTok, Instagram, YouTube Shorts, or another
-surface.
+- Idea Queue entry rules (fields, intent pair, evidence refs, the eight
+  scores): `manage-idea-queue`.
+- Format-specific plan shapes — the micro-journey spine and every non-video
+  and text format: `create-production-plan`.
+- Source-evidence provenance discipline (public-web and institutional
+  evidence stays `public_web`, separate from target distribution
+  platforms): `create-research-findings`, Evidence Quality.
 
 ## V1 Social Post Formats
 
@@ -192,44 +161,21 @@ Canonical template IDs and beat sequences live in
 `docs/templates/social-templates/`); `apply-social-template` owns selection
 and adaptation. Do not restate template IDs here.
 
-## Micro-Journey Requirements
-
-The plan is spine-shaped (ADR 0024) and should include:
-
-- hook,
-- one retain beat holding setup and escalation/demonstration,
-- payoff,
-- CTA or loop behavior (`cta_or_loop`),
-- intended emotion (matching the locked promotion's `intended_emotion`),
-- shot outline,
-- continuity requirements,
-- base-video constraints.
-
-## Non-Video Production Plan Requirements
-
-Carousel plans should define slide-level visual beats, a first-slide hook, creator continuity, and generation notes.
-
-Single image post plans should define the central visual idea, composition, avatar or scene requirements, text overlay policy, and generation prompt.
-
-Story sequence plans should define frame-level moments, sequence arc, lightweight text or sticker notes, creator continuity, and generation notes.
-
-Article plans should define the title, deck, thesis, section outline, evidence
-to use, voice/style constraints, CTA, and review notes.
-
-Thread plans should define the opening post, throughline, ordered posts,
-evidence to use, voice/style constraints, CTA, and review notes.
-
 ## Provider Boundary
 
 Drafting ideas, prompts, plans, shot lists, and generation plans is allowed. Calling a provider is not allowed without explicit approval.
 
 ## Rules
 
-*Dated corrections from wrap-up feedback (ADR 0016). Read before every run; newest last.*
+*Dated corrections from wrap-up feedback (ADR 0016). Entries are changelog
+pointers — the named section owns the rule text. Read before every run;
+newest last.*
 
-- 2026-07-03: Baseline established; no corrections recorded yet.
-- 2026-07-07: E2E, guided, and normal-user runs must maintain a phase checklist with current phase, required next artifact, validation command, and human gate/dry-run drafting step/provider boundary classification. After production planning, offer or run advisory creative review before prompts are presented as ready.
-- 2026-07-07: Source evidence provenance is separate from target distribution platforms. Public-web and institutional background sources must stay `public_web` provenance rather than being mislabeled as YouTube or social evidence.
+- 2026-07-07: Added the phase-checklist and advisory-creative-review
+  contract — see §Phase Checklist Contract.
+- 2026-07-07: Tightened source-evidence provenance (public-web stays
+  `public_web`) — rule owned by `create-research-findings`, Evidence
+  Quality; pointer in §Record Requirements.
 
 ## Self-Update
 
