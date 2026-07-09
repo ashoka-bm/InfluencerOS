@@ -356,6 +356,36 @@ def fetch_youtube_channel(
                    capped=False, notes=notes)
 
 
+FETCH_ROUTES = {
+    "reddit": ("fetch_reddit", ("depth", "from_date", "to_date", "days")),
+    "x": ("fetch_x", ("depth", "from_date", "to_date", "days")),
+    "firecrawl": ("fetch_firecrawl", ()),
+    "linkedin": ("fetch_linkedin", ("max_posts", "days")),
+    "youtube-search": (
+        "fetch_youtube_search",
+        ("from_date", "to_date", "days", "max_results", "order"),
+    ),
+    "youtube-channel": (
+        "fetch_youtube_channel",
+        ("from_date", "to_date", "days", "max_results"),
+    ),
+}
+FETCH_MODES = tuple(FETCH_ROUTES)
+
+
+def fetch_for_mode(mode, target, config, budget, **options):
+    """Route one CLI research-fetch mode to its concrete connector flow."""
+    try:
+        handler_name, option_names = FETCH_ROUTES[mode]
+    except KeyError as exc:
+        raise ValueError(
+            f"unknown research-fetch mode {mode!r}; expected one of {FETCH_MODES}"
+        ) from exc
+    kwargs = {name: options[name] for name in option_names}
+    handler = globals()[handler_name]
+    return handler(target, config, budget, **kwargs)
+
+
 def _result(connector, adapter_id, platform, topic, from_date, to_date,
             model, candidates, budget, enriched, truncated, capped, notes):
     return {

@@ -50,8 +50,8 @@ explicitly by the operator and lands as its own approved batch.
 ## Research-acquisition connectors (ADR 0022)
 
 One bounded carve-out to the "paid provider calls require exact approval" rule
-above: the four key-gated research-acquisition connectors (`reddit_openai`,
-`x_xai`, `firecrawl_web`, `linkedin_apify`) are **standing-approved by API-key
+above: the key-gated research-acquisition connectors registered in
+`influencer_os/connectors/registry.py` are **standing-approved by API-key
 presence** — no per-run prompt. This covers research acquisition only. It is
 bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and a kill
 switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`), and does not weaken any of

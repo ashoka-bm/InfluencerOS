@@ -66,7 +66,6 @@ Creator setup can capture broader creator strategy inputs, including written sur
 - Video Understanding Pack schema
 - Social Post Format schema
 - the ADR 0020 research module schemas (Creator Content Schedule, Research Run, Research Search Plan, Research Evidence, Metric Snapshot, Research Source Yield, Research Findings, Stable Finding, five research intelligence files, Idea Queue Entry and Manifest, Idea Promotion, Project Warning, Content Board, Automation Run, System Event)
-- Content Idea Set and Selected Content Idea schemas (deprecated ADR 0020 compatibility artifacts, out of the intended pipeline)
 - Social Template and Applied Social Template schemas
 - Micro-Journey Video Plan schema
 - Carousel Plan schema

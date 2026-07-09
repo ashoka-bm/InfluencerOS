@@ -1057,8 +1057,12 @@ class YouTubeCliTests(unittest.TestCase):
 
 
 class ConnectorDriftTests(unittest.TestCase):
-    def test_provider_keys_derive_from_registry(self):
-        self.assertEqual(env.provider_keys(), [c["key"] for c in registry.CONNECTORS])
+    def test_provider_keys_derive_from_both_registries(self):
+        from influencer_os.providers.registry import PROVIDERS
+
+        expected = [c["key"] for c in registry.CONNECTORS]
+        expected.extend(row["key"] for row in PROVIDERS if row.get("key"))
+        self.assertEqual(env.provider_keys(), list(dict.fromkeys(expected)))
 
     def test_every_connector_documented_in_registry_doc(self):
         doc = (ROOT / "docs" / "research-adapter-registry.md").read_text()

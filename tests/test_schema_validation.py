@@ -360,14 +360,6 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_record("visual-continuity-plan", invalid)
 
-    def test_content_ideas_require_evidence_refs(self):
-        example = load_json("examples/content-idea-set.example.json")
-        invalid = deepcopy(example)
-        invalid["ideas"][0].pop("evidence_ref_ids", None)
-
-        with self.assertRaises(ValidationError):
-            validate_record("content-idea-set", invalid)
-
     def test_output_package_requires_all_creative_performance_stages(self):
         example = load_json("examples/output-package.example.json")
         invalid = deepcopy(example)

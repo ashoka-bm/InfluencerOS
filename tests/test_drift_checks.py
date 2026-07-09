@@ -3,6 +3,8 @@ import re
 import unittest
 from pathlib import Path
 
+from influencer_os.connectors.fetch import FETCH_MODES
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -247,16 +249,13 @@ class RealCreatorRunbookDriftTests(unittest.TestCase):
         self.assertIn("irreversible", text)
         self.assertIn(".env.example", text)
 
-    # Pinned to the argparse choices in influencer_os/cli.py; a drift here
-    # means either the CLI or the runbook changed without the other.
+    # Pinned to the executable research-fetch modes; the CLI derives its
+    # choices from this tuple so only the runbook vocabulary can drift.
     VALIDATE_TARGETS = {
         "examples", "workspace", "project", "record", "research",
         "queue", "board", "calendar", "brand-board", "all",
     }
-    FETCH_CONNECTORS = {
-        "reddit", "x", "firecrawl", "linkedin", "youtube-search",
-        "youtube-channel",
-    }
+    FETCH_CONNECTORS = set(FETCH_MODES)
     RUNBOOK_PRODUCER_SKILLS = {
         "create-influencer",
         "create-research-findings",
@@ -644,7 +643,6 @@ class ResearchEnumDriftTests(unittest.TestCase):
             set(PRODUCTION_SUPPORTED_FORMATS),
             "PRODUCTION_SUPPORTED_FORMATS must mirror the production plan schemas",
         )
-
 
 class ConductorCallGraphDriftTests(unittest.TestCase):
     CONDUCTORS = ("influencer-os", "create-influencer")

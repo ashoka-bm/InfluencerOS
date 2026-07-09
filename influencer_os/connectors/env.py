@@ -14,14 +14,17 @@ DEFAULT_MAX_CALLS = 12
 
 
 def provider_keys() -> List[str]:
-    """The provider env-var names, derived from the connector registry.
+    """Provider env-var names declared by research and generation registries.
 
-    Single source of truth: the registry defines the connectors; this reads the
-    keys off it. Imported lazily to avoid a registry<->env import cycle.
+    The registries are the sources of truth. Imports stay lazy to avoid the
+    registry <-> environment import cycle, and providers without keys (the
+    deterministic generation mock) contribute nothing.
     """
     from influencer_os.connectors.registry import CONNECTORS
+    from influencer_os.providers.registry import PROVIDERS
 
-    return [c["key"] for c in CONNECTORS]
+    keys = [row["key"] for row in (*CONNECTORS, *PROVIDERS) if row.get("key")]
+    return list(dict.fromkeys(keys))
 
 
 def _find_project_env(start: Optional[Path] = None) -> Path:

@@ -237,9 +237,9 @@ split between orchestration and mechanics.
 - Keep CLI helpers mechanical. `init-creator`, `sync-creator-runtime`,
   `init-project`, `validate workspace`, and `validate project` should not encode
   creative judgment.
-- Treat the current `ContentIdeaSet` and `SelectedContentIdea` schemas as
-  compatibility records only. The target boundary is Research Findings -> Idea
-  Queue -> Idea Promotion -> Project.
+- The removed `ContentIdeaSet` and `SelectedContentIdea` schemas must not
+  re-enter the pipeline. The canonical route is Research Findings -> Idea Queue
+  -> Idea Promotion -> Project.
 - Do not design Command Centre around today's helpers. It is a deferred surface
   over the file-first OS, not the core.
 

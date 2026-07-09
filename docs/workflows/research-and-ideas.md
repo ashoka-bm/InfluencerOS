@@ -355,10 +355,9 @@ specific production or later learning purpose.
 
 `ContentIdeaSet` should be removed from the intended pipeline entirely.
 
-Existing `content-idea-set` schemas, examples, and references may remain
-temporarily as deprecated compatibility artifacts until the replacement research
-module schemas are implemented. New workflow design should not depend on
-`ContentIdeaSet`.
+The superseded `content-idea-set` and `selected-content-idea` schemas and
+examples were removed after the replacement research module shipped. They are
+not compatibility routes and must not re-enter the intended workflow.
 
 `SelectedContentIdea` should be replaced by `IdeaPromotion`. Promotion starts
 from an `IdeaQueueEntry`, and the human-approved promotion package may
@@ -486,8 +485,8 @@ Warnings should appear as flags or badges on board cards rather than becoming
 new workflow statuses. For v1, do not add `paused` or `needs_attention` project
 states unless later evidence shows warnings are not enough.
 
-The current Project status `idea_selected` should be renamed because the
-`SelectedContentIdea` concept is being replaced by `IdeaPromotion`.
+The former Project status `idea_selected` was removed when `IdeaPromotion`
+replaced `SelectedContentIdea` as the production-entry record.
 
 The Kanban board should have a first-class `ContentBoard` / `ContentCard`
 projection for UI use. The projection should be creator-specific and rebuildable
@@ -598,8 +597,8 @@ trend movement, and point to the latest supporting evidence. Stable findings may
 be promoted into more permanent records when repeated research proves their
 value.
 
-The current `ContentIdeaSet` concept should not be treated as a workflow output.
-The replacement is:
+The removed `ContentIdeaSet` concept is not a workflow output. Its canonical
+replacements are:
 
 - `ResearchFindings`: the synthesized, dated, evidence-backed view of what is
   happening in the creator's relevant social space,

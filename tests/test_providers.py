@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from influencer_os.generation import record_generation_approval
 from influencer_os.projects import validate_project
@@ -94,6 +95,31 @@ class ProviderRegistryTests(unittest.TestCase):
     def test_mock_provider_is_available_without_keys(self):
         rows = {r["provider_id"]: r for r in provider_status(BASE_CONFIG)}
         self.assertTrue(rows["mock"]["available"])
+
+    def test_provider_registry_keys_are_loaded_by_normal_configuration(self):
+        from influencer_os.connectors import env
+
+        keyed_provider = {
+            "provider_id": "future-test-provider",
+            "capabilities": ["image"],
+            "key": "FUTURE_PROVIDER_API_KEY",
+            "cost_notes": "test only",
+            "approval_model": EXACT_APPROVAL,
+            "summary": "Test provider with its own key.",
+        }
+        PROVIDERS.append(keyed_provider)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                env_path = Path(tmp) / ".env"
+                env_path.write_text("FUTURE_PROVIDER_API_KEY=available\n")
+                with mock.patch.dict("os.environ", {}, clear=True):
+                    config = env.get_config(env_path=env_path)
+
+            rows = {row["provider_id"]: row for row in provider_status(config)}
+            self.assertEqual(config["FUTURE_PROVIDER_API_KEY"], "available")
+            self.assertTrue(rows["future-test-provider"]["available"])
+        finally:
+            PROVIDERS.remove(keyed_provider)
 
     def test_kill_switch_disables_every_provider(self):
         for row in provider_status(KILLED_CONFIG):

@@ -71,6 +71,7 @@ workspace-library/creators/<creator-slug>/memory/
 - 2026-07-09: Renaming prose while retaining old nested field names does not resolve a domain-language conflict. When `CONTEXT.md` reserves a term such as Gate, sweep schema keys, constructor helpers, variables, headings, tests, and skills; retain legacy vocabulary only where compatibility actually requires it, such as an established filename.
 - 2026-07-09: Schema-valid prompt records can still violate semantic cardinality. Adira's single object asset passed structural validation while its prompt explicitly requested eight props in one image. When a prose-authored artifact needs exactly one subject, enforce the fan-out rule at planning, repeat the invariant in the canonical template and completion criteria, and pin those owning phrases with a drift test.
 - 2026-07-09: Atomic prompts do not prevent an oversized or incoherent reference library. Candidate props, product/brand objects, and production spaces need an evidence-resolving selection record, brand-effectiveness analysis, and explicit user decisions before asset promotion; lifecycle status should decide when approval is required, while record invariants remain validated at every stage.
+- 2026-07-09: Moving a routing switch without removing its parallel vocabulary does not create one source of truth. Accepted choices must derive from the same route table that resolves the handler; otherwise a newly accepted value can pass parsing and still fail dispatch.
 
 ## 2026-07-09 — Separate Visual Inspiration From Production Brand Systems
 

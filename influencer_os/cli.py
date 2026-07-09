@@ -26,6 +26,7 @@ from influencer_os.creator_workspaces import (
 from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.brand_boards import rebuild_brand_board, validate_brand_board
 from influencer_os.calendars import rebuild_calendar, validate_calendar
+from influencer_os.connectors.fetch import FETCH_MODES
 from influencer_os.full_validation import validate_all
 from influencer_os.analytics import import_analytics_csv
 from influencer_os.projects import init_project, validate_project
@@ -157,7 +158,7 @@ def main(argv=None):
     import_asset_parser.add_argument("--approval-record", help="Reference route only: the gen_approval_ record that authorized the generation, when one exists.")
 
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
-    fetch_parser.add_argument("connector", choices=["reddit", "x", "firecrawl", "linkedin", "youtube-search", "youtube-channel"], help="Connector to run.")
+    fetch_parser.add_argument("connector", choices=FETCH_MODES, help="Connector mode to run.")
     fetch_parser.add_argument("target", help="Topic (reddit/x/youtube-search), page URL (firecrawl), profile URL (linkedin), or channel id/@handle (youtube-channel).")
     fetch_parser.add_argument("--depth", choices=["quick", "default", "deep"], default="default", help="Discovery depth for reddit/x.")
     fetch_parser.add_argument("--days", type=int, default=30, help="Recency window in days (default 30).")
@@ -578,36 +579,19 @@ def main(argv=None):
             run_dir = Path(args.run_dir)
             budget = _load_connector_budget(run_dir, config["MAX_CALLS"])
             try:
-                if args.connector == "reddit":
-                    result = connector_fetch.fetch_reddit(
-                        args.target, config, budget, depth=args.depth,
-                        from_date=args.from_date, to_date=args.to_date, days=args.days,
-                    )
-                elif args.connector == "x":
-                    result = connector_fetch.fetch_x(
-                        args.target, config, budget, depth=args.depth,
-                        from_date=args.from_date, to_date=args.to_date, days=args.days,
-                    )
-                elif args.connector == "firecrawl":
-                    result = connector_fetch.fetch_firecrawl(args.target, config, budget)
-                elif args.connector == "youtube-search":
-                    result = connector_fetch.fetch_youtube_search(
-                        args.target, config, budget,
-                        from_date=args.from_date, to_date=args.to_date,
-                        days=args.days, max_results=args.max_results,
-                        order=args.order,
-                    )
-                elif args.connector == "youtube-channel":
-                    result = connector_fetch.fetch_youtube_channel(
-                        args.target, config, budget,
-                        from_date=args.from_date, to_date=args.to_date,
-                        days=args.days, max_results=args.max_results,
-                    )
-                else:
-                    result = connector_fetch.fetch_linkedin(
-                        args.target, config, budget,
-                        max_posts=args.max_posts, days=args.days,
-                    )
+                result = connector_fetch.fetch_for_mode(
+                    args.connector,
+                    args.target,
+                    config,
+                    budget,
+                    depth=args.depth,
+                    from_date=args.from_date,
+                    to_date=args.to_date,
+                    days=args.days,
+                    max_posts=args.max_posts,
+                    max_results=args.max_results,
+                    order=args.order,
+                )
             except connector_fetch.ConnectorUnavailable as exc:
                 _save_connector_budget(run_dir, budget)
                 print(f"error: {exc}", file=sys.stderr)

@@ -31,6 +31,71 @@ QUALITY_REVIEWS_DIR = "generation/quality-reviews"
 UNKNOWN_LICENSE_WARNING = "license-unknown: no license information was provided; verify usage rights before publishing"
 
 
+def ensure_generation_assets_dir(project_dir, error_class=ValidationError):
+    """Return a real generation/assets directory contained by the project."""
+    project_root = Path(project_dir).resolve()
+    generation_dir = Path(project_dir) / "generation"
+    assets_dir = generation_dir / "assets"
+    for directory in (generation_dir, assets_dir):
+        if directory.is_symlink():
+            raise error_class(
+                f"{directory} is a symlink; the generation tree must be real "
+                "directories inside the project"
+            )
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    if not assets_dir.resolve().is_relative_to(project_root):
+        raise error_class(f"{assets_dir} resolves outside the project root")
+    return assets_dir
+
+
+def contained_generation_artifact_path(
+    assets_dir, filename, asset_id, error_class=ValidationError
+):
+    """Resolve a requested bare filename inside generation/assets."""
+    assets_dir = Path(assets_dir)
+    name = Path(filename).name
+    if name != filename or name in (".", "..") or not name:
+        raise error_class(
+            f"requested asset {asset_id!r} filename must be a bare file "
+            f"name, got {filename!r}"
+        )
+    artifact_path = assets_dir / name
+    if artifact_path.resolve().parent != assets_dir.resolve():
+        raise error_class(
+            f"requested asset {asset_id!r} filename escapes the assets "
+            f"directory: {filename!r}"
+        )
+    return artifact_path
+
+
+def record_generated_calls(project_dir, project, approval_record_id, calls):
+    """Append canonical manifest rows for completed provider calls."""
+    project_dir = Path(project_dir)
+    rows = []
+    for call in calls:
+        artifact_path = Path(call["artifact_path"])
+        rows.append(
+            {
+                "asset_id": call["asset_id"],
+                "origin": "generated",
+                "asset_kind": call["request"]["asset_kind"],
+                "approval_record_id": approval_record_id,
+                "plan_prompt_ref": call["request"]["prompt_ref"],
+                "provider_call": {
+                    "provider_id": call["provider_id"],
+                    "model": call["model"],
+                    "params_hash": call["params_hash"],
+                    "requested_at": call["requested_at"],
+                    "completed_at": call["completed_at"],
+                },
+                "artifact_path": str(artifact_path.relative_to(project_dir)),
+                "content_hash": _sha256_file(artifact_path),
+                "recorded_at": call["completed_at"],
+            }
+        )
+    append_manifest_rows(project_dir, rows, project=project)
+
+
 def record_generation_approval(target_path, record_path):
     """Validate and write a GenerationApprovalRecord.
 
@@ -251,9 +316,7 @@ def import_generated_asset(
     target_name = _safe_artifact_filename(
         filename or source_path.name, f"import-generated-asset {asset_id}"
     )
-    from influencer_os.providers.dispatch import _ensure_real_assets_dir
-
-    assets_dir = _ensure_real_assets_dir(project_dir, error_class=ValidationError)
+    assets_dir = ensure_generation_assets_dir(project_dir)
     destination = assets_dir / target_name
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(f"Import target already exists: {destination}")

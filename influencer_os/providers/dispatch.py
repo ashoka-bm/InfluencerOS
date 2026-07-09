@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 
+from influencer_os import generation as generation_records
 from influencer_os.connectors import env
 from influencer_os.json_io import write_json_atomic
 from influencer_os.providers.registry import get_provider, provider_status
@@ -28,7 +29,9 @@ def _mock_generate(request, assets_dir, approval_record):
     costs."""
     asset_id = request["asset_id"]
     filename = request.get("filename") or f"{asset_id}.bin"
-    artifact_path = _contained_artifact_path(assets_dir, filename, asset_id)
+    artifact_path = generation_records.contained_generation_artifact_path(
+        assets_dir, filename, asset_id, error_class=GenerationDispatchError
+    )
     seed = json.dumps(
         {
             "asset_id": asset_id,
@@ -54,46 +57,6 @@ def _mock_generate(request, assets_dir, approval_record):
 _ADAPTERS = {
     "mock": _mock_generate,
 }
-
-
-def _contained_artifact_path(assets_dir, filename, asset_id):
-    """A requested filename is a bare name that resolves inside the assets
-    dir — a forged record cannot write outside it (batch-1 review finding)."""
-    assets_dir = Path(assets_dir)
-    name = Path(filename).name
-    if name != filename or name in (".", "..") or not name:
-        raise GenerationDispatchError(
-            f"requested asset {asset_id!r} filename must be a bare file "
-            f"name, got {filename!r}"
-        )
-    artifact_path = assets_dir / name
-    if artifact_path.resolve().parent != assets_dir.resolve():
-        raise GenerationDispatchError(
-            f"requested asset {asset_id!r} filename escapes the assets "
-            f"directory: {filename!r}"
-        )
-    return artifact_path
-
-
-def _ensure_real_assets_dir(project_dir, error_class=GenerationDispatchError):
-    """The generation tree must be real directories inside the project — a
-    symlinked generation/ or generation/assets/ would silently relocate the
-    trusted root (batch-2 review finding). Creates assets/ when absent."""
-    project_root = Path(project_dir).resolve()
-    generation_dir = Path(project_dir) / "generation"
-    assets_dir = generation_dir / "assets"
-    for directory in (generation_dir, assets_dir):
-        if directory.is_symlink():
-            raise error_class(
-                f"{directory} is a symlink; the generation tree must be real "
-                "directories inside the project"
-            )
-    assets_dir.mkdir(parents=True, exist_ok=True)
-    if not assets_dir.resolve().is_relative_to(project_root):
-        raise error_class(
-            f"{assets_dir} resolves outside the project root"
-        )
-    return assets_dir
 
 
 def _approval_records_dir(project_dir):
@@ -151,9 +114,7 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     # review finding): a hand-written approved record targeting a different
     # project, creator, premature status, or dangling plan refs must refuse
     # exactly like the writer would have.
-    from influencer_os.generation import validate_approval_record_binding
-
-    project = validate_approval_record_binding(
+    project = generation_records.validate_approval_record_binding(
         project_dir, record, error_class=GenerationDispatchError
     )
 
@@ -211,7 +172,9 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
             f"{record['max_calls']}"
         )
 
-    assets_dir = _ensure_real_assets_dir(project_dir)
+    assets_dir = generation_records.ensure_generation_assets_dir(
+        project_dir, error_class=GenerationDispatchError
+    )
 
     # Two-phase consumption (batch-1 review finding): flip the record to
     # `executing` BEFORE any adapter call so a crash or concurrent dispatch
@@ -262,31 +225,9 @@ def dispatch_generation(project_dir, approval_record_id, config=None):
     # Provenance ledger rows before consumption (ADR 0023 Decision 4): if
     # the append fails, the record stays `executing` — an honest crash state
     # that refuses re-dispatch — instead of executed-without-provenance.
-    from influencer_os.generation import _sha256_file, append_manifest_rows
-
-    rows = []
-    for call in calls:
-        artifact_path = Path(call["artifact_path"])
-        rows.append(
-            {
-                "asset_id": call["asset_id"],
-                "origin": "generated",
-                "asset_kind": call["request"]["asset_kind"],
-                "approval_record_id": approval_record_id,
-                "plan_prompt_ref": call["request"]["prompt_ref"],
-                "provider_call": {
-                    "provider_id": call["provider_id"],
-                    "model": call["model"],
-                    "params_hash": call["params_hash"],
-                    "requested_at": call["requested_at"],
-                    "completed_at": call["completed_at"],
-                },
-                "artifact_path": str(artifact_path.relative_to(project_dir)),
-                "content_hash": _sha256_file(artifact_path),
-                "recorded_at": call["completed_at"],
-            }
-        )
-    append_manifest_rows(project_dir, rows, project=project)
+    generation_records.record_generated_calls(
+        project_dir, project, approval_record_id, calls
+    )
 
     # Phase two: consume the record (single-use by construction, Decision 2).
     record["status"] = "executed"

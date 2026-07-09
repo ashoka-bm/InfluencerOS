@@ -227,8 +227,6 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | Social Research Pack | `schemas/social-research-pack.schema.json` | `examples/social-research-pack.example.json` |
 | Video Understanding Pack | `schemas/video-understanding-pack.schema.json` | `examples/video-understanding-pack.example.json` |
 | Social Post Format | `schemas/social-post-format.schema.json` | `examples/social-post-format.example.json` |
-| Content Idea Set (deprecated) | `schemas/content-idea-set.schema.json` | `examples/content-idea-set.example.json` |
-| Selected Content Idea (deprecated) | `schemas/selected-content-idea.schema.json` | `examples/selected-content-idea.example.json` |
 | Social Template | `schemas/social-template.schema.json` | `examples/social-template.example.json` |
 | Applied Social Template | `schemas/applied-social-template.schema.json` | `examples/applied-social-template.example.json` |
 | Review Record | `schemas/review-record.schema.json` | `examples/review-record.example.json` |
@@ -265,10 +263,10 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 
 The implemented record chain now covers creator setup, the ADR 0020 research module (schedule, runs, search plans, evidence, metric snapshots, source-yield ledgers, findings, intelligence, idea queue, promotions, warnings, board, automation-run and system-event record shapes), project planning anchored on locked Idea Promotions, output packaging, publication records, analytics snapshots, and performance summaries.
 
-The deprecated Content Idea Set and Selected Content Idea records are out of the
-intended pipeline (ADR 0020); their schemas remain only as compatibility
-artifacts. Projects reference `idea_promotion_id`, and deeper research
-provenance resolves transitively through the locked promotion.
+Content Idea Set and Selected Content Idea were removed after the ADR 0020
+Research Findings, Idea Queue, and Idea Promotion route shipped. Projects
+reference `idea_promotion_id`, and deeper research provenance resolves
+transitively through the locked promotion.
 
 ## Format-Specific Production Plans
 

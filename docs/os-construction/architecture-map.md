@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (55) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ + docs/pipeline-contract.md                          [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Research connectors        influencer_os/connectors/ (env-gated acquisition tier)        [BUILT — ADR 0022; dormant until key]
@@ -73,8 +73,8 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (55) | JSON Schema contract per durable record (incl. `visual-continuity-plan` and `research-fetch-result`). | [BUILT] |
-| `examples/*.example.json` (55) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` | JSON Schema contract per durable record (incl. `visual-continuity-plan` and `research-fetch-result`). | [BUILT] |
+| `examples/*.example.json` | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary (generation exact-approval; research-acquisition standing approval per ADR 0022). | [BUILT] |
 | `docs/research-adapter-registry.md` | Research acquisition adapter/connector permission registry (ADR 0021/0022). | [BUILT] |
