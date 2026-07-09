@@ -5,6 +5,8 @@ import shutil
 from collections import Counter
 from pathlib import Path
 
+from influencer_os.brand_boards import validate_brand_board
+
 from influencer_os.generation import validate_reference_approval_records
 from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
@@ -979,6 +981,15 @@ def _validate_readiness_milestones(
                 )
 
         blockers.extend(_voice_design_prompt_blockers(creator_profile, active_assets))
+        if set(creator_profile["content_strategy"]["content_mediums"]).intersection(VISUAL_MEDIUMS):
+            try:
+                brand_board = validate_brand_board(workspace_dir)
+                if brand_board["approval_status"] != "approved":
+                    blockers.append(
+                        "personal brand board requires explicit approval before foundation_ready"
+                    )
+            except (FileNotFoundError, ValidationError) as exc:
+                blockers.append(f"personal brand board is incomplete: {exc}")
         blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
         blockers.extend(_asset_source_ref_blockers(workspace_dir, manifest, active_assets))
         blockers.extend(

@@ -33,6 +33,34 @@
       "semantic_index_allowed": false
     },
     {
+      "asset_id": "asset_luna_living_room_wall",
+      "asset_type": "location",
+      "asset_status": "generated",
+      "role": "Clear living-room wall demonstration space",
+      "path": "references/locations/luna-fit-living-room-wall.png",
+      "source": {
+        "source_type": "generated",
+        "source_ref": "sources/intakes/luna-fit-breakdown.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use for full-body standing and wall-supported demonstrations.",
+      "semantic_index_allowed": false
+    },
+    {
+      "asset_id": "asset_luna_reset_timer",
+      "asset_type": "object",
+      "asset_status": "generated",
+      "role": "Signature matte two-minute reset timer",
+      "path": "references/objects/luna-fit-reset-timer.png",
+      "source": {
+        "source_type": "generated",
+        "source_ref": "sources/intakes/luna-fit-breakdown.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use as the recurring visible cue for Luna's two-minute reset promise.",
+      "semantic_index_allowed": false
+    },
+    {
       "asset_id": "asset_luna_everyday_outfit",
       "asset_type": "outfit",
       "asset_status": "prompted",

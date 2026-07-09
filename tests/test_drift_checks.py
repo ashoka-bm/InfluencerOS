@@ -251,7 +251,7 @@ class RealCreatorRunbookDriftTests(unittest.TestCase):
     # means either the CLI or the runbook changed without the other.
     VALIDATE_TARGETS = {
         "examples", "workspace", "project", "record", "research",
-        "queue", "board", "calendar", "all",
+        "queue", "board", "calendar", "brand-board", "all",
     }
     FETCH_CONNECTORS = {
         "reddit", "x", "firecrawl", "linkedin", "youtube-search",
@@ -649,6 +649,14 @@ class ResearchEnumDriftTests(unittest.TestCase):
 class ConductorCallGraphDriftTests(unittest.TestCase):
     CONDUCTORS = ("influencer-os", "create-influencer")
     MAP_SECTION = "Creation-Flow Call Graph (skill → skill)"
+
+    def test_creator_setup_builds_brand_board_after_reference_planning(self):
+        body = skill_body("create-influencer")
+        reference_phase = body.index("**Reference planning**")
+        board_phase = body.index("**Personal brand board**")
+        readiness_phase = body.index("**State reconciliation and readiness check**")
+        self.assertLess(reference_phase, board_phase)
+        self.assertLess(board_phase, readiness_phase)
 
     def test_conductors_declare_dependencies_frontmatter(self):
         for skill in self.CONDUCTORS:

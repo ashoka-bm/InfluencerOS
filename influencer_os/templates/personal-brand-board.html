@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="influencer-os-brand-board-source-digest" content="__SOURCE_DIGEST__">
+  <title>__DOCUMENT_TITLE__</title>
+  <style>
+    :root {
+      --base: __BASE__; --surface: __SURFACE__; --primary: __PRIMARY__; --ink: __TEXT__;
+      --display: __DISPLAY_STACK__; --subhead: __SUBHEAD_STACK__; --body: __BODY_STACK__; --data: __DATA_STACK__;
+      --line: color-mix(in srgb, var(--ink) 18%, transparent); --paper: color-mix(in srgb, var(--base) 84%, white);
+    }
+    * { box-sizing: border-box; }
+    html { background: color-mix(in srgb, var(--surface) 78%, #888); }
+    body { margin: 0; color: var(--ink); font-family: var(--body); line-height: 1.42; }
+    .board { width: min(1180px, 100%); margin: 0 auto; background: var(--base); box-shadow: 0 24px 80px #0003; overflow: hidden; }
+    .hero { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 720px; }
+    .hero-image { width: 100%; height: 100%; min-height: 720px; object-fit: cover; display: block; }
+    .hero-copy { padding: 52px; display: flex; flex-direction: column; justify-content: space-between; background: color-mix(in srgb, var(--base) 86%, white); }
+    .eyebrow,.label,code { font-family: var(--data); text-transform: uppercase; letter-spacing: .06em; }
+    .eyebrow { margin: 0 0 32px; color: var(--primary); font-size: 12px; font-weight: 800; }
+    h1 { margin: 0; font-family: var(--display); font-size: clamp(64px, 8vw, 98px); font-weight: 500; line-height: .88; }
+    .handle { margin: 18px 0 28px; color: var(--primary); font-family: var(--data); font-weight: 800; }
+    .tagline { margin: 0 0 16px; padding-top: 24px; border-top: 1px solid var(--line); font-family: var(--display); font-size: clamp(38px, 5vw, 58px); line-height: .98; }
+    .descriptor { margin: 0 0 8px; font-family: var(--subhead); font-weight: 800; text-transform: uppercase; }
+    .summary { margin: 0; font-size: 18px; max-width: 54ch; }
+    .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 32px; }
+    .card,.type-panel,.rule-panel,.content-template,.pillar,.note { border: 1px solid var(--line); background: color-mix(in srgb, var(--base) 72%, white); }
+    .card { padding: 14px; min-height: 105px; }
+    .card p { margin: 8px 0 0; font-size: 13px; }
+    .label { display: block; font-size: 10px; font-weight: 800; opacity: .72; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; font: 700 10px/1 var(--data); text-transform: uppercase; }
+    .anti .chip { opacity: .58; text-decoration: line-through; }
+    section.content { padding: 38px 42px 0; }
+    .section-title { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; margin: 0 0 20px; font: 800 12px/1 var(--data); text-transform: uppercase; letter-spacing: .08em; }
+    .section-title::before,.section-title::after { content: ""; border-top: 1px solid var(--line); }
+    .palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
+    .swatch { min-width: 0; border: 1px solid var(--line); background: color-mix(in srgb, var(--base) 78%, white); text-align: center; padding-bottom: 10px; }
+    .swatch-color { aspect-ratio: 1/.72; margin-bottom: 9px; border-bottom: 1px solid var(--line); }
+    .swatch strong,.swatch code,.swatch span { display: block; padding: 0 5px; }
+    .swatch strong { font-size: 11px; }
+    .swatch code { margin: 4px 0; font-size: 10px; }
+    .swatch span { font-size: 9px; opacity: .68; }
+    .two-col { display: grid; grid-template-columns: .82fr 1.18fr; gap: 22px; }
+    .name-grid { display: grid; grid-template-columns: 1fr 118px; gap: 12px; }
+    .wordmark,.avatar-panel { border: 1px solid var(--line); padding: 18px; background: color-mix(in srgb, var(--base) 72%, white); }
+    .wordmark-main { margin: 14px 0; font: 500 48px/.94 var(--display); white-space: pre-line; }
+    .wordmark-handle { color: var(--primary); font: 800 12px/1.2 var(--data); }
+    .submark { display: grid; place-items: center; width: 58px; height: 58px; margin-top: 16px; border: 1px solid var(--ink); border-radius: 50%; font: 500 22px/1 var(--display); }
+    .avatar { width: 78px; height: 78px; margin: 0 auto 12px; border-radius: 50%; object-fit: cover; display: block; }
+    .avatar-panel p { margin: 8px 0 0; text-align: center; font-size: 10px; }
+    .type-panel { padding: 8px 18px; }
+    .type-row { display: grid; grid-template-columns: 84px 1fr 205px; gap: 14px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .type-row:last-child { border-bottom: 0; }
+    .type-sample { min-width: 0; }
+    .type-row.display .type-sample { font: 500 34px/1.05 var(--display); }
+    .type-row.subhead .type-sample { font: 800 14px/1.2 var(--subhead); text-transform: uppercase; }
+    .type-row.body .type-sample { font: 400 15px/1.45 var(--body); }
+    .type-row.caption_data .type-sample { font: 700 14px/1.2 var(--data); }
+    .type-meta strong,.type-meta code,.type-meta span { display: block; overflow-wrap: anywhere; }
+    .type-meta { font-size: 9px; }
+    .type-meta code { margin: 3px 0; text-transform: none; letter-spacing: 0; }
+    .spaces { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .space { display: grid; grid-template-columns: 1.15fr .85fr; min-height: 270px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+    .space img,.space .image-placeholder { width: 100%; height: 100%; min-height: 270px; object-fit: cover; }
+    .space-copy { padding: 18px; background: color-mix(in srgb, var(--base) 88%, white); }
+    .space-copy strong { display: block; font: 500 28px/1 var(--display); }
+    .space-copy p { margin: 8px 0 14px; font-size: 11px; }
+    .space-copy ul { margin: 6px 0 15px; padding-left: 17px; font-size: 10px; }
+    .props { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .prop { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 235px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+    .prop img,.prop .image-placeholder { width: 100%; height: 100%; min-height: 235px; object-fit: cover; }
+    .prop-copy { padding: 18px; background: color-mix(in srgb, var(--base) 88%, white); }
+    .prop-copy strong { display: block; font: 500 28px/1 var(--display); }
+    .prop-copy p { margin: 8px 0 14px; font-size: 11px; }
+    .prop-copy ul { margin: 6px 0 15px; padding-left: 17px; font-size: 10px; }
+    .rules { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+    .rule-panel { padding: 14px; min-height: 118px; }
+    .rule-panel ul,.voice-panel ul { margin: 8px 0 0; padding-left: 17px; font-size: 11px; }
+    .templates { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+    .content-template { min-height: 235px; padding: 14px; display: flex; flex-direction: column; justify-content: center; }
+    .content-template img { width: calc(100% + 28px); height: 95px; margin: -14px -14px 14px; object-fit: cover; }
+    .content-template h3 { margin: 18px 0 8px; font: 500 25px/1 var(--display); }
+    .content-template p { margin: 0; font: 800 9px/1.3 var(--data); text-transform: uppercase; }
+    .content-template.accent { background: var(--primary); color: var(--base); }
+    .voice-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 10px; }
+    .voice-panel { border: 1px solid var(--line); padding: 14px; min-height: 150px; }
+    .voice-panel p { font-size: 12px; }
+    .slider { margin: 10px 0 14px; }
+    .slider > div:first-child { display: flex; justify-content: space-between; font: 700 9px/1 var(--data); text-transform: uppercase; }
+    .track { height: 5px; margin-top: 7px; background: color-mix(in srgb, var(--ink) 16%, transparent); position: relative; }
+    .track i { position: absolute; top: -4px; width: 13px; height: 13px; transform: translateX(-50%); border-radius: 50%; background: var(--primary); }
+    .pillars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .pillar { overflow: hidden; text-align: left; padding: 14px; min-height: 142px; }
+    .pillar-index { color: var(--primary); font: 700 26px/1 var(--data); }
+    .pillar h3 { margin: 22px 0 5px; font: 800 11px/1.2 var(--subhead); text-transform: uppercase; }
+    .pillar p { margin: 0; font-size: 10px; }
+    .notes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding-bottom: 38px; }
+    .note { padding: 14px; }
+    .note p { margin: 8px 0 0; font-size: 11px; }
+    footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 26px; padding: 20px 30px; background: var(--primary); color: var(--base); font: 800 11px/1 var(--data); text-transform: uppercase; }
+    .image-placeholder { display: grid; place-items: center; background: var(--surface); font: 500 44px/1 var(--display); }
+    @media (max-width: 900px) {
+      .hero,.two-col { grid-template-columns: 1fr; } .hero-image { min-height: 500px; max-height: 680px; }
+      .palette { grid-template-columns: repeat(4, 1fr); } .templates,.pillars { grid-template-columns: repeat(2, 1fr); }
+      .spaces,.props,.rules,.voice-grid,.notes { grid-template-columns: repeat(2, 1fr); }
+      .space,.prop { grid-template-columns: 1fr; }
+      .hero-copy { padding: 36px 28px; } section.content { padding-inline: 24px; } .type-row { grid-template-columns: 72px 1fr; } .type-meta { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+<main class="board">
+  <section class="hero">
+    __HERO_IMAGE__
+    <div class="hero-copy">
+      <div><p class="eyebrow">__BOARD_TYPE__ / Personal Brand Board</p><h1>__NAME__</h1><div class="handle">__HANDLE__</div><p class="tagline">__TAGLINE__</p><p class="descriptor">__DESCRIPTOR__</p><p class="summary">__SUMMARY__</p></div>
+      <div class="strategy-grid">
+        <article class="card"><span class="label">Audience</span><p>__AUDIENCE__</p></article>
+        <article class="card"><span class="label">Promise</span><p>__PROMISE__</p></article>
+        <article class="card"><span class="label">Differentiator</span><p>__DIFFERENTIATOR__</p></article>
+        <article class="card"><span class="label">Adjectives / anti-adjectives</span>__ADJECTIVES____ANTI_ADJECTIVES__</article>
+      </div>
+    </div>
+  </section>
+  <section class="content"><h2 class="section-title">Color System</h2><div class="palette">__SWATCHES__</div></section>
+  <section class="content two-col">
+    <div><h2 class="section-title">Name System</h2><div class="name-grid"><div class="wordmark"><span class="label">Primary wordmark</span><div class="wordmark-main">__WORDMARK__</div><div class="wordmark-handle">__HANDLE_TREATMENT__</div><div class="submark">__SUBMARK__</div></div><div class="avatar-panel">__AVATAR__<span class="label">Avatar crop</span><p>__AVATAR_GUIDANCE__</p></div></div></div>
+    <div><h2 class="section-title">Typography Hierarchy</h2><div class="type-panel">__TYPE_ROWS__</div></div>
+  </section>
+  <section class="content"><h2 class="section-title">Production Spaces</h2><div class="spaces">__PRODUCTION_SPACES__</div><div class="rules">__RULE_PANELS__</div></section>
+  __SIGNATURE_PROPS_SECTION__
+  <section class="content"><h2 class="section-title">Templates In Use</h2><div class="templates">__CONTENT_TEMPLATES__</div></section>
+  <section class="content"><h2 class="section-title">Voice And Copy Cues</h2><div class="voice-grid"><article class="voice-panel"><span class="label">Headlines</span><ul>__HEADLINES__</ul></article><article class="voice-panel"><span class="label">Caption starters</span><ul>__CAPTION_STARTERS__</ul></article><article class="voice-panel"><span class="label">Use / avoid</span><p><strong>Use:</strong> __USE_WORDS__</p><p><strong>Avoid:</strong> __AVOID_WORDS__</p></article><article class="voice-panel"><span class="label">Tonal sliders</span>__SLIDERS__</article></div></section>
+  <section class="content"><h2 class="section-title">Content Pillars</h2><div class="pillars">__PILLARS__</div></section>
+  <section class="content"><h2 class="section-title">Production QA</h2><div class="notes">__QA_NOTES__</div></section>
+  <footer>__FOOTER__</footer>
+</main>
+</body>
+</html>

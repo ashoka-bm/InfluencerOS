@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from influencer_os.brand_boards import rebuild_brand_board
 from influencer_os.creator_workspaces import (
     init_creator,
     sync_creator_runtime,
@@ -16,6 +17,7 @@ from influencer_os.projects import register_output_package
 from influencer_os.validation import ValidationError
 from tests.test_readiness_validation import (
     place_asset_files,
+    place_brand_board_space_files,
     populate_foundation,
     write_channels,
     write_readiness_milestones,
@@ -1501,6 +1503,12 @@ class ReadinessMilestoneTests(unittest.TestCase):
         populate_foundation(workspace_dir)
         place_asset_files(workspace_dir)
         write_channels(workspace_dir)
+        copy_example_record(
+            "personal-brand-board.example.json",
+            workspace_dir / "references" / "brand" / "personal-brand-board.json",
+        )
+        place_brand_board_space_files(workspace_dir)
+        rebuild_brand_board(workspace_dir)
         return workspace_dir
 
     def test_foundation_ready_image_permission_requires_approved_visual_asset(self):
@@ -1540,6 +1548,7 @@ class ReadinessMilestoneTests(unittest.TestCase):
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", approve_visual_assets)
             place_asset_files(workspace_dir)
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")

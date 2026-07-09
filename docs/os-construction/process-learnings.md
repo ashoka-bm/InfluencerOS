@@ -70,3 +70,20 @@ workspace-library/creators/<creator-slug>/memory/
 - 2026-07-09: A stage-gated validator can leave record invariants unenforced at earlier stages. Readiness milestone approval metadata, channel publish-state consistency, and `prompt_ready` media permissions must be checked before the lifecycle early-return; stage branches should add only the requirements that become mandatory at that stage.
 - 2026-07-09: Renaming prose while retaining old nested field names does not resolve a domain-language conflict. When `CONTEXT.md` reserves a term such as Gate, sweep schema keys, constructor helpers, variables, headings, tests, and skills; retain legacy vocabulary only where compatibility actually requires it, such as an established filename.
 - 2026-07-09: Schema-valid prompt records can still violate semantic cardinality. Adira's single object asset passed structural validation while its prompt explicitly requested eight props in one image. When a prose-authored artifact needs exactly one subject, enforce the fan-out rule at planning, repeat the invariant in the canonical template and completion criteria, and pin those owning phrases with a drift test.
+
+## 2026-07-09 — Separate Visual Inspiration From Production Brand Systems
+
+A generated brand image can communicate mood and layout direction while still
+being unusable as a production contract. Creator setup must establish exact
+palette, typography, imagery, and template tokens in structured data, render
+them through one reusable editable template, and collect approval at that
+specific artifact boundary.
+
+Reusable board sections must have one stable semantic meaning. Production
+spaces link to location assets; signature props link to object assets; content
+pillars remain typographic unless an image directly depicts the pillar.
+
+When a visual document depends on reusable assets, sequence it after asset
+planning and link by typed identity rather than copying file paths. This makes
+wrong-category images fail validation, supports prompt-ready placeholders, and
+makes the projection stale when its source asset records change.

@@ -53,6 +53,7 @@ Creator identity uses a hybrid authoring flow. A rich master intake, such as an 
 - `brand_context/identity.md`
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
+- `references/brand/personal-brand-board.json` plus its shared-template HTML projection for visual creators
 - reference library requirements
 
 After review, the split workspace files become the maintained source of truth. The original intake can remain archived as provenance, but operational workflows should read the current workspace files.
@@ -60,6 +61,12 @@ After review, the split workspace files become the maintained source of truth. T
 `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md` are the tiny always-loaded creator context files. `creator-profile.json` is a typed operational summary, not a full identity dump. It should contain enough structured information for routine automation while pointing to the richer `brand_context/` files and reference assets.
 
 Creator Setup may capture text-first and written-content strategy inputs such as Substack, LinkedIn, X, blog, or newsletter direction. `brand_context/personal-brand.md` is the rich source of truth for content strategy; `creator-profile.json` carries the operational summary used by research and planning.
+
+For visual creators, `references/brand/personal-brand-board.json` is the exact
+visual-system source of truth. `rebuild-brand-board` populates the single
+package-owned `influencer_os/templates/personal-brand-board.html` template;
+the creator-specific HTML is a rebuildable review projection, never a second
+hand-authored design.
 
 ## First-Party OS Persona
 

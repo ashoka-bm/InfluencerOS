@@ -55,6 +55,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-identity` | draft identity | `brand_context/identity.md` |
 | `create-soul` | draft creator soul | `brand_context/soul.md` |
 | `create-personal-brand` | draft personal brand | `brand_context/personal-brand.md` |
+| `personal-brand-board` | create exact visual identity tokens or render/revise a creator brand board after reference planning | `references/brand/personal-brand-board.json` plus shared-template HTML projection; production spaces/props link to typed Reference Library assets |
 | `create-voice-samples` | extract or curate voice samples | `brand_context/voice-samples.md` |
 | `create-reference-library` | plan visual/audio references | `references/reference-library.json` |
 | `elevenlabs-voice-design` | stage ElevenLabs voice design prompt | `references/voice/<asset-slug>.prompt.md`; resulting approved audio is registered separately and links back through `prompt_path` |

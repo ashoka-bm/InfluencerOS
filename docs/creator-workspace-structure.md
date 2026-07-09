@@ -71,6 +71,8 @@ workspace-library/creators/<creator-slug>/
     video-style/
     voice/
     brand/
+      personal-brand-board.json          # canonical creator-specific tokens
+      personal-brand-board.html          # rebuildable shared-template projection
   conversion-assets/
     <conversion-asset-id>.json
   content-schedule.json
@@ -183,6 +185,10 @@ projects/
     project.json
     evidence-brief.md
 ```
+
+The HTML brand board is not authored per creator. Run `rebuild-brand-board` to
+populate `influencer_os/templates/personal-brand-board.html` from the canonical
+JSON spec. A generated mood image may support that spec but cannot replace it.
 
 A project's `source_refs.idea_promotion_id` must resolve to
 `research/idea-promotions/<id>.json` in the owning Creator Workspace; deeper

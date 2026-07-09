@@ -86,7 +86,10 @@ Run the `create-influencer` conductor skill (`skills/create-influencer/`).
 It offers three intake paths — load existing files, guided interview, or
 generate from basic information — and drives the full foundation: identity,
 soul, personal brand, voice samples, creator profile, runtime context, and
-reference library.
+reference library. For visual creators it also invokes `personal-brand-board`
+after reference planning to create exact palette/typography tokens, bind spaces
+and props to typed Reference Library assets, and populate the shared HTML
+template.
 
 The CLI seams it uses, in order:
 
@@ -94,6 +97,8 @@ The CLI seams it uses, in order:
 python3 -m influencer_os init-creator <workspace-manifest>
 python3 -m influencer_os import-intake <source-file> --creator-workspace <workspace> --source-type <type> --notes "<note>"
 python3 -m influencer_os set-intake-status <workspace> <source-id> drafted   # then: reviewed
+python3 -m influencer_os rebuild-brand-board <workspace>
+python3 -m influencer_os validate brand-board <workspace>
 python3 -m influencer_os validate workspace <workspace>
 ```
 

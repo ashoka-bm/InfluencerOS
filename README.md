@@ -136,6 +136,17 @@ After authoring `creator-profile.json` and `references/reference-library.json`, 
 python3 -m influencer_os validate workspace workspace-library/creators/luna-fit
 ```
 
+Visual creators also use one reusable personal-brand-board template. Author
+creator-specific exact tokens in `references/brand/personal-brand-board.json`
+after Reference Library planning. Production spaces and signature props bind
+to typed Reference Library asset IDs; then build and validate the editable HTML
+projection:
+
+```bash
+python3 -m influencer_os rebuild-brand-board workspace-library/creators/luna-fit
+python3 -m influencer_os validate brand-board workspace-library/creators/luna-fit
+```
+
 Validation is status-keyed: a `draft` workspace stays permissive, while a workspace claiming `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, or `active` must pass the corresponding readiness checks. Deprecated `content_ready` and `generation_ready` fixtures validate only far enough to emit a migration warning. Failures report the full blocker list in one run.
 
 After authoring or changing `content-schedule.json`, rebuild the interactive

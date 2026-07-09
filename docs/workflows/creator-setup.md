@@ -64,6 +64,7 @@ read these files first:
 - `conversion-assets/*.json`
 - `content-schedule.json`, when present
 - `boards/content-calendar.html`, when present
+- `references/brand/personal-brand-board.json` and `.html`, for visual creators
 - `progress/setup-checklist.md`
 - `context/MEMORY.md`
 
@@ -78,6 +79,11 @@ Machine-readable files own state:
 - `content-schedule.json` owns calendar readiness.
 - `boards/content-calendar.html` is a derived review projection. It never owns
   schedule state and must be rebuilt after every canonical calendar change.
+- `references/brand/personal-brand-board.json` owns exact palette, typography,
+  identity, imagery, template, and QA tokens. It is authored after Reference
+  Library planning; production spaces bind to `location` assets and signature
+  props bind to `object` assets by stable ID. Its HTML sibling is a rebuildable
+  projection from the package-owned template.
 - Markdown explains decisions, blockers, and review notes. It must mirror the
   canonical records instead of inventing additional milestone names or stale blockers.
 
@@ -88,12 +94,16 @@ calendar update, run a same-turn state sync pass:
 2. remove stale blocker language from rich context files, progress notes,
    `AGENTS.md`, and `CLAUDE.md`;
 3. write the next readiness milestone into `progress/setup-checklist.md` and `context/MEMORY.md`;
-4. for a calendar update, run
+4. for a visual-brand update, run
+   `python3 -m influencer_os rebuild-brand-board <workspace-path>`, present the
+   HTML for a distinct brand-system review, then run
+   `python3 -m influencer_os validate brand-board <workspace-path>`;
+5. for a calendar update, run
    `python3 -m influencer_os rebuild-calendar <workspace-path>` and present
    `boards/content-calendar.html` for review;
-5. run `python3 -m influencer_os validate calendar <workspace-path>` when the
+6. run `python3 -m influencer_os validate calendar <workspace-path>` when the
    calendar exists;
-6. run `python3 -m influencer_os validate workspace <workspace-path>`.
+7. run `python3 -m influencer_os validate workspace <workspace-path>`.
 
 The validator rejects readiness states that still contain known stale setup
 phrases such as a pending portrait approval after the foundation milestone is ready.

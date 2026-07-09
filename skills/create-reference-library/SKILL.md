@@ -44,7 +44,15 @@ Select based on content strategy:
 - object: meaningful props
 - video_style: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, platform finish, recurring shot families
 - voice: ElevenLabs Voice Design prompt packages and approved/imported voice samples
-- brand: visual system, typography, colors, layout posture
+- brand: supporting brand imagery and reference assets; the canonical exact
+  palette, typography, name system, and layout examples live in
+  `references/brand/personal-brand-board.json` and are owned by
+  `personal-brand-board`
+
+The downstream personal brand board binds production spaces to `location`
+assets and signature props to `object` assets by stable `asset_id`. Plan those
+entries before invoking `personal-brand-board`; do not duplicate their file
+paths as free-form board data.
 
 ## Platform And Medium Derivation
 
@@ -61,6 +69,11 @@ Use this mapping as setup guidance:
 | audio or music | ElevenLabs Voice Design prompt package for synthetic spoken continuity, imported/approved voice sample before spoken generation, pronunciation/tone boundaries, sonic identity notes, rights/disclosure constraints |
 | video | image requirements plus default video/photo style, recurring locations, wardrobe/outfit references, recurring collaborators or characters, signature objects, recurring shot-family notes, ElevenLabs Voice Design prompt package |
 | carousel or story_sequence | brand visual system, slide/frame visual system, text overlay policy, optional character/location references if the creator appears |
+
+Do not treat a generated brand mood image, abstract carousel sheet, or prompt as
+the production brand system. Supporting brand images may be registered here,
+but visual creator readiness also requires the separately validated and
+human-approved personal brand board.
 
 Ask for public platforms early because they suggest likely mediums, but let the
 accepted content strategy decide the blockers. Do not create platform-specific

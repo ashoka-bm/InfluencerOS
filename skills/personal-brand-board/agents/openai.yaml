@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Brand Board"
+  short_description: "Build reusable creator mini style guides"
+  default_prompt: "Use $personal-brand-board to create a tokenized, editable personal brand board for this creator."

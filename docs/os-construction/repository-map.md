@@ -59,6 +59,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `influencer_os/recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds covering research, project, board, and Phase 2 learning records (published post records, `analytics/snapshots/`, performance summaries — schema-validated and manifest-anchored via the shared `projects.py` seam that `validate workspace` also runs, never `analytics/raw/`); never a validation dependency. |
 | `influencer_os/semantic_lookup.py` | Rebuildable SQLite FTS5 semantic lookup projection (ADR 0011 keyword leg, Decision 1 phasing): `rebuild-lookup` chunks the creator-scoped allowlist (brand context, findings, stable findings, creator learnings, index-allowed performance-summary narratives — never `analytics/`, with symlinked lookup sources rejected) into heading-aware chunks with line provenance, authority weights, and sha256 change detection; `query-lookup` reranks creator-local BM25 candidates by authority and recency behind a hard creator-scope boundary on a read-only connection; never a validation dependency. |
 | `influencer_os/boards.py` | Content Board projection: `rebuild-board` derives cards from canonical records (columns/manual order preserved); `validate board` agreement check. |
+| `influencer_os/brand_boards.py` | Personal Brand Board projection: validates creator tokens, populates the shared editable HTML template, and rejects stale/tampered projections. |
 | `influencer_os/generation.py` | Generation OS writers and at-rest checks: approval records, asset imports, manifest ledger (ADR 0023). |
 | `influencer_os/providers/` | Generation provider boundary: registry (structural exact approval), approval-gated dispatch, mock adapter (ADR 0023). |
 | `influencer_os/prune.py` | Research retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + its snapshots, removals recorded as run-manifest pruned ids. |
@@ -84,6 +85,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/create-identity/SKILL.md` | Rich identity drafting. |
 | `skills/create-soul/SKILL.md` | Creator psychology and behavior drafting. |
 | `skills/create-personal-brand/SKILL.md` | Brand strategy drafting. |
+| `skills/personal-brand-board/SKILL.md` | Exact visual identity token spec and reusable mini-style-guide rendering. |
 | `skills/create-voice-samples/SKILL.md` | Voice sample extraction and curation. |
 | `skills/create-reference-library/SKILL.md` | Reference Library planning. |
 | `skills/create-runtime-context/SKILL.md` | Tiny always-loaded creator context files. |

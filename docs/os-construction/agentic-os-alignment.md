@@ -41,6 +41,17 @@ The note must include:
 
 ## Accepted Divergences
 
+### Creator Personal Brand Board Projection
+
+Agentic OS uses file-first brand context/style guides and explicit design-system
+tokens. InfluencerOS adapts that pattern into a creator-scoped JSON contract plus
+a rebuildable editable HTML projection because visual creator readiness requires
+machine-checkable palette, typography, imagery, and layout rules. One shared
+package template renders every creator; creator workspaces store only their spec
+and projection. The user approved this adaptation on 2026-07-09 after the Mara
+Vale run exposed that an approved abstract image was not a production brand
+system.
+
 | Divergence | Agentic OS reference | InfluencerOS decision | Reason | Status |
 | --- | --- | --- | --- | --- |
 | Local-first only in the first pass. | Agentic OS aims for access from anywhere through hosted or channel-based execution. | InfluencerOS v1 only needs to run well locally. | The user explicitly deprioritized multi-location access for now. | Accepted for v1 |

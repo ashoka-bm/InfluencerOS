@@ -1227,6 +1227,45 @@ registry/context-matrix drift tests pass. No provider-backed calls were made.
 
 ## Next Work Queue
 
+Personal brand board integration (2026-07-09): added the
+`personal-brand-board` setup skill, `personal-brand-board` schema/example,
+creator-specific canonical JSON at `references/brand/personal-brand-board.json`,
+one package-owned editable HTML template, and `rebuild-brand-board` / `validate
+brand-board` CLI seams. Visual creator readiness now requires a current board
+with explicit board-specific approval; generated brand mood imagery remains a
+supporting reference. Mara Vale was migrated to the shared template without a
+provider call and left honestly at `profile_ready` with the new board marked
+`draft_for_review`. Verification: 54 examples validate; brand-board, readiness,
+drift, guided E2E, and Planning OS journey tests pass. The full 849-test run has
+9 unrelated failures in concurrent onboarding/calendar work already present in
+the dirty worktree.
+
+Brand-board visual semantics correction (2026-07-09): user review found that
+`visual_territories` mixed locations, portraits, props, and layout references,
+and that content-pillar images were decorative rather than explanatory. The
+schema/template now use `production_spaces`: actual recurring filming/photo
+locations with purpose, best-use formats, continuity notes, and required correct
+location imagery. Props remain Reference Library assets, and pillar cards are
+typographic so unrelated images cannot be inserted. Mara now shows only her
+Research Desk and Walking-Note Route in wider context.
+
+Signature-props extension (2026-07-09): added a separate optional board section
+for recurring identity-bearing objects. Each prop requires its correct approved
+object image, narrative role, suitable uses, and continuity notes. Props remain
+Reference Library objects and never mix with production spaces. Mara’s Black
+Research Notebook is the first migrated example.
+
+Brand-board call-chain hardening (2026-07-09): moved
+`personal-brand-board` after Reference Library planning/resolution and before
+readiness validation in `create-influencer`. Production spaces now require
+typed `location` asset IDs and signature props require typed `object` asset IDs;
+unresolved categories fail closed, planned/prompted assets render intentional
+placeholders, and Reference Library changes stale the HTML projection. Mara's
+board was migrated to these links, rebuilt, visually checked, and validated
+without changing its `draft_for_review` approval state. Verification: 66 focused
+brand-board, drift, lifecycle, and provenance tests pass; 54 examples validate;
+compileall passes.
+
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **Run 2 (live connector smoke, ADR 0022) completed 2026-07-07** with `INFLUENCER_OS_CONNECTOR_MAX_CALLS=3` per connector: `reddit_openai` discovery works live (12-17 candidates per topic, 1 paid call, parsed shapes match the mirrored parser), but reddit.com answers the free direct-JSON enrichment reads with HTTP 403 "Blocked" — the enrichment leg never attaches engagement metrics live. Found and fixed in the same batch: `enriched_count` counted attempts, not successes, so the fetch result claimed full enrichment while attaching nothing; it now counts only candidates with engagement attached and notes the failures (regression test `test_blocked_enrichment_counts_zero_and_notes_failure`). `youtube_data_api` works live (5 candidates, 2 paid calls, engagement present). `firecrawl_web` works on public article URLs but reddit.com also blocks it (HTTP 403 at the Firecrawl layer). `x_xai` fails with HTTP 403 `permission-denied` — the xAI team account has no credits; operator action: purchase credits at console.x.ai, then re-run one bounded fetch. `linkedin_apify` untested (no `APIFY_API_KEY`). Consequence for research quality: Reddit evidence currently carries discovery relevance but no visible metrics, so evidence strength for Reddit sources stays capped until an alternative engagement path (e.g. authenticated Reddit API) is approved in its own ADR. **Remaining before any automation decision:** exercise the full manual research-intelligence loop (run → findings → intelligence updates) against a real creator using the working connectors.
 2. Phase 2 Learning OS — **build slices complete** per `docs/workflows/learning-os-implementation-plan.md`: slices 1 (published-post registration), 2 (analytics snapshot ingestion), 3 (Performance Summary contract + `create-performance-summary` skill), 4 (`distill-creator-learning` skill + `log-learning --evidence` creator-lesson mode), 5 (recall index extension to the three Phase 2 record types), and 6 (semantic lookup projection, FTS5 keyword leg per Decision 1: `rebuild-lookup`/`query-lookup`) complete 2026-07-06. All six runnable exit criteria are met; remaining Phase 2 items are explicitly deferred (analytics API connector on request per Decision 3; vector lookup leg with Command Centre per Decision 1).
 3. Optional: render the comparison map Excalidraw scene.

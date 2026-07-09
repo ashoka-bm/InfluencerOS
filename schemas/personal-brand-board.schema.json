@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/personal-brand-board.schema.json",
+  "title": "PersonalBrandBoard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["board_type", "approval_status", "name", "handle", "tagline", "descriptor", "summary", "audience", "promise", "differentiator", "brand_adjectives", "anti_adjectives", "hero_image", "avatar_image", "palette", "typography", "wordmark", "production_spaces", "signature_props", "imagery_rules", "content_templates", "voice", "pillars", "qa_notes", "footer"],
+  "properties": {
+    "board_type": { "type": "string", "enum": ["brand_board", "mini_style_guide"] },
+    "approval_status": { "type": "string", "enum": ["draft_for_review", "approved"] },
+    "name": { "type": "string", "minLength": 1 },
+    "handle": { "type": "string", "minLength": 1 },
+    "tagline": { "type": "string", "minLength": 1 },
+    "descriptor": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "promise": { "type": "string", "minLength": 1 },
+    "differentiator": { "type": "string", "minLength": 1 },
+    "brand_adjectives": { "type": "array", "minItems": 3, "maxItems": 6, "items": { "type": "string", "minLength": 1 } },
+    "anti_adjectives": { "type": "array", "minItems": 3, "maxItems": 6, "items": { "type": "string", "minLength": 1 } },
+    "hero_image": { "type": "string" },
+    "avatar_image": { "type": "string" },
+    "palette": {
+      "type": "array", "minItems": 6, "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["name", "hex", "role", "usage"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+          "role": { "type": "string", "enum": ["Base", "Surface", "Line", "Primary", "Support", "Emphasis", "Secondary", "Text"] },
+          "usage": { "type": "string", "pattern": "^[0-9]{1,2}%$" }
+        }
+      }
+    },
+    "typography": {
+      "type": "object", "additionalProperties": false,
+      "required": ["display", "subhead", "body", "caption_data"],
+      "properties": {
+        "display": { "$ref": "#/definitions/type_role" },
+        "subhead": { "$ref": "#/definitions/type_role" },
+        "body": { "$ref": "#/definitions/type_role" },
+        "caption_data": { "$ref": "#/definitions/type_role" }
+      }
+    },
+    "wordmark": {
+      "type": "object", "additionalProperties": false,
+      "required": ["primary", "handle_treatment", "submark", "avatar_guidance"],
+      "properties": {
+        "primary": { "type": "string", "minLength": 1 },
+        "handle_treatment": { "type": "string", "minLength": 1 },
+        "submark": { "type": "string", "minLength": 1 },
+        "avatar_guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "production_spaces": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "$ref": "#/definitions/production_space" } },
+    "signature_props": { "type": "array", "maxItems": 6, "items": { "$ref": "#/definitions/signature_prop" } },
+    "imagery_rules": {
+      "type": "object", "additionalProperties": false,
+      "required": ["framing", "lighting", "use", "avoid"],
+      "properties": {
+        "framing": { "$ref": "#/definitions/string_list" },
+        "lighting": { "$ref": "#/definitions/string_list" },
+        "use": { "$ref": "#/definitions/string_list" },
+        "avoid": { "$ref": "#/definitions/string_list" }
+      }
+    },
+    "content_templates": { "type": "array", "minItems": 3, "maxItems": 6, "items": { "$ref": "#/definitions/content_template" } },
+    "voice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["headlines", "caption_starters", "use_words", "avoid_words", "sliders"],
+      "properties": {
+        "headlines": { "$ref": "#/definitions/string_list" },
+        "caption_starters": { "$ref": "#/definitions/string_list" },
+        "use_words": { "$ref": "#/definitions/string_list" },
+        "avoid_words": { "$ref": "#/definitions/string_list" },
+        "sliders": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/definitions/slider" } }
+      }
+    },
+    "pillars": { "type": "array", "minItems": 4, "maxItems": 6, "items": { "$ref": "#/definitions/pillar" } },
+    "qa_notes": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "$ref": "#/definitions/note" } },
+    "footer": { "type": "array", "minItems": 2, "maxItems": 5, "items": { "type": "string", "minLength": 1 } }
+  },
+  "definitions": {
+    "string_list": { "type": "array", "minItems": 1, "maxItems": 6, "items": { "type": "string", "minLength": 1 } },
+    "type_role": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "stack", "sample", "spec"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "stack": { "type": "string", "minLength": 1 },
+        "sample": { "type": "string", "minLength": 1 },
+        "spec": { "type": "string", "minLength": 1 }
+      }
+    },
+    "production_space": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "purpose", "best_for", "continuity_notes", "reference_asset_id"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "best_for": { "$ref": "#/definitions/string_list" },
+        "continuity_notes": { "type": "string", "minLength": 1 },
+        "reference_asset_id": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" }
+      }
+    },
+    "signature_prop": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "role", "best_for", "continuity_notes", "reference_asset_id"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "best_for": { "$ref": "#/definitions/string_list" },
+        "continuity_notes": { "type": "string", "minLength": 1 },
+        "reference_asset_id": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" }
+      }
+    },
+    "content_template": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "headline", "caption", "image"],
+      "properties": { "title": { "type": "string", "minLength": 1 }, "headline": { "type": "string", "minLength": 1 }, "caption": { "type": "string", "minLength": 1 }, "image": { "type": "string" }, "variant": { "type": "string", "enum": ["accent"] } }
+    },
+    "slider": {
+      "type": "object", "additionalProperties": false,
+      "required": ["left", "right", "position"],
+      "properties": { "left": { "type": "string", "minLength": 1 }, "right": { "type": "string", "minLength": 1 }, "position": { "type": "integer", "minimum": 0, "maximum": 100 } }
+    },
+    "pillar": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": { "name": { "type": "string", "minLength": 1 }, "description": { "type": "string", "minLength": 1 } }
+    },
+    "note": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "body"],
+      "properties": { "title": { "type": "string", "minLength": 1 }, "body": { "type": "string", "minLength": 1 } }
+    }
+  }
+}

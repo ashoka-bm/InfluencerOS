@@ -64,3 +64,10 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### create-reference-library
 - 2026-07-04: Reference planning should derive required assets from platform-to-medium mapping and explicitly handle person reference images, recurring locations, collaborators, and identity-attached objects.
 - 2026-07-09: Fan out grouped source language into one Reference Asset and isolated output image per distinct physical prop; schema-valid grouped prompts are still incomplete.
+- 2026-07-09: Treat generated brand or carousel imagery as supporting references only; exact palette, typography, and layout tokens belong to the canonical personal brand board.
+
+### personal-brand-board
+- 2026-07-09: Keep one package-owned HTML template and populate it from each creator's schema-valid JSON spec so visual identity stays exact, reusable, and drift-checkable.
+- 2026-07-09: Standardize visual-world sections as actual production spaces with correct location images; keep props in the reference library and render content pillars without decorative imagery.
+- 2026-07-09: Surface recurring identity-bearing objects in a dedicated optional signature-props section with correct object imagery, purpose, uses, and continuity rules; never mix props with production spaces.
+- 2026-07-09: Invoke the board only after Reference Library planning; bind production spaces and props by typed asset ID so incorrect image categories fail validation and prompt-ready references render intentional placeholders.

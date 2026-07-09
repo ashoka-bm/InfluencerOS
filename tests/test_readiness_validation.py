@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from influencer_os.brand_boards import rebuild_brand_board
 from influencer_os.creator_workspaces import init_creator, validate_creator_workspace
 from influencer_os.validation import ValidationError
 
@@ -334,6 +335,21 @@ def place_asset_files(workspace_dir):
             prompt.write_text(f"prompt for {asset['asset_id']}\n")
 
 
+def place_brand_board_space_files(workspace_dir):
+    spec_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    if not spec_path.exists():
+        return
+    spec = json.loads(spec_path.read_text())
+    library = json.loads(
+        (workspace_dir / "references" / "reference-library.json").read_text()
+    )
+    assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+    for item in [*spec["production_spaces"], *spec["signature_props"]]:
+        target = workspace_dir / assets_by_id[item["reference_asset_id"]]["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"brand board reference fixture for {item['title']}\n")
+
+
 def write_readiness_milestones(
     workspace_dir,
     profile_status="ready",
@@ -411,6 +427,11 @@ def make_ready_workspace(temp_dir, status):
     write_channels(workspace_dir)
     write_content_strategy(workspace_dir, status="approved")
     write_conversion_asset(workspace_dir)
+    (workspace_dir / "references" / "brand" / "personal-brand-board.json").write_text(
+        (ROOT / "examples" / "personal-brand-board.example.json").read_text()
+    )
+    place_brand_board_space_files(workspace_dir)
+    rebuild_brand_board(workspace_dir)
     return workspace_dir
 
 
@@ -567,6 +588,7 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
                 approve_visual_assets,
             )
             place_asset_files(workspace_dir)
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
 
@@ -950,6 +972,32 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
 
 
 class FoundationReadyBlockerTests(unittest.TestCase):
+    def test_visual_foundation_requires_a_complete_personal_brand_board(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            (workspace_dir / "references" / "brand" / "personal-brand-board.json").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("personal brand board", str(ctx.exception))
+
+    def test_visual_foundation_requires_explicit_personal_brand_board_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def reopen_board(spec):
+                spec["approval_status"] = "draft_for_review"
+
+            rewrite_json(
+                workspace_dir / "references" / "brand" / "personal-brand-board.json",
+                reopen_board,
+            )
+            rebuild_brand_board(workspace_dir)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("personal brand board requires explicit approval", str(ctx.exception))
+
     def test_populated_foundation_ready_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
@@ -1122,6 +1170,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
                         asset.pop("prompt_path", None)
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", plan_outfit)
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
@@ -1146,6 +1195,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
                 )
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", add_retired)
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
@@ -1456,6 +1506,7 @@ class AssetSourceRefTests(unittest.TestCase):
             rewrite_json(
                 workspace_dir / "references" / "reference-library.json", intake_id_source_ref
             )
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")

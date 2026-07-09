@@ -24,6 +24,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.boards import rebuild_board, validate_board
+from influencer_os.brand_boards import rebuild_brand_board, validate_brand_board
 from influencer_os.calendars import rebuild_calendar, validate_calendar
 from influencer_os.full_validation import validate_all
 from influencer_os.analytics import import_analytics_csv
@@ -42,7 +43,7 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "calendar", "all"], help="Validation target ('all' composes workspace, research, queue, projections, and every project — the alpha release gate).")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "calendar", "brand-board", "all"], help="Validation target ('all' composes workspace, research, queue, projections, and every project — the alpha release gate).")
     validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue/board validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
@@ -114,6 +115,9 @@ def main(argv=None):
 
     calendar_parser = subparsers.add_parser("rebuild-calendar", help="Rebuild the interactive content calendar projection from canonical records.")
     calendar_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
+    brand_board_parser = subparsers.add_parser("rebuild-brand-board", help="Populate the reusable personal brand board template from a creator's canonical brand spec.")
+    brand_board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
     prune_parser = subparsers.add_parser("prune", help="Apply research retention rules (dry-run unless --apply).")
     prune_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
@@ -270,6 +274,12 @@ def main(argv=None):
                 result = validate_calendar(args.path)
                 print(f"Validated content calendar: {result['calendar_path']}")
                 print(f"Checked {result['post_count']} scheduled posts.")
+                return 0
+            if args.target == "brand-board":
+                if not args.path:
+                    raise ValueError("validate brand-board requires a creator workspace path")
+                result = validate_brand_board(args.path)
+                print(f"Validated personal brand board: {result['board_path']}")
                 return 0
             if args.target == "all":
                 if not args.path:
@@ -443,6 +453,11 @@ def main(argv=None):
             count = result["post_count"]
             print(f"Rebuilt content calendar: {count} scheduled {'post' if count == 1 else 'posts'}")
             print(f"Calendar: {result['calendar_path']}")
+            return 0
+
+        if args.command == "rebuild-brand-board":
+            result = rebuild_brand_board(args.creator_workspace)
+            print(f"Rebuilt personal brand board: {result['board_path']}")
             return 0
 
         if args.command == "prune":

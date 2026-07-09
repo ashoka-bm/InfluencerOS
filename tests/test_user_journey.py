@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tests.test_readiness_validation import (
     place_asset_files,
+    place_brand_board_space_files,
     populate_foundation,
     write_channels,
     write_readiness_milestones,
@@ -109,6 +110,12 @@ def seed_creator_setup_outputs(workspace_dir):
     place_asset_files(workspace_dir)
     write_channels(workspace_dir)
     write_readiness_milestones(workspace_dir)
+    copy_example(
+        "personal-brand-board.example.json",
+        workspace_dir / "references" / "brand" / "personal-brand-board.json",
+    )
+    place_brand_board_space_files(workspace_dir)
+    run_cli("rebuild-brand-board", workspace_dir)
 
 
 def seed_research_outputs(workspace_dir):

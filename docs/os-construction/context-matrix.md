@@ -82,6 +82,7 @@ Current workflow coverage:
 | `create-identity` | Creator setup |
 | `create-soul` | Creator setup |
 | `create-personal-brand` | Creator setup |
+| `personal-brand-board` | Creator setup |
 | `create-voice-samples` | Creator setup |
 | `create-reference-library` | Creator setup |
 | `elevenlabs-voice-design` | Creator setup |

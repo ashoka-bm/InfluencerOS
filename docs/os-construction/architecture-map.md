@@ -91,6 +91,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
 | `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
 | `create-personal-brand` | setup | `brand_context/personal-brand.md`. | [BUILT] |
+| `personal-brand-board` | setup | Creator-specific token spec plus reusable HTML mini-style-guide projection. | [BUILT] |
 | `create-voice-samples` | setup | `brand_context/voice-samples.md`. | [BUILT] |
 | `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
 | `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
@@ -209,7 +210,9 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 7  Runtime context   -> Skill(create-runtime-context)
   Phase 8  Reference planning -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
-  Phases 1,9-13  intake, prompt staging, readiness, milestone acceptance, generation gate (inline)
+  Phases 9-10 Reference prompt staging and resolution (inline; provider calls gated)
+  Phase 11 Brand board       -> Skill(personal-brand-board) (visual creators; typed Reference Library links)
+  Phases 1,12-15 intake, records, readiness, milestone acceptance, generation gate (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)
@@ -255,6 +258,7 @@ Freshly-initialized workspaces contain `.claude/skills/` because `init-creator` 
 ```text
 influencer_os/cli.py
   -> creator_workspaces.py   (workspace scaffold/sync/update/validate + readiness milestones)
+  -> brand_boards.py         (token spec + Reference Library -> editable brand-board projection)
   -> calendars.py            (content-schedule -> interactive calendar projection)
   -> projects.py             (project scaffold/validate + provenance resolution)
   -> memory.py               (bounded memory-write + log-learning writers)

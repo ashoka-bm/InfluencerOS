@@ -1,0 +1,97 @@
+{
+  "board_type": "mini_style_guide",
+  "approval_status": "approved",
+  "name": "Luna Fit",
+  "handle": "@lunafit",
+  "tagline": "Movement small enough to start.",
+  "descriptor": "Desk-worker movement guide",
+  "summary": "Calm, practical resets for people living inside real workdays.",
+  "audience": "Busy desk workers who feel excluded by intense fitness culture.",
+  "promise": "One useful movement reset that fits the time and space available now.",
+  "differentiator": "Constraint-first demonstrations with body-neutral language and visible modifications.",
+  "brand_adjectives": ["calm", "practical", "kind"],
+  "anti_adjectives": ["punishing", "clinical", "luxury"],
+  "hero_image": "",
+  "avatar_image": "",
+  "palette": [
+    { "name": "Warm Paper", "hex": "#F6F0E6", "role": "Base", "usage": "46%" },
+    { "name": "Soft Sand", "hex": "#D8CDBD", "role": "Surface", "usage": "14%" },
+    { "name": "Quiet Line", "hex": "#A7A094", "role": "Line", "usage": "8%" },
+    { "name": "Reset Blue", "hex": "#587C8D", "role": "Primary", "usage": "12%" },
+    { "name": "Pale Glass", "hex": "#DDE8E7", "role": "Support", "usage": "6%" },
+    { "name": "Warm Amber", "hex": "#B8844C", "role": "Emphasis", "usage": "4%" },
+    { "name": "Steady Moss", "hex": "#5D6B59", "role": "Secondary", "usage": "4%" },
+    { "name": "Workday Ink", "hex": "#242424", "role": "Text", "usage": "6%" }
+  ],
+  "typography": {
+    "display": { "name": "Georgia", "stack": "Georgia, serif", "sample": "Start smaller.", "spec": "64-88px / 0.95" },
+    "subhead": { "name": "Avenir Next", "stack": "\"Avenir Next\", Arial, sans-serif", "sample": "BEFORE THE NEXT CALL", "spec": "14-18px / 700" },
+    "body": { "name": "Avenir Next", "stack": "\"Avenir Next\", Arial, sans-serif", "sample": "A useful reset should fit the day you actually have.", "spec": "16-18px / 1.5" },
+    "caption_data": { "name": "IBM Plex Mono", "stack": "\"IBM Plex Mono\", Menlo, monospace", "sample": "RESET 01 / 02:00", "spec": "11-13px / 700" }
+  },
+  "wordmark": {
+    "primary": "Luna Fit",
+    "handle_treatment": "@lunafit / tiny resets",
+    "submark": "LF",
+    "avatar_guidance": "Use a close, recognizable face crop without overlay text."
+  },
+  "production_spaces": [
+    {
+      "title": "Desk Corner",
+      "purpose": "The recurring workday location where a constraint and tiny reset are visible together.",
+      "best_for": ["chair resets", "between-meeting routines", "calendar-gap cues"],
+      "continuity_notes": "Keep the desk, chair, window direction, and camera height stable.",
+      "reference_asset_id": "asset_luna_living_room"
+    },
+    {
+      "title": "Living Room Wall",
+      "purpose": "A clear full-body space for standing movements and visible modifications.",
+      "best_for": ["wall-supported mobility", "standing resets", "full-body instruction"],
+      "continuity_notes": "Keep the wall uncluttered, floor marks stable, and camera near waist height.",
+      "reference_asset_id": "asset_luna_living_room_wall"
+    }
+  ],
+  "signature_props": [
+    {
+      "title": "Reset Timer",
+      "role": "A recurring object that makes Luna’s two-minute promise visible without adding fitness-theater styling.",
+      "best_for": ["routine openings", "timer close-ups", "habit-cue stills"],
+      "continuity_notes": "Use the same matte timer, neutral face, and unbranded casing across content.",
+      "reference_asset_id": "asset_luna_reset_timer"
+    }
+  ],
+  "imagery_rules": {
+    "framing": ["Eye-level portrait", "Full movement when instruction requires it"],
+    "lighting": ["Soft daylight", "Natural skin and room texture"],
+    "use": ["One visual lead", "Real workday context"],
+    "avoid": ["Luxury wellness stock", "Pain dramatization", "Body transformation imagery"]
+  },
+  "content_templates": [
+    { "title": "Carousel Cover", "headline": "Two minutes counts.", "caption": "SAVE THIS RESET", "image": "" },
+    { "title": "Reel Title", "headline": "Before the next call.", "caption": "DESK RESET", "image": "" },
+    { "title": "Story Frame", "headline": "Choose one.", "caption": "LOW-PRESSURE MENU", "image": "" },
+    { "title": "Quote Card", "headline": "Small is still useful.", "caption": "LUNA FIT NOTE", "image": "", "variant": "accent" }
+  ],
+  "voice": {
+    "headlines": ["Start smaller.", "Use the chair you already have."],
+    "caption_starters": ["Before the next call...", "Choose the version that fits today."],
+    "use_words": ["reset", "available", "repeatable", "gentle"],
+    "avoid_words": ["burn", "punish", "no excuses", "shred"],
+    "sliders": [
+      { "left": "intense", "right": "calm", "position": 82 },
+      { "left": "clinical", "right": "human", "position": 76 }
+    ]
+  },
+  "pillars": [
+    { "name": "Desk Resets", "description": "One visible action that fits between meetings." },
+    { "name": "Habit Cues", "description": "Attach movement to an existing workday moment." },
+    { "name": "Modifications", "description": "Make the action fit the person and room." },
+    { "name": "Body Neutrality", "description": "Capability and comfort without shame." }
+  ],
+  "qa_notes": [
+    { "title": "Accessibility", "body": "Use Workday Ink on Warm Paper for body copy and never rely on color alone." },
+    { "title": "Production Rule", "body": "Every frame needs one action, one hierarchy, and one clearly visible modification." },
+    { "title": "Source Rule", "body": "Use approved creator references first and keep generated copy out of image pixels." }
+  ],
+  "footer": ["Small enough to start", "Clear enough to repeat", "Kind enough to return to"]
+}

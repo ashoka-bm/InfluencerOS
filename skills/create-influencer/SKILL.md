@@ -5,6 +5,7 @@ dependencies:
   - create-identity
   - create-soul
   - create-personal-brand
+  - personal-brand-board
   - create-voice-samples
   - create-creator-profile
   - create-runtime-context
@@ -223,21 +224,22 @@ Run these internal phases in order:
 5. **Voice samples**: use `create-voice-samples` to create `brand_context/voice-samples.md` as the concrete example file.
 6. **Operational summary**: use `create-creator-profile` to create `creator-profile.json` from the accepted foundation.
 7. **Runtime context**: use `create-runtime-context` to create the tiny always-loaded `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md`.
-8. **Reference planning**: use `create-reference-library` to create `references/reference-library.json` entries for required real or planned assets.
+8. **Reference planning**: use `create-reference-library` to create `references/reference-library.json` entries with stable asset IDs for required real or planned assets.
 9. **Reference prompt staging**: if image or video is in scope, stage prompts in this order: user person image -> default video/photo style -> three character assets -> outfits -> locations -> objects. Use the canonical prompt templates under `docs/templates/creator-setup/reference-prompts/` unchanged.
-10. **Prompt drafting**: create separate provider-neutral `.prompt.md` files for missing images, locations, outfits, voice, and brand assets.
-11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
+10. **Reference resolution**: import or generate an exact approved batch, or retain `planned`/`prompted` assets for prompt-ready setup. Provider-backed work remains behind the exact-call generation gate.
+11. **Personal brand board**: for image, video, carousel, or story-sequence creators, use `personal-brand-board` only after Reference Library asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
+12. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
-12. **State reconciliation and readiness check**: run the §Setup State
+13. **State reconciliation and readiness check**: run the §Setup State
     Reconciliation pass, then run `python3 -m influencer_os validate workspace
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-13. **Milestone acceptance**: ask for approval before advancing each milestone:
+14. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
-14. **Generation gate**: stop before provider-backed generation unless the user approves the exact call or batch.
+15. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
 
 ## Medium-Based Blockers
 
@@ -245,16 +247,16 @@ All creators require tiny runtime context, identity, soul, personal brand, niche
 
 Text-first creators require brand voice, publication style, and topic/pillar strategy.
 
-Image creators require image policy, brand or visual system reference, image style guidance, and image prompts or approved references.
+Image creators require image policy, a validated and separately approved tokenized personal brand board, image style guidance, and image prompts or approved references.
 
-Video creators require character identity plate, location reference, outfit or wardrobe reference, default video/photo style card, brand reference, ElevenLabs Voice Design prompt package, and shot/motion constraints.
+Video creators require character identity plate, location reference, outfit or wardrobe reference, default video/photo style card, a validated and separately approved tokenized personal brand board, ElevenLabs Voice Design prompt package, and shot/motion constraints.
 
 The default video/photo style card is a reusable `@video_style_reference`;
 its controls and scope rules live in `create-reference-library`.
 
 Voiceover and audio creators require a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken voice generation still requires an imported/approved voice sample or voice id brought back through the provider-boundary path plus pronunciation and tone boundaries.
 
-Carousel and story-sequence creators require sequence style, slide or frame visual system, and text overlay policy.
+Carousel and story-sequence creators require the tokenized personal brand board, sequence style, slide or frame visual system, and text overlay policy.
 
 ## Setup Readiness Hierarchy
 
@@ -333,6 +335,10 @@ last.*
 - 2026-07-09: Corrected no-voiceover handling — see §Setup Readiness Hierarchy.
   A no-voiceover policy prohibits spoken generation; it never grants permission
   or substitutes for approved/imported voice evidence.
+- 2026-07-09: Added the separately reviewed tokenized personal brand board after
+  the Mara Vale run treated an abstract generated reference image as a complete
+  production brand system. It runs after Reference Library planning and binds
+  spaces/props to typed asset IDs.
 
 ## Self-Update
 
