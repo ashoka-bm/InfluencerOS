@@ -10,6 +10,7 @@ dependencies:
   - create-creator-profile
   - create-runtime-context
   - create-reference-library
+  - create-lead-magnet
 ---
 
 # Create An Influencer
@@ -237,15 +238,20 @@ Run these internal phases in order:
 11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
-12. **State reconciliation and readiness check**: run the §Setup State
+12. **Conversion assets**: when the strategy references a lead magnet, offer,
+    or other conversion mechanism, use `create-lead-magnet` — Part A (record +
+    drafted body) during strategy, since `strategy_ready` validation blocks on
+    missing conversion-asset records; Part B (theme, render, approval) after
+    strategy acceptance and before calendar slots promote the asset.
+13. **State reconciliation and readiness check**: run the §Setup State
     Reconciliation pass, then run `python3 -m influencer_os validate workspace
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-13. **Milestone acceptance**: ask for approval before advancing each milestone:
+14. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
-14. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
+15. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
 
 ## Medium-Based Blockers
 
@@ -275,9 +281,9 @@ Run creator setup as an onboarding hierarchy:
    mechanism, game-theory cadence, monthly format mix per platform, and
    related-post chains such as a Substack article feeding Instagram or TikTok
    clips.
-3. **Production Readiness**: create required lead magnets or conversion assets,
-   confirm or skip channel handles, and translate the strategy into calendar
-   slots.
+3. **Production Readiness**: create required lead magnets or conversion assets
+   (via `create-lead-magnet`), confirm or skip channel handles, and translate
+   the strategy into calendar slots.
 4. **Post Production**: research and create individual posts only after the
    creator foundation and strategy calendar are approved.
 

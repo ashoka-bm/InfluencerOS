@@ -87,7 +87,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
 | `influencer-os` | conductor | Content-creation conductor (10 phases; `dependencies` + `## Phase Owners` declared). | [BUILT] |
-| `create-influencer` | conductor | Influencer-setup conductor (14 phases); product/brand routing remains planned under ADR 0026. | [BUILT] |
+| `create-influencer` | conductor | Influencer-setup conductor (15 phases); product/brand routing remains planned under ADR 0026. | [BUILT] |
 | `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
 | `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
 | `create-personal-brand` | setup | `brand_context/personal-brand.md`. | [BUILT] |
@@ -214,7 +214,8 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 9  Selected reference planning, prompt staging, and resolution -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
   Phase 10 Brand board       -> Skill(personal-brand-board) (visual creators; typed Reference Library links)
-  Phases 1,11-14 intake, records, readiness, milestone acceptance, generation gate (inline)
+  Phase 12 Conversion assets -> Skill(create-lead-magnet)
+  Phases 1,11,13-15 intake, onboarding records, readiness, milestone acceptance, generation gate (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)
