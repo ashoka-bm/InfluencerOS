@@ -23,11 +23,18 @@ The workflow should create or refine:
 - `context/MEMORY.md`
 - `creator-workspace.json`
 - `creator-profile.json`
+- `readiness-gates.json`
+- `channels.json`
+- `content-strategy.json`
 - `brand_context/identity.md`
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
 - `brand_context/voice-samples.md`
 - `references/reference-library.json`
+- `conversion-assets/*.json` when strategy references a lead magnet, offer, or
+  other conversion mechanism
+- `content-schedule.json` when the workspace is being moved to production
+  readiness
 - source files under `sources/`
 - provider-neutral reference asset prompts when useful
 - `progress/setup-checklist.md`
@@ -41,6 +48,50 @@ Creator Setup should be permissive at intake and strict at readiness.
 A user may begin with almost nothing, such as "generate a persona," a display name, or a niche. The system may then interview the user, recommend defaults, draft missing identity material, and create provider-neutral prompts. However, the creator should not be marked ready for downstream research and content planning until the required foundation has been reviewed or explicitly accepted.
 
 Audience and niche remain creator-profile inputs. The system may transform user-provided words into the ideal stored shape, but it must not redefine the creator's audience or niche without user confirmation.
+
+## Setup State Reconciliation
+
+Creator setup must not maintain parallel state in prose. Before answering
+"where are we?", resuming a creator setup, or advancing a readiness milestone,
+read these files first:
+
+- `creator-workspace.json`
+- `readiness-gates.json`
+- `channels.json`
+- `content-strategy.json`
+- `conversion-assets/*.json`
+- `content-schedule.json`, when present
+- `progress/setup-checklist.md`
+- `context/MEMORY.md`
+
+Machine-readable files own state:
+
+- `readiness-gates.json` owns the profile, foundation, strategy, and production
+  gate statuses.
+- `content-strategy.json` owns platform roles, monthly mix, cadence principles,
+  related-post chains, campaigns, and conversion paths.
+- `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
+  waitlist, opt-in page, and partner asset status.
+- `content-schedule.json` owns calendar readiness.
+- Markdown explains decisions, blockers, and review notes. It must mirror the
+  canonical records instead of inventing additional gate names or stale blockers.
+
+After any user approval, accepted generation batch, conversion-asset review, or
+calendar update, run a same-turn state sync pass:
+
+1. update the canonical JSON record;
+2. remove stale blocker language from rich context files, progress notes,
+   `AGENTS.md`, and `CLAUDE.md`;
+3. write the next gate into `progress/setup-checklist.md` and `context/MEMORY.md`;
+4. run `python3 -m influencer_os validate workspace <workspace-path>`.
+
+The validator rejects readiness states that still contain known stale setup
+phrases such as a pending portrait approval after the foundation gate is ready.
+It also enforces that `strategy_ready` has approved conversion assets and
+`production_ready` has a valid content schedule. A workspace with approved
+foundation and approved strategy, but a drafted lead magnet and no schedule, is
+not production-ready; its next step is lead magnet review, then calendar
+creation.
 
 ## Intake Modes
 

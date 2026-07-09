@@ -398,6 +398,11 @@ def write_conversion_asset(workspace_dir, status="approved"):
     markdown.write_text("# 7 Tiny Reset Questions\n")
 
 
+def write_content_schedule(workspace_dir):
+    record = json.loads((ROOT / "examples" / "creator-content-schedule.example.json").read_text())
+    (workspace_dir / "content-schedule.json").write_text(json.dumps(record, indent=2) + "\n")
+
+
 def make_ready_workspace(temp_dir, status):
     workspace_dir = init_workspace_with_status(temp_dir, status)
     populate_foundation(workspace_dir)
@@ -554,6 +559,62 @@ class OnboardingStageGateTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("content-schedule.json", str(ctx.exception))
+
+    def test_foundation_ready_rejects_stale_foundation_blocker_prose(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            (workspace_dir / "brand_context" / "identity.md").write_text(
+                (workspace_dir / "brand_context" / "identity.md").read_text()
+                + "\n- Open blockers: user approval of the generated portrait concept.\n"
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("stale foundation blocker language", message)
+            self.assertIn("brand_context/identity.md", message)
+
+    def test_foundation_ready_rejects_stale_soul_blocker_prose(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            (workspace_dir / "brand_context" / "soul.md").write_text(
+                (workspace_dir / "brand_context" / "soul.md").read_text()
+                + "\n- Open blockers: portrait pending approval.\n"
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("stale foundation blocker language", message)
+            self.assertIn("brand_context/soul.md", message)
+
+    def test_foundation_ready_allows_negated_reference_asset_phrase(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            (workspace_dir / "progress" / "setup-checklist.md").write_text(
+                (workspace_dir / "progress" / "setup-checklist.md").read_text()
+                + "\n- No reference assets missing after approval.\n"
+            )
+
+            result = validate_creator_workspace(workspace_dir)
+            self.assertEqual(result["creator_slug"], "luna-fit")
+
+    def test_mara_style_state_stays_blocked_before_production(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_gates(
+                workspace_dir,
+                strategy_status="ready",
+                production_status="ready",
+            )
+            write_conversion_asset(workspace_dir, status="drafted")
+            write_content_schedule(workspace_dir)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("conversion asset", message)
+            self.assertIn("drafted", message)
 
 
 class ReferenceLibraryIntegrityTests(unittest.TestCase):

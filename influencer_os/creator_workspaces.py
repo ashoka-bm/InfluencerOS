@@ -167,6 +167,36 @@ SECTION_HEADING_PATTERN = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 VOICE_SAMPLE_HEADING_PATTERN = re.compile(r"^#{2,3}\s+(?:\d+\.\s+|Sample:)", re.MULTILINE)
 WORD_PATTERN = re.compile(r"\b[\w][\w'-]*\b")
 
+# Phrases that indicate stale setup prose is contradicting the canonical
+# readiness gates. Keep this list narrow: scaffolds may contain unchecked
+# work, but these phrases reopen gates that a machine-readable record has
+# already closed.
+FOUNDATION_READY_STALE_PATTERNS = (
+    r"\bfoundation draft pending user approval\b",
+    r"\bcreator foundation is still gated\b",
+    r"\bfoundation is still gated\b",
+    r"\bunresolved creator-foundation\b",
+    r"\buser approval of the generated portrait\b",
+    r"\bportrait pending approval\b",
+    r"\bbrand system prompt and slide style need approval\b",
+    r"\b(open blockers?|blockers?|blocked|missing|required):.*\breference assets missing\b",
+)
+STRATEGY_READY_STALE_PATTERNS = (
+    r"\bstrategy pending approval\b",
+    r"\bstrategy posture pending approval\b",
+    r"\bstrategy draft pending user approval\b",
+)
+
+SETUP_STATE_PROSE_FILES = (
+    "AGENTS.md",
+    "CLAUDE.md",
+    "context/MEMORY.md",
+    "brand_context/identity.md",
+    "brand_context/soul.md",
+    "brand_context/personal-brand.md",
+    "progress/setup-checklist.md",
+)
+
 # Source-type routing from the creator-setup Source Import rules: master-intake
 # material (breakdowns, interviews) lands in intakes/, external docs in
 # imports/, informal notes in notes/.
@@ -904,6 +934,14 @@ def _validate_readiness_gates(
     if _stage_at_least(status, "foundation_ready"):
         blockers.extend(_foundation_stage_blockers(workspace_dir, readiness_gates))
         blockers.extend(_foundation_blockers(workspace_dir))
+        blockers.extend(
+            _setup_state_prose_blockers(
+                workspace_dir,
+                "foundation",
+                readiness_gates["gates"]["foundation"],
+                FOUNDATION_READY_STALE_PATTERNS,
+            )
+        )
 
         if not manifest["source_intakes"]:
             blockers.append(
@@ -945,6 +983,14 @@ def _validate_readiness_gates(
                 workspace_dir, readiness_gates, content_strategy, creator_profile
             )
         )
+        blockers.extend(
+            _setup_state_prose_blockers(
+                workspace_dir,
+                "strategy",
+                readiness_gates["gates"]["strategy"],
+                STRATEGY_READY_STALE_PATTERNS,
+            )
+        )
 
     if _stage_at_least(status, "production_ready"):
         blockers.extend(_production_stage_blockers(workspace_dir, readiness_gates))
@@ -968,6 +1014,29 @@ def _profile_stage_blockers(creator_profile, readiness_gates, channels):
         blockers.append(
             "selected channel(s) missing from channels.json: " + ", ".join(missing)
         )
+    return blockers
+
+
+def _setup_state_prose_blockers(workspace_dir, gate_name, gate, stale_patterns):
+    if gate["status"] not in {"ready", "waived"}:
+        return []
+
+    blockers = []
+    for relative_path in SETUP_STATE_PROSE_FILES:
+        path = workspace_dir / relative_path
+        if not path.exists():
+            continue
+        lines = path.read_text().lower().splitlines()
+        found = sorted(
+            pattern
+            for pattern in stale_patterns
+            if any(re.search(pattern, line) for line in lines)
+        )
+        if found:
+            blockers.append(
+                f"{relative_path} contains stale {gate_name} blocker language after "
+                f"{gate_name} gate is {gate['status']}: " + ", ".join(sorted(found))
+            )
     return blockers
 
 

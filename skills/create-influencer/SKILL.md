@@ -112,6 +112,47 @@ full onboarding setup is complete when the workspace is `production_ready`: the
 profile, foundation, strategy, conversion assets, and first calendar plan are
 all accepted or explicitly waived.
 
+## Setup State Reconciliation
+
+Before answering "where are we?", resuming setup, or advancing any readiness
+milestone, read the canonical state records first:
+
+- `creator-workspace.json`
+- `readiness-gates.json`
+- `channels.json`
+- `content-strategy.json`
+- `conversion-assets/*.json`
+- `content-schedule.json`, when present
+- `progress/setup-checklist.md`
+- `context/MEMORY.md`
+
+Treat machine-readable records as authoritative:
+
+- `readiness-gates.json` owns profile, foundation, strategy, and production
+  gate state.
+- `content-strategy.json` owns approved platform strategy, monthly mix,
+  cadence principles, campaigns, and conversion paths.
+- `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
+  waitlist, and landing/opt-in asset status.
+- `content-schedule.json` owns calendar readiness.
+- Markdown files explain the current state; they must not invent a parallel
+  gate model or reopen a gate already closed by the canonical records.
+
+After any user approval, provider-approved generation batch, conversion-asset
+draft/review, or calendar update, run a state sync pass in the same turn:
+
+1. update the relevant machine-readable record;
+2. remove stale blocker language from `brand_context/*`, `context/MEMORY.md`,
+   `progress/setup-checklist.md`, `AGENTS.md`, and `CLAUDE.md`;
+3. mirror the next gate in `progress/setup-checklist.md`;
+4. run `python3 -m influencer_os validate workspace <workspace-path>`.
+
+If validation says the workspace is not `production_ready`, do not create post
+production work. For the common real-creator path where foundation and strategy
+are approved but the lead magnet is still drafted and no three-month schedule
+exists, the next step is lead magnet review followed by calendar creation, not
+individual post production.
+
 ## Decision Interview
 
 Use a Grill With Docs style Decision Interview whenever intake leaves gaps:
@@ -188,7 +229,11 @@ Run these internal phases in order:
 11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
-12. **Readiness check**: run `python3 -m influencer_os validate workspace <workspace-path>` — at readiness statuses it fails with the full stage and medium-based blocker list; mirror open blockers into `progress/setup-checklist.md`.
+12. **State reconciliation and readiness check**: run the §Setup State
+    Reconciliation pass, then run `python3 -m influencer_os validate workspace
+    <workspace-path>` — at readiness statuses it fails with the full stage,
+    medium-based blocker list, and stale setup-prose contradictions; mirror open
+    blockers into `progress/setup-checklist.md`.
 13. **Acceptance gate**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
@@ -282,6 +327,9 @@ last.*
   enough for image/video/voice creators; strategy must produce a monthly
   platform mix, conversion chains, and cadence principles before production
   calendarization.
+- 2026-07-09: Added setup-state reconciliation after a real creator run exposed
+  state drift between approved gates and stale Markdown blockers — see §Setup
+  State Reconciliation. Canonical JSON records own state; Markdown mirrors it.
 
 ## Self-Update
 
