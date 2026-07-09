@@ -30,6 +30,10 @@ def scaffold_valid_workspace(temp_dir):
     )
     for example_name, relative_path in [
         ("creator-profile.example.json", "creator-profile.json"),
+        (
+            "visual-continuity-plan.example.json",
+            "references/visual-continuity-plan.json",
+        ),
         ("reference-library.example.json", "references/reference-library.json"),
     ]:
         (workspace_dir / relative_path).write_text((ROOT / "examples" / example_name).read_text())

@@ -80,6 +80,8 @@ Baseline skill source files live under repo `skills/<skill-name>/SKILL.md`. Crea
 
 ```text
 Creator Profile
+  -> user-approved Visual Continuity Plan for props, product/brand objects, and production spaces
+  -> Reference Library promotes selected Signature Props/Objects and Anchor Spaces
   -> Creator Content Schedule
   -> Video Understanding Pack, when researching real videos
   -> Research Findings
@@ -133,7 +135,7 @@ resolves deeper provenance transitively (see the Product Invariant in
 
 | Module | Inputs (read-only) | Public interface records | Internal records |
 | --- | --- | --- | --- |
-| Creator Setup | intake sources, references | Creator Profile, Creator Content Schedule, readiness status, `context/` and `brand_context/` files | import scratch, draft notes |
+| Creator Setup | intake sources, references | Creator Profile, Visual Continuity Plan, Reference Library, Creator Content Schedule, readiness status, `context/` and `brand_context/` files | import scratch, draft notes |
 | Research and Ideas | Creator Profile, Creator Content Schedule, distilled creator memory, public sources | Research Findings (`research/findings.md`), Idea Queue (`research/idea-queue/`), Idea Promotion (`research/idea-promotions/`) | research runs, search plans, evidence, metric snapshots, source-yield ledgers, research intelligence, stable findings |
 | Production | Idea Promotion, evidence brief, Reference Library | Project, Applied Social Template, format-specific plans, Base Video Generation Plan, Output Package | draft prompts, working notes |
 | Learning | Output Package, Published Post Record, Analytics Snapshots | Performance Summary, distilled creator memory | raw analytics exports |
@@ -304,6 +306,7 @@ Implemented workspace, project, and Learning OS schemas:
 
 - `creator-workspace.schema.json`
 - `creator-profile.schema.json` v2
+- `visual-continuity-plan.schema.json`
 - `reference-library.schema.json`
 - `project.schema.json`
 - `output-package.schema.json`

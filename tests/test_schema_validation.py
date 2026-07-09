@@ -350,6 +350,16 @@ class SchemaValidationTests(unittest.TestCase):
                 with self.assertRaises(ValidationError):
                     validate_record("reference-library", invalid)
 
+    def test_visual_continuity_approval_requires_user_metadata(self):
+        example = load_json("examples/visual-continuity-plan.example.json")
+        validate_record("visual-continuity-plan", example)
+
+        invalid = deepcopy(example)
+        invalid["selection_review"]["decided_by"] = None
+
+        with self.assertRaises(ValidationError):
+            validate_record("visual-continuity-plan", invalid)
+
     def test_content_ideas_require_evidence_refs(self):
         example = load_json("examples/content-idea-set.example.json")
         invalid = deepcopy(example)

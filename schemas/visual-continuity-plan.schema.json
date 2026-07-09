@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/visual-continuity-plan.schema.json",
+  "title": "VisualContinuityPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "visual_continuity_plan_id",
+    "creator_profile_id",
+    "created_on",
+    "candidates",
+    "selection_review"
+  ],
+  "properties": {
+    "visual_continuity_plan_id": {
+      "type": "string",
+      "pattern": "^visual_continuity_plan_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "candidate_type",
+          "name",
+          "source_refs",
+          "brand_meaning",
+          "atmosphere_role",
+          "brand_expression",
+          "recurring_use_cases",
+          "continuity_requirements",
+          "variation_allowed",
+          "effectiveness",
+          "risk_flags",
+          "redundancy_notes",
+          "recommendation",
+          "recommendation_rationale",
+          "user_decision",
+          "decision_notes",
+          "target_asset_id"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^continuity_candidate_[a-zA-Z0-9_-]+$"
+          },
+          "candidate_type": {
+            "type": "string",
+            "enum": ["prop", "product_object", "production_space"]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "brand_meaning": {
+            "type": "string",
+            "minLength": 1
+          },
+          "atmosphere_role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "brand_expression": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recurring_use_cases": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "continuity_requirements": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "variation_allowed": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "effectiveness": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "brand_alignment",
+              "distinctiveness",
+              "recurrence",
+              "atmosphere_contribution",
+              "visual_utility",
+              "continuity_sensitivity"
+            ],
+            "properties": {
+              "brand_alignment": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "distinctiveness": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "recurrence": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "atmosphere_contribution": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "visual_utility": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "continuity_sensitivity": { "type": "integer", "minimum": 0, "maximum": 3 }
+            }
+          },
+          "risk_flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "authenticity",
+                "cultural_specificity",
+                "privacy",
+                "rights",
+                "source_ambiguity",
+                "source_contradiction"
+              ]
+            }
+          },
+          "redundancy_notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": [
+              "signature_prop",
+              "signature_object",
+              "anchor_space",
+              "supporting_visual_motif",
+              "project_specific",
+              "reject",
+              "clarify"
+            ]
+          },
+          "recommendation_rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "user_decision": {
+            "type": "string",
+            "enum": ["pending", "accepted", "rejected", "deferred", "changes_requested"]
+          },
+          "decision_notes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_asset_id": {
+            "type": ["string", "null"],
+            "pattern": "^asset_[a-zA-Z0-9_-]+$"
+          }
+        }
+      }
+    },
+    "selection_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "presented_on", "decided_on", "decided_by", "notes"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_user_review", "changes_requested", "approved"]
+        },
+        "presented_on": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "decided_on": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "decided_by": {
+          "type": ["string", "null"],
+          "enum": ["user", null]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "status": { "const": "draft" },
+            "presented_on": { "const": null },
+            "decided_on": { "const": null },
+            "decided_by": { "const": null }
+          }
+        },
+        {
+          "properties": {
+            "status": { "const": "pending_user_review" },
+            "presented_on": { "type": "string", "format": "date" },
+            "decided_on": { "const": null },
+            "decided_by": { "const": null }
+          }
+        },
+        {
+          "properties": {
+            "status": { "const": "changes_requested" },
+            "presented_on": { "type": "string", "format": "date" },
+            "decided_on": { "type": "string", "format": "date" },
+            "decided_by": { "const": "user" }
+          }
+        },
+        {
+          "properties": {
+            "status": { "const": "approved" },
+            "presented_on": { "type": "string", "format": "date" },
+            "decided_on": { "type": "string", "format": "date" },
+            "decided_by": { "const": "user" }
+          }
+        }
+      ]
+    }
+  }
+}

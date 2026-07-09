@@ -87,7 +87,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `skills/create-personal-brand/SKILL.md` | Brand strategy drafting. |
 | `skills/personal-brand-board/SKILL.md` | Exact visual identity token spec and reusable mini-style-guide rendering. |
 | `skills/create-voice-samples/SKILL.md` | Voice sample extraction and curation. |
-| `skills/create-reference-library/SKILL.md` | Reference Library planning. |
+| `skills/create-reference-library/SKILL.md` | Visual Continuity Plan selection review, Reference Library promotion, and prompt planning. |
 | `skills/create-runtime-context/SKILL.md` | Tiny always-loaded creator context files. |
 | `skills/create-research-findings/SKILL.md` | Research run and Research Findings producer. |
 | `skills/manage-idea-queue/SKILL.md` | Idea Queue producer. |
@@ -131,6 +131,7 @@ workspace-library/
             SKILL.local.md
       sources/
       references/
+      visual-continuity-plan.json
       research/
       projects/
       memory/

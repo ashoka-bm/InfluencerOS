@@ -14,7 +14,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.projects import init_project, validate_project
 from influencer_os.projects import register_output_package
-from influencer_os.validation import ValidationError
+from influencer_os.validation import ValidationError, validate_record
 from tests.test_readiness_validation import (
     place_asset_files,
     place_brand_board_space_files,
@@ -33,6 +33,10 @@ def copy_example_record(example_name, destination):
 
 def populate_workspace_records(workspace_dir):
     copy_example_record("creator-profile.example.json", workspace_dir / "creator-profile.json")
+    copy_example_record(
+        "visual-continuity-plan.example.json",
+        workspace_dir / "references" / "visual-continuity-plan.json",
+    )
     copy_example_record("reference-library.example.json", workspace_dir / "references" / "reference-library.json")
     # The example manifest declares this source intake; place it so intake
     # provenance resolves during workspace validation.
@@ -360,6 +364,9 @@ class CliTests(unittest.TestCase):
             self.assertTrue((workspace_dir / "creator-workspace.json").exists())
             self.assertTrue((workspace_dir / "creator-profile.json").exists())
             self.assertTrue((workspace_dir / "context" / "SOUL.md").exists())
+            visual_plan = workspace_dir / "references" / "visual-continuity-plan.json"
+            self.assertTrue(visual_plan.exists())
+            validate_record("visual-continuity-plan", json.loads(visual_plan.read_text()))
             self.assertTrue((workspace_dir / "context" / "USER.md").exists())
             self.assertTrue((workspace_dir / "context" / "MEMORY.md").exists())
             self.assertTrue((workspace_dir / "brand_context" / "identity.md").exists())

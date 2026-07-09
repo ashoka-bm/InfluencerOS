@@ -20,7 +20,7 @@ Root adapters              AGENTS.md (canonical) + CLAUDE.md, SOUL.md (thin impo
 First-party OS persona     context/  (SOUL/USER/MEMORY/learnings)                        [BUILT]
 First-party OS brand       brand_context/  (positioning/voice/icp/samples/assets)        [BUILT; stubs]
 Durable planning docs      docs/os-construction/ + docs/adr/                             [BUILT]
-Workflow contracts         schemas/ (47) + docs/pipeline-contract.md                     [BUILT]
+Workflow contracts         schemas/ (55) + docs/pipeline-contract.md                     [BUILT]
 Skills (source)            skills/<skill-name>/SKILL.md (+ references/, SKILL.local.md)  [BUILT + PLANNED]
 Runtime CLI                influencer_os/ (cli + helpers + validation)                   [BUILT]
 Research connectors        influencer_os/connectors/ (env-gated acquisition tier)        [BUILT — ADR 0022; dormant until key]
@@ -73,8 +73,8 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 
 | Path | Role | Status |
 | --- | --- | --- |
-| `schemas/*.schema.json` (47) | JSON Schema contract per durable record (incl. `research-fetch-result` connector output). | [BUILT] |
-| `examples/*.example.json` (47) | Valid example per schema; CLI/test fixtures. | [BUILT] |
+| `schemas/*.schema.json` (55) | JSON Schema contract per durable record (incl. `visual-continuity-plan` and `research-fetch-result`). | [BUILT] |
+| `examples/*.example.json` (55) | Valid example per schema; CLI/test fixtures. | [BUILT] |
 | `docs/pipeline-contract.md` | Typed step-to-step pipeline contract. | [BUILT] |
 | `docs/provider-boundary.md` | Provider approval boundary (generation exact-approval; research-acquisition standing approval per ADR 0022). | [BUILT] |
 | `docs/research-adapter-registry.md` | Research acquisition adapter/connector permission registry (ADR 0021/0022). | [BUILT] |
@@ -95,7 +95,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-voice-samples` | setup | `brand_context/voice-samples.md`. | [BUILT] |
 | `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
 | `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
-| `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
+| `create-reference-library` | setup | User-reviewed `references/visual-continuity-plan.json`, selected `references/reference-library.json` assets + prompts. | [BUILT] |
 | `elevenlabs-voice-design` | setup | Human-in-the-loop ElevenLabs Voice Design prompt files under `references/voice/`; no provider call. | [BUILT] |
 | `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
 | `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
@@ -208,11 +208,11 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 5  Voice samples     -> Skill(create-voice-samples)
   Phase 6  Operational summary -> Skill(create-creator-profile)
   Phase 7  Runtime context   -> Skill(create-runtime-context)
-  Phase 8  Reference planning -> Skill(create-reference-library)
+  Phase 8  Visual continuity analysis + user approval -> Skill(create-reference-library)
+  Phase 9  Selected reference planning, prompt staging, and resolution -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
-  Phases 9-10 Reference prompt staging and resolution (inline; provider calls gated)
-  Phase 11 Brand board       -> Skill(personal-brand-board) (visual creators; typed Reference Library links)
-  Phases 1,12-15 intake, records, readiness, milestone acceptance, generation gate (inline)
+  Phase 10 Brand board       -> Skill(personal-brand-board) (visual creators; typed Reference Library links)
+  Phases 1,11-14 intake, records, readiness, milestone acceptance, generation gate (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)

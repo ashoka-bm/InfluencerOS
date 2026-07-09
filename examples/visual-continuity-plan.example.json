@@ -1,0 +1,173 @@
+{
+  "visual_continuity_plan_id": "visual_continuity_plan_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "created_on": "2026-06-29",
+  "candidates": [
+    {
+      "candidate_id": "continuity_candidate_luna_living_room",
+      "candidate_type": "production_space",
+      "name": "Warm apartment living room",
+      "source_refs": [
+        "sources/intakes/luna-fit-breakdown.md",
+        "brand_context/personal-brand.md"
+      ],
+      "brand_meaning": "Makes useful movement feel available inside an ordinary workday rather than a luxury fitness environment.",
+      "atmosphere_role": "Calm, attainable, lived-in relief.",
+      "brand_expression": "Luna is practical, unshowy, and attentive to real household constraints.",
+      "recurring_use_cases": [
+        "Apartment reset demonstrations",
+        "Talking-head explanations",
+        "Chair and wall mobility scenes"
+      ],
+      "continuity_requirements": [
+        "Room geography",
+        "Warm natural-light posture",
+        "Ordinary apartment scale"
+      ],
+      "variation_allowed": [
+        "Time of day",
+        "Small surface styling",
+        "Camera position within the established room"
+      ],
+      "effectiveness": {
+        "brand_alignment": 3,
+        "distinctiveness": 2,
+        "recurrence": 3,
+        "atmosphere_contribution": 3,
+        "visual_utility": 3,
+        "continuity_sensitivity": 3
+      },
+      "risk_flags": [],
+      "redundancy_notes": "No other selected space provides the same home-based workday context.",
+      "recommendation": "anchor_space",
+      "recommendation_rationale": "It carries the creator's accessibility promise across the primary video formats and benefits materially from stable geography.",
+      "user_decision": "accepted",
+      "decision_notes": "User accepted this as Luna's primary recurring production environment.",
+      "target_asset_id": "asset_luna_living_room"
+    },
+    {
+      "candidate_id": "continuity_candidate_luna_living_room_wall",
+      "candidate_type": "production_space",
+      "name": "Clear living-room demonstration wall",
+      "source_refs": [
+        "sources/intakes/luna-fit-breakdown.md",
+        "brand_context/personal-brand.md"
+      ],
+      "brand_meaning": "Provides a stable, uncluttered place for standing mobility and visible modifications within Luna's ordinary home world.",
+      "atmosphere_role": "Clear, calm, practical instruction.",
+      "brand_expression": "Luna removes visual friction so beginner movement remains easy to follow.",
+      "recurring_use_cases": [
+        "Standing mobility demonstrations",
+        "Wall-supported modifications"
+      ],
+      "continuity_requirements": [
+        "Clear wall area",
+        "Stable camera height",
+        "Consistent relationship to the living room"
+      ],
+      "variation_allowed": [
+        "Time of day",
+        "Minor lighting shifts"
+      ],
+      "effectiveness": {
+        "brand_alignment": 3,
+        "distinctiveness": 2,
+        "recurrence": 3,
+        "atmosphere_contribution": 2,
+        "visual_utility": 3,
+        "continuity_sensitivity": 2
+      },
+      "risk_flags": [],
+      "redundancy_notes": "It is a distinct instructional zone inside the broader living-room Anchor Space.",
+      "recommendation": "anchor_space",
+      "recommendation_rationale": "The stable clear-wall setup repeatedly supports full-body teaching that the wider room reference cannot frame as precisely.",
+      "user_decision": "accepted",
+      "decision_notes": "User accepted this as Luna's standing demonstration zone.",
+      "target_asset_id": "asset_luna_living_room_wall"
+    },
+    {
+      "candidate_id": "continuity_candidate_luna_reset_timer",
+      "candidate_type": "prop",
+      "name": "Matte two-minute reset timer",
+      "source_refs": [
+        "sources/intakes/luna-fit-breakdown.md",
+        "brand_context/identity.md"
+      ],
+      "brand_meaning": "Makes Luna's two-minute promise visible as a repeatable cue rather than an abstract claim.",
+      "atmosphere_role": "Gentle structure without fitness-theater pressure.",
+      "brand_expression": "Luna turns small, bounded actions into trustworthy habits.",
+      "recurring_use_cases": [
+        "Routine openings",
+        "Timer close-ups",
+        "Habit-cue stills"
+      ],
+      "continuity_requirements": [
+        "Matte casing",
+        "Neutral timer face",
+        "Unbranded appearance"
+      ],
+      "variation_allowed": [
+        "Placement",
+        "Displayed countdown value"
+      ],
+      "effectiveness": {
+        "brand_alignment": 3,
+        "distinctiveness": 3,
+        "recurrence": 3,
+        "atmosphere_contribution": 2,
+        "visual_utility": 3,
+        "continuity_sensitivity": 3
+      },
+      "risk_flags": [],
+      "redundancy_notes": "No other object makes the two-minute positioning as immediately legible.",
+      "recommendation": "signature_prop",
+      "recommendation_rationale": "It is a recurring, recognition-bearing object whose stable appearance reinforces Luna's core promise.",
+      "user_decision": "accepted",
+      "decision_notes": "User accepted the timer as Luna's primary Signature Prop.",
+      "target_asset_id": "asset_luna_reset_timer"
+    },
+    {
+      "candidate_id": "continuity_candidate_luna_water_bottle",
+      "candidate_type": "prop",
+      "name": "Ordinary water bottle",
+      "source_refs": [
+        "brand_context/identity.md"
+      ],
+      "brand_meaning": "Supports the ordinary-workday setting without carrying a unique creator story.",
+      "atmosphere_role": "Useful, familiar desk-life texture.",
+      "brand_expression": "Luna uses what is already available.",
+      "recurring_use_cases": [
+        "Desk reset backgrounds",
+        "Hydration transitions"
+      ],
+      "continuity_requirements": [],
+      "variation_allowed": [
+        "Color",
+        "Shape",
+        "Placement"
+      ],
+      "effectiveness": {
+        "brand_alignment": 2,
+        "distinctiveness": 0,
+        "recurrence": 2,
+        "atmosphere_contribution": 1,
+        "visual_utility": 2,
+        "continuity_sensitivity": 0
+      },
+      "risk_flags": [],
+      "redundancy_notes": "The living-room and desk environments already communicate ordinary accessibility more strongly.",
+      "recommendation": "supporting_visual_motif",
+      "recommendation_rationale": "It can recur naturally but visual drift would not harm creator recognition, so it should not consume a Reference Asset.",
+      "user_decision": "accepted",
+      "decision_notes": "User accepted the motif classification without a fixed reference image.",
+      "target_asset_id": null
+    }
+  ],
+  "selection_review": {
+    "status": "approved",
+    "presented_on": "2026-06-29",
+    "decided_on": "2026-06-29",
+    "decided_by": "user",
+    "notes": "User reviewed the candidate recommendations and accepted the Anchor Spaces, Signature Prop, and supporting-motif classifications."
+  }
+}

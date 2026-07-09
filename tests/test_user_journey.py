@@ -99,6 +99,10 @@ def write_research_markdown(workspace_dir):
 def seed_creator_setup_outputs(workspace_dir):
     copy_example("creator-profile.example.json", workspace_dir / "creator-profile.json")
     copy_example(
+        "visual-continuity-plan.example.json",
+        workspace_dir / "references" / "visual-continuity-plan.json",
+    )
+    copy_example(
         "reference-library.example.json",
         workspace_dir / "references" / "reference-library.json",
     )

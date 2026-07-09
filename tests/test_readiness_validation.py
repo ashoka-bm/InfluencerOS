@@ -298,6 +298,12 @@ def rewrite_json(path, mutate):
     path.write_text(json.dumps(record, indent=2) + "\n")
 
 
+def remove_prompt_file(workspace_dir, relative_path):
+    prompt_path = workspace_dir / relative_path
+    if prompt_path.exists():
+        prompt_path.unlink()
+
+
 def init_workspace_with_status(temp_dir, status):
     manifest = json.loads((ROOT / "examples" / "creator-workspace.example.json").read_text())
     manifest["status"] = status
@@ -309,6 +315,9 @@ def init_workspace_with_status(temp_dir, status):
     )
     (workspace_dir / "references" / "reference-library.json").write_text(
         (ROOT / "examples" / "reference-library.example.json").read_text()
+    )
+    (workspace_dir / "references" / "visual-continuity-plan.json").write_text(
+        (ROOT / "examples" / "visual-continuity-plan.example.json").read_text()
     )
     (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
         (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
@@ -943,6 +952,248 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
 
 
 class ReferenceLibraryIntegrityTests(unittest.TestCase):
+    def test_visual_foundation_readiness_requires_presented_and_approved_candidates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "foundation_ready")
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+
+            def leave_review_pending(plan):
+                plan["selection_review"] = {
+                    "status": "pending_user_review",
+                    "presented_on": "2026-07-09",
+                    "decided_on": None,
+                    "decided_by": None,
+                    "notes": "Candidates were presented and await the user's decision.",
+                }
+                for candidate in plan["candidates"]:
+                    candidate["user_decision"] = "pending"
+                    candidate["decision_notes"] = "Awaiting the user's decision."
+
+            rewrite_json(plan_path, leave_review_pending)
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                lambda library: library.update(
+                    assets=[
+                        asset
+                        for asset in library["assets"]
+                        if asset["asset_type"] not in {"object", "location"}
+                    ]
+                ),
+            )
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["reference_refs"].update(
+                    primary_location_asset_ids=[]
+                ),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("foundation_ready", str(ctx.exception))
+            self.assertIn("user-approved Visual Continuity Plan", str(ctx.exception))
+
+    def test_reference_assets_wait_for_visual_continuity_user_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            plan = json.loads(
+                (ROOT / "examples" / "visual-continuity-plan.example.json").read_text()
+            )
+            plan["selection_review"] = {
+                "status": "pending_user_review",
+                "presented_on": "2026-07-09",
+                "decided_on": None,
+                "decided_by": None,
+                "notes": "Candidate props and production spaces are awaiting user review."
+            }
+            for candidate in plan["candidates"]:
+                candidate["user_decision"] = "pending"
+                candidate["decision_notes"] = "Awaiting the user's decision."
+            (workspace_dir / "references" / "visual-continuity-plan.json").write_text(
+                json.dumps(plan, indent=2) + "\n"
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("Visual Continuity Plan", str(ctx.exception))
+            self.assertIn("user-approved", str(ctx.exception))
+
+    def test_orphan_object_or_location_prompt_waits_for_user_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+            plan = json.loads(plan_path.read_text())
+            plan["selection_review"] = {
+                "status": "pending_user_review",
+                "presented_on": "2026-07-09",
+                "decided_on": None,
+                "decided_by": None,
+                "notes": "Candidate selection is awaiting user review."
+            }
+            for candidate in plan["candidates"]:
+                candidate["user_decision"] = "pending"
+                candidate["decision_notes"] = "Awaiting user review."
+            plan_path.write_text(json.dumps(plan, indent=2) + "\n")
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                lambda library: library.update(
+                    assets=[
+                        asset
+                        for asset in library["assets"]
+                        if asset["asset_type"] not in {"object", "location"}
+                    ]
+                ),
+            )
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["reference_refs"].update(
+                    primary_location_asset_ids=[]
+                ),
+            )
+            orphan = workspace_dir / "references" / "props" / "unapproved.prompt.md"
+            orphan.parent.mkdir(parents=True, exist_ok=True)
+            orphan.write_text("Unapproved object prompt.\n")
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("unapproved.prompt.md", str(ctx.exception))
+            self.assertIn("user-approved", str(ctx.exception))
+
+    def test_approved_plan_rejects_prompt_without_declared_selected_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            orphan = workspace_dir / "references" / "props" / "rejected-prop.prompt.md"
+            orphan.parent.mkdir(parents=True, exist_ok=True)
+            orphan.write_text("Prompt for a prop the user rejected.\n")
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("rejected-prop.prompt.md", str(ctx.exception))
+            self.assertIn("declared Reference Assets", str(ctx.exception))
+
+    def test_visual_continuity_source_refs_must_resolve_inside_workspace(self):
+        for bad_ref in ("sources/intakes/missing.md#object", "../../outside.md#object"):
+            with self.subTest(bad_ref=bad_ref), tempfile.TemporaryDirectory() as temp_dir:
+                workspace_dir = init_workspace_with_status(temp_dir, "draft")
+                rewrite_json(
+                    workspace_dir / "references" / "visual-continuity-plan.json",
+                    lambda plan: plan["candidates"][0].update(source_refs=[bad_ref]),
+                )
+
+                with self.assertRaises(ValueError) as ctx:
+                    validate_creator_workspace(workspace_dir)
+                self.assertIn("source_ref", str(ctx.exception))
+                self.assertIn(bad_ref, str(ctx.exception))
+
+    def test_nonvisual_plan_still_rejects_duplicate_candidate_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            rewrite_json(
+                workspace_dir / "creator-profile.json",
+                lambda profile: profile["content_strategy"].update(
+                    content_mediums=["text"]
+                ),
+            )
+
+            def duplicate_candidate(plan):
+                plan["candidates"].append(json.loads(json.dumps(plan["candidates"][0])))
+
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                duplicate_candidate,
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("Duplicate Visual Continuity Plan candidate ids", str(ctx.exception))
+
+    def test_selected_reference_asset_must_link_to_accepted_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            (workspace_dir / "references" / "visual-continuity-plan.json").write_text(
+                (ROOT / "examples" / "visual-continuity-plan.example.json").read_text()
+            )
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                lambda library: next(
+                    asset
+                    for asset in library["assets"]
+                    if asset["asset_id"] == "asset_luna_living_room"
+                ).pop("selection_candidate_id"),
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("selection_candidate_id", str(ctx.exception))
+            self.assertIn("asset_luna_living_room", str(ctx.exception))
+
+    def test_product_object_asset_can_link_to_signature_object_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+
+            def add_product_candidate(plan):
+                candidate = json.loads(json.dumps(plan["candidates"][1]))
+                candidate.update(
+                    candidate_id="continuity_candidate_luna_product_bottle",
+                    candidate_type="product_object",
+                    name="Luna branded reset bottle",
+                    recommendation="signature_object",
+                    recommendation_rationale="The product and packaging need stable recognition.",
+                    user_decision="accepted",
+                    decision_notes="User accepted the product object.",
+                    target_asset_id="asset_luna_product_bottle",
+                )
+                plan["candidates"].append(candidate)
+
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                add_product_candidate,
+            )
+
+            def add_product_asset(library):
+                asset = json.loads(
+                    json.dumps(
+                        next(
+                            item
+                            for item in library["assets"]
+                            if item["asset_id"] == "asset_luna_living_room"
+                        )
+                    )
+                )
+                asset.update(
+                    asset_id="asset_luna_product_bottle",
+                    asset_type="object",
+                    role="Stable branded reset bottle product reference",
+                    path="references/objects/luna-product-bottle.png",
+                    selection_candidate_id="continuity_candidate_luna_product_bottle",
+                )
+                library["assets"].append(asset)
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                add_product_asset,
+            )
+
+            result = validate_creator_workspace(workspace_dir)
+            self.assertEqual(result["creator_slug"], "luna-fit")
+
+    def test_approved_plan_cannot_accept_an_unresolved_clarification(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+
+            def reopen_candidate(plan):
+                candidate = plan["candidates"][1]
+                candidate["recommendation"] = "clarify"
+                candidate["user_decision"] = "accepted"
+                candidate["decision_notes"] = "Accepted without resolving the ambiguity."
+
+            rewrite_json(plan_path, reopen_candidate)
+
+            with self.assertRaises(ValueError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("clarify", str(ctx.exception))
+            self.assertIn("unresolved", str(ctx.exception))
+
     def test_duplicate_asset_ids_are_rejected_even_at_draft(self):
         # Two assets sharing an id make every reference to that id ambiguous
         # (dict resolution is last-wins), so duplicates fail at every status.
@@ -1112,6 +1363,12 @@ class FoundationReadyBlockerTests(unittest.TestCase):
             rewrite_json(
                 workspace_dir / "references" / "reference-library.json", drop_outfit_and_brand
             )
+            remove_prompt_file(
+                workspace_dir, "references/outfits/luna-everyday-outfit.prompt.md"
+            )
+            remove_prompt_file(
+                workspace_dir, "references/brand/luna-brand-system.prompt.md"
+            )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -1154,6 +1411,9 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
             rewrite_json(
                 workspace_dir / "references" / "reference-library.json", strip_outfit_prompt
             )
+            remove_prompt_file(
+                workspace_dir, "references/outfits/luna-everyday-outfit.prompt.md"
+            )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -1170,6 +1430,9 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
                         asset.pop("prompt_path", None)
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", plan_outfit)
+            remove_prompt_file(
+                workspace_dir, "references/outfits/luna-everyday-outfit.prompt.md"
+            )
             rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
@@ -1230,6 +1493,10 @@ class FoundationReadinessTests(unittest.TestCase):
                 workspace_dir / "references" / "reference-library.json",
                 remove_voice_design_prompt,
             )
+            remove_prompt_file(
+                workspace_dir,
+                "references/voice/luna-fit-elevenlabs-voice-design.prompt.md",
+            )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -1267,6 +1534,10 @@ class FoundationReadinessTests(unittest.TestCase):
                 workspace_dir / "references" / "reference-library.json",
                 replace_voice_design_with_generic_note,
             )
+            remove_prompt_file(
+                workspace_dir,
+                "references/voice/luna-fit-elevenlabs-voice-design.prompt.md",
+            )
             place_asset_files(workspace_dir)
 
             with self.assertRaises(ValidationError) as ctx:
@@ -1285,6 +1556,9 @@ class FoundationReadinessTests(unittest.TestCase):
                         asset.pop("prompt_path", None)
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", plan_outfit)
+            remove_prompt_file(
+                workspace_dir, "references/outfits/luna-everyday-outfit.prompt.md"
+            )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -1330,6 +1604,21 @@ class TextFirstCreatorTests(unittest.TestCase):
                 ]
 
             rewrite_json(workspace_dir / "references" / "reference-library.json", strip_visual_assets)
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                lambda plan: plan.update(
+                    candidates=[],
+                    selection_review={
+                        "status": "draft",
+                        "presented_on": None,
+                        "decided_on": None,
+                        "decided_by": None,
+                        "notes": "No reusable visual continuity candidates are in scope.",
+                    },
+                ),
+            )
+            for prompt_path in (workspace_dir / "references").rglob("*.prompt.md"):
+                prompt_path.unlink()
             voice_note = workspace_dir / "references" / "voice" / "luna-voice-note.md"
             voice_note.parent.mkdir(parents=True, exist_ok=True)
             voice_note.write_text("Calm, encouraging, second person.\n")

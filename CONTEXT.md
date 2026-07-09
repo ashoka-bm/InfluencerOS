@@ -64,6 +64,26 @@ The creator's reusable visual and audio continuity assets, such as character ide
 **Reference Asset**:
 One reusable or planned continuity item in the Reference Library. A Reference Asset may be planned, prompted, user-provided, generated, approved, or retired.
 
+**Visual Continuity Plan**:
+The reviewed creator-setup record that evaluates candidate props, product/brand objects, and production spaces for brand meaning, atmosphere, brand expression, recurrence, visual usefulness, continuity sensitivity, and risk before any candidate becomes a Reference Asset.
+
+**Signature Prop**:
+A user-approved, identity-attached object whose consistent appearance materially strengthens creator recognition or brand meaning across multiple pieces. Generic set dressing and one-off scene objects are not Signature Props.
+_Avoid_: recurring object, meaningful prop
+
+**Signature Object**:
+A user-approved product, packaging form, or organization-owned object whose consistent appearance materially strengthens product or brand recognition across multiple pieces. It is the product/organization counterpart to a Signature Prop.
+
+**Anchor Space**:
+A user-approved recurring production environment with a specific brand and atmosphere role whose visual continuity matters across multiple pieces. A place mentioned in creator lore or used for one scene is not automatically an Anchor Space.
+_Avoid_: production space, recurring location
+
+**Supporting Visual Motif**:
+A repeatable visual cue that contributes atmosphere or brand expression but does not need a fixed Reference Asset. It may vary between projects without harming continuity.
+
+**Atmosphere Role**:
+The specific feeling, identity signal, or brand meaning that a candidate object or space contributes when it appears on screen.
+
 **Medium-Based Blocker**:
 A Creator Setup blocker that applies only when a content medium requires it. Text-first creators need identity, soul, and brand context; image and video creators also need visual references; audio/video creators need a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken generation requires an approved/imported voice reference.
 

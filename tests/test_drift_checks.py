@@ -652,7 +652,7 @@ class ConductorCallGraphDriftTests(unittest.TestCase):
 
     def test_creator_setup_builds_brand_board_after_reference_planning(self):
         body = skill_body("create-influencer")
-        reference_phase = body.index("**Reference planning**")
+        reference_phase = body.index("**Reference planning, prompt staging, and resolution**")
         board_phase = body.index("**Personal brand board**")
         readiness_phase = body.index("**State reconciliation and readiness check**")
         self.assertLess(reference_phase, board_phase)
@@ -1037,7 +1037,7 @@ class SkillProseDriftTests(unittest.TestCase):
 
         for phrase in (
             "Every distinct prop, product, or signature object gets its own Reference Asset",
-            "one distinct prop per Reference Asset and per planned reference image",
+            "one distinct prop, product, packaging form, or organization-owned object per Reference Asset and per planned reference image",
             "If a prompt names more than one distinct object, split it",
         ):
             self.assertIn(
@@ -1061,6 +1061,31 @@ class SkillProseDriftTests(unittest.TestCase):
             "Object references are atomic",
             workflow,
             "creator setup workflow lost the object fan-out rule",
+        )
+
+    def test_visual_continuity_candidates_require_user_selection_review(self):
+        skill = re.sub(
+            r"\s+", " ", read_repo_text("skills/create-reference-library/SKILL.md")
+        )
+        conductor = re.sub(
+            r"\s+", " ", read_repo_text("skills/create-influencer/SKILL.md")
+        )
+        for phrase in (
+            "schemas/visual-continuity-plan.schema.json",
+            "Present every candidate to the user before drafting any object or location prompt",
+            "approve, reject, defer, or request changes",
+            "1-3 Signature Props and 1-3 Anchor Spaces",
+            "1-3 Signature Objects",
+        ):
+            self.assertIn(
+                phrase,
+                skill,
+                f"create-reference-library lost selection-review contract {phrase!r}",
+            )
+        self.assertIn(
+            "Visual Continuity Plan approval",
+            conductor,
+            "create-influencer no longer sequences visual selection before prompt staging",
         )
 
     def test_template_ids_resolve_and_library_is_pointed_at(self):

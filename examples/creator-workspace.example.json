@@ -18,6 +18,7 @@
     "readiness_gates": "readiness-gates.json",
     "channels": "channels.json",
     "content_strategy": "content-strategy.json",
+    "visual_continuity_plan": "references/visual-continuity-plan.json",
     "reference_library": "references/reference-library.json",
     "production_rubric": "production-rubric.json"
   },
@@ -48,6 +49,7 @@
   "schema_versions": {
     "creator_workspace": "0.1.0",
     "creator_profile": "0.1.0",
+    "visual_continuity_plan": "0.1.0",
     "reference_library": "planned",
     "output_package": "planned",
     "published_post_record": "planned",

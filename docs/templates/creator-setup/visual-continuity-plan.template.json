@@ -1,0 +1,49 @@
+{
+  "visual_continuity_plan_id": "visual_continuity_plan_<slug>",
+  "creator_profile_id": "creator_<slug>",
+  "created_on": "YYYY-MM-DD",
+  "candidates": [
+    {
+      "candidate_id": "continuity_candidate_<slug>_<candidate>",
+      "candidate_type": "prop | product_object | production_space",
+      "name": "Candidate name",
+      "source_refs": [
+        "sources/intakes/<source>.md"
+      ],
+      "brand_meaning": "What this candidate communicates about the brand.",
+      "atmosphere_role": "The feeling or visual-world signal it contributes.",
+      "brand_expression": "What it communicates about the creator, product, or brand.",
+      "recurring_use_cases": [
+        "Named pillar, format, or repeated scene family"
+      ],
+      "continuity_requirements": [
+        "Details that must remain fixed if selected"
+      ],
+      "variation_allowed": [
+        "Details that may change without harming continuity"
+      ],
+      "effectiveness": {
+        "brand_alignment": 0,
+        "distinctiveness": 0,
+        "recurrence": 0,
+        "atmosphere_contribution": 0,
+        "visual_utility": 0,
+        "continuity_sensitivity": 0
+      },
+      "risk_flags": [],
+      "redundancy_notes": "How this overlaps with or differs from other candidates.",
+      "recommendation": "signature_prop | signature_object | anchor_space | supporting_visual_motif | project_specific | reject | clarify",
+      "recommendation_rationale": "Why this outcome best fits the evidence and strategy.",
+      "user_decision": "pending",
+      "decision_notes": "Awaiting user review.",
+      "target_asset_id": null
+    }
+  ],
+  "selection_review": {
+    "status": "draft",
+    "presented_on": null,
+    "decided_on": null,
+    "decided_by": null,
+    "notes": "Candidate selection has not yet been presented to the user."
+  }
+}

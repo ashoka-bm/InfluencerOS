@@ -30,6 +30,7 @@ The workflow should create or refine:
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
 - `brand_context/voice-samples.md`
+- `references/visual-continuity-plan.json`
 - `references/reference-library.json`
 - `conversion-assets/*.json` when strategy references a lead magnet, offer, or
   other conversion mechanism
@@ -61,6 +62,7 @@ read these files first:
 - `readiness-gates.json`
 - `channels.json`
 - `content-strategy.json`
+- `references/visual-continuity-plan.json`
 - `conversion-assets/*.json`
 - `content-schedule.json`, when present
 - `boards/content-calendar.html`, when present
@@ -74,6 +76,10 @@ Machine-readable files own state:
   readiness milestone statuses.
 - `content-strategy.json` owns platform roles, monthly mix, cadence principles,
   related-post chains, campaigns, and conversion paths.
+- `references/visual-continuity-plan.json` owns candidate prop,
+  product/brand-object, and production-space analysis, the presented
+  recommendations, per-candidate user decisions, and Visual Continuity Plan
+  approval.
 - `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
   waitlist, opt-in page, and partner asset status.
 - `content-schedule.json` owns calendar readiness.
@@ -204,6 +210,7 @@ The creator is blocked from readiness when any of these are missing or unreviewe
 - personal brand file
 - voice sample file
 - reference library with required assets or required asset prompts
+- a user-approved Visual Continuity Plan before any object or location prompt
 - source intake provenance
 - explicit review or acceptance state
 
@@ -219,7 +226,8 @@ The Create Influencer conductor uses dedicated subskills for each maintained out
 - `create-voice-samples` -> `brand_context/voice-samples.md`
 - `create-runtime-context` -> `context/SOUL.md`, `context/USER.md`, `context/MEMORY.md`
 - `create-creator-profile` -> `creator-profile.json`
-- `create-reference-library` -> `references/reference-library.json` and prompt files
+- `create-reference-library` -> `references/visual-continuity-plan.json`, then
+  `references/reference-library.json` and prompt files after user approval
 
 Templates live under `docs/templates/creator-setup/`.
 
@@ -237,6 +245,7 @@ Creator Setup files should be small enough for precise downstream use and large 
 | `brand_context/personal-brand.md` | 1,300-2,000 words | 2,500 words | Preserve strategy, surfaces, mediums, monetization, and safety boundaries. |
 | `brand_context/voice-samples.md` | 700-1,300 words | 1,700 words | Preserve concrete voice examples with metadata. |
 | `creator-profile.json` | schema-bound summary | schema-bound summary | Store operational fields only. |
+| `references/visual-continuity-plan.json` | one row per credible prop, product/brand-object, or space candidate | focused review set | Evaluate brand, atmosphere, brand expression, recurrence, continuity, risk, and user selection before prompt creation. |
 | `references/reference-library.json` | one record per reusable asset | no duplicate variants | Track lifecycle, paths, prompt paths, and usage. |
 | Reference `.prompt.md` files | 120-350 words | 500 words | Describe role, controlled variables, avoid list, and downstream use. |
 | Reference style cards | 150-400 words | 600 words | Store reusable style guidance without becoming a brand bible. |
@@ -501,12 +510,22 @@ Each identity-attached object that should appear consistently should have an
 object reference or prompt; casual one-off props should stay in downstream
 project planning.
 
-Object references are atomic: each distinct prop gets its own Reference Asset,
-prompt file, planned output path, generation request, and reference image. A
-multi-angle sheet may repeat the same object from several views, but it must
-not contain different props. Grouped source language such as "family objects"
-or "desk tools" must be expanded into one asset per physical object before
-prompt drafting or generation approval.
+Object references are atomic: each distinct prop, product, packaging form, or
+organization-owned object gets its own Reference Asset, prompt file, planned
+output path, generation request, and reference image. A multi-angle sheet may
+repeat the same object from several views, but it must not contain different
+objects. Grouped source language such as "family objects" or "desk tools" must
+be expanded into one asset per physical object before prompt drafting or
+generation approval.
+
+## Visual Continuity Selection Review
+
+The full candidate-analysis, presentation, user-decision, promotion, and
+prompt-staging contract is owned by `skills/create-reference-library/SKILL.md`.
+Creator Setup must run that contract before object or location reference work,
+and a visual workspace cannot become `foundation_ready` until its Visual
+Continuity Plan is user-approved. This workflow intentionally does not maintain
+a second copy of the scoring or recommendation rules.
 
 ## Reference Library Policy
 
@@ -574,11 +593,15 @@ When image or video is in scope, stage prompt work in this order:
 2. Create or accept the default video/photo style card, including recurring shot families only when they are stable persona habits.
 3. Create the three character reference assets from the standard character prompts: identity plate, full-body turnaround sheet, and macro detail card.
 4. Create outfit references from person + outfit references.
-5. Create location references from person + location references.
-6. Create object references from person + object references.
+5. Draft and present the Visual Continuity Plan candidate review.
+6. Record the user's final selection and approve the plan.
+7. Create Anchor Space references only from accepted production-space candidates.
+8. Create Signature Prop or Signature Object references only from accepted
+   prop/product-object candidates.
 
-At step 6, fan out any list of objects before writing prompts. Do not represent
-multiple distinct props with one asset id, one prompt, or one output image.
+At step 8, fan out any list of objects before writing prompts. Do not represent
+multiple distinct props, products, or brand objects with one asset id, one
+prompt, or one output image.
 
 Provider-neutral prompts should live in separate markdown files near the asset they describe, such as:
 

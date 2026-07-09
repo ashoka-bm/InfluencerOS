@@ -63,6 +63,10 @@ class WorkspaceScaffoldMixin:
             workspace / "references" / "reference-library.json",
         )
         shutil.copyfile(
+            ROOT / "examples" / "visual-continuity-plan.example.json",
+            workspace / "references" / "visual-continuity-plan.json",
+        )
+        shutil.copyfile(
             ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md",
             workspace / "sources" / "intakes" / "luna-fit-breakdown.md",
         )

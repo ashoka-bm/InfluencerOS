@@ -24,6 +24,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-04: Creator setup onboarding should begin with a briefing and three paths: load existing files, guided interview, or generate from basic information; system-filled blanks stay in review.
 - 2026-07-09: Creator setup should run as Creator Foundation -> Strategy -> Post Production. For image/video/voice channels, profile approval is not enough; require stable visual and voice references or an explicit waiver before strategy calendars and post production.
 - 2026-07-09: 2026-07-09: A no-voiceover policy prohibits spoken generation; it never waives spoken_voice_generation_allowed or substitutes for approved voice evidence.
+- 2026-07-09: Delegate visual-continuity candidate analysis and approval to create-reference-library before reference prompt staging or foundation readiness.
 
 ### wrap-up
 
@@ -64,6 +65,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### create-reference-library
 - 2026-07-04: Reference planning should derive required assets from platform-to-medium mapping and explicitly handle person reference images, recurring locations, collaborators, and identity-attached objects.
 - 2026-07-09: Fan out grouped source language into one Reference Asset and isolated output image per distinct physical prop; schema-valid grouped prompts are still incomplete.
+- 2026-07-09: Evaluate prop and production-space candidates for brand effectiveness, present the full package for explicit user selection, and block asset or prompt promotion until approval.
 - 2026-07-09: Treat generated brand or carousel imagery as supporting references only; exact palette, typography, and layout tokens belong to the canonical personal brand board.
 
 ### personal-brand-board

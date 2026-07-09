@@ -63,6 +63,7 @@ workspace-library/creators/<creator-slug>/
     imports/
     notes/
   references/
+    visual-continuity-plan.json
     reference-library.json
     character/
     locations/
@@ -266,7 +267,21 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `sources/` stores original creator inputs such as breakdowns, interviews, handoffs, pasted briefs, imports, and raw notes.
 
-`references/` stores reusable visual and audio continuity assets. `reference-library.json` gives each asset a stable ID, status, role, file path, source, creation date, and allowed usage. Planned or prompted assets may be tracked before the final media file exists so setup can explain generation blockers.
+`references/` stores visual-continuity selection state plus reusable visual and
+audio continuity assets. `visual-continuity-plan.json` evaluates candidate
+props, product/brand objects, and production spaces, records their
+brand/Atmosphere Roles and the
+user's accept/reject/defer/change decisions, and must be user-approved before
+object or location prompts are created or a visual workspace claims
+`foundation_ready`. Candidate `source_refs` resolve to real files inside the
+workspace. Before approval, an undeclared prompt anywhere under `references/`
+is blocked, so alternate folder names cannot bypass the approval boundary.
+`reference-library.json` contains only
+selected reusable assets and gives each one a stable ID, status, role, file
+path, source, creation date, and allowed usage. Active object/location assets
+link back through `selection_candidate_id`. Planned or prompted assets may be
+tracked before the final media file exists so setup can explain generation
+blockers.
 
 `conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Strategy readiness requires referenced asset records to exist; a production slot that promotes one requires it to be approved or published-ready.
 

@@ -24,6 +24,7 @@
       "asset_status": "generated",
       "role": "Recurring warm apartment living room",
       "path": "references/locations/luna-living-room-master-location-sheet.png",
+      "selection_candidate_id": "continuity_candidate_luna_living_room",
       "source": {
         "source_type": "generated",
         "source_ref": "sources/intakes/luna-fit-breakdown.md"
@@ -38,6 +39,7 @@
       "asset_status": "generated",
       "role": "Clear living-room wall demonstration space",
       "path": "references/locations/luna-fit-living-room-wall.png",
+      "selection_candidate_id": "continuity_candidate_luna_living_room_wall",
       "source": {
         "source_type": "generated",
         "source_ref": "sources/intakes/luna-fit-breakdown.md"
@@ -52,6 +54,7 @@
       "asset_status": "generated",
       "role": "Signature matte two-minute reset timer",
       "path": "references/objects/luna-fit-reset-timer.png",
+      "selection_candidate_id": "continuity_candidate_luna_reset_timer",
       "source": {
         "source_type": "generated",
         "source_ref": "sources/intakes/luna-fit-breakdown.md"

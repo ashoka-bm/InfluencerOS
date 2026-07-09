@@ -1225,6 +1225,19 @@ statuses remain readable only to emit migration warnings. Verification: 856
 unit tests pass, 53 examples validate, compilation and whitespace checks pass;
 registry/context-matrix drift tests pass. No provider-backed calls were made.
 
+Visual continuity selection hardening (2026-07-09): added the schema-backed
+Visual Continuity Plan between accepted creator context and the Reference
+Library. Props and production spaces are now scored for distinct brand and
+Atmosphere Roles, presented as a complete user-review package, and promoted
+only after explicit approval; candidate evidence refs resolve inside the
+workspace, nonvisual plans retain their internal validation, visual
+`foundation_ready` status requires approval, and undeclared prompt files under
+any `references/` subfolder cannot bypass the pre-approval boundary. Adira's
+ignored Creator Workspace contains the first 13-candidate pending review plan;
+no provider generation ran and no candidate was silently approved.
+Verification: 877 unit tests pass, 55 examples validate, compilation and
+whitespace checks pass.
+
 ## Next Work Queue
 
 Personal brand board integration (2026-07-09): added the

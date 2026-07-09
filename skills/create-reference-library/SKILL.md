@@ -1,21 +1,130 @@
 ---
 name: create-reference-library
-description: Use to plan references/reference-library.json and provider-neutral prompt files for the creator's continuity assets.
+description: Use to evaluate visual continuity candidates, obtain user approval, and plan references/reference-library.json plus provider-neutral prompts.
 dependencies:
   - elevenlabs-voice-design
 ---
 
 # Create Reference Library
 
-Create `references/reference-library.json` and prompt files from creator setup materials.
+Create the reviewed `references/visual-continuity-plan.json`, then
+`references/reference-library.json` and prompt files from creator setup
+materials.
 
-Use [docs/templates/creator-setup/reference-library.template.json](docs/templates/creator-setup/reference-library.template.json) and validate against [schemas/reference-library.schema.json](schemas/reference-library.schema.json).
+Use
+[docs/templates/creator-setup/visual-continuity-plan.template.json](docs/templates/creator-setup/visual-continuity-plan.template.json)
+and validate it against
+[schemas/visual-continuity-plan.schema.json](schemas/visual-continuity-plan.schema.json).
+Use [docs/templates/creator-setup/reference-library.template.json](docs/templates/creator-setup/reference-library.template.json) and validate the promoted assets against [schemas/reference-library.schema.json](schemas/reference-library.schema.json).
 
 ## Purpose
 
-The Reference Library answers: what reusable continuity assets exist, what assets are still planned, and what prompts or files should downstream generation use?
+The Visual Continuity Plan answers: which candidate props, product/brand
+objects, and production spaces actually strengthen the brand, atmosphere,
+expression, and continuity, and what did the user decide about each one?
 
-It tracks both real assets and planned assets.
+The Reference Library then answers: what selected reusable continuity assets
+exist, what assets are still planned, and what prompts or files should
+downstream generation use?
+
+The Reference Library tracks real and planned assets. It is not the candidate
+backlog; Supporting Visual Motifs, project-specific elements, rejected
+candidates, and unresolved candidates stay in the Visual Continuity Plan.
+
+## Visual Continuity Selection
+
+Run this before creating any `object` or `location` Reference Asset or prompt.
+
+### Candidate Analysis
+
+Extract evidence-backed candidate props, product/brand objects, and production
+spaces from the accepted foundation, intake, content pillars, and planned
+formats. For an influencer,
+use the Creator Profile, Identity, Soul File, and Personal Brand File. For a
+product or organization brand, use its accepted profile, offering or product
+facts, brand guidelines, customer promise, and intended content surfaces. A
+concrete noun is not automatically a candidate. Include it only when there is a
+plausible recurring communication, atmosphere, brand-expression, or continuity
+job to evaluate.
+
+For every candidate, record:
+
+- granular source refs;
+- brand meaning and Atmosphere Role;
+- what it expresses about the creator, product, or brand;
+- recurring use cases across actual pillars and formats;
+- what visual details must remain continuous and what may vary;
+- authenticity, cultural-specificity, privacy, rights, source-ambiguity, or
+  source-contradiction risks;
+- redundancy against the rest of the proposed visual world;
+- recommendation and rationale.
+
+Score each effectiveness dimension from 0-3:
+
+- `0`: absent, contradicted, generic, or harmful;
+- `1`: weak, incidental, one-off, or mostly replaceable;
+- `2`: useful and recurring with a clear brand job;
+- `3`: core, distinctive, repeatedly useful, and costly to let drift.
+
+Score `brand_alignment`, `distinctiveness`, `recurrence`,
+`atmosphere_contribution`, `visual_utility`, and `continuity_sensitivity`
+separately. Do not sum them into an automatic verdict. Recommend:
+
+- `signature_prop`: an identity-attached object whose stable appearance
+  materially strengthens recognition or meaning;
+- `signature_object`: a product, packaging form, or organization-owned object
+  whose stable appearance materially strengthens product or brand recognition;
+- `anchor_space`: a recurring environment whose stable geography and
+  atmosphere materially strengthen the brand;
+- `supporting_visual_motif`: useful recurring texture that may vary and needs
+  no Reference Asset;
+- `project_specific`: useful for one content idea, not the reusable library;
+- `clarify`: meaningful but blocked by ambiguity, contradiction, privacy,
+  rights, or authenticity questions;
+- `reject`: generic, redundant, off-brand, or ineffective.
+
+For influencers, default to a focused portfolio of 1-3 Signature Props and 1-3
+Anchor Spaces. For product or organization brands, use 1-3 Signature Objects
+and 1-3 Anchor Spaces when those asset families are relevant.
+Exceed that recommendation only when every additional asset has a distinct
+Atmosphere Role, repeated use across the accepted strategy, and continuity
+sensitivity high enough to justify reference maintenance.
+
+### User Selection Review
+
+Present every candidate to the user before drafting any object or location prompt.
+Show one compact table with candidate name, type, source basis, Atmosphere
+Role, effectiveness scores, risk flags, recommendation, and rationale. Include
+recommended motifs, project-specific elements, clarifications, and rejections
+so the user can see what will *not* consume a Reference Asset.
+
+Ask the user to approve, reject, defer, or request changes for each candidate,
+or to approve the complete recommended package. Persist every answer as the
+candidate's `user_decision` and `decision_notes`. Set
+`selection_review.status = approved`, `decided_by = user`, and `decided_on`
+only after the user explicitly accepts a fully resolved package. Validation is
+not approval. This is a Creator Setup review checkpoint under foundation
+acceptance, not a third production Gate.
+
+If the user requests changes, revise the plan and present the affected
+candidates again. Never infer approval from silence, a previous creator's
+choices, or approval of the broader profile.
+
+### Promotion Into The Reference Library
+
+After Visual Continuity Plan approval:
+
+- promote each accepted `signature_prop` into one `object` Reference Asset;
+- promote each accepted `signature_object` into one `object` Reference Asset;
+- promote each accepted `anchor_space` into one `location` Reference Asset;
+- copy the candidate id into the asset's `selection_candidate_id`;
+- make `target_asset_id` on the candidate point back to that asset;
+- keep Supporting Visual Motifs and project-specific elements out of the
+  Reference Library;
+- create no asset for rejected, deferred, or clarification-blocked candidates.
+
+No object or location prompt may be drafted until the plan is user-approved
+and the candidate-to-asset mapping validates.
 
 ## Asset Status
 
@@ -127,8 +236,16 @@ When image or video is in scope, plan reference images in this order:
 2. **Video/photo style**: use the standard video/photo style prompt unchanged to lock `@video_style_reference`.
 3. **Character package**: use `docs/templates/creator-setup/reference-prompts/standard-character-asset-prompts.md` unchanged to create the three character assets: identity plate, full-body turnaround sheet, and macro detail card.
 4. **Outfit references**: use `docs/templates/creator-setup/reference-prompts/standard-outfit-reference-prompt.md` unchanged for wardrobe references based on person + outfit inputs.
-5. **Location references**: use `docs/templates/creator-setup/reference-prompts/standard-location-reference-prompts.md` unchanged for repeatable creator spaces.
-6. **Object references**: use `docs/templates/creator-setup/reference-prompts/standard-object-reference-prompts.md` unchanged for props, products, and signature objects.
+5. **Visual Continuity Selection Review**: present candidate props,
+   product/brand objects, and production spaces; record the user's decisions
+   and approve the plan.
+6. **Anchor Space references**: only for accepted `anchor_space` candidates,
+   use `docs/templates/creator-setup/reference-prompts/standard-location-reference-prompts.md`
+   unchanged.
+7. **Signature Prop or Signature Object references**: only for accepted
+   `signature_prop` or `signature_object` candidates, use
+   `docs/templates/creator-setup/reference-prompts/standard-object-reference-prompts.md`
+   unchanged.
 
 Do not rewrite these standard prompts inside the skill. Copy or adapt only the variable slots into creator-specific `.prompt.md` files while preserving the reference-scope rules.
 
@@ -248,6 +365,11 @@ renders requires explicit approval for the exact call or batch.
 
 Complete when every medium required by the selected channels and content strategy has either approved assets or planned/prompted assets with stable IDs, source refs, usage notes, prompt paths where needed, the character/outfit/location/object prompt family has been staged when visual generation is in scope, and character identity assets obey the neutral-background hard rules before being marked `approved`. `media_ready` foundation mode and image/video generation permissions require approved or user-provided media references, not merely planned entries.
 
-For object assets, completion additionally requires one distinct prop per
-Reference Asset and per planned reference image; a grouped multi-prop prompt is
-incomplete even when it validates against the schema.
+For object assets, completion additionally requires one distinct prop, product,
+packaging form, or organization-owned object per Reference Asset and per
+planned reference image; a grouped multi-object prompt is incomplete even when
+it validates against the schema.
+
+For visual continuity selection, completion additionally requires a
+user-approved Visual Continuity Plan, no unresolved candidate decisions, and a
+valid candidate link for every active object or location Reference Asset.

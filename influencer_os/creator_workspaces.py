@@ -290,6 +290,8 @@ mark an asset "completed"; name its status.
 - [ ] Full-body turnaround sheet — planned
 - [ ] Macro detail card — planned
 - [ ] Brand or visual system reference — planned
+- [ ] Visual Continuity Plan candidates presented to user
+- [ ] Visual Continuity Plan selection approved by user
 - [ ] Image style guidance completed
 
 ### Video
@@ -298,6 +300,8 @@ mark an asset "completed"; name its status.
 - [ ] Full-body turnaround sheet — planned
 - [ ] Macro detail card — planned
 - [ ] Primary location reference — planned
+- [ ] Anchor Space candidates reviewed and approved
+- [ ] Signature Prop/Signature Object candidates reviewed and approved
 - [ ] Outfit or wardrobe reference — planned
 - [ ] Default video style card — planned
 - [ ] ElevenLabs Voice Design prompt package — planned
@@ -340,6 +344,26 @@ JSON_SCAFFOLDS = {
 }
 
 
+def _initial_visual_continuity_plan(manifest):
+    slug_id = manifest["creator_slug"].replace("-", "_")
+    return {
+        "visual_continuity_plan_id": f"visual_continuity_plan_{slug_id}",
+        "creator_profile_id": manifest["creator_profile_id"],
+        "created_on": manifest["created_on"],
+        "candidates": [],
+        "selection_review": {
+            "status": "draft",
+            "presented_on": None,
+            "decided_on": None,
+            "decided_by": None,
+            "notes": (
+                "Candidate props, product/brand objects, and production spaces "
+                "have not been presented for review."
+            ),
+        },
+    }
+
+
 def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
     manifest_path = Path(manifest_path)
     workspace_root = Path(workspace_root)
@@ -360,6 +384,11 @@ def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
 
     for relative_path, data in JSON_SCAFFOLDS.items():
         _write_json_if_missing(workspace_dir / relative_path, data)
+
+    _write_json_if_missing(
+        workspace_dir / "references" / "visual-continuity-plan.json",
+        _initial_visual_continuity_plan(manifest),
+    )
 
     _write_json_if_missing(
         workspace_dir / "readiness-gates.json", _initial_readiness_milestones(manifest)
@@ -716,6 +745,9 @@ def validate_creator_workspace(workspace_path):
     _validate_workspace_record(workspace_dir, manifest, "readiness_gates", "readiness-gates")
     _validate_workspace_record(workspace_dir, manifest, "channels", "channels")
     _validate_workspace_record(workspace_dir, manifest, "content_strategy", "content-strategy")
+    _validate_workspace_record(
+        workspace_dir, manifest, "visual_continuity_plan", "visual-continuity-plan"
+    )
     _validate_workspace_record(workspace_dir, manifest, "reference_library", "reference-library")
 
     creator_profile = load_json(workspace_dir / manifest["canonical_files"]["creator_profile"])
@@ -723,6 +755,11 @@ def validate_creator_workspace(workspace_path):
     channels = load_json(workspace_dir / manifest["canonical_files"]["channels"])
     content_strategy = load_json(workspace_dir / manifest["canonical_files"]["content_strategy"])
     reference_library = load_json(workspace_dir / manifest["canonical_files"]["reference_library"])
+
+    visual_continuity_path = (
+        workspace_dir / manifest["canonical_files"]["visual_continuity_plan"]
+    )
+    visual_continuity_plan = load_json(visual_continuity_path)
 
     if creator_profile["creator_profile_id"] != manifest["creator_profile_id"]:
         raise ValueError(
@@ -744,6 +781,14 @@ def validate_creator_workspace(workspace_path):
             "Reference library creator_profile_id does not match workspace manifest: "
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
+    _validate_source_intakes(workspace_dir, manifest)
+    _validate_visual_continuity_selection(
+        workspace_dir,
+        manifest,
+        creator_profile,
+        visual_continuity_plan,
+        reference_library,
+    )
     for label, record in (
         ("readiness milestones", readiness_state),
         ("channels", channels),
@@ -773,7 +818,6 @@ def validate_creator_workspace(workspace_path):
         )
 
     _resolve_reference_refs(creator_profile, reference_library)
-    _validate_source_intakes(workspace_dir, manifest)
     _validate_readiness_milestones(
         workspace_dir,
         manifest,
@@ -851,6 +895,182 @@ def validate_creator_workspace(workspace_path):
     }
 
 
+def _validate_visual_continuity_selection(
+    workspace_dir, manifest, creator_profile, plan, reference_library
+):
+    if plan["creator_profile_id"] != manifest["creator_profile_id"]:
+        raise ValueError(
+            "Visual Continuity Plan creator_profile_id does not match workspace manifest: "
+            f"{plan['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
+        )
+    visual_in_scope = bool(
+        set(creator_profile["content_strategy"]["content_mediums"]).intersection(
+            VISUAL_MEDIUMS
+        )
+    )
+
+    candidate_counts = Counter(candidate["candidate_id"] for candidate in plan["candidates"])
+    duplicate_candidate_ids = sorted(
+        candidate_id for candidate_id, count in candidate_counts.items() if count > 1
+    )
+    if duplicate_candidate_ids:
+        raise ValueError(
+            "Duplicate Visual Continuity Plan candidate ids: "
+            + ", ".join(duplicate_candidate_ids)
+        )
+
+    workspace_root = workspace_dir.resolve()
+    for candidate in plan["candidates"]:
+        for source_ref in candidate["source_refs"]:
+            problem = _workspace_file_ref_problem(
+                workspace_dir, workspace_root, source_ref, allow_fragment=True
+            )
+            if problem == "escape":
+                raise ValueError(
+                    f"Visual continuity candidate {candidate['candidate_id']} source_ref "
+                    f"escapes the workspace: {source_ref}"
+                )
+            if problem == "missing":
+                raise ValueError(
+                    f"Visual continuity candidate {candidate['candidate_id']} source_ref "
+                    f"does not resolve to a workspace file: {source_ref}"
+                )
+
+        recommendation = candidate["recommendation"]
+        if recommendation == "clarify" and candidate["user_decision"] == "accepted":
+            raise ValueError(
+                f"Visual continuity candidate {candidate['candidate_id']} remains "
+                "unresolved: a 'clarify' recommendation cannot be accepted; "
+                "revise, reject, or defer it"
+            )
+        expected_type = {
+            "signature_prop": "prop",
+            "signature_object": "product_object",
+            "anchor_space": "production_space",
+        }.get(recommendation)
+        if expected_type is not None and candidate["candidate_type"] != expected_type:
+            raise ValueError(
+                f"Visual continuity candidate {candidate['candidate_id']} recommendation "
+                f"{recommendation!r} requires candidate_type {expected_type!r}"
+            )
+
+    selected_asset_types = {"object", "location"}
+    selected_assets = [
+        asset
+        for asset in reference_library["assets"]
+        if asset["asset_status"] != "retired"
+        and asset["asset_type"] in selected_asset_types
+    ]
+    prompt_paths = sorted(
+        path.relative_to(workspace_dir).as_posix()
+        for path in (workspace_dir / "references").rglob("*.prompt.md")
+        if path.is_file()
+    )
+    all_declared_prompt_paths = {
+        asset["prompt_path"]
+        for asset in reference_library["assets"]
+        if asset.get("prompt_path")
+    }
+    orphan_prompt_paths = sorted(set(prompt_paths) - all_declared_prompt_paths)
+    review_status = plan["selection_review"]["status"]
+    if (
+        visual_in_scope
+        and manifest["status"] in ONBOARDING_STATUS_ORDER
+        and _stage_at_least(manifest["status"], "foundation_ready")
+        and review_status != "approved"
+    ):
+        raise ValueError(
+            f"Visual workspace status {manifest['status']!r} requires a user-approved "
+            "Visual Continuity Plan; present and resolve every candidate before "
+            "foundation readiness"
+        )
+    if (selected_assets or orphan_prompt_paths) and review_status != "approved":
+        prompt_note = (
+            f"; undeclared prompt files: {', '.join(orphan_prompt_paths)}"
+            if orphan_prompt_paths
+            else ""
+        )
+        raise ValueError(
+            "Object and location Reference Assets require a user-approved "
+            "Visual Continuity Plan before reference prompt creation" + prompt_note
+        )
+    if review_status != "approved":
+        return
+
+    candidates = {candidate["candidate_id"]: candidate for candidate in plan["candidates"]}
+    unresolved_decisions = sorted(
+        candidate["candidate_id"]
+        for candidate in plan["candidates"]
+        if candidate["user_decision"] in {"pending", "changes_requested"}
+    )
+    if unresolved_decisions:
+        raise ValueError(
+            "Approved Visual Continuity Plan has unresolved candidate decisions: "
+            + ", ".join(unresolved_decisions)
+        )
+
+    expected_recommendations = {
+        "object": {"signature_prop", "signature_object"},
+        "location": {"anchor_space"},
+    }
+    assets_by_id = {asset["asset_id"]: asset for asset in selected_assets}
+    if orphan_prompt_paths:
+        raise ValueError(
+            "Reference prompt files must resolve through declared Reference Assets: "
+            + ", ".join(orphan_prompt_paths)
+        )
+    for asset in selected_assets:
+        candidate_id = asset.get("selection_candidate_id")
+        if not candidate_id:
+            raise ValueError(
+                f"Reference asset {asset['asset_id']} requires selection_candidate_id "
+                "from the approved Visual Continuity Plan"
+            )
+        candidate = candidates.get(candidate_id)
+        if candidate is None:
+            raise ValueError(
+                f"Reference asset {asset['asset_id']} selection_candidate_id does not "
+                f"resolve in the Visual Continuity Plan: {candidate_id}"
+            )
+        if candidate["user_decision"] != "accepted":
+            raise ValueError(
+                f"Reference asset {asset['asset_id']} links to candidate {candidate_id} "
+                f"whose user_decision is {candidate['user_decision']!r}"
+            )
+        expected = expected_recommendations[asset["asset_type"]]
+        if candidate["recommendation"] not in expected:
+            raise ValueError(
+                f"Reference asset {asset['asset_id']} requires candidate recommendation "
+                f"in {sorted(expected)!r}, got {candidate['recommendation']!r}"
+            )
+        if candidate["target_asset_id"] != asset["asset_id"]:
+            raise ValueError(
+                f"Visual continuity candidate {candidate_id} target_asset_id does not "
+                f"match Reference Asset {asset['asset_id']}"
+            )
+
+    for candidate in plan["candidates"]:
+        recommendation = candidate["recommendation"]
+        promotes_asset = (
+            candidate["user_decision"] == "accepted"
+            and recommendation in {"signature_prop", "signature_object", "anchor_space"}
+        )
+        if promotes_asset:
+            target_asset_id = candidate["target_asset_id"]
+            if target_asset_id not in assets_by_id:
+                raise ValueError(
+                    f"Accepted visual continuity candidate {candidate['candidate_id']} "
+                    f"target_asset_id does not resolve to an active Reference Asset: "
+                    f"{target_asset_id!r}"
+                )
+        elif candidate["target_asset_id"] is not None:
+            raise ValueError(
+                f"Visual continuity candidate {candidate['candidate_id']} must not name "
+                "target_asset_id unless the user accepted a Signature Prop, "
+                "Signature Object, or Anchor Space"
+            )
+
+
 def _validate_source_intakes(workspace_dir, manifest):
     duplicate_ids = sorted(
         source_id
@@ -876,10 +1096,10 @@ def _validate_source_intakes(workspace_dir, manifest):
     missing = []
     for entry in manifest["source_intakes"]:
         raw_path = entry["path"]
-        resolved = (workspace_dir / raw_path).resolve()
-        if Path(raw_path).is_absolute() or not resolved.is_relative_to(workspace_root):
+        problem = _workspace_file_ref_problem(workspace_dir, workspace_root, raw_path)
+        if problem == "escape":
             escaping.append(raw_path)
-        elif not resolved.is_file():
+        elif problem == "missing":
             missing.append(raw_path)
     if escaping:
         raise ValueError(
@@ -887,6 +1107,18 @@ def _validate_source_intakes(workspace_dir, manifest):
         )
     if missing:
         raise FileNotFoundError(f"Missing source intake files: {', '.join(sorted(missing))}")
+
+
+def _workspace_file_ref_problem(
+    workspace_dir, workspace_root, raw_ref, *, allow_fragment=False
+):
+    raw_path = raw_ref.split("#", 1)[0] if allow_fragment else raw_ref
+    resolved = (workspace_dir / raw_path).resolve()
+    if Path(raw_path).is_absolute() or not resolved.is_relative_to(workspace_root):
+        return "escape"
+    if not resolved.is_file():
+        return "missing"
+    return None
 
 
 def _resolve_reference_refs(creator_profile, reference_library):

@@ -99,6 +99,7 @@ Produce or update:
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
 - `brand_context/voice-samples.md`
+- `references/visual-continuity-plan.json`
 - `references/reference-library.json`
 - `conversion-assets/*.json` when lead magnets, offers, or other conversion
   assets are part of the strategy
@@ -224,22 +225,27 @@ Run these internal phases in order:
 5. **Voice samples**: use `create-voice-samples` to create `brand_context/voice-samples.md` as the concrete example file.
 6. **Operational summary**: use `create-creator-profile` to create `creator-profile.json` from the accepted foundation.
 7. **Runtime context**: use `create-runtime-context` to create the tiny always-loaded `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md`.
-8. **Reference planning**: use `create-reference-library` to create `references/reference-library.json` entries with stable asset IDs for required real or planned assets.
-9. **Reference prompt staging**: if image or video is in scope, stage prompts in this order: user person image -> default video/photo style -> three character assets -> outfits -> locations -> objects. Use the canonical prompt templates under `docs/templates/creator-setup/reference-prompts/` unchanged.
-10. **Reference resolution**: import or generate an exact approved batch, or retain `planned`/`prompted` assets for prompt-ready setup. Provider-backed work remains behind the exact-call generation gate.
-11. **Personal brand board**: for image, video, carousel, or story-sequence creators, use `personal-brand-board` only after Reference Library asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
-12. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
+8. **Visual continuity planning and approval**: delegate the complete candidate
+   analysis, presentation, Visual Continuity Plan approval, asset promotion,
+   and prompt-staging contract to `create-reference-library`. Do not duplicate
+   or weaken that owning skill's selection rules here.
+9. **Reference planning, prompt staging, and resolution**: after that approval
+   boundary, continue through `create-reference-library` and its canonical
+   templates. Import or generate only an exact approved batch, or retain
+   `planned`/`prompted` assets for prompt-ready setup.
+10. **Personal brand board**: for image, video, carousel, or story-sequence creators, use `personal-brand-board` only after Reference Library asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
+11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
-13. **State reconciliation and readiness check**: run the §Setup State
+12. **State reconciliation and readiness check**: run the §Setup State
     Reconciliation pass, then run `python3 -m influencer_os validate workspace
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-14. **Milestone acceptance**: ask for approval before advancing each milestone:
+13. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
-15. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
+14. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
 
 ## Medium-Based Blockers
 
@@ -339,6 +345,11 @@ last.*
   the Mara Vale run treated an abstract generated reference image as a complete
   production brand system. It runs after Reference Library planning and binds
   spaces/props to typed asset IDs.
+- 2026-07-09: Added Visual Continuity Plan approval before object/location
+  reference creation — see §Subskills phases 8-10. Candidate props,
+  product/brand objects, and spaces are evaluated for brand and atmosphere
+  effectiveness, presented to the user, and promoted only after explicit
+  selection approval.
 
 ## Self-Update
 

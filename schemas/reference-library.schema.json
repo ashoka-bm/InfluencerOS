@@ -24,6 +24,10 @@
           "role": { "type": "string", "minLength": 1 },
           "path": { "type": "string", "pattern": "^references/[a-z0-9-]+/(?!\\.\\.?$)[^/\\n\\r]+$" },
           "prompt_path": { "type": "string", "pattern": "^references/[a-z0-9-]+/(?!\\.\\.?$)[^/\\n\\r]+$" },
+          "selection_candidate_id": {
+            "type": "string",
+            "pattern": "^continuity_candidate_[a-zA-Z0-9_-]+$"
+          },
           "source": {
             "type": "object",
             "additionalProperties": false,

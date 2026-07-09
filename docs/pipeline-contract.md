@@ -89,7 +89,7 @@ Creator runtime skills live under `.claude/skills/<skill-name>/SKILL.md` inside 
 
 ## Creator Authoring Flow
 
-Creator workspaces may start from a master intake document. The import flow drafts the typed Creator Profile, identity file, soul file, personal brand file, and reference library requirements. Once reviewed, those split files become the maintained source of truth.
+Creator workspaces may start from a master intake document. The import flow drafts the typed Creator Profile, identity file, soul file, personal brand file, and visual continuity candidates. Props, product/brand objects, and production spaces are presented to the user through the Visual Continuity Plan before selected Signature Props, Signature Objects, and Anchor Spaces are promoted into the Reference Library. Candidate evidence refs resolve inside the workspace, and visual `foundation_ready` status requires a fully resolved user approval. Once reviewed, those split files become the maintained source of truth.
 
 The original intake should be retained only as provenance when needed, with source path, import date, and extraction notes.
 
@@ -213,6 +213,7 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | --- | --- | --- |
 | Creator Workspace | `schemas/creator-workspace.schema.json` | `examples/creator-workspace.example.json` |
 | Creator Profile | `schemas/creator-profile.schema.json` | `examples/creator-profile.example.json` |
+| Visual Continuity Plan | `schemas/visual-continuity-plan.schema.json` | `examples/visual-continuity-plan.example.json` |
 | Readiness Milestones | `schemas/readiness-gates.schema.json` | `examples/readiness-gates.example.json` |
 | Channel Registry | `schemas/channels.schema.json` | `examples/channels.example.json` |
 | Content Strategy | `schemas/content-strategy.schema.json` | `examples/content-strategy.example.json` |
