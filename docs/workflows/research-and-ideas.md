@@ -107,7 +107,6 @@ Recommended creator memory inputs:
 - distilled creator learnings,
 - performance summaries,
 - selected postmortems,
-- prior Social Research Packs,
 - prior Video Understanding Packs,
 - prior idea queue outcomes.
 

@@ -74,7 +74,7 @@ The main adaptation is domain: Agentic OS is a general business assistant with m
 | Workflow model | Creation flywheel: research, concept, produce, publish, gather data, feedback. | Planning pipeline: research, ideas, selected idea, template, plan, generation plan, output package, learning. | Adapt |
 | Outputs | Project folders and deliverables, often markdown-first. | Schema-backed project records and Output Packages with provenance. | Adapt |
 | Memory | Tier 0 files, daily logs, `.aos` captures, semantic recall index, cron distillation. | Creator Memory, SQL index, semantic lookup projection; hooks/cron deferred. | Adapt/defer |
-| Research | Skills and external providers support research. | Dated Social Research Packs and Video Understanding Packs tied to Creator Profile. | Adapt |
+| Research | Skills and external providers support research. | Platform-scoped Research Runs, Evidence, Findings, and Video Understanding Packs tied to Creator Profile. | Adapt |
 | Provider boundary | External services enhance skills; secrets in `.env`; some workflows call providers. | Provider-backed generation/render/upload/paid calls require exact approval. | Adapt stricter |
 | Command Centre | Built app for tasks, cron, memory, docs, skills, settings. | Deferred; CLI/docs/schemas are enough until the file-first OS is stable. | Defer |
 | Cron | Markdown job runtime with leader lock and logs. | Deferred until Automation OS. | Defer |
@@ -102,7 +102,7 @@ The main adaptation is domain: Agentic OS is a general business assistant with m
 - General brand/business context becomes Creator Profile plus creator `brand_context/`.
 - Generic outputs become schema-backed records and Output Packages.
 - Broad session memory becomes creator-scoped memory with provenance.
-- Research becomes dated, sourced, platform-scoped research per ADR 0020 (Research Runs, Search Plans, Evidence, Source Yield, Findings, Idea Queue), with Social Research Packs retained only as compatibility records and Video Understanding Packs used when real videos are analyzed.
+- Research becomes dated, sourced, platform-scoped research per ADR 0020 (Research Runs, Search Plans, Evidence, Source Yield, Findings, Idea Queue), with Video Understanding Packs used when real videos are analyzed.
 - Provider integrations become explicit approval gates.
 - Skill routing becomes conductor skills tied to workflow records.
 - Agentic OS flywheel becomes InfluencerOS planning and learning loops.

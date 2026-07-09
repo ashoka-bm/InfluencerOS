@@ -326,8 +326,8 @@ Two parallel tracks (see the roadmap Post-Phase-4 section):
 - Track 2 — Multi-entity onboarding (ADR 0026): add a required `creator_type`
   discriminator (`influencer | product | brand`) that conditions the required
   foundation documents, reusing the medium-based blocker mechanism. "Creator"
-  becomes the umbrella term; the `creator_*` plumbing and the 41 downstream
-  schemas are unchanged. Build slices are tracked in
+  becomes the umbrella term; the `creator_*` plumbing and downstream schemas
+  are unchanged. Build slices are tracked in
   `docs/workflows/multi-entity-onboarding-implementation-plan.md`.
 
 Completed:
@@ -439,7 +439,6 @@ python3 -m influencer_os init-creator examples/creator-workspace.example.json --
 cp examples/creator-profile.example.json .tmp/creators/luna-fit/creator-profile.json
 cp examples/reference-library.example.json .tmp/creators/luna-fit/references/reference-library.json
 cp examples/sources/luna-fit-breakdown.example.md .tmp/creators/luna-fit/sources/intakes/luna-fit-breakdown.md
-cp examples/social-research-pack.example.json .tmp/creators/luna-fit/research/social-research-packs/research_luna_fit_2026_06_28.json
 cp examples/video-understanding-pack.example.json .tmp/creators/luna-fit/research/video-understanding-packs/video_research_luna_fit_001.json
 cp examples/creator-content-schedule.example.json .tmp/creators/luna-fit/content-schedule.json
 mkdir -p .tmp/creators/luna-fit/research/runs/research_run_luna_fit_2026_07_03_001
@@ -1238,6 +1237,21 @@ ignored Creator Workspace contains the first 13-candidate pending review plan;
 no provider generation ran and no candidate was silently approved.
 Verification: 877 unit tests pass, 55 examples validate, compilation and
 whitespace checks pass.
+
+Lean routing and ownership cleanup (2026-07-09): removed the superseded
+`init-run` / Social Research Pack path, including its schema, example,
+scaffold, resolver branch, tests, and current operational documentation. The
+Creator Workspace research route is now the sole supported entry. Generic
+creator-scope checks moved to `creator_scope.py`; generic JSONL validation
+moved to `validation.py`; Improvement OS now owns friction-ledger validation
+and reflection reconciliation, eliminating the Research/Rubric ownership
+cycle. Current product language distinguishes shipped influencer onboarding
+from ADR 0026's planned product/brand target, and the influencer appearance
+choice is now named Representation Model. Manual record inventories were
+replaced with disk-derived authority, and shared integration builders moved
+from `test_cli.py` to `tests/support.py`. The generation/Project seam was left
+unchanged. Verification: 870 unit tests pass, 52 examples validate,
+compilation and both review axes pass with no remaining findings.
 
 ## Next Work Queue
 

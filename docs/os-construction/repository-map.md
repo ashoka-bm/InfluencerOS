@@ -51,11 +51,13 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | Path | Role |
 | --- | --- |
 | `influencer_os/full_validation.py` | Composed `validate all` release gate: workspace → research → queue → board → every project, layer-named errors, deduplicated warnings. |
-| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board`/`all` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `register-published-post`, `add-analytics-snapshot`, `import-analytics-csv`, `init-run`, `rebuild-index`, `rebuild-lookup`, `query-lookup`, `rebuild-board`, `prune`, `memory-write`, `log-learning`, `list-connectors`, `research-fetch`). It should call workflow helpers, not hold product rules. |
+| `influencer_os/cli.py` | CLI command surface (`validate` incl. `research`/`queue`/`board`/`all` targets, `init-creator`, `import-intake`, `set-intake-status`, `sync-creator-runtime`, `update-creators`, `init-project`, `register-output-package`, `register-published-post`, `add-analytics-snapshot`, `import-analytics-csv`, `rebuild-index`, `rebuild-lookup`, `query-lookup`, `rebuild-board`, `prune`, `memory-write`, `log-learning`, `list-connectors`, `research-fetch`). It should call workflow helpers, not hold product rules. |
 | `influencer_os/validation.py` | Fail-closed schema subset validation and disk-derived example coverage. |
+| `influencer_os/creator_scope.py` | Neutral Creator Workspace scope loading and creator-field checks shared across runtime modules. |
 | `influencer_os/creator_workspaces.py` | Creator Workspace scaffolding, source intake import and provenance, sync/update propagation, validation, and readiness gates. |
 | `influencer_os/projects.py` | Project scaffolding, validation, and promotion-anchored provenance resolution. |
 | `influencer_os/research.py` | Research-module validation: search plans, JSONL evidence and metrics, source-yield ledgers, findings frontmatter (scoped YAML subset), queue consistency, and the idea-promotion gate. |
+| `influencer_os/rubric.py` | Improvement OS Production Rubric, friction ledger, and reflection-run reconciliation. |
 | `influencer_os/recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds covering research, project, board, and Phase 2 learning records (published post records, `analytics/snapshots/`, performance summaries — schema-validated and manifest-anchored via the shared `projects.py` seam that `validate workspace` also runs, never `analytics/raw/`); never a validation dependency. |
 | `influencer_os/semantic_lookup.py` | Rebuildable SQLite FTS5 semantic lookup projection (ADR 0011 keyword leg, Decision 1 phasing): `rebuild-lookup` chunks the creator-scoped allowlist (brand context, findings, stable findings, creator learnings, index-allowed performance-summary narratives — never `analytics/`, with symlinked lookup sources rejected) into heading-aware chunks with line provenance, authority weights, and sha256 change detection; `query-lookup` reranks creator-local BM25 candidates by authority and recency behind a hard creator-scope boundary on a read-only connection; never a validation dependency. |
 | `influencer_os/boards.py` | Content Board projection: `rebuild-board` derives cards from canonical records (columns/manual order preserved); `validate board` agreement check. |
@@ -64,8 +66,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | `influencer_os/providers/` | Generation provider boundary: registry (structural exact approval), approval-gated dispatch, mock adapter (ADR 0023). |
 | `influencer_os/prune.py` | Research retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + its snapshots, removals recorded as run-manifest pruned ids. |
 | `influencer_os/memory.py` | Bounded `memory-write` and `log-learning` writers (ADR 0016). |
-| `influencer_os/runs.py` | Dry-run initialization and run records. |
-| `influencer_os/connectors/` | Env-gated research-acquisition connector tier (ADR 0022): env detection/kill switch/call cap, stdlib HTTP client, registry + fetch dispatch, canonical-record mapping, and the Reddit/OpenAI, X/xAI, Firecrawl, and LinkedIn/Apify connectors. Powers `list-connectors` and `research-fetch`; dormant until a provider key is present. |
+| `influencer_os/connectors/` | Env-gated research-acquisition connector tier (ADR 0022/0027): env detection/kill switch/call cap, stdlib HTTP client, registry + fetch dispatch, canonical-record mapping, and Reddit, X, Firecrawl, LinkedIn, and YouTube adapters. Powers `list-connectors` and `research-fetch`; dormant until a provider key is present. |
 
 ## Contracts
 
@@ -73,6 +74,7 @@ This map shows where each part of InfluencerOS should live. It describes file ow
 | --- | --- |
 | `schemas/` | JSON Schema contracts for every durable record. |
 | `examples/` | Valid example records for schemas and CLI tests. |
+| `tests/support.py` | Shared integration-test workspace and project builders; test modules do not act as fixture interfaces. |
 | `tests/` | Unit tests for CLI, scaffolding, and schema behavior. |
 
 ## Skills
@@ -179,7 +181,6 @@ influencer_os/cli.py
   -> recall_index.py
   -> prune.py
   -> memory.py
-  -> runs.py
   -> validation.py
   -> connectors/   (list-connectors, research-fetch — ADR 0022)
   -> schemas/

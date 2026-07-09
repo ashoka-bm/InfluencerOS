@@ -83,9 +83,8 @@ What needs work, in severity order:
    workstream-12 decision ("the human saw the evidence"), and warnings do
    reach stderr; it is surfaced here as a policy confirmation, not a bug.
 6. **Minor:** project validation ignores `promotion_status` (a project locked
-   to a superseded/cancelled promotion still validates); `runs.py` has no
-   tests; a single end-to-end journey test; `EXCALIDRAW_API_TOKEN` missing
-   from `.env.example`.
+   to a superseded/cancelled promotion still validates); a single end-to-end
+   journey test; `EXCALIDRAW_API_TOKEN` missing from `.env.example`.
 
 Out of scope for this plan (tracked elsewhere):
 
@@ -196,7 +195,7 @@ Operator-attended execution, not code:
   unknown-comparator raise) — one small test each.
 - Optional: extend `tests/test_user_journey.py` with a second journey that
   exercises the analytics → performance-summary → distillation leg
-  end-to-end; add basic `runs.py` coverage.
+  end-to-end.
 
 ## Execution Order
 

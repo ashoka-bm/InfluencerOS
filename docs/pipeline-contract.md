@@ -20,20 +20,22 @@ creator.profile
   -> output.record, when generation or import creates an artifact
 ```
 
-## Local Run Layout
+## Research Run Layout
 
-The CLI initializes dry-run state under `workspace-library/runs/<run-id>/`.
+Research runs live inside the owning Creator Workspace under
+`research/runs/<research-run-id>/`.
 
 ```text
-run.json
-events.jsonl
-records/
-  creator-profile.json
+research-run.json
+search-plan.json
+evidence.jsonl
+metric-snapshots.jsonl
+source-yield.jsonl
 ```
 
-`workspace-library/` is ignored by git. The repository stores product contracts, schemas, examples, and tests; run state stays local.
+`workspace-library/` is ignored by git. The repository stores product contracts, schemas, examples, and tests; creator-scoped run state stays local.
 
-During the current build phase, local run and creator data are disposable test fixtures unless the user explicitly promotes them. The operator expects to wipe fixture data before real creator onboarding.
+During the current build phase, local creator data is disposable test fixture state unless the user explicitly promotes it. The operator expects to wipe fixture data before real creator onboarding.
 
 ## Local Creator Layout
 
@@ -209,59 +211,14 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 
 ## Record Types
 
-| Record type | Schema | Example |
-| --- | --- | --- |
-| Creator Workspace | `schemas/creator-workspace.schema.json` | `examples/creator-workspace.example.json` |
-| Creator Profile | `schemas/creator-profile.schema.json` | `examples/creator-profile.example.json` |
-| Visual Continuity Plan | `schemas/visual-continuity-plan.schema.json` | `examples/visual-continuity-plan.example.json` |
-| Readiness Milestones | `schemas/readiness-gates.schema.json` | `examples/readiness-gates.example.json` |
-| Channel Registry | `schemas/channels.schema.json` | `examples/channels.example.json` |
-| Content Strategy | `schemas/content-strategy.schema.json` | `examples/content-strategy.example.json` |
-| Conversion Asset | `schemas/conversion-asset.schema.json` | `examples/conversion-asset.example.json` |
-| Reference Library | `schemas/reference-library.schema.json` | `examples/reference-library.example.json` |
-| Project | `schemas/project.schema.json` | `examples/project.example.json` |
-| Output Package | `schemas/output-package.schema.json` | `examples/output-package.example.json` |
-| Published Post Record | `schemas/published-post-record.schema.json` | `examples/published-post-record.example.json` |
-| Analytics Snapshot | `schemas/analytics-snapshot.schema.json` | `examples/analytics-snapshot.example.json` |
-| Performance Summary | `schemas/performance-summary.schema.json` | `examples/performance-summary.example.json` |
-| Social Research Pack | `schemas/social-research-pack.schema.json` | `examples/social-research-pack.example.json` |
-| Video Understanding Pack | `schemas/video-understanding-pack.schema.json` | `examples/video-understanding-pack.example.json` |
-| Social Post Format | `schemas/social-post-format.schema.json` | `examples/social-post-format.example.json` |
-| Social Template | `schemas/social-template.schema.json` | `examples/social-template.example.json` |
-| Applied Social Template | `schemas/applied-social-template.schema.json` | `examples/applied-social-template.example.json` |
-| Review Record | `schemas/review-record.schema.json` | `examples/review-record.example.json` |
-| Generation Approval Record | `schemas/generation-approval-record.schema.json` | `examples/generation-approval-record.example.json` |
-| Generation Asset Manifest | `schemas/generation-asset-manifest.schema.json` | `examples/generation-asset-manifest.example.json` |
-| Quality Review | `schemas/quality-review.schema.json` | `examples/quality-review.example.json` |
-| Micro-Journey Video Plan | `schemas/micro-journey-video-plan.schema.json` | `examples/micro-journey-video-plan.example.json` |
-| Carousel Plan | `schemas/carousel-plan.schema.json` | `examples/carousel-plan.example.json` |
-| Single Image Post Plan | `schemas/single-image-post-plan.schema.json` | `examples/single-image-post-plan.example.json` |
-| Story Sequence Plan | `schemas/story-sequence-plan.schema.json` | `examples/story-sequence-plan.example.json` |
-| Article Plan | `schemas/article-plan.schema.json` | `examples/article-plan.example.json` |
-| Thread Plan | `schemas/thread-plan.schema.json` | `examples/thread-plan.example.json` |
-| Base Video Generation Plan | `schemas/base-video-generation-plan.schema.json` | `examples/base-video-generation-plan.example.json` |
-| Creator Content Schedule | `schemas/creator-content-schedule.schema.json` | `examples/creator-content-schedule.example.json` |
-| Research Run | `schemas/research-run.schema.json` | `examples/research-run.example.json` |
-| Research Search Plan | `schemas/research-search-plan.schema.json` | `examples/research-search-plan.example.json` |
-| Research Evidence (JSONL) | `schemas/research-evidence.schema.json` | `examples/research-evidence.example.json` |
-| Metric Snapshot (JSONL) | `schemas/metric-snapshot.schema.json` | `examples/metric-snapshot.example.json` |
-| Research Source Yield (JSONL) | `schemas/research-source-yield.schema.json` | `examples/research-source-yield.example.json` |
-| Research Findings (frontmatter) | `schemas/research-findings.schema.json` | `examples/research-findings.example.json` |
-| Stable Finding (frontmatter) | `schemas/stable-finding.schema.json` | `examples/stable-finding.example.json` |
-| Research Sources | `schemas/research-sources.schema.json` | `examples/research-sources.example.json` |
-| Research Hashtags | `schemas/research-hashtags.schema.json` | `examples/research-hashtags.example.json` |
-| Research Search Terms | `schemas/research-search-terms.schema.json` | `examples/research-search-terms.example.json` |
-| Reference Creators | `schemas/reference-creators.schema.json` | `examples/reference-creators.example.json` |
-| Research Watchlist | `schemas/research-watchlist.schema.json` | `examples/research-watchlist.example.json` |
-| Idea Queue Entry | `schemas/idea-queue-entry.schema.json` | `examples/idea-queue-entry.example.json` |
-| Idea Queue Manifest | `schemas/idea-queue.schema.json` | `examples/idea-queue.example.json` |
-| Idea Promotion | `schemas/idea-promotion.schema.json` | `examples/idea-promotion.example.json` |
-| Project Warning (JSONL) | `schemas/project-warning.schema.json` | `examples/project-warning.example.json` |
-| Content Board | `schemas/content-board.schema.json` | `examples/content-board.example.json` |
-| Automation Run | `schemas/automation-run.schema.json` | `examples/automation-run.example.json` |
-| System Event | `schemas/system-event.schema.json` | `examples/system-event.example.json` |
+The authoritative record inventory is the set of `schemas/*.schema.json` files.
+Every schema must have the same-stem `examples/*.example.json`; discovery is
+disk-derived and `python3 -m influencer_os validate examples` fails on either a
+missing example or an orphan example. Do not duplicate that inventory here.
 
-The implemented record chain now covers creator setup, the ADR 0020 research module (schedule, runs, search plans, evidence, metric snapshots, source-yield ledgers, findings, intelligence, idea queue, promotions, warnings, board, automation-run and system-event record shapes), project planning anchored on locked Idea Promotions, output packaging, publication records, analytics snapshots, and performance summaries.
+The implemented record chain covers creator setup, platform-scoped research,
+idea promotion, project planning, output packaging, publication evidence,
+analytics, learning, generation provenance, and Improvement OS records.
 
 Content Idea Set and Selected Content Idea were removed after the ADR 0020
 Research Findings, Idea Queue, and Idea Promotion route shipped. Projects

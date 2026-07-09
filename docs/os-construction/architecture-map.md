@@ -1,6 +1,6 @@
 # InfluencerOS Architecture Map
 
-Last updated: 2026-07-05
+Last updated: 2026-07-09
 
 This is the whole-system blueprint at file granularity: where every file lives, what it owns, and which function or skill calls which other function or skill. It records **structure and call flow, not file internals**. Internals (schema fields, skill prose, function bodies) are defined in the files themselves and built in dedicated TDD passes.
 
@@ -51,7 +51,7 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `context/SOUL.md` | Sole OS identity document (persona). | [BUILT] |
 | `context/USER.md` | OS operator profile. | [BUILT] |
 | `context/MEMORY.md` | OS working memory, byte-capped; written by `memory-write`. | [BUILT] |
-| `context/learnings.md` | Append-only per-skill learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
+| `context/learnings.md` | Append-only per-skill learnings; written by `wrap-up`. | [BUILT] |
 | `brand_context/*.md` | OS positioning, voice, icp, samples, assets. | [BUILT; stubs] |
 
 ### Durable planning docs (`docs/os-construction/`)
@@ -64,10 +64,10 @@ Deferred subsystems        hooks, cron, Command Centre, .claude/agents, anywhere
 | `agentic-os-alignment.md` · `agentic-os-copy-plan.md` · `agentic-os-parity-plan.md` | Parity governance. | [BUILT] |
 | `divergence-test.md` · `visual-architecture-maps.md` | Divergence gate + map standard. | [BUILT] |
 | `context-matrix.md` · `skill-registry.md` | Context load rules + skill registry. | [BUILT] |
-| `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT; empty until `wrap-up` runs] |
+| `process-learnings.md` | Repo-level process learnings; written by `wrap-up`. | [BUILT] |
 | `adversarial-review.md` | Ranked divergence ledger from the parity review. | [BUILT] |
 | `maps/` | Excalidraw map records. | [BUILT] |
-| `docs/adr/0001–0024` | Architectural decisions (0020 research module; 0021 research intelligence; 0022 research-acquisition connectors; 0023 generation provider boundary; 0024 creative content model). | [BUILT] |
+| `docs/adr/0001–0028` | Architectural decisions, including research/intelligence (0020–0022), generation providers (0023), creative content (0024), Improvement OS (0025), planned multi-entity onboarding (0026), YouTube research (0027), and readiness hardening (0028). | [BUILT] |
 
 ### Workflow contracts
 
@@ -87,7 +87,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
 | `influencer-os` | conductor | Content-creation conductor (10 phases; `dependencies` + `## Phase Owners` declared). | [BUILT] |
-| `create-influencer` | conductor | Creator-setup conductor (13 phases). | [BUILT] |
+| `create-influencer` | conductor | Influencer-setup conductor (14 phases); product/brand routing remains planned under ADR 0026. | [BUILT] |
 | `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
 | `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
 | `create-personal-brand` | setup | `brand_context/personal-brand.md`. | [BUILT] |
@@ -117,18 +117,19 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `cli.py` | Command surface; routes to helpers (`register-output-package`, `list-connectors`, `research-fetch` included), holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
+| `creator_scope.py` | Neutral Creator Workspace scope loading and creator-field checks shared across runtime modules. | [BUILT] |
 | `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness milestones. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
 | `research.py` | Search-plan, JSONL, source-yield, and frontmatter validation; `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A; intelligence hardening 2026-07-04] |
+| `rubric.py` | Improvement OS Production Rubric, friction ledger, and reflection-run reconciliation (ADR 0025). | [BUILT — Phase 4] |
 | `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds covering research, project, board, and Phase 2 learning records (schema-validated and manifest-anchored via the shared `projects.py` seam that `validate workspace` also runs at rest; `analytics/raw/` never scanned); never a validation dependency. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
 | `semantic_lookup.py` | FTS5 semantic lookup projection (ADR 0011 keyword leg): `rebuild-lookup` chunks the creator-scoped allowlist (brand context, findings, stable findings, learnings, index-allowed performance summaries; `analytics/` unreachable by construction and symlinked lookup sources rejected) with heading/line provenance, authority weights, sha256 change detection; `query-lookup` reranks creator-local BM25 x authority x recency behind a hard creator-scope no-leak boundary, read-only, queries never persisted; never a validation dependency. | [BUILT — Phase 2 slice 6] |
 | `boards.py` | Content Board projection: `rebuild-board` (cards derived, columns/manual order preserved) + `validate board` agreement check. | [BUILT — Phase 1 slice 4 batch C] |
 | `prune.py` | Retention pruning: dry-run default, `--apply` deletes unreferenced out-of-window evidence + snapshots, pruned ids recorded on the run manifest. | [BUILT — Phase 1 slice 4 batch D] |
 | `memory.py` | Bounded `memory-write` + `log-learning` writers; evidence-linked creator lessons with at-rest validation. | [BUILT — ADR 0016; creator lessons Phase 2 slice 4] |
-| `runs.py` | Dry-run init + run records. | [BUILT] |
 | `generation.py` | Generation OS writers + at-rest checks (ADR 0023): approval-record writer with shared record↔project binding, asset import (project + reference routes), manifest ledger appends and bidirectional reconciliation, content-bound quality-review coverage. | [BUILT — Phase 3 slices 2-5] |
 | `providers/` | Generation provider boundary (ADR 0023): `registry.py` (structural `exact_approval` rows, import fails closed), `dispatch.py` (the only adapter entry point; approval-record-gated, O_EXCL-locked two-phase consumption, kill-switch hard stop, mock adapter). Powers `list-providers`. | [BUILT — Phase 3 slice 1 + review hardening] |
-| `connectors/` | Env-gated research-acquisition tier (ADR 0022): `env.py` (key detection, kill switch, call cap), `http.py` (stdlib client), `registry.py`/`fetch.py` (availability + dispatch), `models.py`/`parse.py` (canonical mapping to `ResearchEvidence`/`MetricSnapshot`), and connectors `openai_reddit.py` (+`reddit_enrich.py`), `xai_x.py`, `firecrawl_web.py`, `linkedin_apify.py`. Powers `list-connectors` + `research-fetch`; output validated by `research-fetch-result.schema.json`. | [BUILT — ADR 0022; dormant until provider key] |
+| `connectors/` | Env-gated research-acquisition tier (ADR 0022/0027): shared env, HTTP, registry, fetch, model, and parsing modules plus Reddit, X, Firecrawl, LinkedIn, and YouTube adapters. Powers `list-connectors` + `research-fetch`; output validated by `research-fetch-result.schema.json`. | [BUILT; dormant until provider key] |
 
 ### Tests (`tests/`) — parity + contract
 
@@ -136,6 +137,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `test_schema_validation.py` | All examples validate; coverage derived from disk; fail-closed subset tests. | [BUILT — WS13] |
 | `test_cli.py` | CLI behavior incl. provenance resolution and readiness milestones. | [BUILT] |
+| `support.py` | Shared integration-test workspace and project builders. | [BUILT] |
 | `test_recall_index.py` | Index resolution per record kind (incl. Phase 2 learning records), idempotent per-creator rebuilds, fail-closed ambiguity, raw-analytics exclusion, delete-and-rebuild equivalence, default ADR 0010 path. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
 | `test_boards.py` | Board derivation (cards, badges, parent/child), metadata preservation, agreement validation, CLI. | [BUILT — Phase 1 slice 4 batch C] |
 | `test_prune.py` | Retention rules (dry-run, apply, protection, idempotence) + pruned-ids reconciliation. | [BUILT — Phase 1 slice 4 batch D] |
@@ -261,28 +263,28 @@ influencer_os/cli.py
   -> brand_boards.py         (token spec + Reference Library -> editable brand-board projection)
   -> calendars.py            (content-schedule -> interactive calendar projection)
   -> projects.py             (project scaffold/validate + provenance resolution)
+  -> creator_scope.py        (workspace creator identity + record-scope checks)
+  -> rubric.py               (friction ledger + reflection reconciliation)
   -> memory.py               (bounded memory-write + log-learning writers)
-  -> runs.py                 (dry-run init)
   -> validation.py           (fail-closed schema subset incl. $ref/oneOf/anyOf/allOf)
   -> connectors/             (list-connectors availability; research-fetch dispatch, ADR 0022)
   -> schemas/                (JSON Schema contracts)
 ```
 
-## Research-Acquisition Connector Call Graph (ADR 0022)
+## Research-Acquisition Connector Call Graph (ADR 0022/0027)
 
 ```text
 influencer_os/cli.py
   list-connectors [--env-file <path>]  -> connectors.registry.connector_status()
        reports each connector available|unavailable from env (env.py: key present,
        kill switch off, per-run call cap) — no provider call
-  research-fetch <connector> <target> --run-dir <research-run-dir> [--depth|--days|--from-date|--to-date|--max-posts|--out|--env-file]
-       -> connectors.fetch dispatch (fetch_reddit | fetch_x | fetch_firecrawl |
-         fetch_linkedin) -> connector module (openai_reddit | xai_x |
-         firecrawl_web | linkedin_apify) -> http.py provider call
+  research-fetch <connector> <target> --run-dir <research-run-dir> [connector options]
+       -> connectors.fetch.FETCH_ROUTES (single route authority)
+       -> named connector adapter -> http.py provider call
        -> parse.py / models.py map provider output to ResearchEvidence + MetricSnapshot
        -> validate against research-fetch-result.schema.json BEFORE emitting
-  guardrails: standing approval by key presence pinned to the four ADR 0022
-    adapter IDs (not api_backed/scraping_api at large);
+  guardrails: standing approval by key presence pinned to the connector
+    registry's ADR 0022/0027 adapter IDs (not api_backed/scraping_api at large);
     per-run call cap (INFLUENCER_OS_CONNECTOR_MAX_CALLS) and kill switch
     (INFLUENCER_OS_DISABLE_PAID_CONNECTORS); free reddit.com enrichment bounded
     separately; runs only inside an explicit user-initiated fetch (no scheduled path).

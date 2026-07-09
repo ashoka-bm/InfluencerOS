@@ -146,17 +146,10 @@ workspace-library/creators/<creator-slug>/
 
 The structure above is the target production layout. In build/test mode, a workspace that follows this layout is still a fixture unless the user explicitly accepts it as durable creator state.
 
-### Transitional Layout (Phase 0C)
-
-The `research/` tree and the project `evidence-brief.md` above are the ADR 0020
-target; they land with the Phase 1 research module slice. Until then,
-`init-creator` scaffolds the current transitional layout, and provenance
-validation resolves against it:
+### Research Layout
 
 ```text
 research/
-  social-research-packs/
-    <social-research-pack-id>.json       # research_* ids (compatibility records)
   video-understanding-packs/
     <video-understanding-pack-id>.json   # video_research_* ids
   sources/
