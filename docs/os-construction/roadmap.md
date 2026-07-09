@@ -367,13 +367,13 @@ The 2026-07-07 pre-alpha review and the gap-closing batches (composed
 Goal: onboard products and brands, not only avatar-led influencers, via a
 `creator_type` discriminator that conditions the required foundation
 documents. "Creator" becomes the umbrella term; the `creator_*` plumbing and
-the 41 downstream schemas are unchanged.
+downstream schemas are unchanged.
 
 Entry criteria:
 
 - ADR 0026 recorded (done, 2026-07-07).
 - The influencer path stays green throughout (no regression to the working
-  setup flow or the 739-test pipeline).
+  setup flow or full test suite).
 
 Exit criteria (target outcomes; runnable rewrite lands in the implementation
 plan):

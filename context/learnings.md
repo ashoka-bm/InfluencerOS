@@ -25,6 +25,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: Creator setup should run as Creator Foundation -> Strategy -> Post Production. For image/video/voice channels, profile approval is not enough; require stable visual and voice references or an explicit waiver before strategy calendars and post production.
 - 2026-07-09: 2026-07-09: A no-voiceover policy prohibits spoken generation; it never waives spoken_voice_generation_allowed or substitutes for approved voice evidence.
 - 2026-07-09: Delegate visual-continuity candidate analysis and approval to create-reference-library before reference prompt staging or foundation readiness.
+- 2026-07-09: Use Representation Model for synthetic/avatar-led/human-backed/text-first/mixed; reserve Creator Type for ADR 0026's planned influencer/product/brand discriminator.
 
 ### wrap-up
 
@@ -36,6 +37,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-07: No feedback - routine session after repository hardening fixes.
 - 2026-07-09: No feedback - routine session after creator-to-video workflow visualization.
 - 2026-07-09: 2026-07-09: No feedback — routine session after onboarding readiness and calendar review remediation.
+- 2026-07-09: No feedback — routine session after lean routing and ownership cleanup.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.

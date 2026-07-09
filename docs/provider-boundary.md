@@ -1,6 +1,6 @@
 # Provider Boundary
 
-InfluencerOS is dry-run-first.
+InfluencerOS is planning-first and local-first.
 
 Allowed without approval:
 

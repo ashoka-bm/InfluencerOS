@@ -1,6 +1,6 @@
 # InfluencerOS
 
-InfluencerOS creates researched content ideas and production plans for avatar-led social media creators, starting with universal short-form video and now including article and thread plans.
+InfluencerOS currently creates researched content ideas and production plans for influencer workspaces, starting with universal short-form video and now including article and thread plans. Product and brand onboarding is an accepted ADR 0026 target, not a shipped runtime capability.
 
 InfluencerOS is also being structured as a local-first Agentic OS adaptation. Root adapter files load the same durable project context for Codex, Claude, OpenClaw/Hermes-style agents, and compatible tools.
 
@@ -50,32 +50,19 @@ Creator setup can capture broader creator strategy inputs, including written sur
 
 ## What V1 Includes
 
-- Creator Workspace schema
-- Creator Profile schema
-- Reference Library schema
-- Creator Setup workflow
-- Create Influencer conductor skill
-- Creator Setup subskills and templates
-- Voice samples template for creator setup
-- Project schema
-- Output Package schema
-- Published Post Record schema
-- Analytics Snapshot schema
-- Performance Summary schema
-- Social Research Pack schema
-- Video Understanding Pack schema
-- Social Post Format schema
-- the ADR 0020 research module schemas (Creator Content Schedule, Research Run, Research Search Plan, Research Evidence, Metric Snapshot, Research Source Yield, Research Findings, Stable Finding, five research intelligence files, Idea Queue Entry and Manifest, Idea Promotion, Project Warning, Content Board, Automation Run, System Event)
-- Social Template and Applied Social Template schemas
-- Micro-Journey Video Plan schema
-- Carousel Plan schema
-- Single Image Post Plan schema
-- Story Sequence Plan schema
-- Article Plan schema
-- Thread Plan schema
-- Base Video Generation Plan schema
-- producer skills through output packaging and Learning OS distillation
+- schema-backed creator setup, research, planning, generation provenance,
+  publication evidence, analytics, learning, and Improvement OS records
+- producer skills from creator foundation through output packaging and learning
+- format-specific production plans for video, carousel, single-image,
+  story-sequence, article, and thread work
+- exact-approval generation provider routing and standing-approved research
+  acquisition routing
 - local recall index and semantic lookup projection CLIs
+
+The record inventory is disk-derived: every `schemas/*.schema.json` must have a
+same-stem `examples/*.example.json`. `python3 -m influencer_os validate
+examples` fails on missing or orphaned pairs, so this README does not duplicate
+that inventory.
 
 ## What V1 Defers
 
@@ -403,26 +390,6 @@ Append an evidence-linked creator lesson to a Creator Workspace `memory/learning
 python3 -m influencer_os log-learning <creator-workspace>/memory/learnings.md "hooks" \
   "One-line creator lesson." \
   --evidence performance_summary_<id> --strength single_post_signal
-```
-
-## Initialize A Dry Run
-
-```bash
-python3 -m influencer_os init-run examples/creator-profile.example.json
-```
-
-This creates a local ignored run folder under:
-
-```text
-workspace-library/runs/
-```
-
-The initialized run contains:
-
-```text
-run.json
-events.jsonl
-records/creator-profile.json
 ```
 
 ## Test

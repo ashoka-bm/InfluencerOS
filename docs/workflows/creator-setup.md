@@ -163,7 +163,7 @@ next question, do not expand into a broad form.
 
 Recommended question order:
 
-- display name, niche, audience, positioning, and creator type;
+- display name, niche, audience, positioning, and representation model;
 - primary public platforms and content mediums;
 - content boundaries, claims rules, disclosure, and privacy constraints;
 - voice, phrases, examples, and publication style;

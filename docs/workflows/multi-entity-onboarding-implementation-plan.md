@@ -11,13 +11,13 @@ Post-Phase-4 section. No code has been written.
 Let the OS onboard products and brands, not only avatar-led influencers, by
 adding a required `creator_type` discriminator (`influencer | product | brand`)
 that conditions which foundation documents and profile fields are required.
-"Creator" is the umbrella term; the `creator_*` ID plumbing and the 41
-downstream schemas stay unchanged.
+"Creator" is the umbrella term; the `creator_*` ID plumbing and downstream
+schemas stay unchanged.
 
 ## Non-negotiable guardrails
 
 - The influencer path stays green throughout: no regression to the working
-  setup flow, the readiness gates, or the 739-test pipeline. `creator_type`
+  setup flow, the readiness gates, or the full test suite. `creator_type`
   defaults to `influencer`, so every existing fixture keeps validating.
 - No global rename (Creator → Subject). Deferred as an optional cosmetic pass.
 - No downstream schema changes in this workstream. Research/ideas/generation/

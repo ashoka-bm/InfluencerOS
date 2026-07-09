@@ -1,6 +1,6 @@
 # InfluencerOS
 
-InfluencerOS is an agent operating system for creating short-form video concepts and generation plans for synthetic or avatar-led social media creators.
+InfluencerOS is an agent operating system for creating researched content plans and generation-ready packages. The current runtime onboards influencer workspaces; product and brand onboarding is an accepted target that has not shipped yet.
 
 ## Language
 
@@ -8,22 +8,25 @@ InfluencerOS is an agent operating system for creating short-form video concepts
 The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Idea Queue, and turn one promoted idea into format-specific production plans, starting with the universal short-form base video generation plan.
 
 **Creator**:
-The umbrella term for any onboarded marketing subject that content is being created for — an avatar-led influencer, a product, or a brand/company (see Creator Type). It means the public-facing identity, not the human operator behind it. The `creator_*` vocabulary, workspace path, and CLI commands are umbrella names that span all three entity types (ADR 0026).
+The current runtime term for an onboarded influencer identity, not the human operator behind it. ADR 0026 also reserves Creator as the future umbrella term for an influencer, product, or brand/company. The `creator_*` vocabulary, workspace path, and CLI commands remain stable when that target ships.
 
-**Creator Type**:
-The discriminator that says which kind of subject a Creator is: `influencer`, `product`, or `brand`. It determines which foundation documents and profile fields are required, enforced by the same status-gated readiness mechanism as the medium-based blockers (ADR 0013, ADR 0026). The shared spine — content strategy, audience/market, boundaries, goals, voice/tone, positioning — is required for every type; the persona documents (Identity, Soul File) and avatar visual-continuity references are required for `influencer` only.
+**Creator Type (Accepted Target; Not Yet Shipped)**:
+The planned discriminator that says which kind of subject a Creator is: `influencer`, `product`, or `brand`. When implemented, it will determine which foundation documents and profile fields are required through the existing status-gated readiness mechanism (ADR 0013, ADR 0026). The current schemas and setup implementation do not carry or route on this discriminator.
+
+**Representation Model**:
+The current onboarding choice describing how an influencer appears publicly: synthetic, avatar-led, human-backed, text-first, or mixed. It affects media and reference needs, but it is not the planned Creator Type discriminator.
 
 **Influencer**:
 The Creator Type for an avatar, persona, or account identity. Its foundation is persona-led: Identity (lore), Soul File (psychology), Personal Brand File, Voice Samples File, and avatar visual-continuity references (character plates, wardrobe, camera, locations).
 
-**Brand**:
+**Brand (Accepted Target; Not Yet Shipped)**:
 The Creator Type for a company or organization. Its foundation is a Brand Brief (mission, category, positioning, value proposition, market and competitors), Brand Guidelines (logo, palette, typography, visual system, imagery rules), and a Brand Voice guide. It has no persona psychology or lore; positioning and values replace Soul.
 
-**Product**:
+**Product (Accepted Target; Not Yet Shipped)**:
 The Creator Type for a specific offering. Its foundation is an Offering document (features, benefits, USPs, use cases, pricing tier, proof points) plus inherited brand context (positioning, guidelines, voice) and product visual references (product shots, packaging). A product may name a `parent_brand_ref`; in v1 the parent brand's context is kept inline in the product workspace (ADR 0026).
 
 **Creator Profile**:
-The structured identity record for the creator. It always carries the Creator Type and the shared spine (niche/market, audience, positioning, content strategy, boundaries, goals). Persona fields (persona summary, voice cadence, visual identity) are required for the `influencer` type; product and brand types supply their type-specific foundation instead. InfluencerOS treats niche and audience as inputs, not as guesses.
+The structured operational identity record for the current influencer runtime. It carries the shared spine (niche, audience, positioning, content strategy, boundaries, goals) and requires persona fields such as persona summary, voice cadence, and visual identity. It does not yet carry Creator Type; ADR 0026's future product/brand route will add the discriminator and type-specific foundations. InfluencerOS treats niche and audience as inputs, not as guesses.
 
 **Creator Workspace**:
 The ignored local folder for one creator's private identity, references, research history, projects, memory, analytics evidence, and progress. It lives under `workspace-library/creators/<creator-slug>/`.
@@ -86,9 +89,6 @@ The specific feeling, identity signal, or brand meaning that a candidate object 
 
 **Medium-Based Blocker**:
 A Creator Setup blocker that applies only when a content medium requires it. Text-first creators need identity, soul, and brand context; image and video creators also need visual references; audio/video creators need a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken generation requires an approved/imported voice reference.
-
-**Social Research Pack**:
-A dated, sourced packet of current social video patterns, hooks, formats, creator references, and trend evidence. It supports idea generation but does not override the Creator Profile.
 
 **Research Findings**:
 The concise rolling creator-scoped summary of what current research shows. It is
@@ -193,7 +193,7 @@ The interpretation layer that maps analytics back to creative decisions. It sepa
 The v1 output target: vertical, short, hook-first, visually legible without platform context, and suitable for Instagram Reels, TikTok, and YouTube Shorts without requiring platform-specific planning.
 
 **Provider Boundary**:
-The line between dry-run planning and external generation. Drafting plans is allowed; image/video/render generation requires explicit user approval.
+The line between local planning and external generation. Drafting plans is allowed; image/video/render generation requires explicit user approval.
 
 **Gate**:
 A human approval that can block the pipeline until granted. InfluencerOS has two: Idea Promotion (moving an idea into production) and the Provider Boundary generation approval (authorizing a paid provider call). Gates are always human-owned; nothing auto-approves them.

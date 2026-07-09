@@ -175,7 +175,7 @@ Priority question order:
 
 1. display name, niche, target audience, and positioning;
 2. primary public platforms and content mediums;
-3. creator type: synthetic, avatar-led, human-backed, text-first, or mixed;
+3. representation model: synthetic, avatar-led, human-backed, text-first, or mixed;
 4. content boundaries, claims/disclosure rules, and private facts to avoid;
 5. voice, recurring phrases, and sample material;
 6. visual identity, reference image availability, and generation policy;
@@ -350,6 +350,9 @@ last.*
   product/brand objects, and spaces are evaluated for brand and atmosphere
   effectiveness, presented to the user, and promoted only after explicit
   selection approval.
+- 2026-07-09: Renamed the influencer appearance choice to Representation
+  Model in §Decision Interview so it cannot be confused with ADR 0026's
+  planned Creator Type discriminator (`influencer | product | brand`).
 
 ## Self-Update
 
