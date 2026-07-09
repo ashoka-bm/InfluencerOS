@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-07
+Last updated: 2026-07-09
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -9,6 +9,10 @@ This file tracks repo-level product progress. It is public project state. Privat
 InfluencerOS is being built and tested before real creator onboarding. Current Creator Workspace contents under `workspace-library/` are disposable fixtures unless the user explicitly promotes a workspace as production creator state.
 
 This includes generated personas, generated reference images, prompts, research notes, draft projects, workspace memory, and setup progress. The operator expects to wipe this test data before using the system for real creators. Durable progress is the operating system work recorded in this repo: docs, schemas, tests, CLI behavior, skills, templates, examples, and validation rules.
+
+## Documentation Updates
+
+- Added `docs/workflow-creator-to-video.html` (2026-07-09): a focused visual map of the create-influencer-to-created-video path. It shows each workflow step, the related skills/schemas/templates/workspace records, both human gates, and the exact stopping condition for "video created" before quality review and output packaging.
 
 ## Phase Map
 

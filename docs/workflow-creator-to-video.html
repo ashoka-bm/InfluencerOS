@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InfluencerOS Creator To Video Workflow</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --ink: #172033;
+      --muted: #5d6978;
+      --line: #ccd5df;
+      --panel: #ffffff;
+      --soft: #eef3f7;
+      --teal: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #b45309;
+      --rose: #be123c;
+      --green: #15803d;
+      --teal-soft: #e5f4f0;
+      --blue-soft: #e9efff;
+      --amber-soft: #fbefd9;
+      --rose-soft: #fde8ee;
+      --green-soft: #e7f5ea;
+      --shadow: 0 14px 35px rgba(23, 32, 51, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 900px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .kicker,
+    .status strong,
+    .step-num {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 820px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .status p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .doc-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .doc-nav a {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section {
+      margin-top: 32px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .step {
+      position: relative;
+      min-height: 230px;
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      top: 58px;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .step:nth-child(4n)::after,
+    .step:last-child::after {
+      display: none;
+    }
+
+    .step h3 {
+      margin-top: 7px;
+    }
+
+    .step p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .setup {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .research {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .gate {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .generation {
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .risk {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .file-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    code,
+    .file {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .file {
+      display: block;
+      padding: 7px 8px;
+      border: 1px solid rgba(23, 32, 51, .12);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .72);
+      color: #243044;
+      text-decoration: none;
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: minmax(210px, .8fr) minmax(260px, 1fr) minmax(320px, 1.2fr) minmax(240px, .8fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .matrix div {
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .matrix div:nth-child(4n) {
+      border-right: 0;
+    }
+
+    .matrix .head {
+      background: var(--soft);
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .matrix .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: #243044;
+    }
+
+    .callout-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .callout {
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .callout h3 {
+      margin-top: 7px;
+    }
+
+    .callout p,
+    .callout li {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .callout p {
+      margin-top: 8px;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    @media (max-width: 1080px) {
+      header,
+      .section-head {
+        display: block;
+      }
+
+      .status {
+        margin-top: 18px;
+      }
+
+      .timeline,
+      .callout-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+      }
+
+      .step:nth-child(4n)::after {
+        display: block;
+      }
+
+      .step:nth-child(2n)::after,
+      .step:last-child::after {
+        display: none;
+      }
+
+      .matrix {
+        grid-template-columns: 1fr;
+      }
+
+      .matrix div,
+      .matrix div:nth-child(4n) {
+        border-right: 0;
+      }
+
+      .matrix .head:not(:first-child) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        padding: 24px 14px 42px;
+      }
+
+      h1 {
+        font-size: 33px;
+      }
+
+      .timeline,
+      .callout-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <span class="kicker">InfluencerOS workflow map</span>
+        <h1>Creator setup to created video</h1>
+        <p class="lede">A file-first view of the path from creating an influencer foundation to producing a generated video asset. Each step shows the durable records, schemas, skills, templates, and CLI seams that make the step auditable.</p>
+        <nav class="doc-nav" aria-label="Related workflow maps">
+          <a href="workflow-overview.html">Workflow overview</a>
+          <a href="workflow-skill-invocation-map.html">Skill invocation map</a>
+          <a href="workflow-generation-os.html">Generation OS</a>
+          <a href="pipeline-contract.md">Pipeline contract</a>
+        </nav>
+      </div>
+      <aside class="status">
+        <strong>Scope</strong>
+        <p>Stops when the project has a video file under <code>generation/assets/</code> and a matching <code>generation/asset-manifest.json</code> row. Packaging, publishing, analytics, and learning are downstream.</p>
+      </aside>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="kicker">End-to-end path</span>
+          <h2>Operating sequence</h2>
+        </div>
+        <div class="legend" aria-label="Legend">
+          <span class="tag">Setup</span>
+          <span class="tag">Research</span>
+          <span class="tag">Human gate</span>
+          <span class="tag">Generation</span>
+          <span class="tag">Blocking review</span>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <article class="step setup">
+          <span class="step-num">Step 01</span>
+          <h3>Create influencer foundation</h3>
+          <p>Run setup from intake, guided interview, or generated draft. Output is a Creator Workspace that can reach <code>content_ready</code> or <code>generation_ready</code>.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/create-influencer/SKILL.md">skills/create-influencer/SKILL.md</a>
+            <a class="file" href="../schemas/creator-workspace.schema.json">schemas/creator-workspace.schema.json</a>
+            <a class="file" href="../schemas/creator-profile.schema.json">schemas/creator-profile.schema.json</a>
+            <a class="file" href="../docs/workflows/creator-setup.md">docs/workflows/creator-setup.md</a>
+          </div>
+        </article>
+
+        <article class="step setup">
+          <span class="step-num">Step 02</span>
+          <h3>Stage identity and references</h3>
+          <p>Write the rich foundation files, runtime context, reference library, source provenance, and provider-neutral prompts for missing visual assets.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/create-reference-library/SKILL.md">skills/create-reference-library/SKILL.md</a>
+            <a class="file" href="../schemas/reference-library.schema.json">schemas/reference-library.schema.json</a>
+            <a class="file" href="../docs/templates/creator-setup/reference-library.template.json">docs/templates/creator-setup/reference-library.template.json</a>
+            <a class="file" href="../docs/templates/creator-setup/reference-prompts/standard-character-asset-prompts.md">docs/templates/creator-setup/reference-prompts/*.md</a>
+          </div>
+        </article>
+
+        <article class="step research">
+          <span class="step-num">Step 03</span>
+          <h3>Research current opportunities</h3>
+          <p>Create dated evidence and concise findings. If real videos were inspected, create a Video Understanding Pack before synthesizing findings.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/create-research-findings/SKILL.md">skills/create-research-findings/SKILL.md</a>
+            <a class="file" href="../schemas/research-run.schema.json">schemas/research-run.schema.json</a>
+            <a class="file" href="../schemas/research-evidence.schema.json">schemas/research-evidence.schema.json</a>
+            <a class="file" href="../schemas/video-understanding-pack.schema.json">schemas/video-understanding-pack.schema.json</a>
+          </div>
+        </article>
+
+        <article class="step research">
+          <span class="step-num">Step 04</span>
+          <h3>Add scored idea queue entry</h3>
+          <p>Capture the hook, premise, payoff, intended emotion, core message, evidence refs, creator fit, and production-readiness scoring.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/manage-idea-queue/SKILL.md">skills/manage-idea-queue/SKILL.md</a>
+            <a class="file" href="../schemas/idea-queue-entry.schema.json">schemas/idea-queue-entry.schema.json</a>
+            <a class="file" href="../schemas/idea-queue.schema.json">schemas/idea-queue.schema.json</a>
+            <a class="file" href="../examples/idea-queue-entry.example.json">examples/idea-queue-entry.example.json</a>
+          </div>
+        </article>
+
+        <article class="step gate">
+          <span class="step-num">Step 05</span>
+          <h3>Approve promotion package</h3>
+          <p>The human approves the exact idea, formats, platforms, evidence, schedule claim, creative carry-forward, and Projects to create.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/promote-idea/SKILL.md">skills/promote-idea/SKILL.md</a>
+            <a class="file" href="../schemas/idea-promotion.schema.json">schemas/idea-promotion.schema.json</a>
+            <a class="file" href="../schemas/project.schema.json">schemas/project.schema.json</a>
+            <a class="file" href="../docs/gates-and-reviews.md">docs/gates-and-reviews.md</a>
+          </div>
+        </article>
+
+        <article class="step research">
+          <span class="step-num">Step 06</span>
+          <h3>Create Project shell</h3>
+          <p>Promotion writes the locked Idea Promotion, creates <code>projects/&lt;project-slug&gt;/</code>, and replaces the scaffold with a production-facing evidence brief.</p>
+          <div class="file-list" aria-label="Related files">
+            <span class="file">workspace-library/creators/&lt;slug&gt;/research/idea-promotions/*.json</span>
+            <span class="file">workspace-library/creators/&lt;slug&gt;/projects/&lt;project&gt;/project.json</span>
+            <span class="file">workspace-library/creators/&lt;slug&gt;/projects/&lt;project&gt;/evidence-brief.md</span>
+            <span class="file">python3 -m influencer_os init-project</span>
+          </div>
+        </article>
+
+        <article class="step research">
+          <span class="step-num">Step 07</span>
+          <h3>Apply social template</h3>
+          <p>Choose the structure that best carries the promoted idea through hook, retain, payoff, CTA, and optional packaging beats.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/apply-social-template/SKILL.md">skills/apply-social-template/SKILL.md</a>
+            <a class="file" href="../schemas/applied-social-template.schema.json">schemas/applied-social-template.schema.json</a>
+            <a class="file" href="../docs/social-template-library.md">docs/social-template-library.md</a>
+            <span class="file">projects/&lt;project&gt;/plan/applied-template.json</span>
+          </div>
+        </article>
+
+        <article class="step generation">
+          <span class="step-num">Step 08</span>
+          <h3>Draft short-form video plan</h3>
+          <p>For <code>format_short_form_video</code>, write the Micro-Journey Video Plan and provider-neutral Base Video Generation Plan.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/create-production-plan/SKILL.md">skills/create-production-plan/SKILL.md</a>
+            <a class="file" href="../schemas/micro-journey-video-plan.schema.json">schemas/micro-journey-video-plan.schema.json</a>
+            <a class="file" href="../schemas/base-video-generation-plan.schema.json">schemas/base-video-generation-plan.schema.json</a>
+            <span class="file">projects/&lt;project&gt;/plan/generation-plan.json</span>
+          </div>
+        </article>
+
+        <article class="step gate">
+          <span class="step-num">Step 09</span>
+          <h3>Approve exact generation call</h3>
+          <p>The human approves a specific provider, model, plan ref, prompt refs, output filenames, scope, batch cap, and cost note.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/request-generation-approval/SKILL.md">skills/request-generation-approval/SKILL.md</a>
+            <a class="file" href="../schemas/generation-approval-record.schema.json">schemas/generation-approval-record.schema.json</a>
+            <a class="file" href="../docs/provider-boundary.md">docs/provider-boundary.md</a>
+            <span class="file">python3 -m influencer_os record-generation-approval</span>
+          </div>
+        </article>
+
+        <article class="step generation">
+          <span class="step-num">Step 10</span>
+          <h3>Create or import video asset</h3>
+          <p>Generation dispatch consumes the approval once, or an already-created video is imported with origin, tool, license, and warnings recorded.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../influencer_os/providers/dispatch.py">influencer_os/providers/dispatch.py</a>
+            <a class="file" href="../skills/import-generated-asset/SKILL.md">skills/import-generated-asset/SKILL.md</a>
+            <a class="file" href="../schemas/generation-asset-manifest.schema.json">schemas/generation-asset-manifest.schema.json</a>
+            <span class="file">projects/&lt;project&gt;/generation/assets/final-video.*</span>
+          </div>
+        </article>
+
+        <article class="step generation">
+          <span class="step-num">Step 11</span>
+          <h3>Record generated state</h3>
+          <p>The created video is auditable when the file exists, the manifest row points to it, and validation resolves the approval or import provenance.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../influencer_os/generation.py">influencer_os/generation.py</a>
+            <a class="file" href="../examples/generation-asset-manifest.example.json">examples/generation-asset-manifest.example.json</a>
+            <span class="file">projects/&lt;project&gt;/generation/asset-manifest.json</span>
+            <span class="file">python3 -m influencer_os validate project</span>
+          </div>
+        </article>
+
+        <article class="step risk">
+          <span class="step-num">Next gate</span>
+          <h3>Review before packaging</h3>
+          <p>After the video exists, generated or imported media needs a passing QualityReview before it can become upload-ready material.</p>
+          <div class="file-list" aria-label="Related files">
+            <a class="file" href="../skills/review-generated-assets/SKILL.md">skills/review-generated-assets/SKILL.md</a>
+            <a class="file" href="../schemas/quality-review.schema.json">schemas/quality-review.schema.json</a>
+            <a class="file" href="../skills/create-output-package/SKILL.md">skills/create-output-package/SKILL.md</a>
+            <a class="file" href="../schemas/output-package.schema.json">schemas/output-package.schema.json</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="kicker">Record chain</span>
+          <h2>What each step leaves behind</h2>
+        </div>
+        <p>This table is the compact file map for the path. Workspace paths are examples under <code>workspace-library/creators/&lt;creator-slug&gt;/</code>; repo files are the source contracts that define them.</p>
+      </div>
+
+      <div class="matrix">
+        <div class="head">Workflow step</div>
+        <div class="head">Producer or command</div>
+        <div class="head">Durable workspace files</div>
+        <div class="head">Validation contract</div>
+
+        <div>Create influencer</div>
+        <div class="mono">skills/create-influencer/SKILL.md</div>
+        <div class="mono">creator-workspace.json, creator-profile.json, brand_context/*.md, context/*.md, sources/*, progress/*</div>
+        <div class="mono">schemas/creator-workspace.schema.json, schemas/creator-profile.schema.json</div>
+
+        <div>Reference plan</div>
+        <div class="mono">skills/create-reference-library/SKILL.md</div>
+        <div class="mono">references/reference-library.json, references/**/*.prompt.md</div>
+        <div class="mono">schemas/reference-library.schema.json</div>
+
+        <div>Research</div>
+        <div class="mono">skills/create-research-findings/SKILL.md</div>
+        <div class="mono">research/runs/*, research/evidence/*.jsonl, research/findings.md, research/video-understanding-packs/*.json</div>
+        <div class="mono">validate research, schemas/research-*.schema.json</div>
+
+        <div>Idea queue</div>
+        <div class="mono">skills/manage-idea-queue/SKILL.md</div>
+        <div class="mono">research/idea-queue/entries/*.json, research/idea-queue/queue.json</div>
+        <div class="mono">validate queue, schemas/idea-queue*.schema.json</div>
+
+        <div>Promotion and Project</div>
+        <div class="mono">skills/promote-idea/SKILL.md, init-project</div>
+        <div class="mono">research/idea-promotions/*.json, projects/&lt;project&gt;/project.json, evidence-brief.md</div>
+        <div class="mono">schemas/idea-promotion.schema.json, schemas/project.schema.json</div>
+
+        <div>Template and plan</div>
+        <div class="mono">skills/apply-social-template/SKILL.md, skills/create-production-plan/SKILL.md</div>
+        <div class="mono">projects/&lt;project&gt;/plan/applied-template.json, production-plan.json, generation-plan.json</div>
+        <div class="mono">schemas/applied-social-template.schema.json, schemas/micro-journey-video-plan.schema.json, schemas/base-video-generation-plan.schema.json</div>
+
+        <div>Generation approval</div>
+        <div class="mono">skills/request-generation-approval/SKILL.md, record-generation-approval</div>
+        <div class="mono">projects/&lt;project&gt;/generation/approval-records/*.json</div>
+        <div class="mono">schemas/generation-approval-record.schema.json</div>
+
+        <div>Video created</div>
+        <div class="mono">dispatch_generation or import-generated-asset</div>
+        <div class="mono">projects/&lt;project&gt;/generation/assets/*, generation/asset-manifest.json</div>
+        <div class="mono">schemas/generation-asset-manifest.schema.json, validate project</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="kicker">Boundaries</span>
+          <h2>Where the workflow stops</h2>
+        </div>
+      </div>
+      <div class="callout-grid">
+        <article class="callout">
+          <span class="kicker">Human gates</span>
+          <h3>Two explicit approvals</h3>
+          <p>The idea promotion gate approves production work. The generation gate approves the exact provider call or bounded batch. Neither approval can be inferred from prior intent, keys, or plan text.</p>
+        </article>
+        <article class="callout">
+          <span class="kicker">Created video</span>
+          <h3>Definition of done</h3>
+          <p>A video has been created when the artifact exists under <code>generation/assets/</code>, a manifest row binds it to approval or import provenance, and <code>validate project</code> resolves the chain.</p>
+        </article>
+        <article class="callout">
+          <span class="kicker">After creation</span>
+          <h3>Not yet upload-ready</h3>
+          <p>Packaging is downstream. Generated and imported media must pass <code>review-generated-assets</code> before <code>create-output-package</code> can register upload-ready files.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
