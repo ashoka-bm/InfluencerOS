@@ -1253,6 +1253,24 @@ from `test_cli.py` to `tests/support.py`. The generation/Project seam was left
 unchanged. Verification: 870 unit tests pass, 52 examples validate,
 compilation and both review axes pass with no remaining findings.
 
+Lead-magnet skill landed and integrated (2026-07-09): `create-lead-magnet`
+(strategy → production bridge) produces the `conversion-asset` record, body
+copy to a heading contract, a per-creator resolved theme
+(`references/brand/<slug>-theme.css`), and a rendered PDF from the bundled
+dependency-free HTML/CSS template; creator photos reuse the approved identity
+plate via a non-generative crop, and generated reference imagery stays behind
+the provider boundary. Proven end-to-end on the margot-calder fixture
+(operator-approved render; record advanced to `approved`). Integration audit
+closed the gaps: `create-influencer` now dispatches the skill at phase 12
+(dependencies, hierarchy, and architecture-map call graph updated), the
+context matrix gained the row, and the reference-library `brand` family now
+captures imagery treatment rules so the theme's `[AUTO]` tokens are derivable.
+Margot's workspace still fails full workspace validation for pre-existing
+reasons (deprecated `foundation_review` status; missing `channels.json`,
+`content-strategy.json`, `readiness-gates.json`) — queued as a backfill task.
+Verification: unit tests pass, examples validate, drift checks pass. No
+provider-backed calls were made.
+
 ## Next Work Queue
 
 Personal brand board integration (2026-07-09): added the

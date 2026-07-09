@@ -75,3 +75,6 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: Standardize visual-world sections as actual production spaces with correct location images; keep props in the reference library and render content pillars without decorative imagery.
 - 2026-07-09: Surface recurring identity-bearing objects in a dedicated optional signature-props section with correct object imagery, purpose, uses, and continuity rules; never mix props with production spaces.
 - 2026-07-09: Invoke the board only after Reference Library planning; bind production spaces and props by typed asset ID so incorrect image categories fail validation and prompt-ready references render intentional placeholders.
+
+### create-lead-magnet
+- 2026-07-09: First real run (margot) user-approved; integration audit found the conductor gap — create-influencer now dispatches create-lead-magnet in its conversion-assets phase and the brand reference family must capture imagery treatment rules for the [AUTO] theme tokens.
