@@ -1,7 +1,7 @@
 /* =========================================================================
    LEAD-MAGNET TEMPLATE  ·  structural stylesheet  ·  no build step
    -------------------------------------------------------------------------
-   A theme file (themes/<brand>.css) sets ~13 INPUT tokens in :root.
+   A sibling theme.css file sets the INPUT tokens in :root.
    Everything else — color ramp, the modular type scale, spacing rhythm — is
    DERIVED here in pure CSS via color-mix(in oklab) and pow(). Swap the theme
    <link> to re-skin. This file never changes per brand and contains no hex
@@ -122,8 +122,9 @@ em { font-style: italic; }
 
 /* ============================ COVER ====================================== */
 .page--cover { justify-content: space-between; }
-.cover-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.cover-brand { font-family: var(--font-display); font-size: var(--step-1); }
+.cover-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.cover-brand { font-family: var(--font-display); font-size: var(--step-1); max-width: 55%; }
+.cover-top .kicker { max-width: 40%; text-align: right; }
 .cover-center { margin-top: auto; margin-bottom: auto; }
 .cover-eyebrow {
   font-family: var(--font-mono); font-size: var(--step-0);
@@ -208,6 +209,7 @@ em { font-style: italic; }
   display: inline-block; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
   font-size: var(--step-0); background: var(--color-accent); color: var(--color-accent-contrast);
   padding: var(--space-3) var(--space-5); border-radius: var(--radius); text-decoration: none;
+  align-self: flex-start; max-width: 100%;
 }
 .cta-news { color: var(--color-surface); opacity: 0.75; margin-top: var(--space-5); max-width: 44ch; }
 .page--cta .page-foot { border-top-color: color-mix(in srgb, var(--color-surface) 22%, transparent); color: color-mix(in srgb, var(--color-surface) 60%, transparent); }

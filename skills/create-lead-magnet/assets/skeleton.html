@@ -3,215 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>7 Questions To Ask Before Paying For A Peptide Consult — Mara Vale</title>
-
-<!-- Fonts. Portable via Google Fonts; for offline / deterministic CI rendering,
-     self-host these as WOFF2 and swap this <link> for a local @font-face file. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;600&family=Jost:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-<!-- Structural template (never edited per brand) -->
-<link rel="stylesheet" href="css/template.css">
-
-<!-- ▼▼▼ RE-BRAND HERE: swap this one line to any file in themes/ ▼▼▼ -->
-<link rel="stylesheet" href="themes/mara-vale.css">
-<!-- ▲▲▲ that's the whole re-theme ▲▲▲ -->
+<title>{{LEAD_MAGNET_TITLE}} — {{CREATOR_NAME}}</title>
+<link rel="stylesheet" href="template.css">
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
-<!-- 1 · COVER  (portrait variant: photo column + text panel. Drop the class
-     "cover--portrait" to fall back to the text-only centred cover.) -->
-<section class="page page--cover cover--portrait">
-  <div class="cover-photo"><img src="assets/creator.png" alt="Portrait of Mara Vale"></div>
-  <div class="cover-panel">
-    <div class="cover-top">
-      <span class="cover-brand">Mara Vale</span>
-      <span class="kicker">Free Guide</span>
-    </div>
-    <div class="cover-center">
-      <span class="cover-eyebrow">A buyer-prep guide</span>
-      <h1 class="cover-title">7 Questions To Ask Before Paying For A Peptide Consult</h1>
-      <p class="cover-promise">Seven questions to slow the sale down, see what is actually being offered, and walk into a licensed conversation with sharper questions.</p>
-    </div>
-    <div class="cover-foot">
-      <span class="cover-byline">By Mara Vale</span>
-      <span class="cover-disclaimer">Education only.<br>Not medical advice.</span>
-    </div>
+<!-- Generic, offline, text-only default. Add approved imagery deliberately. -->
+<section class="page page--cover">
+  <div class="cover-top"><span class="cover-brand">{{CREATOR_NAME}}</span><span class="kicker">{{ASSET_LABEL}}</span></div>
+  <div class="cover-center">
+    <span class="cover-eyebrow">{{COVER_EYEBROW}}</span>
+    <h1 class="cover-title">{{LEAD_MAGNET_TITLE}}</h1>
+    <p class="cover-promise">{{ONE_LINE_PROMISE}}</p>
   </div>
+  <div class="cover-foot"><span class="cover-byline">By {{CREATOR_NAME}}</span><span class="cover-disclaimer">{{SHORT_DISCLAIMER}}</span></div>
 </section>
 
-<!-- 2 · OPENING NOTE + THREE BUCKETS -->
 <section class="page">
-  <div class="running-head">
-    <span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span>
-    <span class="kicker kicker--accent">Start here</span>
-  </div>
-  <h2 class="section-title">Before you buy the claim, slow the process down.</h2>
-  <p class="lede">Peptide marketing usually moves faster than the evidence, the regulation, and your ability to compare offers. That does not make every claim nonsense. It means the first job is not to believe or dismiss — it is to separate the buckets.</p>
-  <p class="note-body">This guide will not tell you what to take, where to buy it, or how to dose it. Those are clinician questions. What it can do is help you ask cleaner ones before money changes hands.</p>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Overview</span></div>
+  <h2 class="section-title">{{OVERVIEW_HEADING}}</h2>
+  <p class="lede">{{OVERVIEW_PARAGRAPH_1}}</p>
+  <p class="note-body">{{OVERVIEW_PARAGRAPH_2}}</p>
   <hr class="rule rule--accent">
-  <p class="kicker kicker--accent">Put the offer in three buckets</p>
   <div class="buckets">
-    <div class="bucket"><span class="bucket-num">1</span><div><p class="bucket-name">What is known?</p><p class="bucket-desc">Evidence, approval status, labeled use, safety information, and the actual substance being discussed.</p></div></div>
-    <div class="bucket"><span class="bucket-num">2</span><div><p class="bucket-name">What is plausible?</p><p class="bucket-desc">Mechanisms, early research, and clinic reasoning that may be interesting but are not the same as proven outcomes.</p></div></div>
-    <div class="bucket"><span class="bucket-num">3</span><div><p class="bucket-name">What is being sold?</p><p class="bucket-desc">Consults, labs, compounded products, memberships, coaching, content, or referrals. If a page treats all three as one, that is where your questions begin.</p></div></div>
+    <div class="bucket"><span class="bucket-num">1</span><div><p class="bucket-name">{{BUCKET_1_NAME}}</p><p class="bucket-desc">{{BUCKET_1_DESCRIPTION}}</p></div></div>
+    <div class="bucket"><span class="bucket-num">2</span><div><p class="bucket-name">{{BUCKET_2_NAME}}</p><p class="bucket-desc">{{BUCKET_2_DESCRIPTION}}</p></div></div>
+    <div class="bucket"><span class="bucket-num">3</span><div><p class="bucket-name">{{BUCKET_3_NAME}}</p><p class="bucket-desc">{{BUCKET_3_DESCRIPTION}}</p></div></div>
   </div>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 3 · QUESTIONS 1–2 -->
+<!-- Duplicate this question block across pages 3–6 and replace every token. -->
 <section class="page">
-  <div class="running-head"><span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span><span class="kicker kicker--accent">The seven questions</span></div>
-  <h2 class="q-page-title">The seven questions</h2>
-  <div class="q">
-    <span class="q-num">1</span>
-    <div>
-      <h3 class="q-title">What exactly is being offered?</h3>
-      <ul class="q-ask">
-        <li>Is this an approved medicine, a compounded drug, a supplement, or an education-only offer?</li>
-        <li>What is the exact substance being named — precisely, not as a marketing label?</li>
-        <li>Am I paying for education, a consult, testing, monitoring, or a product?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> "Peptide" is a category, not a permission slip. Different categories carry different evidence, rules, and risks.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"Can you clarify exactly what category this offer belongs to, and what I am actually paying for?"</p></div>
-    </div>
-  </div>
-  <div class="q">
-    <span class="q-num">2</span>
-    <div>
-      <h3 class="q-title">What evidence supports the specific claim?</h3>
-      <ul class="q-ask">
-        <li>Is the claim based on human clinical evidence, animal research, mechanism, or testimonials?</li>
-        <li>Does it support this exact outcome, dose, route, and population?</li>
-        <li>Are risks and limitations shown as clearly as benefits?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> Promising does not mean proven. Mechanism and testimonials rarely prove a specific offer works as claimed.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"What evidence supports this specific claim for someone like me, and what are its limits?"</p></div>
-    </div>
-  </div>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Questions 1–2</span></div>
+  <h2 class="q-page-title">{{QUESTIONS_HEADING}}</h2>
+  <div class="q"><span class="q-num">1</span><div><h3 class="q-title">{{QUESTION_1}}</h3><ul class="q-ask"><li>{{QUESTION_1_PROMPT_A}}</li><li>{{QUESTION_1_PROMPT_B}}</li><li>{{QUESTION_1_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_1_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_1_BRING}}</p></div></div></div>
+  <div class="q"><span class="q-num">2</span><div><h3 class="q-title">{{QUESTION_2}}</h3><ul class="q-ask"><li>{{QUESTION_2_PROMPT_A}}</li><li>{{QUESTION_2_PROMPT_B}}</li><li>{{QUESTION_2_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_2_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_2_BRING}}</p></div></div></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 4 · QUESTIONS 3–4 -->
 <section class="page">
-  <div class="running-head"><span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span><span class="kicker kicker--accent">The seven questions</span></div>
-  <div class="q">
-    <span class="q-num">3</span>
-    <div>
-      <h3 class="q-title">Who decides whether this is right for my body?</h3>
-      <ul class="q-ask">
-        <li>Who reviews my history, medications, labs, and contraindications?</li>
-        <li>What credentials does that person hold?</li>
-        <li>What happens if I am not a good fit?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> An offer can sound personalized without being clinically responsible. You want to know who is accountable for saying no.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"Who is clinically responsible for deciding this is appropriate for me — and what would make you advise against it?"</p></div>
-    </div>
-  </div>
-  <div class="q">
-    <span class="q-num">4</span>
-    <div>
-      <h3 class="q-title">What monitoring happens before, during, and after?</h3>
-      <ul class="q-ask">
-        <li>What baseline information is reviewed before any recommendation?</li>
-        <li>Are labs required, optional, or ignored?</li>
-        <li>Who do I contact if something feels wrong?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> The pitch focuses on benefits; your body experiences the risk side too. Monitoring shows whether an offer is built around care or conversion.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"What do you monitor before, during, and after — and what would make you stop or change course?"</p></div>
-    </div>
-  </div>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Questions 3–4</span></div>
+  <div class="q"><span class="q-num">3</span><div><h3 class="q-title">{{QUESTION_3}}</h3><ul class="q-ask"><li>{{QUESTION_3_PROMPT_A}}</li><li>{{QUESTION_3_PROMPT_B}}</li><li>{{QUESTION_3_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_3_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_3_BRING}}</p></div></div></div>
+  <div class="q"><span class="q-num">4</span><div><h3 class="q-title">{{QUESTION_4}}</h3><ul class="q-ask"><li>{{QUESTION_4_PROMPT_A}}</li><li>{{QUESTION_4_PROMPT_B}}</li><li>{{QUESTION_4_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_4_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_4_BRING}}</p></div></div></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 5 · QUESTIONS 5–6 -->
 <section class="page">
-  <div class="running-head"><span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span><span class="kicker kicker--accent">The seven questions</span></div>
-  <div class="q">
-    <span class="q-num">5</span>
-    <div>
-      <h3 class="q-title">What are the costs, conflicts, and incentives?</h3>
-      <ul class="q-ask">
-        <li>What is the full cost of consults, labs, follow-ups, memberships, and refills?</li>
-        <li>Does anyone profit from a specific product, pharmacy, lab, or referral?</li>
-        <li>Can I take this information to an independent clinician?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> Commercial relationships are not automatically bad — hidden ones are. Good education is still useful even if you do not buy.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"Can you explain the full cost and any financial relationships tied to this recommendation?"</p></div>
-    </div>
-  </div>
-  <div class="q">
-    <span class="q-num">6</span>
-    <div>
-      <h3 class="q-title">What is being left unsaid?</h3>
-      <ul class="q-ask">
-        <li>What risks, uncertainties, or non-responders are mentioned?</li>
-        <li>Which populations should avoid this, and what outcomes are not supported?</li>
-        <li>What would a skeptical clinician ask before agreeing?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> Strong marketing often wins by omission. A trustworthy offer can discuss its limits without collapsing.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"What are the strongest reasons someone should be cautious about this?"</p></div>
-    </div>
-  </div>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Questions 5–6</span></div>
+  <div class="q"><span class="q-num">5</span><div><h3 class="q-title">{{QUESTION_5}}</h3><ul class="q-ask"><li>{{QUESTION_5_PROMPT_A}}</li><li>{{QUESTION_5_PROMPT_B}}</li><li>{{QUESTION_5_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_5_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_5_BRING}}</p></div></div></div>
+  <div class="q"><span class="q-num">6</span><div><h3 class="q-title">{{QUESTION_6}}</h3><ul class="q-ask"><li>{{QUESTION_6_PROMPT_A}}</li><li>{{QUESTION_6_PROMPT_B}}</li><li>{{QUESTION_6_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_6_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_6_BRING}}</p></div></div></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 6 · QUESTION 7 (featured) -->
 <section class="page">
-  <div class="running-head"><span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span><span class="kicker kicker--accent">The seven questions</span></div>
-  <div class="q q--feature">
-    <span class="q-num">7</span>
-    <div>
-      <h3 class="q-title">What is the decision I am actually making today?</h3>
-      <ul class="q-ask">
-        <li>Am I deciding to learn more, book a consult, run labs, start treatment, or buy a product?</li>
-        <li>What happens if I wait two weeks?</li>
-        <li>What independent source would help me evaluate this — and what one question do I need answered before I spend money?</li>
-      </ul>
-      <p class="q-why"><b>Why it matters:</b> Many offers compress curiosity into purchase. You can slow that down. A better next step may be a licensed consult, a second opinion, or simply not buying yet.</p>
-      <div class="q-bring"><span class="q-bring-label">Bring this to the consult</span><p class="q-bring-quote">"What decision are you asking me to make today, and what information would make waiting the wiser choice?"</p></div>
-    </div>
-  </div>
-  <figure class="figure"><div class="frame frame--figure"><img src="assets/reference.png" alt="An unhurried moment — reading before deciding"></div><figcaption>Reference image — generated, then brand-tinted so the whole set coheres</figcaption></figure>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Question 7</span></div>
+  <div class="q q--feature"><span class="q-num">7</span><div><h3 class="q-title">{{QUESTION_7}}</h3><ul class="q-ask"><li>{{QUESTION_7_PROMPT_A}}</li><li>{{QUESTION_7_PROMPT_B}}</li><li>{{QUESTION_7_PROMPT_C}}</li></ul><p class="q-why"><b>Why it matters:</b> {{QUESTION_7_WHY}}</p><div class="q-bring"><span class="q-bring-label">Use this prompt</span><p class="q-bring-quote">{{QUESTION_7_BRING}}</p></div></div></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 7 · ONE-PAGE SUMMARY / CHEAT-SHEET (mandatory) -->
 <section class="page page--summary">
-  <div class="running-head"><span class="rh-id"><span class="avatar"><img src="assets/creator.png" alt=""></span><span class="kicker">Mara Vale</span></span><span class="kicker kicker--accent">Keep this page</span></div>
-  <h2 class="section-title">The one-page checklist</h2>
-  <ol class="summary-list">
-    <li>What exactly is being offered?</li>
-    <li>What evidence supports the specific claim?</li>
-    <li>Who decides whether this is right for my body?</li>
-    <li>What monitoring happens before, during, and after?</li>
-    <li>What are the costs, conflicts, and incentives?</li>
-    <li>What is being left unsaid?</li>
-    <li>What is the decision I am actually making today?</li>
-  </ol>
-  <div class="pull">
-    <p class="pull-label">Mara's rule</p>
-    <p class="pull-quote">If the sales page is more confident than the evidence and less specific than the policy — start asking questions.</p>
-  </div>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <div class="running-head"><span class="kicker">{{CREATOR_NAME}}</span><span class="kicker kicker--accent">Keep this page</span></div>
+  <h2 class="section-title">{{CHECKLIST_HEADING}}</h2>
+  <ol class="summary-list"><li>{{QUESTION_1}}</li><li>{{QUESTION_2}}</li><li>{{QUESTION_3}}</li><li>{{QUESTION_4}}</li><li>{{QUESTION_5}}</li><li>{{QUESTION_6}}</li><li>{{QUESTION_7}}</li></ol>
+  <div class="pull"><p class="pull-label">{{RULE_LABEL}}</p><p class="pull-quote">{{MEMORABLE_RULE}}</p></div>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
-<!-- 8 · CTA -->
 <section class="page page--cta">
   <span class="kicker">One next step</span>
-  <p class="cta-statement">Bring better questions to someone qualified.</p>
-  <a class="cta-button" href="#">Join the newsletter</a>
-  <p class="cta-news">Source-backed peptide literacy, claim teardowns, and clinic-prep frameworks — no hype, no miracle language.</p>
-  <div class="creator">
-    <div class="frame frame--square"><img src="assets/creator.png" alt="Mara Vale"></div>
-    <div>
-      <p class="creator-name">Mara Vale</p>
-      <p class="creator-bio">Writes source-backed peptide literacy for people who want clarity before they spend. Education only — no protocols, no hype.</p>
-    </div>
-  </div>
-  <p class="compliance">This guide is for education only and is not medical advice. It does not diagnose, treat, or recommend any product or protocol. Talk to a licensed professional about your individual situation. If a sponsor is involved, that relationship is disclosed.</p>
-  <div class="page-foot"><span class="foot-legal">Education only. Not medical advice.</span><span class="foot-num"></span></div>
+  <p class="cta-statement">{{CTA_STATEMENT}}</p>
+  <a class="cta-button" href="{{CTA_URL}}">{{CTA_LABEL}}</a>
+  <p class="cta-news">{{CTA_SUPPORTING_COPY}}</p>
+  <p class="compliance">{{FULL_DISCLAIMER}}</p>
+  <div class="page-foot"><span class="foot-legal">{{SHORT_DISCLAIMER}}</span><span class="foot-num"></span></div>
 </section>
 
 </body>

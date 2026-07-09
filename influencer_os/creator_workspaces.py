@@ -816,6 +816,15 @@ def validate_creator_workspace(workspace_path):
             "Duplicate reference library asset ids: " + ", ".join(duplicate_asset_ids)
         )
 
+    _, conversion_asset_blockers = _load_conversion_assets(
+        workspace_dir, creator_profile, content_strategy
+    )
+    if conversion_asset_blockers:
+        raise ValidationError(
+            "Conversion asset integrity blockers:\n- "
+            + "\n- ".join(conversion_asset_blockers)
+        )
+
     _resolve_reference_refs(creator_profile, reference_library)
     _validate_readiness_milestones(
         workspace_dir,
@@ -1459,7 +1468,7 @@ def _strategy_stage_blockers(workspace_dir, readiness_state, content_strategy, c
     blockers.extend(_strategy_variant_ref_blockers(content_strategy))
 
     conversion_assets, conversion_asset_blockers = _load_conversion_assets(
-        workspace_dir, creator_profile
+        workspace_dir, creator_profile, content_strategy
     )
     blockers.extend(conversion_asset_blockers)
     for asset_id in sorted(_strategy_conversion_asset_ids(content_strategy)):
@@ -1603,7 +1612,7 @@ def _production_stage_blockers(
                         f"calendar slot {slot['slot_id']} platform {platform} requires an account or an explicit skip"
                     )
             conversion_assets, asset_blockers = _load_conversion_assets(
-                workspace_dir, creator_profile
+                workspace_dir, creator_profile, content_strategy
             )
             blockers.extend(asset_blockers)
             for slot in schedule["calendar_slots"]:
@@ -1694,7 +1703,7 @@ def _strategy_conversion_asset_ids(content_strategy):
     return asset_ids
 
 
-def _load_conversion_assets(workspace_dir, creator_profile):
+def _load_conversion_assets(workspace_dir, creator_profile, content_strategy):
     assets = {}
     blockers = []
     for path in sorted((workspace_dir / "conversion-assets").glob("*.json")):
@@ -1709,6 +1718,22 @@ def _load_conversion_assets(workspace_dir, creator_profile):
             blockers.append(
                 f"conversion asset {asset_id} creator_slug does not match workspace creator"
             )
+        if record["source_content_strategy_id"] != content_strategy["content_strategy_id"]:
+            blockers.append(
+                f"conversion asset {asset_id} source_content_strategy_id does not match "
+                "the accepted strategy"
+            )
+        if record["status"] in CONVERSION_ASSET_READY_STATUSES:
+            approval = record["approval"]
+            if (
+                approval["status"] != "user_approved"
+                or approval["approved_by"] != "user"
+                or not approval["approved_on"]
+            ):
+                blockers.append(
+                    f"conversion asset {asset_id} status {record['status']!r} requires "
+                    "explicit user approval metadata"
+                )
         blockers.extend(_conversion_asset_file_ref_blockers(workspace_dir, record))
         assets[record["conversion_asset_id"]] = record
     return assets, blockers

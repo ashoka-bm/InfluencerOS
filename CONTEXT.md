@@ -59,7 +59,7 @@ The creator's planned publishing direction: platform roles, monthly format mix, 
 The creator's selected and optional publishing channels. `channels.json` records platform, role, account or handle readiness, content mediums, expected format IDs, and whether a real handle is required before publishing/export. Selected channels drive the reference requirements for `foundation_ready`.
 
 **Conversion Asset**:
-A lead magnet, offer, newsletter asset, checklist, waitlist, landing page, or other conversion mechanism referenced by strategy or calendar slots. Conversion assets live under `conversion-assets/*.json`; `strategy_ready` requires referenced records to exist, while a production slot that promotes one requires it to be approved or published-ready.
+A lead magnet, offer, newsletter asset, checklist, waitlist, landing page, or other conversion mechanism referenced by strategy or calendar slots. Conversion assets live under `conversion-assets/*.json`, name their immediate upstream Content Strategy, and record explicit user approval before entering an approved lifecycle state. `strategy_ready` requires referenced records to exist, while a production slot that promotes one requires it to be approved or published-ready.
 
 **Reference Library**:
 The creator's reusable visual and audio continuity assets, such as character identity plates, turnaround sheets, macro detail cards, locations, outfits, props, video style cards, shot-family references, ElevenLabs Voice Design prompt packages, and approved/imported voice samples.

@@ -1,44 +1,58 @@
 #!/usr/bin/env node
-// crop-portrait.mjs — extract a clean single headshot from a creator's identity
-// plate (which is a turnaround sheet: front headshot on top, 3/4 + profile below).
-// Cropping is a NON-GENERATIVE transform — no new generation approval is needed.
-// NEVER generate a new face for the lead magnet; always reuse the APPROVED plate.
+// Crop a user-reviewed rectangle from an approved identity plate. This is a
+// non-generative transform; it never guesses the plate layout.
 //
-//   node crop-portrait.mjs <identity-plate.png> <out-portrait.png> [topFraction=0.56]
-//
-// Uses headless Chrome via puppeteer-core (no Pillow/ImageMagick dependency).
-// The plate is embedded as a base64 data URI because headless Chrome blocks
-// file:// image loads from a setContent page.
+//   node crop-portrait.mjs <plate.png> <out.png> <x> <y> <width> <height>
 
-import puppeteer from 'puppeteer-core';
-import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { loadPuppeteer } from './browser-runtime.mjs';
+import { findChrome } from './chrome-paths.mjs';
 
-const [plate, out, topFrac = '0.56'] = process.argv.slice(2);
-if (!plate || !out) { console.error('usage: crop-portrait.mjs <plate.png> <out.png> [topFraction]'); process.exit(1); }
 
-function findChrome() {
-  for (const c of [process.env.CHROME_PATH,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium'].filter(Boolean)) {
-    try { readFileSync(c); return c; } catch {}
-  }
-  throw new Error('Set CHROME_PATH to a Chrome/Chromium binary.');
+const [plate, output, ...rectangleArgs] = process.argv.slice(2);
+const rectangle = rectangleArgs.map(Number);
+if (!plate || !output || rectangle.length !== 4 || rectangle.some((value) => !Number.isFinite(value))) {
+  console.error('usage: crop-portrait.mjs <plate.png> <out.png> <x> <y> <width> <height>');
+  process.exit(1);
 }
-// dimensions via sips (macOS) — swap for any dims tool on other platforms
-const W = +execSync(`sips -g pixelWidth "${plate}"`).toString().match(/pixelWidth:\s*(\d+)/)[1];
-const H = +execSync(`sips -g pixelHeight "${plate}"`).toString().match(/pixelHeight:\s*(\d+)/)[1];
-const cropH = Math.round(H * parseFloat(topFrac));
 
-const b64 = readFileSync(plate).toString('base64');
-const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] });
+const [x, y, width, height] = rectangle;
+if (x < 0 || y < 0 || width <= 0 || height <= 0) {
+  console.error('crop rectangle requires x/y >= 0 and width/height > 0');
+  process.exit(1);
+}
+
+const plateBytes = await readFile(plate);
+const dataUri = `data:image/png;base64,${plateBytes.toString('base64')}`;
+const puppeteer = await loadPuppeteer();
+const browser = await puppeteer.launch({
+  executablePath: await findChrome(),
+  headless: true,
+  args: ['--no-sandbox'],
+});
+
 try {
   const page = await browser.newPage();
-  await page.setViewport({ width: W, height: cropH, deviceScaleFactor: 1 });
-  await page.setContent(`<style>*{margin:0;padding:0}</style><img id="i" src="data:image/png;base64,${b64}" style="display:block;width:${W}px">`);
-  await page.evaluate(() => new Promise(r => { const im = document.getElementById('i'); im.complete && im.naturalWidth ? r() : (im.onload = r); }));
-  await page.screenshot({ path: out, clip: { x: 0, y: 0, width: W, height: cropH } });
-  console.log(`cropped ${W}x${cropH} -> ${out}`);
+  await page.setViewport({ width: x + width, height: y + height, deviceScaleFactor: 1 });
+  await page.setContent(
+    `<style>*{margin:0;padding:0}</style><img id="plate" src="${dataUri}" style="display:block">`,
+  );
+  const dimensions = await page.evaluate(() => new Promise((resolveImage, rejectImage) => {
+    const image = document.getElementById('plate');
+    const done = () => resolveImage({ width: image.naturalWidth, height: image.naturalHeight });
+    if (image.complete && image.naturalWidth) done();
+    else {
+      image.onload = done;
+      image.onerror = () => rejectImage(new Error('identity plate could not be decoded'));
+    }
+  }));
+  if (x + width > dimensions.width || y + height > dimensions.height) {
+    throw new Error(
+      `crop rectangle ${x},${y},${width},${height} exceeds plate ${dimensions.width}x${dimensions.height}`,
+    );
+  }
+  await page.screenshot({ path: output, clip: { x, y, width, height } });
+  console.log(`cropped ${x},${y},${width},${height} -> ${output}`);
 } finally {
   await browser.close();
 }

@@ -276,7 +276,7 @@ link back through `selection_candidate_id`. Planned or prompted assets may be
 tracked before the final media file exists so setup can explain generation
 blockers.
 
-`conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Strategy readiness requires referenced asset records to exist; a production slot that promotes one requires it to be approved or published-ready.
+`conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Every record names its immediate upstream Content Strategy. Approved and published-ready states require explicit user-approval metadata. Strategy readiness requires referenced asset records to exist; a production slot that promotes one requires it to be approved or published-ready.
 
 `content-schedule.json` is the Creator Content Schedule: accepted-strategy reference, cadence expectations, content goals, calendar slots, and drift checks. Slots may reference strategy campaigns/variants; any slot promoting a conversion asset names the approved use and platform. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 

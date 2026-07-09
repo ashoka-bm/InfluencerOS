@@ -1257,19 +1257,26 @@ Lead-magnet skill landed and integrated (2026-07-09): `create-lead-magnet`
 (strategy → production bridge) produces the `conversion-asset` record, body
 copy to a heading contract, a per-creator resolved theme
 (`references/brand/<slug>-theme.css`), and a rendered PDF from the bundled
-dependency-free HTML/CSS template; creator photos reuse the approved identity
-plate via a non-generative crop, and generated reference imagery stays behind
+offline HTML/CSS template; optional creator photos reuse an explicitly reviewed
+crop from the approved identity plate, and generated reference imagery stays behind
 the provider boundary. Proven end-to-end on the margot-calder fixture
 (operator-approved render; record advanced to `approved`). Integration audit
 closed the gaps: `create-influencer` now dispatches the skill at phase 12
 (dependencies, hierarchy, and architecture-map call graph updated), the
-context matrix gained the row, and the reference-library `brand` family now
-captures imagery treatment rules so the theme's `[AUTO]` tokens are derivable.
+context matrix gained the row.
 Margot's workspace still fails full workspace validation for pre-existing
 reasons (deprecated `foundation_review` status; missing `channels.json`,
 `content-strategy.json`, `readiness-gates.json`) — queued as a backfill task.
 Verification: unit tests pass, examples validate, drift checks pass. No
 provider-backed calls were made.
+
+Adversarial hardening (2026-07-09): Part A now lists only its existing Markdown
+file, conversion records carry accepted-strategy provenance, and approved/ready
+states require explicit user-approval metadata. Creator setup routes only
+`lead_magnet` assets to this PDF workflow and halts on unsupported conversion
+types. Disposable render bundles moved to root `.tmp/`; the default skeleton is
+generic, text-only, and offline. Shared Chrome discovery removed duplicated
+helper logic, and portrait crops now require an explicit reviewed rectangle.
 
 ## Next Work Queue
 

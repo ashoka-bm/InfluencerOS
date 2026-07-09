@@ -2,8 +2,15 @@
   "conversion_asset_id": "conversion_asset_luna_reset_checklist",
   "creator_profile_id": "creator_luna_fit",
   "creator_slug": "luna-fit",
+  "source_content_strategy_id": "content_strategy_luna_fit",
   "asset_type": "lead_magnet",
   "status": "approved",
+  "approval": {
+    "status": "user_approved",
+    "approved_by": "user",
+    "approved_on": "2026-07-09",
+    "notes": "User approved the body and final rendered artifact."
+  },
   "title": "7 Tiny Reset Questions Before Your Next Meeting",
   "created_on": "2026-07-09",
   "updated_on": "2026-07-09",

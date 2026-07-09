@@ -8,8 +8,10 @@
     "conversion_asset_id",
     "creator_profile_id",
     "creator_slug",
+    "source_content_strategy_id",
     "asset_type",
     "status",
+    "approval",
     "title",
     "created_on",
     "updated_on",
@@ -32,6 +34,10 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$"
     },
+    "source_content_strategy_id": {
+      "type": "string",
+      "pattern": "^content_strategy_[a-zA-Z0-9_-]+$"
+    },
     "asset_type": {
       "type": "string",
       "enum": ["lead_magnet", "opt_in_page", "email_sequence", "paid_offer", "offer_page", "partner_landing_asset"]
@@ -39,6 +45,17 @@
     "status": {
       "type": "string",
       "enum": ["planned", "drafted", "approved", "published_or_ready", "retired"]
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_by", "approved_on", "notes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "user_approved"] },
+        "approved_by": { "type": ["string", "null"], "enum": ["user", null] },
+        "approved_on": { "type": ["string", "null"], "format": "date" },
+        "notes": { "type": "string", "minLength": 1 }
+      }
     },
     "title": { "type": "string", "minLength": 1 },
     "created_on": { "type": "string", "format": "date" },
@@ -66,5 +83,38 @@
       "enum": ["awareness", "email_capture", "trust_nurture", "paid_conversion", "partner_referral"]
     },
     "notes": { "type": "string", "minLength": 1 }
-  }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "status": { "type": "string", "enum": ["approved", "published_or_ready"] },
+        "approval": {
+          "type": "object",
+          "properties": {
+            "status": { "const": "user_approved" },
+            "approved_by": { "const": "user" },
+            "approved_on": { "type": "string", "format": "date" }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "status": { "type": "string", "enum": ["planned", "drafted"] },
+        "approval": {
+          "type": "object",
+          "properties": {
+            "status": { "const": "pending" },
+            "approved_by": { "const": null },
+            "approved_on": { "const": null }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "status": { "const": "retired" }
+      }
+    }
+  ]
 }

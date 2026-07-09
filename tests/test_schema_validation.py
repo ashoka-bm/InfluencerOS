@@ -54,6 +54,19 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, invalid)
 
+    def test_approved_conversion_asset_requires_user_approval_at_record_boundary(self):
+        record = load_json("examples/conversion-asset.example.json")
+        invalid = deepcopy(record)
+        invalid["approval"] = {
+            "status": "pending",
+            "approved_by": None,
+            "approved_on": None,
+            "notes": "Rendered but not reviewed.",
+        }
+
+        with self.assertRaises(ValidationError):
+            validate_record("conversion-asset", invalid)
+
     def test_format_fields_reject_unknown_format_ids(self):
         # The format vocabulary is a closed enum (approval-surface decisions);
         # a typo like format_shortform_video must fail, not silently never match.

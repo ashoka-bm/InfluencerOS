@@ -221,6 +221,9 @@ Suggested lifecycle:
 Strategy records and production calendar slots should reference conversion
 assets by id. Posts that route to a lead magnet must not be produced until the
 referenced conversion asset exists and is at least `approved` for that use.
+Each conversion asset names its immediate upstream Content Strategy by id.
+An `approved` or `published_or_ready` lifecycle state requires recorded explicit
+user approval; rendering or schema validation is not approval.
 
 ### Decision 10: Split Strategy From Calendar
 
@@ -289,8 +292,9 @@ V1 records:
   notes.
 - `content-strategy.json`: monthly content mix, post families, related-post
   chains, conversion paths, conversion asset refs, and cadence principles.
-- `conversion-assets/*.json`: conversion asset type, status, source files,
-  approved use, linked platform/funnel use, and lifecycle notes.
+- `conversion-assets/*.json`: conversion asset type, status, immediate upstream
+  Content Strategy id, explicit user-approval metadata, source files, approved
+  use, linked platform/funnel use, and lifecycle notes.
 
 Avoid rich UI-only nesting until real onboarding use proves it is needed.
 

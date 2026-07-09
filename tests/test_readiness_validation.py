@@ -416,6 +416,13 @@ def write_content_strategy(workspace_dir, status="approved"):
 def write_conversion_asset(workspace_dir, status="approved"):
     record = json.loads((ROOT / "examples" / "conversion-asset.example.json").read_text())
     record["status"] = status
+    if status in {"planned", "drafted"}:
+        record["approval"] = {
+            "status": "pending",
+            "approved_by": None,
+            "approved_on": None,
+            "notes": "Awaiting user review of the final conversion asset.",
+        }
     target = workspace_dir / "conversion-assets" / f"{record['conversion_asset_id']}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(record, indent=2) + "\n")
@@ -451,6 +458,25 @@ class DraftLenienceTests(unittest.TestCase):
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
+
+    def test_draft_workspace_rejects_conversion_asset_from_another_strategy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+            write_conversion_asset(workspace_dir, status="drafted")
+
+            def mismatch_strategy(asset):
+                asset["source_content_strategy_id"] = "content_strategy_wrong"
+
+            rewrite_json(
+                workspace_dir
+                / "conversion-assets"
+                / "conversion_asset_luna_reset_checklist.json",
+                mismatch_strategy,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("source_content_strategy_id", str(ctx.exception))
 
     def test_draft_workspace_rejects_a_falsely_ready_milestone_without_human_approval(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -656,6 +682,50 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("creator_profile_id", str(ctx.exception))
+
+    def test_strategy_ready_rejects_conversion_asset_from_another_strategy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
+
+            def mismatch_strategy(asset):
+                asset["source_content_strategy_id"] = "content_strategy_wrong"
+
+            rewrite_json(
+                workspace_dir
+                / "conversion-assets"
+                / "conversion_asset_luna_reset_checklist.json",
+                mismatch_strategy,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("source_content_strategy_id", str(ctx.exception))
+            self.assertIn("accepted strategy", str(ctx.exception))
+
+    def test_approved_conversion_asset_requires_explicit_user_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
+
+            def remove_user_approval(asset):
+                asset["approval"] = {
+                    "status": "pending",
+                    "approved_by": None,
+                    "approved_on": None,
+                    "notes": "Rendered but not reviewed.",
+                }
+
+            rewrite_json(
+                workspace_dir
+                / "conversion-assets"
+                / "conversion_asset_luna_reset_checklist.json",
+                remove_user_approval,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("user_approved", str(ctx.exception))
 
     def test_strategy_ready_requires_conversion_asset_file_refs_to_exist(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -77,4 +77,5 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: Invoke the board only after Reference Library planning; bind production spaces and props by typed asset ID so incorrect image categories fail validation and prompt-ready references render intentional placeholders.
 
 ### create-lead-magnet
-- 2026-07-09: First real run (margot) user-approved; integration audit found the conductor gap — create-influencer now dispatches create-lead-magnet in its conversion-assets phase and the brand reference family must capture imagery treatment rules for the [AUTO] theme tokens.
+- 2026-07-09: First real run (margot) user-approved; integration audit found the conductor gap — create-influencer must dispatch create-lead-magnet explicitly in its lead-magnet conversion phase.
+- 2026-07-09: Adversarial hardening: Part A references only existing files; approval and strategy provenance fail closed at record/workspace seams; non-lead types halt; render state stays in root .tmp; browser helpers need success-path boundary tests.

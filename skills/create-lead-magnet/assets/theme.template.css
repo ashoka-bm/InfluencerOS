@@ -2,8 +2,8 @@
    This is the ONLY thing that differs per creator. template.css derives the full
    colour ramp (color-mix) and type scale (pow) from these ~17 tokens.
 
-   Each token is tagged [AUTO] (derive from the creator's brand-system.md /
-   personal-brand.md / creator-profile.json) or [DECIDE] (a judgment or a computed
+   Each token is tagged [AUTO] (derive from personal-brand.md,
+   creator-profile.json, and the optional personal-brand-board.json) or [DECIDE] (a judgment or a computed
    value — draft it, then get user acceptance; validation is not approval).
    NEVER copy another creator's theme as a starting point — resolve from THIS
    creator's brand data. */
@@ -16,9 +16,9 @@
   --color-highlight:        #808080;  /* [AUTO] secondary brand colour (optional) */
 
   /* type */
-  --font-display: Georgia, serif;               /* [AUTO] brand "editorial/display serif" posture → concrete family [DECIDE] */
-  --font-body:    -apple-system, sans-serif;    /* [AUTO] brand "clean/body sans" posture → concrete family [DECIDE] */
-  --font-mono:    ui-monospace, monospace;      /* [DECIDE] no brand signal usually; pick a neutral mono */
+  --font-display: Georgia, 'Times New Roman', serif; /* [AUTO] resolve to an offline system stack */
+  --font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; /* [AUTO] offline system stack */
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, monospace; /* [DECIDE] offline system stack */
   --ratio:        1.25;   /* [AUTO] voice register: restrained/calm ~1.2, warm ~1.33, editorial/dramatic ~1.5 */
   --type-base:    10.5pt; /* [DECIDE] structural default; rarely changes */
   --size-cover:   60pt;   /* [DECIDE] nudge up for editorial voices, down for restrained */

@@ -153,11 +153,9 @@ Select based on content strategy:
 - object: meaningful props
 - video_style: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, platform finish, recurring shot families
 - voice: ElevenLabs Voice Design prompt packages and approved/imported voice samples
-- brand: supporting brand imagery and reference assets, plus imagery treatment
-  rules (e.g. real-skin/no-saturation-tricks vs mono/duotone allowance) so
-  downstream theming such as `create-lead-magnet` brand tokens is derivable;
-  the canonical exact palette, typography, name system, and layout examples
-  live in `references/brand/personal-brand-board.json` and are owned by
+- brand: supporting brand imagery and reference assets; the canonical exact
+  palette, typography, name system, and layout examples live in
+  `references/brand/personal-brand-board.json` and are owned by
   `personal-brand-board`
 
 The downstream personal brand board binds production spaces to `location`

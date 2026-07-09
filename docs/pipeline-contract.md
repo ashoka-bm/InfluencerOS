@@ -85,6 +85,11 @@ continuity. Projects, output packages, published records, analytics, and memory
 stay creator-scoped so the Learning OS can improve future ideas without
 blending creator identities.
 
+Each conversion asset carries `source_content_strategy_id` as its immediate
+upstream provenance link. Lifecycle states `approved` and
+`published_or_ready` additionally require explicit user-approval metadata;
+rendering or validation alone cannot advance the record.
+
 Creator runtime skills live under `.claude/skills/<skill-name>/SKILL.md` inside the Creator Workspace. They are copied from repo `skills/<skill-name>/SKILL.md` so an agent can run from the creator root. Creator-specific overrides live beside them as `SKILL.local.md`. Runtime sync refreshes copied baseline skills while preserving local overrides and creator-only skills.
 
 `creator-profile.json` should be an operational summary: strong enough for routine research, ideas, scripts, plans, and output packaging, but not a full structured copy of every identity, psychology, brand, and reference detail.

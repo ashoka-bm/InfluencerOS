@@ -373,6 +373,50 @@ class CreatorSetupTemplateDriftTests(unittest.TestCase):
             )
 
 
+class LeadMagnetSkillContractTests(unittest.TestCase):
+    def test_part_a_refs_only_existing_body_and_part_b_adds_pdf(self):
+        skill = read_repo_text("skills/create-lead-magnet/SKILL.md")
+        self.assertIn(
+            'Part A `file_refs` = `["conversion-assets/<slug>-lead-magnet.md"]`',
+            skill,
+        )
+        self.assertIn("Part B adds the rendered PDF to `file_refs`", skill)
+
+    def test_only_lead_magnets_dispatch_to_pdf_skill(self):
+        conductor = read_repo_text("skills/create-influencer/SKILL.md")
+        self.assertIn("only when `asset_type` is `lead_magnet`", conductor)
+        self.assertIn("halt and surface the unsupported conversion-asset type", conductor)
+
+    def test_conversion_asset_approval_is_explicitly_human(self):
+        skill = read_repo_text("skills/create-lead-magnet/SKILL.md")
+        self.assertIn("present the body and rendered PDF to the user", skill)
+        self.assertIn("Only explicit user approval advances", skill)
+
+    def test_working_bundle_lives_in_root_tmp(self):
+        skill = read_repo_text("skills/create-lead-magnet/SKILL.md")
+        self.assertIn("<repo>/.tmp/lead-magnets/<creator-slug>/<asset-slug>/", skill)
+        self.assertNotIn("nested WORKING bundle", skill)
+
+    def test_text_first_inputs_do_not_require_visual_assets(self):
+        skill = read_repo_text("skills/create-lead-magnet/SKILL.md")
+        self.assertIn("Text-first creators require no identity plate", skill)
+        self.assertNotIn("<slug>-brand-system.md", skill)
+
+    def test_default_template_is_generic_and_offline(self):
+        skeleton = read_repo_text("skills/create-lead-magnet/assets/skeleton.html")
+        self.assertNotIn("Mara Vale", skeleton)
+        self.assertNotIn("https://", skeleton)
+        self.assertNotIn("assets/creator.png", skeleton)
+        self.assertIn('href="theme.css"', skeleton)
+
+    def test_registry_classifies_lead_magnet_as_creator_setup(self):
+        registry = read_repo_text(REGISTRY_PATH)
+        core = table_skill_names(markdown_section(registry, "Core Workflow Skills"))
+        setup = table_skill_names(markdown_section(registry, "Creator Setup Subskills"))
+        self.assertNotIn("create-lead-magnet", core)
+        self.assertIn("create-lead-magnet", setup)
+
+
 class GuidedE2EDriftTests(unittest.TestCase):
     def test_create_influencer_normal_user_guidance_contract_is_pinned(self):
         skill = read_repo_text("skills/create-influencer/SKILL.md").lower()

@@ -32,8 +32,9 @@ The workflow should create or refine:
 - `brand_context/voice-samples.md`
 - `references/visual-continuity-plan.json`
 - `references/reference-library.json`
-- `conversion-assets/*.json` when strategy references a lead magnet, offer, or
-  other conversion mechanism
+- `conversion-assets/*.json` when strategy references an `asset_type:
+  lead_magnet`; v1 Creator Setup halts and surfaces any other conversion-asset
+  type rather than inventing or misclassifying its deliverable workflow
 - `content-schedule.json` when the workspace is being moved to production
   readiness
 - `boards/content-calendar.html` as the rebuildable human-review projection of
@@ -80,8 +81,10 @@ Machine-readable files own state:
   product/brand-object, and production-space analysis, the presented
   recommendations, per-candidate user decisions, and Visual Continuity Plan
   approval.
-- `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
-  waitlist, opt-in page, and partner asset status.
+- `conversion-assets/*.json` is the record family for lead magnets, offers,
+  newsletter assets, waitlists, opt-in pages, and partner assets. V1 Creator
+  Setup produces lead magnets only; every other type remains unsupported and
+  blocks readiness until its own workflow is explicitly built.
 - `content-schedule.json` owns calendar readiness.
 - `boards/content-calendar.html` is a derived review projection. It never owns
   schedule state and must be rebuilt after every canonical calendar change.
@@ -653,7 +656,9 @@ Workspace readiness statuses:
 - `profile_ready`: the creator profile is accepted and selected channels are recorded.
 - `foundation_ready`: channel-derived foundation requirements are ready, either in `prompt_ready` mode with stable prompts or `media_ready` mode with approved/user-provided media.
 - `strategy_ready`: the monthly platform mix, cadence principles, conversion paths, related-post chains, and required conversion assets are accepted.
-- `production_ready`: the strategy has been translated into content calendar slots and the required lead magnets or conversion assets are ready for use.
+- `production_ready`: the strategy has been translated into content calendar
+  slots and required lead magnets are ready for use. A strategy requiring a
+  non-lead-magnet conversion type remains blocked in v1.
 - `active`: the creator is in normal use.
 - `archived`: the creator is no longer active.
 
