@@ -22,12 +22,21 @@ from influencer_os.projects import (
     write_analytics_snapshot,
 )
 from influencer_os.validation import validate_record
-from tests.test_cli import copy_example_record, rewrite_json
 from tests.test_published_posts import scaffold_packaged_project, stage_published_record
 
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_SNAPSHOT_ID = "analytics_snapshot_luna_tiny_reset_youtube_24h"
+
+
+def copy_example_record(example_name, destination):
+    destination.write_text((ROOT / "examples" / example_name).read_text())
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 
 def scaffold_published_project(temp_dir):

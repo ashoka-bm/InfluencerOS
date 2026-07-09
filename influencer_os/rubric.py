@@ -12,11 +12,13 @@ import json
 import re
 from pathlib import Path
 
+from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.json_io import write_json_atomic
 from influencer_os.validation import (
     ROOT,
     ValidationError,
     load_json,
+    validate_jsonl_file,
     validate_record,
 )
 
@@ -41,6 +43,46 @@ DEFAULT_REFLECTION_THRESHOLDS = {
     "unprocessed_n": 10,
     "unclassified_n": 3,
 }
+
+
+def validate_events_ledger(workspace_dir, scope):
+    """Validate Improvement friction records and reflection reconciliation."""
+    workspace_dir = Path(workspace_dir)
+    checked = []
+    ledger_path = workspace_dir / EVENTS_LEDGER_RELATIVE
+    criteria_by_id = collect_criteria(workspace_dir, scope=scope)
+    seen_event_ids = set()
+
+    def record_check(record):
+        check_creator_scope(record, scope)
+        event_id = record.get("event_id")
+        if event_id in seen_event_ids:
+            raise ValidationError(f"duplicate event id {event_id!r}")
+        seen_event_ids.add(event_id)
+        check_event_resolution(record, criteria_by_id)
+
+    if ledger_path.exists():
+        validate_jsonl_file("system-event", ledger_path, record_check=record_check)
+        checked.append(str(ledger_path.relative_to(workspace_dir)))
+
+    workspace_rubric_path = workspace_dir / WORKSPACE_RUBRIC_FILENAME
+    if workspace_rubric_path.exists():
+        workspace_rubric = load_rubric(workspace_rubric_path)
+        for criterion in workspace_rubric.get("criteria", []):
+            source_event = criterion.get("minted_from_event_id")
+            if source_event is not None and source_event not in seen_event_ids:
+                raise ValidationError(
+                    f"{workspace_rubric_path}: criterion "
+                    f"{criterion['criterion_id']!r} cites minted_from_event_id "
+                    f"{source_event!r} which does not resolve to a ledger event"
+                )
+        checked.append(WORKSPACE_RUBRIC_FILENAME)
+
+    reflection_runs = load_reflection_runs(workspace_dir, scope=scope)
+    reconcile_reflection_runs(reflection_runs, seen_event_ids, context=workspace_dir)
+    if reflection_runs:
+        checked.append(str(REFLECTION_RUNS_DIR_RELATIVE))
+    return checked
 
 
 def load_rubric(path):
@@ -210,8 +252,6 @@ def reflection_report(workspace_path, scope=None):
     friction counts, per-recurrence-key counts, the unclassified rubric-gap
     signal, and the advisory warnings for crossed thresholds. Validates the
     ledger and runs first (fail-closed), then reports; never mutates."""
-    from influencer_os.research import load_workspace_scope, validate_events_ledger
-
     workspace_dir = Path(workspace_path)
     if scope is None:
         scope = load_workspace_scope(workspace_dir)
@@ -329,8 +369,6 @@ def log_incident(
     semantics via validate_record, resolution via the collected rubric, and
     creator scope via the workspace manifest.
     """
-    from influencer_os.research import check_creator_scope, load_workspace_scope
-
     workspace_dir = Path(workspace_path)
     scope = load_workspace_scope(workspace_dir)
     ledger_path = workspace_dir / EVENTS_LEDGER_RELATIVE

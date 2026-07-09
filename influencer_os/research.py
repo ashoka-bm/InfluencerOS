@@ -10,13 +10,17 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
+from influencer_os.rubric import validate_events_ledger
 from influencer_os.validation import (
     GATED_RESEARCH_ACCESS_METHODS,
     is_standing_approved_adapter,
     ValidationError,
+    iter_jsonl_lines,
     load_json,
     validate_file,
     validate_intent_carry_forward,
+    validate_jsonl_file,
     validate_record,
 )
 
@@ -60,34 +64,6 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
 # to mean anything, so they are not evaluated.
 THIN_EVIDENCE_MIN_CHECKED = 3
 THIN_EVIDENCE_PROMOTION_RATE = 0.34
-
-
-def _iter_jsonl_lines(path):
-    # Split on newlines only: splitlines() would also break on U+2028/U+2029,
-    # which are legal inside JSON strings, corrupting records and line numbers.
-    for line_number, line in enumerate(path.read_text().split("\n"), start=1):
-        if line.strip():
-            yield line_number, line
-
-
-def validate_jsonl_file(schema_name, path, record_check=None):
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Missing JSONL file: {path}")
-    records = []
-    for line_number, line in _iter_jsonl_lines(path):
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise ValidationError(f"{path}:{line_number}: invalid JSON: {exc}") from None
-        try:
-            validate_record(schema_name, record)
-            if record_check is not None:
-                record_check(record)
-        except ValidationError as exc:
-            raise ValidationError(f"{path}:{line_number}: {exc}") from None
-        records.append(record)
-    return records
 
 
 def check_project_warning_pairing(record):
@@ -271,90 +247,6 @@ def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None
                 f"project warning {warning_id} targets queue entry "
                 f"{entry_id!r}, but idea promotion {promotion_id!r} was "
                 f"promoted from {promoted_entry!r}"
-            )
-
-
-def validate_events_ledger(workspace_dir, scope):
-    """Shared friction-ledger seam (ADR 0025), called by both validate_research
-    and validate workspace: per-line schema + structural semantics, creator
-    scope, duplicate event ids, criterion resolution against the collected
-    rubric (cite-or-mint at rest), and creator-rubric mint provenance
-    resolving to real ledger events. Returns the checked relative paths."""
-    from influencer_os import rubric as rubric_module
-
-    workspace_dir = Path(workspace_dir)
-    checked = []
-    ledger_path = workspace_dir / "system" / "creator-events.jsonl"
-    criteria_by_id = rubric_module.collect_criteria(workspace_dir, scope=scope)
-    seen_event_ids = set()
-
-    def record_check(record):
-        check_creator_scope(record, scope)
-        event_id = record.get("event_id")
-        if event_id in seen_event_ids:
-            raise ValidationError(f"duplicate event id {event_id!r}")
-        seen_event_ids.add(event_id)
-        rubric_module.check_event_resolution(record, criteria_by_id)
-
-    if ledger_path.exists():
-        validate_jsonl_file("system-event", ledger_path, record_check=record_check)
-        checked.append(str(ledger_path.relative_to(workspace_dir)))
-
-    # Creator-rubric mint provenance must resolve to real ledger events. The
-    # OS rubric is exempt: it may be minted from any workspace's (untracked)
-    # ledger, so its provenance is not resolvable from one workspace.
-    workspace_rubric_path = workspace_dir / rubric_module.WORKSPACE_RUBRIC_FILENAME
-    if workspace_rubric_path.exists():
-        workspace_rubric = rubric_module.load_rubric(workspace_rubric_path)
-        for criterion in workspace_rubric.get("criteria", []):
-            source_event = criterion.get("minted_from_event_id")
-            if source_event is not None and source_event not in seen_event_ids:
-                raise ValidationError(
-                    f"{workspace_rubric_path}: criterion "
-                    f"{criterion['criterion_id']!r} cites minted_from_event_id "
-                    f"{source_event!r} which does not resolve to a ledger event"
-                )
-        checked.append(rubric_module.WORKSPACE_RUBRIC_FILENAME)
-
-    # Reflection runs reconcile against the ledger both directions at rest
-    # (ADR 0025): a claiming run may not cite a nonexistent event, and no
-    # event is processed twice.
-    reflection_runs = rubric_module.load_reflection_runs(workspace_dir, scope=scope)
-    rubric_module.reconcile_reflection_runs(
-        reflection_runs, seen_event_ids, context=workspace_dir
-    )
-    if reflection_runs:
-        checked.append(str(rubric_module.REFLECTION_RUNS_DIR_RELATIVE))
-    return checked
-
-
-def load_workspace_scope(workspace_dir):
-    """The research module is creator-scoped: every record in a Creator
-    Workspace must belong to the workspace's creator."""
-    manifest_path = Path(workspace_dir) / "creator-workspace.json"
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"Missing creator workspace manifest: {manifest_path}")
-    manifest = load_json(manifest_path)
-    try:
-        validate_record("creator-workspace", manifest)
-    except ValidationError as exc:
-        raise ValidationError(f"{manifest_path}: {exc}") from None
-    return {
-        "creator_profile_id": manifest["creator_profile_id"],
-        "creator_slug": manifest["creator_slug"],
-    }
-
-
-def check_creator_scope(record, scope, context=None):
-    """Pin a record's creator fields to the owning workspace. Fields a
-    record's schema does not carry (project warnings) are skipped."""
-    for field, expected in scope.items():
-        value = record.get(field)
-        if value is not None and value != expected:
-            prefix = f"{context}: " if context else ""
-            raise ValidationError(
-                f"{prefix}{field} {value!r} does not match the owning "
-                f"creator workspace ({expected!r})"
             )
 
 
@@ -1183,7 +1075,7 @@ def collect_research_record_ids(workspace_dir):
         for filename, id_field, id_runs in scans:
             for jsonl_path in sorted(runs_dir.glob(f"*/{filename}")):
                 run_id = jsonl_path.parent.name
-                for line_number, line in _iter_jsonl_lines(jsonl_path):
+                for line_number, line in iter_jsonl_lines(jsonl_path):
                     try:
                         record = json.loads(line)
                     except json.JSONDecodeError as exc:

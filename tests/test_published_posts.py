@@ -16,9 +16,7 @@ from influencer_os.projects import (
     register_published_post,
     validate_project,
 )
-from tests.test_cli import (
-    copy_example_record,
-    rewrite_json,
+from tests.support import (
     scaffold_project_workspace,
     seed_generation_fixtures,
     switch_project_to_text_format,
@@ -27,6 +25,16 @@ from tests.test_cli import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def copy_example_record(example_name, destination):
+    destination.write_text((ROOT / "examples" / example_name).read_text())
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 
 def scaffold_packaged_project(temp_dir):

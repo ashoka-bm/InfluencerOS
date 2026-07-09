@@ -12,9 +12,8 @@ from influencer_os.creator_workspaces import init_creator
 from influencer_os.full_validation import validate_all
 from influencer_os.projects import validate_project
 from influencer_os.validation import ValidationError
-from tests.test_cli import (
+from tests.support import (
     populate_promotion_records,
-    populate_research_packs,
     populate_workspace_records,
     scaffold_project_workspace,
 )

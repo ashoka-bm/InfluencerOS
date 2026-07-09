@@ -9,12 +9,11 @@ from pathlib import Path
 from influencer_os.research import (
     parse_frontmatter,
     validate_findings_file,
-    validate_jsonl_file,
     validate_promotion_gate,
     validate_queue,
     validate_research,
 )
-from influencer_os.validation import ValidationError
+from influencer_os.validation import ValidationError, validate_jsonl_file
 
 
 ROOT = Path(__file__).resolve().parents[1]

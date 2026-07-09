@@ -35,7 +35,6 @@ from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
 from influencer_os.semantic_lookup import query_lookup, rebuild_lookup
-from influencer_os.runs import DEFAULT_WORKSPACE, init_run
 from influencer_os.validation import ValidationError, validate_examples, validate_file
 
 
@@ -47,11 +46,6 @@ def main(argv=None):
     validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "calendar", "brand-board", "all"], help="Validation target ('all' composes workspace, research, queue, projections, and every project — the alpha release gate).")
     validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue/board validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
-
-    init_parser = subparsers.add_parser("init-run", help="Initialize a dry-run workspace from a creator profile.")
-    init_parser.add_argument("creator_profile", help="Path to a Creator Profile JSON file.")
-    init_parser.add_argument("--workspace", default=str(DEFAULT_WORKSPACE), help="Run workspace directory.")
-    init_parser.add_argument("--run-id", help="Optional explicit run id.")
 
     creator_parser = subparsers.add_parser("init-creator", help="Initialize a Creator Workspace from a workspace manifest.")
     creator_parser.add_argument("creator_workspace", help="Path to a Creator Workspace JSON manifest.")
@@ -299,16 +293,6 @@ def main(argv=None):
                 for warning in result["warnings"]:
                     print(warning, file=sys.stderr)
                 return 0
-            return 0
-
-        if args.command == "init-run":
-            run_dir = init_run(
-                args.creator_profile,
-                workspace=Path(args.workspace),
-                run_id=args.run_id,
-            )
-            print(f"Initialized run: {run_dir}")
-            print("Next phase: social_research_pack")
             return 0
 
         if args.command == "init-creator":

@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 
 from influencer_os.creator_workspaces import init_creator, validate_creator_workspace
-from influencer_os.research import load_workspace_scope, validate_events_ledger
+from influencer_os.creator_scope import load_workspace_scope
+from influencer_os.rubric import validate_events_ledger
 from influencer_os.rubric import (
     DEFAULT_REFLECTION_THRESHOLDS,
     REFLECTION_RUNS_DIR_RELATIVE,
@@ -22,6 +23,12 @@ from influencer_os.rubric import (
 from influencer_os.validation import ValidationError, validate_record
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 
 def make_event(**overrides):
@@ -760,7 +767,6 @@ class PredictionPairingTests(unittest.TestCase):
 
     def scaffold(self, temp_dir, package_mutate=None, summary_mutate=None):
         from influencer_os.projects import validate_project
-        from tests.test_cli import rewrite_json
         from tests.test_performance_summary import (
             scaffold_summarized_project,
             write_summary,
@@ -949,7 +955,6 @@ class PredictionPairingTests(unittest.TestCase):
         # must hold for a text package too, where visual thumbnail rules
         # differ. Article packages carry the same 5-stage map.
         from influencer_os.projects import validate_project
-        from tests.test_cli import rewrite_json
         from tests.test_published_posts import scaffold_packaged_article_project
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -979,7 +984,7 @@ class MaturityLadderTests(unittest.TestCase):
     register-output-package call."""
 
     def scaffold_reviews(self, temp_dir, review_mutate=None):
-        from tests.test_cli import rewrite_json, seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
         from tests.test_published_posts import scaffold_project_workspace
 
         _, project_dir = scaffold_project_workspace(temp_dir)
@@ -1120,7 +1125,6 @@ class MaturityLadderTests(unittest.TestCase):
         # End-to-end (batch-3 review test gap): a blocking criterion in the
         # OWNING workspace's rubric reaches the gate via validate_project.
         from influencer_os.projects import validate_project
-        from tests.test_cli import rewrite_json
 
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir, project, rows = self.scaffold_reviews(temp_dir)
@@ -1145,7 +1149,6 @@ class MaturityLadderTests(unittest.TestCase):
 
     def test_foreign_creator_rubric_fails_at_project_seam(self):
         from influencer_os.projects import validate_project
-        from tests.test_cli import rewrite_json
 
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir, _, _ = self.scaffold_reviews(temp_dir)

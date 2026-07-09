@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from influencer_os.research import check_creator_scope, load_workspace_scope
+from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.validation import ValidationError, load_json, validate_file
 
 

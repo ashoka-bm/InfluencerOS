@@ -16,14 +16,13 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from influencer_os.creator_scope import load_workspace_scope
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import (
     RESEARCH_JSONL_FILES,
-    _iter_jsonl_lines,
-    load_workspace_scope,
     parse_frontmatter,
 )
-from influencer_os.validation import ValidationError, load_json
+from influencer_os.validation import ValidationError, iter_jsonl_lines, load_json
 
 
 INDEX_DB_RELATIVE = Path("index") / "influencer-os.sqlite"
@@ -135,7 +134,7 @@ def collect_index_rows(workspace_dir, scope=None):
                 jsonl_path = run_dir / filename
                 if not jsonl_path.exists():
                     continue
-                for line_number, line in _iter_jsonl_lines(jsonl_path):
+                for line_number, line in iter_jsonl_lines(jsonl_path):
                     try:
                         record = json.loads(line)
                     except json.JSONDecodeError as exc:

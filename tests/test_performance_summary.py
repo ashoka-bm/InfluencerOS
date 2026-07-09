@@ -7,6 +7,7 @@ WARN. There is no summary write gate: the interpretive skill authors the
 record and validate_project is the enforcement seam, so every check here is
 an at-rest probe.
 """
+import json
 import subprocess
 import sys
 import tempfile
@@ -24,7 +25,6 @@ from tests.test_analytics import (
     scaffold_published_project,
     stage_snapshot_record,
 )
-from tests.test_cli import copy_example_record, rewrite_json
 from tests.test_published_posts import (
     scaffold_project_workspace,
     stage_published_record,
@@ -32,6 +32,16 @@ from tests.test_published_posts import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def copy_example_record(example_name, destination):
+    destination.write_text((ROOT / "examples" / example_name).read_text())
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 # A snapshot_at past the WARN maturity threshold relative to the example
 # published_at (2026-06-29T18:30:00Z).

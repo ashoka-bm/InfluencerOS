@@ -21,7 +21,7 @@ from influencer_os.validation import (
     ValidationError,
     validate_record,
 )
-from tests.test_cli import rewrite_json, scaffold_project_workspace
+from tests.support import scaffold_project_workspace
 from tests.test_performance_summary import (
     ingest_example_snapshot,
     scaffold_summarized_project,
@@ -36,6 +36,16 @@ from tests.test_research_validation import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def copy_example_record(example_name, destination):
+    destination.write_text((ROOT / "examples" / example_name).read_text())
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
 
 SEEDED_TEMPLATE_DIR = ROOT / "docs" / "templates" / "social-templates"
 
@@ -639,8 +649,7 @@ class ReviewRecordTests(unittest.TestCase):
         # well-formed block-status review present at packaging time does not
         # stop register_output_package.
         from influencer_os.projects import register_output_package
-        from tests.test_cli import (
-            copy_example_record,
+        from tests.support import (
             seed_generation_fixtures,
             write_upload_ready_assets,
         )

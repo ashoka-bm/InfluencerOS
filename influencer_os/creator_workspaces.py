@@ -11,8 +11,8 @@ from influencer_os.generation import validate_reference_approval_records
 from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
-from influencer_os.research import validate_events_ledger, validate_promotions
-from influencer_os.rubric import reflection_report
+from influencer_os.research import validate_promotions
+from influencer_os.rubric import reflection_report, validate_events_ledger
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
 
@@ -227,7 +227,6 @@ STANDARD_DIRECTORIES = [
     "references/video-style",
     "references/voice",
     "references/brand",
-    "research/social-research-packs",
     "research/video-understanding-packs",
     "research/sources",
     "research/runs",

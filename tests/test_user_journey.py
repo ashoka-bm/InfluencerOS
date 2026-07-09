@@ -135,13 +135,6 @@ def seed_research_outputs(workspace_dir):
     )
 
     copy_example(
-        "social-research-pack.example.json",
-        workspace_dir
-        / "research"
-        / "social-research-packs"
-        / "research_luna_fit_2026_06_28.json",
-    )
-    copy_example(
         "video-understanding-pack.example.json",
         workspace_dir
         / "research"
@@ -269,7 +262,7 @@ class PhaseOneUserJourneyTests(unittest.TestCase):
 
             # Generation provenance (ADR 0023): the example package's media
             # refs resolve through the seeded approval record + manifest.
-            from tests.test_cli import seed_generation_fixtures
+            from tests.support import seed_generation_fixtures
 
             seed_generation_fixtures(project_dir)
 

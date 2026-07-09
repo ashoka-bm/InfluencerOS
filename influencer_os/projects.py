@@ -177,11 +177,7 @@ PRODUCTION_PLAN_ID_FIELDS = {
     "thread-plan": "thread_plan_id",
 }
 
-# Research pack ids resolve to <workspace>/<directory>/<pack-id>.json records.
-RESEARCH_PACK_LOCATIONS = (
-    ("video_research_", "research/video-understanding-packs", "video-understanding-pack", "video_understanding_pack_id"),
-    ("research_", "research/social-research-packs", "social-research-pack", "social_research_pack_id"),
-)
+VIDEO_UNDERSTANDING_PACK_DIRECTORY = "research/video-understanding-packs"
 
 # The advisory platform → format capability map (ADR 0024, Creative
 # Direction slice 3). Fit classifications transcribed from the dated
@@ -1398,8 +1394,9 @@ def _locate_workspace(project_dir):
 
 def _resolve_source_refs(source_refs, workspace_dir, context):
     _resolve_reference_assets(source_refs.get("reference_asset_ids", []), workspace_dir, context)
-    _resolve_research_packs(source_refs.get("research_pack_ids", []), workspace_dir, context)
-    _resolve_research_packs(source_refs.get("video_understanding_pack_ids", []), workspace_dir, context)
+    _resolve_video_understanding_packs(
+        source_refs.get("video_understanding_pack_ids", []), workspace_dir, context
+    )
 
 
 def _resolve_reference_assets(asset_ids, workspace_dir, context):
@@ -1415,27 +1412,21 @@ def _resolve_reference_assets(asset_ids, workspace_dir, context):
         )
 
 
-def _resolve_research_packs(pack_ids, workspace_dir, context):
+def _resolve_video_understanding_packs(pack_ids, workspace_dir, context):
     for pack_id in pack_ids:
-        directory, schema_name, id_field = _research_pack_location(pack_id, context)
-        pack_path = workspace_dir / directory / f"{pack_id}.json"
+        pack_path = workspace_dir / VIDEO_UNDERSTANDING_PACK_DIRECTORY / f"{pack_id}.json"
         if not pack_path.exists():
             raise ValidationError(
-                f"{context}: research pack {pack_id!r} does not resolve to {directory}/{pack_id}.json"
+                f"{context}: Video Understanding Pack {pack_id!r} does not resolve to "
+                f"{VIDEO_UNDERSTANDING_PACK_DIRECTORY}/{pack_id}.json"
             )
-        record = _validate_project_record(pack_path, schema_name)
-        if record[id_field] != pack_id:
+        record = _validate_project_record(pack_path, "video-understanding-pack")
+        if record["video_understanding_pack_id"] != pack_id:
             raise ValidationError(
-                f"{context}: research pack file {pack_path} has {id_field} "
-                f"{record[id_field]!r}, expected {pack_id!r}"
+                f"{context}: Video Understanding Pack file {pack_path} has "
+                f"video_understanding_pack_id {record['video_understanding_pack_id']!r}, "
+                f"expected {pack_id!r}"
             )
-
-
-def _research_pack_location(pack_id, context):
-    for prefix, directory, schema_name, id_field in RESEARCH_PACK_LOCATIONS:
-        if pack_id.startswith(prefix):
-            return directory, schema_name, id_field
-    raise ValidationError(f"{context}: unrecognized research pack id prefix: {pack_id!r}")
 
 
 def _validate_project_records(project_dir, project, workspace_dir, promotion=None):
@@ -1460,7 +1451,7 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
     # a foreign creator's rubric must never gate this project — and fail
     # closed on a missing canonical creator rubric, which would silently
     # drop its blocking criteria from the gate.
-    from influencer_os.research import load_workspace_scope
+    from influencer_os.creator_scope import load_workspace_scope
     from influencer_os.rubric import WORKSPACE_RUBRIC_FILENAME, collect_criteria
 
     workspace_rubric_path = Path(workspace_dir) / WORKSPACE_RUBRIC_FILENAME

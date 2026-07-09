@@ -9,9 +9,14 @@ workspace is absent (wiped fixtures, CI)."""
 import json
 from pathlib import Path
 
+from influencer_os.creator_scope import load_workspace_scope
 from influencer_os.creator_workspaces import DEFAULT_CREATOR_WORKSPACE_ROOT
 from influencer_os.json_io import write_json_atomic
-from influencer_os.rubric import EVENTS_LEDGER_RELATIVE, collect_criteria
+from influencer_os.rubric import (
+    EVENTS_LEDGER_RELATIVE,
+    collect_criteria,
+    validate_events_ledger,
+)
 from influencer_os.validation import (
     ROOT,
     ValidationError,
@@ -94,7 +99,6 @@ def _resolve_claim_against_workspace(claim, workspace_dir, context):
     # that either cites the claim's criterion or is an unclassified
     # rejection (the distilled-criterion flow), and the declared baseline
     # count must equal the evidence set.
-    from influencer_os.research import load_workspace_scope, validate_events_ledger
     from influencer_os.validation import FRICTION_EVENT_TYPES
 
     scope = load_workspace_scope(workspace_dir)

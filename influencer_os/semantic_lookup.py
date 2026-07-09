@@ -47,9 +47,9 @@ import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from influencer_os.creator_scope import load_workspace_scope
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.recall_index import default_index_path
-from influencer_os.research import load_workspace_scope
 from influencer_os.validation import ValidationError, load_json
 
 

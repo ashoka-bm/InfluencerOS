@@ -28,13 +28,26 @@ from influencer_os.providers.registry import (
     provider_status,
 )
 from influencer_os.validation import ValidationError, validate_record
-from tests.test_cli import rewrite_json, scaffold_project_workspace
+from tests.support import scaffold_project_workspace
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 BASE_CONFIG = {"DISABLE_PAID_CONNECTORS": False}
 KILLED_CONFIG = {"DISABLE_PAID_CONNECTORS": True}
+
+
+def copy_example_record(example_name, destination):
+    destination.write_text((ROOT / "examples" / example_name).read_text())
+
+
+def rewrite_json(path, mutate):
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record, indent=2) + "\n")
+
+
+rewrite = rewrite_json
 
 
 def load_example(name):
@@ -706,7 +719,7 @@ class ProvenanceLedgerTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_manifest_row_with_missing_artifact_fails_at_rest(self):
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -716,7 +729,7 @@ class ProvenanceLedgerTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_tampered_artifact_fails_hash_check(self):
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -728,7 +741,7 @@ class ProvenanceLedgerTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_generated_row_requires_executed_resolving_approval(self):
-        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -779,7 +792,7 @@ class ProvenanceLedgerTests(unittest.TestCase):
 
     def test_rebuild_index_covers_generation_records(self):
         from influencer_os.recall_index import rebuild_index, resolve_record_id
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
@@ -850,7 +863,7 @@ class Batch2HardeningTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_manifest_row_contradicting_request_fails(self):
-        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         for mutate, message in (
             (lambda row: row.update(asset_kind="image"), "contradicts the approved request"),
@@ -871,7 +884,6 @@ class Batch2HardeningTests(unittest.TestCase):
 
     def test_role_kind_lineage_enforced_on_packaged_refs(self):
         from tests.test_analytics import scaffold_published_project
-        from tests.test_cli import rewrite_json as rewrite
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_published_project(temp_dir)
@@ -886,7 +898,6 @@ class Batch2HardeningTests(unittest.TestCase):
 
     def test_generation_status_must_match_referenced_origins(self):
         from tests.test_analytics import scaffold_published_project
-        from tests.test_cli import rewrite_json as rewrite
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_published_project(temp_dir)
@@ -902,7 +913,7 @@ class Batch2HardeningTests(unittest.TestCase):
     def test_stale_review_does_not_cover_reimported_asset(self):
         # Batch-3 review finding: coverage is content-bound — a review of the
         # old bytes stops covering a hand-replaced artifact.
-        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -933,7 +944,7 @@ class Batch2HardeningTests(unittest.TestCase):
     def test_latest_review_verdict_wins(self):
         # Batch-3 review finding: a newer failing review on the same content
         # beats an older pass.
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -971,7 +982,6 @@ class Batch2HardeningTests(unittest.TestCase):
 
     def test_generated_refs_require_provider_calls_made(self):
         from tests.test_analytics import scaffold_published_project
-        from tests.test_cli import rewrite_json as rewrite
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_published_project(temp_dir)
@@ -988,7 +998,6 @@ class Batch2HardeningTests(unittest.TestCase):
         # Own adversarial sweep: declaring planned_not_generated on a
         # project with ledger rows would skip every media binding.
         from tests.test_analytics import scaffold_published_project
-        from tests.test_cli import rewrite_json as rewrite
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_published_project(temp_dir)
@@ -1049,7 +1058,7 @@ class QualityReviewTests(unittest.TestCase):
             validate_record("quality-review", review)
 
     def test_review_scoping_unknown_assets_fails_at_rest(self):
-        from tests.test_cli import rewrite_json as rewrite, seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -1072,7 +1081,7 @@ class QualityReviewTests(unittest.TestCase):
                 validate_project(project_dir)
 
     def test_generated_without_review_warns(self):
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -1092,7 +1101,7 @@ class QualityReviewTests(unittest.TestCase):
 
 class PackagingQualityGateTests(unittest.TestCase):
     def stage_package(self, temp_dir, project_dir):
-        from tests.test_cli import copy_example_record, write_upload_ready_assets
+        from tests.support import write_upload_ready_assets
 
         package_path = Path(temp_dir) / "output-package.json"
         copy_example_record("output-package.example.json", package_path)
@@ -1105,7 +1114,7 @@ class PackagingQualityGateTests(unittest.TestCase):
         # Exit criterion 4: register-output-package fails when generation
         # media lacks a passing QualityReview.
         from influencer_os.projects import register_output_package
-        from tests.test_cli import seed_generation_fixtures
+        from tests.support import seed_generation_fixtures
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
@@ -1127,7 +1136,6 @@ class PackagingQualityGateTests(unittest.TestCase):
         # Exit criterion 4 at-rest parity: flipping a passing review to
         # failing after packaging makes validate project fail.
         from tests.test_analytics import scaffold_published_project
-        from tests.test_cli import rewrite_json as rewrite
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_published_project(temp_dir)
@@ -1153,7 +1161,7 @@ class MockEndToEndChainTests(unittest.TestCase):
         # manifest to its approval record and plan.
         from influencer_os.generation import import_generated_asset, load_asset_manifest
         from influencer_os.projects import register_output_package
-        from tests.test_cli import copy_example_record, write_upload_ready_assets
+        from tests.support import write_upload_ready_assets
 
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_generation_ready_project(temp_dir)

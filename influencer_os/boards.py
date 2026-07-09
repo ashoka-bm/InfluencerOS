@@ -13,15 +13,18 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.json_io import write_json_atomic
 from influencer_os.research import (
-    check_creator_scope,
     check_project_warning_pairing,
     check_project_warning_target_refs,
-    load_workspace_scope,
-    validate_jsonl_file,
 )
-from influencer_os.validation import ValidationError, load_json, validate_record
+from influencer_os.validation import (
+    ValidationError,
+    load_json,
+    validate_jsonl_file,
+    validate_record,
+)
 
 
 # Lower rank sorts first on a card's badge list.

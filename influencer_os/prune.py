@@ -14,13 +14,15 @@ import datetime
 import json
 from pathlib import Path
 
+from influencer_os.creator_scope import load_workspace_scope
 from influencer_os.json_io import write_json_atomic
-from influencer_os.research import (
-    _iter_jsonl_lines,
-    load_workspace_scope,
-    validate_research,
+from influencer_os.research import validate_research
+from influencer_os.validation import (
+    ValidationError,
+    iter_jsonl_lines,
+    load_json,
+    validate_record,
 )
-from influencer_os.validation import ValidationError, load_json, validate_record
 
 
 DEFAULT_RETENTION_DAYS = 30
@@ -77,7 +79,7 @@ def collect_protected_ids(workspace_dir):
 def _load_jsonl_records(path, schema_name):
     """Return (line_number, raw_line, record) triples, schema-validated."""
     entries = []
-    for line_number, line in _iter_jsonl_lines(path):
+    for line_number, line in iter_jsonl_lines(path):
         try:
             record = json.loads(line)
         except json.JSONDecodeError as exc:

@@ -243,6 +243,37 @@ def validate_file(schema_name, record_path, root=ROOT):
     validate_record(schema_name, load_json(record_path), root=root)
 
 
+def iter_jsonl_lines(path):
+    """Yield non-empty JSONL lines without splitting legal JSON separators."""
+    path = Path(path)
+    # splitlines() would also break on U+2028/U+2029, which are legal inside
+    # JSON strings and would corrupt both records and line numbers.
+    for line_number, line in enumerate(path.read_text().split("\n"), start=1):
+        if line.strip():
+            yield line_number, line
+
+
+def validate_jsonl_file(schema_name, path, record_check=None):
+    """Validate every JSONL record and return the parsed records."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Missing JSONL file: {path}")
+    records = []
+    for line_number, line in iter_jsonl_lines(path):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValidationError(f"{path}:{line_number}: invalid JSON: {exc}") from None
+        try:
+            validate_record(schema_name, record)
+            if record_check is not None:
+                record_check(record)
+        except ValidationError as exc:
+            raise ValidationError(f"{path}:{line_number}: {exc}") from None
+        records.append(record)
+    return records
+
+
 def discover_example_schema_pairs(root=ROOT):
     schema_names = {
         path.name[: -len(".schema.json")]

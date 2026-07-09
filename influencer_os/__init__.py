@@ -1,4 +1,3 @@
-"""InfluencerOS dry-run tooling."""
+"""InfluencerOS local-first tooling."""
 
 __version__ = "0.1.0"
-
