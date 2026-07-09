@@ -63,3 +63,4 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### create-reference-library
 - 2026-07-04: Reference planning should derive required assets from platform-to-medium mapping and explicitly handle person reference images, recurring locations, collaborators, and identity-attached objects.
+- 2026-07-09: Fan out grouped source language into one Reference Asset and isolated output image per distinct physical prop; schema-valid grouped prompts are still incomplete.
