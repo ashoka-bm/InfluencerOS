@@ -119,6 +119,23 @@ When image or video is in scope, plan reference images in this order:
 
 Do not rewrite these standard prompts inside the skill. Copy or adapt only the variable slots into creator-specific `.prompt.md` files while preserving the reference-scope rules.
 
+### Atomic Object Reference Rule
+
+Every distinct prop, product, or signature object gets its own Reference Asset,
+prompt file, planned output path, generation request, and resulting reference
+image. Before drafting object prompts, expand any grouped source phrase or
+semantic family (for example, "desk tools" or "family objects") into one
+stable asset per physical object.
+
+An object reference sheet may show multiple angles or macro details only when
+every section depicts the same single target object. It must not combine
+different props, include a collection or arrangement, or add supporting
+objects for styling. If a prompt names more than one distinct object, split it
+before it can be presented for generation approval. Lifestyle and
+character-use prompts may combine a person, location, or wardrobe reference
+with exactly one target object; they do not replace that object's isolated
+reference image.
+
 Strongly recommend a user-provided person reference image for any image or video
 creator. If the user does not provide one, create a planned or prompted
 character identity asset instead — `asset_status` stays `planned` or
@@ -135,6 +152,8 @@ For video creators:
 - create object assets or prompts only for identity-attached items that need
   visual consistency across videos, such as a signature microphone, notebook,
   product, instrument, mug, mascot, tool, or wearable;
+- split every selected object into its own asset and prompt even when several
+  objects share one story, role, location, or source passage;
 - keep one-off props in downstream project plans instead of the reference
   library.
 
@@ -215,3 +234,7 @@ renders requires explicit approval for the exact call or batch.
 ## Completion Criteria
 
 Complete when every medium required by the selected channels and content strategy has either approved assets or planned/prompted assets with stable IDs, source refs, usage notes, prompt paths where needed, the character/outfit/location/object prompt family has been staged when visual generation is in scope, and character identity assets obey the neutral-background hard rules before being marked `approved`. `media_ready` foundation mode and image/video generation permissions require approved or user-provided media references, not merely planned entries.
+
+For object assets, completion additionally requires one distinct prop per
+Reference Asset and per planned reference image; a grouped multi-prop prompt is
+incomplete even when it validates against the schema.

@@ -185,6 +185,9 @@ newest last.*
 - 2026-07-07: Tightened source-evidence provenance (public-web stays
   `public_web`) — rule owned by `create-research-findings`, Evidence
   Quality; pointer in §Record Requirements.
+- 2026-07-09: Object reference prompts are atomic — one distinct prop per
+  Reference Asset, prompt, provider request, and reference image; rule owned by
+  `create-reference-library`, Atomic Object Reference Rule.
 
 ## Self-Update
 

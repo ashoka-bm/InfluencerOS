@@ -14,6 +14,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 - Pending repeated feedback.
 - 2026-07-03: Use bradautomates/claude-video /watch as optional external acquisition for Video Understanding Packs; keep Whisper, first-run installs, and batches behind approval, and do not add it to dependencies.
+- 2026-07-09: Object reference planning must fan out every distinct prop into its own Reference Asset, prompt, provider request, and output image; multi-angle sheets may repeat only the same single object.
 
 ### create-influencer
 

@@ -2,6 +2,16 @@
 
 Use these when you have a person reference image and a separate object, product, or prop reference image. The person image controls identity. The object image controls the prop only.
 
+## Atomic Output Contract
+
+Use one prompt and one output image for exactly one distinct target object.
+When the source material names several props, create a separate Reference
+Asset and separate prompt from this template for each prop before generation.
+Never use one prompt to create a collection, kit, family of objects, grouped
+flat-lay, table arrangement, or contact sheet containing different props.
+Multiple panels are allowed only as different views of the same single target
+object.
+
 ## Reference Scope
 
 - `@person_reference`: controls face, age, body type, hair, skin texture, and identity.
@@ -10,11 +20,12 @@ Use these when you have a person reference image and a separate object, product,
 - Optional `@location_reference`: controls setting only.
 - Optional `@video_style_reference`: controls camera source, aspect ratio, framing, lighting, movement, and shot quality only for lifestyle or character-use prompts.
 - Do not transfer hands, people, background, lighting, or camera angle from the object reference unless requested.
+- `@object_reference` and `[TARGET OBJECT]` must identify one physical object, never a list, set, collection, or semantic family.
 
 ## Object Multi-Angle Reference Sheet
 
 ```text
-Create one object reference sheet divided into clean sections for the same object from @object_reference, on a flat matte neutral gray background.
+Create one reference sheet for exactly one target object, [TARGET OBJECT], from @object_reference, divided into clean sections on a flat matte neutral gray background. Every section must show the same single target object and no other prop.
 
 SECTION 1 - FRONT / IDENTITY VIEW
 Show the full object from the front or front three-quarter angle. Preserve shape, color, material, proportions, scale cues, and identity-bearing marks.
@@ -28,13 +39,13 @@ Show the rear view. Preserve back construction, surface wear, material transitio
 SECTION 4 - MACRO DETAIL
 Show close-up details: material grain, glass, buttons, cracks, seams, wear, labels, hardware, stitching, chain links, stones, texture, or transformation marks.
 
-Presentation: Clean studio lighting, consistent object identity, no extra objects, no hands unless scale or handling is explicitly required, no environment, no visible text unless approved, no watermark.
+Presentation: Clean studio lighting, consistent object identity, no extra or supporting objects, no collection, no arrangement, no grouped flat-lay, no hands unless scale or handling is explicitly required, no environment, no visible text unless approved, no watermark. If another distinct object would be useful, omit it and create a separate prompt and reference image for it.
 ```
 
 ## Character Holding Or Wearing Object
 
 ```text
-Create a realistic image of the person from @person_reference with the object from @object_reference.
+Create a realistic image of the person from @person_reference with exactly one target object, [TARGET OBJECT], from @object_reference.
 
 Identity: Preserve the face, age, hair, skin texture, body type, and expression style from @person_reference.
 
@@ -50,13 +61,13 @@ Camera and lighting: [DESCRIBE CAMERA, LIGHTING, AND ASPECT RATIO] or use @video
 
 Integration: Match hand contact, grip, shadows, reflections, scale, and perspective. The object should feel physically present and correctly sized.
 
-Avoid: identity drift, object duplication, changing object design, unreadable or fake logos unless approved, fused fingers, impossible grip, floating object, extra people, visible text, watermarks.
+Avoid: identity drift, object duplication, additional props, supporting objects, changing object design, unreadable or fake logos unless approved, fused fingers, impossible grip, floating object, extra people, visible text, watermarks.
 ```
 
 ## Product Or Prop Lifestyle Still
 
 ```text
-Create a polished lifestyle still featuring the person from @person_reference and the object from @object_reference.
+Create a polished lifestyle still featuring the person from @person_reference and exactly one target object, [TARGET OBJECT], from @object_reference.
 
 Subject role: The person remains recognizable and natural. Preserve identity from @person_reference.
 
@@ -70,5 +81,5 @@ Camera: [DESCRIBE SHOT SIZE, ANGLE, LENS FEEL, AND ASPECT RATIO]. If @video_styl
 
 Mood: [DESCRIBE EMOTIONAL OR BRAND TONE].
 
-Avoid: turning the object into a different product, adding duplicate objects, over-branding, changing the person's face, mismatched lighting, fake text, extra people, watermarks.
+Avoid: turning the object into a different product, adding duplicate or additional props, adding supporting objects for styling, over-branding, changing the person's face, mismatched lighting, fake text, extra people, watermarks.
 ```

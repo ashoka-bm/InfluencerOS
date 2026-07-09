@@ -1017,6 +1017,44 @@ class SkillProseDriftTests(unittest.TestCase):
                 "field accepts (interview vocabulary leaked into the record contract)",
             )
 
+    def test_object_reference_prompt_contract_stays_atomic(self):
+        skill = read_repo_text("skills/create-reference-library/SKILL.md")
+        template = read_repo_text(
+            "docs/templates/creator-setup/reference-prompts/"
+            "standard-object-reference-prompts.md"
+        )
+        workflow = read_repo_text("docs/workflows/creator-setup.md")
+        skill_flat = re.sub(r"\s+", " ", skill)
+        template_flat = re.sub(r"\s+", " ", template)
+
+        for phrase in (
+            "Every distinct prop, product, or signature object gets its own Reference Asset",
+            "one distinct prop per Reference Asset and per planned reference image",
+            "If a prompt names more than one distinct object, split it",
+        ):
+            self.assertIn(
+                phrase,
+                skill_flat,
+                f"create-reference-library lost atomic object rule {phrase!r}",
+            )
+
+        for phrase in (
+            "Use one prompt and one output image for exactly one distinct target object",
+            "Multiple panels are allowed only as different views of the same single target",
+            "no grouped flat-lay",
+        ):
+            self.assertIn(
+                phrase,
+                template_flat,
+                f"standard object prompt lost atomic output guard {phrase!r}",
+            )
+
+        self.assertIn(
+            "Object references are atomic",
+            workflow,
+            "creator setup workflow lost the object fan-out rule",
+        )
+
     def test_template_ids_resolve_and_library_is_pointed_at(self):
         # F2: the conductor carried an inline starter-template list whose IDs
         # had drifted from docs/social-template-library.md (6 of 9 resolved

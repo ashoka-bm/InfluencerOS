@@ -491,6 +491,13 @@ Each identity-attached object that should appear consistently should have an
 object reference or prompt; casual one-off props should stay in downstream
 project planning.
 
+Object references are atomic: each distinct prop gets its own Reference Asset,
+prompt file, planned output path, generation request, and reference image. A
+multi-angle sheet may repeat the same object from several views, but it must
+not contain different props. Grouped source language such as "family objects"
+or "desk tools" must be expanded into one asset per physical object before
+prompt drafting or generation approval.
+
 ## Reference Library Policy
 
 `references/reference-library.json` tracks both real and planned assets. Each asset has an `asset_status`:
@@ -559,6 +566,9 @@ When image or video is in scope, stage prompt work in this order:
 4. Create outfit references from person + outfit references.
 5. Create location references from person + location references.
 6. Create object references from person + object references.
+
+At step 6, fan out any list of objects before writing prompts. Do not represent
+multiple distinct props with one asset id, one prompt, or one output image.
 
 Provider-neutral prompts should live in separate markdown files near the asset they describe, such as:
 
