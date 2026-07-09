@@ -85,6 +85,7 @@ Current workflow coverage:
 | `personal-brand-board` | Creator setup |
 | `create-voice-samples` | Creator setup |
 | `create-reference-library` | Creator setup |
+| `create-lead-magnet` | Creator setup |
 | `elevenlabs-voice-design` | Creator setup |
 | `create-runtime-context` | Creator setup |
 | `wrap-up` | Skill/process improvement |

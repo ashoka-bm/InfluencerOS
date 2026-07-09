@@ -1,0 +1,260 @@
+/* =========================================================================
+   LEAD-MAGNET TEMPLATE  ·  structural stylesheet  ·  no build step
+   -------------------------------------------------------------------------
+   A theme file (themes/<brand>.css) sets ~13 INPUT tokens in :root.
+   Everything else — color ramp, the modular type scale, spacing rhythm — is
+   DERIVED here in pure CSS via color-mix(in oklab) and pow(). Swap the theme
+   <link> to re-skin. This file never changes per brand and contains no hex
+   and no font names — only var(--token).
+
+   Renderer: headless Chrome / Chrome "Print → Save as PDF" (needs color-mix +
+   pow(), i.e. any Chrome from 2024+). Fixed-page model: every .page is exactly
+   one Letter sheet, so full-bleed backgrounds and precise layout just work.
+   ========================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+@page { size: Letter; margin: 0; }
+
+:root {
+  /* ---- DERIVED colours (CSS does the math; nothing to precompute) -------- */
+  --color-ink-muted:      color-mix(in oklab, var(--color-ink), var(--color-surface) 34%);
+  --color-hairline:       color-mix(in oklab, var(--color-ink), var(--color-surface) 84%);
+  --color-surface-raised: color-mix(in oklab, var(--color-surface), var(--color-ink) 5%);
+  --color-surface-sunken: color-mix(in oklab, var(--color-surface), var(--color-ink) 9%);
+  --color-accent-soft:    color-mix(in oklab, var(--color-accent), var(--color-surface) 72%);
+
+  /* ---- DERIVED modular type scale (ratio comes from the theme's --ratio) - */
+  --step--1: calc(1rem / var(--ratio));
+  --step-0:  1rem;
+  --step-1:  calc(1rem * var(--ratio));
+  --step-2:  calc(1rem * pow(var(--ratio), 2));
+  --step-3:  calc(1rem * pow(var(--ratio), 3));
+  --step-4:  calc(1rem * pow(var(--ratio), 4));
+
+  /* ---- fixed rhythm / geometry (brand-independent) ---------------------- */
+  --leading-body: 1.55;
+  --leading-display: 1.1;
+  --tracking-kicker: 0.18em;
+  --measure: 64ch;
+  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
+  --space-5: 1.5rem; --space-6: 2rem;  --space-7: 3rem;   --space-8: 4rem;
+  --hairline-w: 1px;
+  --sig-border: solid;   /* themes override to "dashed" etc. */
+
+  /* imagery treatment — themes override to push any photo toward the palette */
+  --img-grayscale: 0;            /* 0 = full colour … 1 = mono */
+  --img-tint: transparent;       /* usually var(--color-accent) or --color-ink */
+  --img-tint-blend: normal;      /* multiply | soft-light | color … */
+  --img-tint-opacity: 0;         /* strength of the tint */
+}
+
+html { font-size: var(--type-base, 10.5pt); }
+
+body {
+  margin: 0;
+  counter-reset: pageno;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  line-height: var(--leading-body);
+  font-size: var(--step-0);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---- the page unit ------------------------------------------------------- */
+.page {
+  position: relative;
+  width: 8.5in;
+  height: 11in;
+  overflow: hidden;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: var(--page-margin);
+  page-break-after: always;
+  break-after: page;
+  counter-increment: pageno;
+  display: flex;
+  flex-direction: column;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+
+/* ---- shared micro-typography --------------------------------------------- */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+.kicker--accent { color: var(--color-accent); }
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: var(--leading-display); margin: 0; }
+p { margin: 0 0 var(--space-3); max-width: var(--measure); }
+strong { font-weight: 600; }
+em { font-style: italic; }
+
+.rule { border: none; border-top: var(--hairline-w) solid var(--color-hairline); margin: var(--space-4) 0; }
+.rule--accent { border-top: 2px solid var(--color-accent); }
+
+.running-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-bottom: var(--space-3);
+  border-bottom: var(--hairline-w) var(--sig-border) var(--color-hairline);
+  margin-bottom: var(--space-6);
+}
+.page-foot {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: var(--hairline-w) var(--sig-border) var(--color-hairline);
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: calc(var(--step--1) * 0.92);
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+}
+.foot-legal { text-transform: uppercase; }
+/* page number is generated (not selectable text) — the only auto content */
+.foot-num::after { content: counter(pageno, decimal-leading-zero); }
+
+/* ============================ COVER ====================================== */
+.page--cover { justify-content: space-between; }
+.cover-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.cover-brand { font-family: var(--font-display); font-size: var(--step-1); }
+.cover-center { margin-top: auto; margin-bottom: auto; }
+.cover-eyebrow {
+  font-family: var(--font-mono); font-size: var(--step-0);
+  letter-spacing: var(--tracking-kicker); text-transform: uppercase;
+  color: var(--color-accent); margin: 0 0 var(--space-5);
+  display: inline-block; padding-bottom: var(--space-2);
+  border-bottom: 2px var(--sig-border) var(--color-accent);
+}
+.cover-title {
+  font-family: var(--font-display); font-size: var(--size-cover);
+  line-height: 0.98; letter-spacing: -0.01em; margin: 0 0 var(--space-5); max-width: 12ch;
+}
+.cover-promise { font-size: var(--step-1); color: var(--color-ink-muted); max-width: 46ch; line-height: 1.4; }
+.cover-foot { display: flex; justify-content: space-between; align-items: flex-end; }
+.cover-byline { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); }
+.cover-disclaimer {
+  font-family: var(--font-mono); font-size: var(--step--1);
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-muted); text-align: right;
+}
+
+/* ==================== OPENING NOTE + THREE BUCKETS ======================= */
+.section-title { font-size: var(--step-3); margin-bottom: var(--space-4); }
+.lede { font-size: var(--step-1); line-height: 1.45; color: var(--color-ink); max-width: 52ch; }
+.note-body { color: var(--color-ink-muted); }
+.buckets { display: grid; grid-template-columns: 1fr; margin-top: var(--space-5); }
+.bucket {
+  display: grid; grid-template-columns: 3rem 1fr; gap: var(--space-4);
+  padding: var(--space-4) 0; border-top: var(--hairline-w) solid var(--color-hairline);
+}
+.bucket:last-child { border-bottom: var(--hairline-w) solid var(--color-hairline); }
+.bucket-num { font-family: var(--font-display); font-size: var(--step-3); color: var(--color-accent); line-height: 1; }
+.bucket-name { font-family: var(--font-display); font-size: var(--step-1); margin-bottom: var(--space-1); }
+.bucket-desc { color: var(--color-ink-muted); margin: 0; font-size: var(--step-0); }
+
+/* ===================== QUESTION BLOCK (two per page) ===================== */
+.q-page-title { font-size: var(--step-2); margin-bottom: var(--space-5); }
+.q { display: grid; grid-template-columns: 2.6rem 1fr; column-gap: var(--space-4); padding: var(--space-4) 0 var(--space-5); break-inside: avoid; }
+.q + .q { border-top: var(--hairline-w) solid var(--color-hairline); }
+.q-num { font-family: var(--font-display); font-size: var(--step-3); color: var(--color-accent); line-height: 0.9; }
+.q-title { font-size: var(--step-1); margin-bottom: var(--space-3); max-width: 40ch; }
+.q-ask { list-style: none; margin: 0 0 var(--space-3); padding: 0; }
+.q-ask li { position: relative; padding-left: 1.7rem; margin-bottom: var(--space-2); font-size: calc(var(--step-0) * 0.97); line-height: 1.4; }
+.q-ask li::before {
+  content: ""; position: absolute; left: 0; top: 0.15em;
+  width: 0.95rem; height: 0.95rem; border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius); background: var(--color-surface);
+}
+.q-why { font-size: calc(var(--step-0) * 0.95); color: var(--color-ink-muted); margin: 0 0 var(--space-3); }
+.q-why b { color: var(--color-ink); font-weight: 600; }
+.q-bring { border-left: 2px var(--sig-border) var(--color-accent); padding: var(--space-1) 0 var(--space-1) var(--space-4); margin: 0; }
+.q-bring-label { display: block; font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-accent); margin-bottom: var(--space-1); }
+.q-bring-quote { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); margin: 0; color: var(--color-ink); }
+.q--feature { grid-template-columns: 3.4rem 1fr; }
+.q--feature .q-num { font-size: var(--step-4); }
+.q--feature .q-title { font-size: var(--step-2); }
+
+/* ===================== SUMMARY / CHEAT-SHEET ============================= */
+.page--summary { background: var(--color-surface-raised); }
+.summary-list { list-style: none; counter-reset: s; margin: var(--space-2) 0 0; padding: 0; }
+.summary-list li {
+  counter-increment: s; position: relative; padding: var(--space-4) 0 var(--space-4) 3.2rem;
+  border-top: var(--hairline-w) solid var(--color-hairline);
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.3;
+}
+.summary-list li:last-child { border-bottom: var(--hairline-w) solid var(--color-hairline); }
+.summary-list li::before {
+  content: counter(s); position: absolute; left: 0; top: var(--space-4);
+  font-family: var(--font-mono); font-size: var(--step-0);
+  color: var(--color-accent-contrast); background: var(--color-accent);
+  width: 1.9rem; height: 1.9rem; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+}
+.pull { margin: var(--space-6) 0 0; padding: var(--space-5); background: var(--color-surface-sunken); border-left: 3px var(--sig-border) var(--color-accent); }
+.pull-label { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-accent); margin: 0 0 var(--space-2); }
+.pull-quote { font-family: var(--font-display); font-style: italic; font-size: var(--step-2); line-height: 1.3; margin: 0; }
+
+/* ============================== CTA ===================================== */
+.page--cta { background: var(--color-ink); color: var(--color-surface); justify-content: center; }
+.page--cta .kicker { color: var(--color-accent); }
+.cta-statement { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; color: var(--color-surface); max-width: 22ch; margin: var(--space-4) 0 var(--space-6); }
+.cta-button {
+  display: inline-block; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
+  font-size: var(--step-0); background: var(--color-accent); color: var(--color-accent-contrast);
+  padding: var(--space-3) var(--space-5); border-radius: var(--radius); text-decoration: none;
+}
+.cta-news { color: var(--color-surface); opacity: 0.75; margin-top: var(--space-5); max-width: 44ch; }
+.page--cta .page-foot { border-top-color: color-mix(in srgb, var(--color-surface) 22%, transparent); color: color-mix(in srgb, var(--color-surface) 60%, transparent); }
+.compliance { font-family: var(--font-mono); font-size: calc(var(--step--1) * 0.9); line-height: 1.5; color: color-mix(in srgb, var(--color-surface) 55%, transparent); margin-top: var(--space-6); max-width: 60ch; }
+
+/* =========================================================================
+   IMAGERY
+   The .frame wrapper applies the brand's treatment to ANY image — a real
+   client photo or a generated reference — so the whole set coheres to the
+   palette. Treatment is theme-driven (see --img-* tokens); no per-image work.
+   ========================================================================= */
+.frame { position: relative; overflow: hidden; background: var(--color-surface-sunken); border-radius: var(--radius); }
+.frame > img { display: block; width: 100%; height: 100%; object-fit: cover; filter: grayscale(var(--img-grayscale)) contrast(1.02); }
+.frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: var(--img-tint); mix-blend-mode: var(--img-tint-blend); opacity: var(--img-tint-opacity);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.frame--figure   { aspect-ratio: 16 / 9; }
+.frame--portrait { aspect-ratio: 3 / 4; }
+.frame--square   { aspect-ratio: 1 / 1; border-radius: 50%; }
+
+figure.figure { margin: var(--space-6) 0 0; }
+.figure figcaption { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink-muted); margin-top: var(--space-3); }
+
+/* recurring author avatar in the running head */
+.rh-id { display: flex; align-items: center; gap: var(--space-3); }
+.avatar { width: 1.5rem; height: 1.5rem; border-radius: 50%; overflow: hidden; background: var(--color-surface-sunken); flex: 0 0 auto; }
+.avatar > img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(var(--img-grayscale)); }
+
+/* portrait cover: photo column + text panel (echoes a one-page brand board) */
+.cover--portrait { display: grid; grid-template-columns: 0.85fr 1fr; padding: 0; }
+.cover-photo { position: relative; overflow: hidden; background: var(--color-surface-sunken); }
+.cover-photo > img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(var(--img-grayscale)) contrast(1.02); }
+.cover-photo::after { content: ""; position: absolute; inset: 0; background: var(--img-tint); mix-blend-mode: var(--img-tint-blend); opacity: var(--img-tint-opacity); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.cover-panel { display: flex; flex-direction: column; justify-content: space-between; padding: var(--page-margin); }
+.cover--portrait .cover-title { font-size: calc(var(--size-cover) * 0.62); max-width: 14ch; }
+
+/* "meet the creator" block (great on the CTA page — face next to the ask) */
+.creator { display: grid; grid-template-columns: 4.25rem 1fr; gap: var(--space-4); align-items: center; margin: var(--space-6) 0 0; }
+.creator .frame { width: 4.25rem; height: 4.25rem; }
+.creator-name { font-family: var(--font-display); font-size: var(--step-1); margin: 0 0 var(--space-1); }
+.creator-bio { color: var(--color-ink-muted); font-size: calc(var(--step-0) * 0.95); margin: 0; max-width: 46ch; }
+.page--cta .creator-name { color: var(--color-surface); }
+.page--cta .creator-bio { color: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+
+/* optional full-bleed plate page (section divider) */
+.page--plate { padding: 0; }
+.page--plate .frame { width: 100%; height: 100%; border-radius: 0; }
+.page--plate .plate-caption { position: absolute; left: var(--page-margin); bottom: var(--page-margin); color: var(--color-accent-contrast); font-family: var(--font-display); font-size: var(--step-2); max-width: 20ch; }

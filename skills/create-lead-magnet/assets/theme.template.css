@@ -1,0 +1,40 @@
+/* PER-CREATOR THEME TEMPLATE — copy to references/brand/<slug>-theme.css and fill.
+   This is the ONLY thing that differs per creator. template.css derives the full
+   colour ramp (color-mix) and type scale (pow) from these ~17 tokens.
+
+   Each token is tagged [AUTO] (derive from the creator's brand-system.md /
+   personal-brand.md / creator-profile.json) or [DECIDE] (a judgment or a computed
+   value — draft it, then get user acceptance; validation is not approval).
+   NEVER copy another creator's theme as a starting point — resolve from THIS
+   creator's brand data. */
+:root {
+  /* colour roles */
+  --color-surface:          #FFFFFF;  /* [AUTO] brand "surface/paper/background" palette word → hex [DECIDE exact] */
+  --color-ink:              #111111;  /* [AUTO] brand "ink/text/charcoal" word → hex [DECIDE exact] */
+  --color-accent:           #808080;  /* [AUTO] the ONE brand highlight/accent word → hex [DECIDE exact] */
+  --color-accent-contrast:  #111111;  /* [DECIDE] compute: black or white, whichever is >=4.5:1 on --color-accent */
+  --color-highlight:        #808080;  /* [AUTO] secondary brand colour (optional) */
+
+  /* type */
+  --font-display: Georgia, serif;               /* [AUTO] brand "editorial/display serif" posture → concrete family [DECIDE] */
+  --font-body:    -apple-system, sans-serif;    /* [AUTO] brand "clean/body sans" posture → concrete family [DECIDE] */
+  --font-mono:    ui-monospace, monospace;      /* [DECIDE] no brand signal usually; pick a neutral mono */
+  --ratio:        1.25;   /* [AUTO] voice register: restrained/calm ~1.2, warm ~1.33, editorial/dramatic ~1.5 */
+  --type-base:    10.5pt; /* [DECIDE] structural default; rarely changes */
+  --size-cover:   60pt;   /* [DECIDE] nudge up for editorial voices, down for restrained */
+
+  /* geometry + signature move */
+  --page-margin:  0.9in;  /* [DECIDE] structural default */
+  --radius:       2px;    /* [DECIDE] weak brand lean (crisp brands → 0) */
+  --sig-border:   solid;  /* [AUTO] "receipt/tear-line" or ledger brand → dashed; otherwise solid */
+
+  /* imagery treatment — how photos are pushed toward the palette.
+     [AUTO] from brand imagery rules. If the brand mandates REAL SKIN / no
+     saturation tricks, keep grayscale low (~0.1) and tint opacity low (~0.15).
+     Only use a heavy duotone (grayscale 1, multiply ~0.8) for brands whose
+     imagery direction explicitly allows a mono/duotone treatment. */
+  --img-grayscale:    0;
+  --img-tint:         transparent;
+  --img-tint-blend:   normal;
+  --img-tint-opacity: 0;
+}
