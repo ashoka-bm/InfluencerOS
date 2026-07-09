@@ -1,0 +1,30 @@
+{
+  "channels_id": "channels_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "updated_on": "2026-07-09",
+  "channels": [
+    {
+      "channel_id": "channel_luna_fit_instagram",
+      "platform": "instagram",
+      "intended_handle": "@lunafit",
+      "public_url": "https://www.instagram.com/lunafit",
+      "account_status": "created",
+      "production_drafting_allowed": true,
+      "publishing_export_blocked": false,
+      "production_approved": true,
+      "notes": "Primary visual reach channel."
+    },
+    {
+      "channel_id": "channel_luna_fit_youtube",
+      "platform": "youtube",
+      "intended_handle": "@lunafit",
+      "public_url": null,
+      "account_status": "skipped",
+      "production_drafting_allowed": true,
+      "publishing_export_blocked": true,
+      "production_approved": true,
+      "notes": "Drafting allowed; publishing blocked until account is created."
+    }
+  ]
+}

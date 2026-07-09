@@ -76,6 +76,21 @@
       "created_on": "2026-06-29",
       "usage_notes": "Use for @video_style_reference: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, shot quality, recurring shot families, and social-native finish.",
       "semantic_index_allowed": true
+    },
+    {
+      "asset_id": "asset_luna_elevenlabs_voice_design",
+      "asset_type": "voice",
+      "asset_status": "prompted",
+      "role": "ElevenLabs Voice Design prompt for synthetic spoken voice continuity",
+      "path": "references/voice/luna-fit-elevenlabs-voice-design.prompt.md",
+      "prompt_path": "references/voice/luna-fit-elevenlabs-voice-design.prompt.md",
+      "source": {
+        "source_type": "derived",
+        "source_ref": "brand_context/voice-samples.md"
+      },
+      "created_on": "2026-06-29",
+      "usage_notes": "Use as the human-in-the-loop prompt package for manual ElevenLabs Voice Design. This is not generated audio and does not approve provider calls.",
+      "semantic_index_allowed": true
     }
   ],
   "usage_policy": {

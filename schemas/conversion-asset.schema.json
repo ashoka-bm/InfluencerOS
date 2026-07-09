@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/conversion-asset.schema.json",
+  "title": "ConversionAsset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "conversion_asset_id",
+    "creator_profile_id",
+    "creator_slug",
+    "asset_type",
+    "status",
+    "title",
+    "created_on",
+    "updated_on",
+    "file_refs",
+    "approved_uses",
+    "platforms",
+    "funnel_stage",
+    "notes"
+  ],
+  "properties": {
+    "conversion_asset_id": {
+      "type": "string",
+      "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "creator_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": ["lead_magnet", "opt_in_page", "email_sequence", "paid_offer", "offer_page", "partner_landing_asset"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "drafted", "approved", "published_or_ready", "retired"]
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "created_on": { "type": "string", "format": "date" },
+    "updated_on": { "type": "string", "format": "date" },
+    "file_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^conversion-assets/(?!\\.\\.?$)[^/\\n\\r]+$"
+      }
+    },
+    "approved_uses": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "youtube"]
+      }
+    },
+    "funnel_stage": {
+      "type": "string",
+      "enum": ["awareness", "email_capture", "trust_nurture", "paid_conversion", "partner_referral"]
+    },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

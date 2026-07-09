@@ -21,6 +21,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-03: Nia Sol run review: stale no-generation notes survived an approved generation call; the skill now requires superseding checklist/MEMORY/daily-note claims in the same run as any generation.
 - 2026-07-03: Nia Sol run review: checklist grouped wording (completed or prompted) hid which assets existed; scaffold and skill now track per-asset lifecycle status, and generated assets record date/tool/deviations in usage_notes.
 - 2026-07-04: Creator setup onboarding should begin with a briefing and three paths: load existing files, guided interview, or generate from basic information; system-filled blanks stay in review.
+- 2026-07-09: Creator setup should run as Creator Foundation -> Strategy -> Post Production. For image/video/voice channels, profile approval is not enough; require stable visual and voice references or an explicit waiver before strategy calendars and post production.
 
 ### wrap-up
 

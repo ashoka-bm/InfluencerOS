@@ -46,6 +46,9 @@ workspace-library/creators/<creator-slug>/
   AGENTS.md
   creator-workspace.json
   creator-profile.json
+  readiness-gates.json
+  channels.json
+  content-strategy.json
   context/
     SOUL.md
     USER.md
@@ -68,6 +71,8 @@ workspace-library/creators/<creator-slug>/
     video-style/
     voice/
     brand/
+  conversion-assets/
+    <conversion-asset-id>.json
   content-schedule.json
   research/
     findings.md
@@ -237,6 +242,12 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `creator-profile.json` is the operational summary for automation. It should include stable IDs, audience, niche, positioning, persona summary, voice summary, visual identity summary, boundaries, goals, and pointers to richer files and references.
 
+`readiness-gates.json` is the operational onboarding state. It records profile, foundation, strategy, and production gate statuses; blockers; waivers; the foundation mode (`media_ready`, `prompt_ready`, or `null`); and media permission booleans for creator image, creator video, and spoken voice generation.
+
+`channels.json` is the selected-channel registry. It records the public platforms and roles the creator intends to use, expected formats, channel-derived mediums, handle/account readiness, and whether a concrete handle is required before publishing or export.
+
+`content-strategy.json` is the machine-readable strategy plan. It records monthly format mix, platform roles, cadence principles, related-post families, conversion paths, conversion asset references, and campaign relationships. It is distinct from `content-schedule.json`, which turns the strategy into dated or open production slots.
+
 `brand_context/identity.md` is the long-form identity record: biography, lore, relationship to audience, recurring facts, continuity rules, and voice examples.
 
 `brand_context/soul.md` is the personality and belief record: psychology, values, belief matrix, triggers, soothers, cadence, emotional logic, and behavior under stress.
@@ -248,6 +259,8 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 `sources/` stores original creator inputs such as breakdowns, interviews, handoffs, pasted briefs, imports, and raw notes.
 
 `references/` stores reusable visual and audio continuity assets. `reference-library.json` gives each asset a stable ID, status, role, file path, source, creation date, and allowed usage. Planned or prompted assets may be tracked before the final media file exists so setup can explain generation blockers.
+
+`conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Strategy readiness requires referenced conversion assets to exist and be approved or published-ready.
 
 `content-schedule.json` is the Creator Content Schedule: cadence expectations, content goals, calendar slots, and drift checks. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 

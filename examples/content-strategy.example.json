@@ -1,0 +1,74 @@
+{
+  "content_strategy_id": "content_strategy_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "updated_on": "2026-07-09",
+  "strategy_status": "drafted",
+  "monthly_mix": [
+    {
+      "monthly_mix_id": "monthly_mix_luna_reels",
+      "platform": "instagram",
+      "variant_id": "variant_luna_claim_teardown_instagram_reel",
+      "target_count_per_month": 8,
+      "cadence_note": "Cluster around anchor topics without posting on the same weekdays every week."
+    }
+  ],
+  "post_families": [
+    {
+      "family_id": "family_luna_claim_teardown",
+      "name": "Claim Teardown",
+      "purpose": "Break down one risky or confusing claim into a safer question.",
+      "variants": [
+        {
+          "variant_id": "variant_luna_claim_teardown_instagram_reel",
+          "platform": "instagram",
+          "format_id": "format_short_form_video",
+          "modality": "video",
+          "role": "Reach and saveable trust."
+        },
+        {
+          "variant_id": "variant_luna_claim_teardown_linkedin_text",
+          "platform": "linkedin",
+          "format_id": "format_thread",
+          "modality": "text",
+          "role": "Professional authority."
+        }
+      ]
+    }
+  ],
+  "content_campaigns": [
+    {
+      "campaign_id": "campaign_luna_weekly_anchor",
+      "name": "Weekly Anchor And Derivatives",
+      "anchor_variant": "variant_luna_claim_teardown_linkedin_text",
+      "derivative_variants": [
+        "variant_luna_claim_teardown_instagram_reel"
+      ],
+      "conversion_asset_ids": [
+        "conversion_asset_luna_reset_checklist"
+      ],
+      "monthly_target": 4,
+      "relationship_rule": "Each anchor post should produce at least one short-form derivative with a softer CTA.",
+      "cadence_note": "Derivatives should follow the anchor in the same week but not on a fixed weekday."
+    }
+  ],
+  "conversion_paths": [
+    {
+      "conversion_path_id": "conversion_path_luna_email",
+      "name": "Email Capture",
+      "entry_platforms": [
+        "instagram",
+        "linkedin"
+      ],
+      "conversion_asset_ids": [
+        "conversion_asset_luna_reset_checklist"
+      ],
+      "notes": "Public posts route to the checklist before paid offers."
+    }
+  ],
+  "cadence_principles": [
+    "Avoid exact same-day weekly repetition.",
+    "Cluster derivative posts around anchor ideas.",
+    "Leave room for time-sensitive inserts."
+  ]
+}

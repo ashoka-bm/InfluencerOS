@@ -260,6 +260,45 @@ class SchemaValidationTests(unittest.TestCase):
         valid["source_intakes"][0]["path"] = "sources/imports/exported-brand-doc.md"
         validate_record("creator-workspace", valid)
 
+    def test_creator_workspace_accepts_onboarding_stage_statuses(self):
+        example = load_json("examples/creator-workspace.example.json")
+        for status in (
+            "draft",
+            "profile_ready",
+            "foundation_ready",
+            "strategy_ready",
+            "production_ready",
+            "active",
+            "archived",
+        ):
+            valid = deepcopy(example)
+            valid["status"] = status
+            with self.subTest(status=status):
+                validate_record("creator-workspace", valid)
+
+    def test_creator_workspace_rejects_deprecated_readiness_statuses(self):
+        example = load_json("examples/creator-workspace.example.json")
+        for status in ("foundation_review", "content_ready", "generation_ready"):
+            invalid = deepcopy(example)
+            invalid["status"] = status
+            with self.subTest(status=status):
+                with self.assertRaises(ValidationError):
+                    validate_record("creator-workspace", invalid)
+
+    def test_creator_workspace_requires_onboarding_canonical_files(self):
+        example = load_json("examples/creator-workspace.example.json")
+        for field in ("readiness_gates", "channels", "content_strategy"):
+            invalid = deepcopy(example)
+            invalid["canonical_files"].pop(field, None)
+            with self.subTest(field=field):
+                with self.assertRaises(ValidationError):
+                    validate_record("creator-workspace", invalid)
+
+        invalid = deepcopy(example)
+        invalid["directories"].pop("conversion_assets", None)
+        with self.assertRaises(ValidationError):
+            validate_record("creator-workspace", invalid)
+
     def test_applied_template_format_is_closed_vocabulary(self):
         # The plan-layer format field was the only format-typed property
         # outside the closed enum; a made-up format must fail at the schema.

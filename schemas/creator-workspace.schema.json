@@ -44,9 +44,10 @@
       "type": "string",
       "enum": [
         "draft",
-        "foundation_review",
-        "content_ready",
-        "generation_ready",
+        "profile_ready",
+        "foundation_ready",
+        "strategy_ready",
+        "production_ready",
         "active",
         "archived"
       ]
@@ -67,6 +68,9 @@
         "soul",
         "personal_brand",
         "voice_samples",
+        "readiness_gates",
+        "channels",
+        "content_strategy",
         "reference_library",
         "production_rubric"
       ],
@@ -103,6 +107,18 @@
           "type": "string",
           "const": "brand_context/voice-samples.md"
         },
+        "readiness_gates": {
+          "type": "string",
+          "const": "readiness-gates.json"
+        },
+        "channels": {
+          "type": "string",
+          "const": "channels.json"
+        },
+        "content_strategy": {
+          "type": "string",
+          "const": "content-strategy.json"
+        },
         "reference_library": {
           "type": "string",
           "const": "references/reference-library.json"
@@ -122,6 +138,7 @@
         "sources",
         "references",
         "research",
+        "conversion_assets",
         "projects",
         "memory",
         "progress",
@@ -153,6 +170,10 @@
         "research": {
           "type": "string",
           "const": "research/"
+        },
+        "conversion_assets": {
+          "type": "string",
+          "const": "conversion-assets/"
         },
         "projects": {
           "type": "string",

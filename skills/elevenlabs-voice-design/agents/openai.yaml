@@ -1,0 +1,4 @@
+interface:
+  display_name: "ElevenLabs Voice Design"
+  short_description: "Stage voice prompts for ElevenLabs"
+  default_prompt: "Use $elevenlabs-voice-design to stage an ElevenLabs Voice Design prompt for this creator."

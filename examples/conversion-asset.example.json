@@ -1,0 +1,24 @@
+{
+  "conversion_asset_id": "conversion_asset_luna_reset_checklist",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "asset_type": "lead_magnet",
+  "status": "approved",
+  "title": "7 Tiny Reset Questions Before Your Next Meeting",
+  "created_on": "2026-07-09",
+  "updated_on": "2026-07-09",
+  "file_refs": [
+    "conversion-assets/luna-reset-checklist.md"
+  ],
+  "approved_uses": [
+    "email_capture",
+    "soft_cta"
+  ],
+  "platforms": [
+    "instagram",
+    "linkedin",
+    "substack"
+  ],
+  "funnel_stage": "email_capture",
+  "notes": "Lead magnet must exist before posts promote it."
+}

@@ -13,6 +13,7 @@ Allowed without approval:
 - micro-journey plans,
 - shot lists,
 - provider-neutral prompts,
+- human-in-the-loop ElevenLabs Voice Design prompt files,
 - base generation plans.
 
 Requires explicit user approval:
@@ -21,6 +22,7 @@ Requires explicit user approval:
 - video generation,
 - render jobs,
 - audio generation,
+- voice generation or saving a generated voice in ElevenLabs,
 - Whisper or other API-backed transcription fallback for video understanding,
 - external uploads,
 - paid provider calls,

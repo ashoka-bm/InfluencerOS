@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/readiness-gates.schema.json",
+  "title": "ReadinessGates",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "readiness_gates_id",
+    "creator_profile_id",
+    "creator_slug",
+    "updated_on",
+    "gates",
+    "permissions"
+  ],
+  "properties": {
+    "readiness_gates_id": {
+      "type": "string",
+      "pattern": "^readiness_gates_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "creator_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "foundation", "strategy", "production"],
+      "properties": {
+        "profile": { "$ref": "#/definitions/gate" },
+        "foundation": { "$ref": "#/definitions/foundation_gate" },
+        "strategy": { "$ref": "#/definitions/gate" },
+        "production": { "$ref": "#/definitions/gate" }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "creator_image_generation_allowed",
+        "creator_video_generation_allowed",
+        "spoken_voice_generation_allowed"
+      ],
+      "properties": {
+        "creator_image_generation_allowed": { "type": "boolean" },
+        "creator_video_generation_allowed": { "type": "boolean" },
+        "spoken_voice_generation_allowed": { "type": "boolean" }
+      }
+    }
+  },
+  "definitions": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_on", "approved_by", "blockers", "waivers"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_started", "in_progress", "blocked", "ready", "waived"]
+        },
+        "approved_on": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "approved_by": {
+          "type": ["string", "null"],
+          "enum": ["user", "system", null]
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "waivers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/waiver" }
+        }
+      }
+    },
+    "foundation_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_on", "approved_by", "mode", "blockers", "waivers"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_started", "in_progress", "blocked", "ready", "waived"]
+        },
+        "approved_on": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "approved_by": {
+          "type": ["string", "null"],
+          "enum": ["user", "system", null]
+        },
+        "mode": {
+          "type": ["string", "null"],
+          "enum": ["media_ready", "prompt_ready", null]
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "waivers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/waiver" }
+        }
+      }
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["waiver_id", "reason", "approved_on", "approved_by"],
+      "properties": {
+        "waiver_id": {
+          "type": "string",
+          "pattern": "^waiver_[a-zA-Z0-9_-]+$"
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "approved_on": { "type": "string", "format": "date" },
+        "approved_by": { "type": "string", "enum": ["user"] }
+      }
+    }
+  }
+}

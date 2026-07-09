@@ -14,7 +14,12 @@ from influencer_os.creator_workspaces import (
 from influencer_os.projects import init_project, validate_project
 from influencer_os.projects import register_output_package
 from influencer_os.validation import ValidationError
-from tests.test_readiness_validation import place_asset_files, populate_foundation
+from tests.test_readiness_validation import (
+    place_asset_files,
+    populate_foundation,
+    write_channels,
+    write_readiness_gates,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1495,11 +1500,13 @@ class ReadinessGateTests(unittest.TestCase):
         populate_workspace_records(workspace_dir)
         populate_foundation(workspace_dir)
         place_asset_files(workspace_dir)
+        write_channels(workspace_dir)
         return workspace_dir
 
-    def test_generation_ready_requires_an_approved_visual_asset(self):
+    def test_foundation_ready_image_permission_requires_approved_visual_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = self.init_workspace_with_status(temp_dir, "generation_ready")
+            workspace_dir = self.init_workspace_with_status(temp_dir, "foundation_ready")
+            write_readiness_gates(workspace_dir, image_allowed=True)
 
             def demote_all_assets(library):
                 for asset in library["assets"]:
@@ -1514,12 +1521,20 @@ class ReadinessGateTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("requires at least one approved visual asset", message)
+            self.assertIn("requires approved visual identity reference", message)
             self.assertNotIn("is missing", message)
 
-    def test_generation_ready_passes_with_approved_visual_asset(self):
+    def test_foundation_ready_image_permission_passes_with_approved_visual_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = self.init_workspace_with_status(temp_dir, "generation_ready")
+            workspace_dir = self.init_workspace_with_status(temp_dir, "foundation_ready")
+            write_readiness_gates(workspace_dir, image_allowed=True)
+
+            def approve_primary_character(library):
+                for asset in library["assets"]:
+                    if asset["asset_id"] == "asset_luna_identity_plate":
+                        asset["asset_status"] = "approved"
+
+            rewrite_json(workspace_dir / "references" / "reference-library.json", approve_primary_character)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")

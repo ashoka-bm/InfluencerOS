@@ -55,7 +55,7 @@ Validation supports readiness, but validation alone is not approval.
 
 ## Status
 
-- Workspace status: generation_ready.
+- Workspace status: foundation_ready.
 - Foundation accepted: yes, per explicit operator approval recorded in `progress/setup-interview.md`; validation is supporting evidence only.
 - Provider generation approval: not approved.
 
@@ -342,7 +342,7 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
                 "source_luna_fit_guided_e2e_001",
                 "reviewed",
             )
-            set_workspace_status(workspace_dir, "generation_ready")
+            set_workspace_status(workspace_dir, "foundation_ready")
             run_cli("validate", "workspace", workspace_dir)
 
             seed_guided_public_web_research(workspace_dir)

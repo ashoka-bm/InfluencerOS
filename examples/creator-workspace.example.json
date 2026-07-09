@@ -15,6 +15,9 @@
     "soul": "brand_context/soul.md",
     "personal_brand": "brand_context/personal-brand.md",
     "voice_samples": "brand_context/voice-samples.md",
+    "readiness_gates": "readiness-gates.json",
+    "channels": "channels.json",
+    "content_strategy": "content-strategy.json",
     "reference_library": "references/reference-library.json",
     "production_rubric": "production-rubric.json"
   },
@@ -24,6 +27,7 @@
     "sources": "sources/",
     "references": "references/",
     "research": "research/",
+    "conversion_assets": "conversion-assets/",
     "projects": "projects/",
     "memory": "memory/",
     "progress": "progress/",

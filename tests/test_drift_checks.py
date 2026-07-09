@@ -398,8 +398,10 @@ class GuidedE2EDriftTests(unittest.TestCase):
             "system_filled",
             "acceptance status",
             "whole-foundation review package",
-            "content_ready",
-            "generation_ready",
+            "profile_ready",
+            "foundation_ready",
+            "strategy_ready",
+            "production_ready",
             "distinguish generated/system-filled answers from user-provided answers",
         )
         for phrase in required:

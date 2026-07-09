@@ -21,13 +21,19 @@ CREATOR_RUNTIME_SKILLS_DIR = Path(".claude") / "skills"
 # so a refresh can never silently destroy creator edits (ADR 0018).
 SKILLS_BACKUP_DIR = Path(".claude") / "skills-backup"
 
-# Medium-based readiness: generation implies visual output, so a
-# generation_ready workspace needs at least one approved asset of these kinds.
-GENERATION_READY_ASSET_TYPES = {"character", "video_style"}
+# Medium-based readiness: media permissions imply visual output, so a
+# media-ready foundation needs approved assets of these kinds.
+MEDIA_READY_ASSET_TYPES = {"character", "video_style"}
 
-# Statuses that assert readiness; draft and foundation_review stay permissive
-# ("permissive at intake, strict at readiness").
-READINESS_ENFORCED_STATUSES = {"content_ready", "generation_ready", "active"}
+# Statuses that assert stage readiness; draft stays permissive ("permissive at
+# intake, strict at readiness").
+READINESS_ENFORCED_STATUSES = {
+    "profile_ready",
+    "foundation_ready",
+    "strategy_ready",
+    "production_ready",
+    "active",
+}
 
 # Foundation files that must be populated beyond their scaffold at readiness.
 FOUNDATION_FILES = [
@@ -110,14 +116,14 @@ CONTEXT_BYTE_CAPS = {
 MEDIUM_REQUIRED_ASSET_KINDS = {
     "text": (),
     "image": ("character", "brand", "video_style"),
-    "video": ("character", "location", "outfit", "video_style", "brand"),
+    "video": ("character", "location", "outfit", "video_style", "brand", "voice"),
     "audio": ("voice",),
 }
 
 VISUAL_MEDIUMS = {"image", "video"}
 
-# Lifecycle order: generation_ready requires required kinds at prompted or
-# later; retired assets are excluded from readiness entirely.
+# Lifecycle order: media generation permissions require required kinds at
+# prompted or later; retired assets are excluded from readiness entirely.
 ASSET_STATUS_RANK = {
     "planned": 0,
     "prompted": 1,
@@ -128,6 +134,17 @@ ASSET_STATUS_RANK = {
 
 # Asset lifecycle statuses whose `path` must exist on disk.
 ASSET_STATUSES_REQUIRING_FILE = {"user_provided", "generated", "approved"}
+ASSET_STATUSES_APPROVED_FOR_MEDIA = {"user_provided", "approved"}
+CONVERSION_ASSET_READY_STATUSES = {"approved", "published_or_ready"}
+ONBOARDING_STATUS_ORDER = {
+    "draft": 0,
+    "profile_ready": 1,
+    "foundation_ready": 2,
+    "strategy_ready": 3,
+    "production_ready": 4,
+    "active": 5,
+    "archived": 6,
+}
 
 # Primary reference_refs fields must name assets of these kinds.
 PRIMARY_REF_EXPECTED_TYPES = {
@@ -183,6 +200,7 @@ STANDARD_DIRECTORIES = [
     "research/runs",
     "research/intelligence",
     "research/stable-findings",
+    "conversion-assets",
     "research/idea-queue/entries",
     "research/idea-promotions",
     "boards",
@@ -249,11 +267,13 @@ mark an asset "completed"; name its status.
 - [ ] Primary location reference — planned
 - [ ] Outfit or wardrobe reference — planned
 - [ ] Default video style card — planned
+- [ ] ElevenLabs Voice Design prompt package — planned
 - [ ] Shot and motion constraints completed
 
 ### Voiceover Or Spoken Audio
 
-- [ ] Voice sample or voice style note — planned
+- [ ] ElevenLabs Voice Design prompt package — planned
+- [ ] Imported or approved voice reference before spoken generation — planned
 - [ ] Pronunciation and tone boundaries completed
 
 ### Carousel Or Story Sequence
@@ -307,6 +327,10 @@ def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
 
     for relative_path, data in JSON_SCAFFOLDS.items():
         _write_json_if_missing(workspace_dir / relative_path, data)
+
+    _write_json_if_missing(workspace_dir / "readiness-gates.json", _initial_readiness_gates(manifest))
+    _write_json_if_missing(workspace_dir / "channels.json", _initial_channels(manifest))
+    _write_json_if_missing(workspace_dir / "content-strategy.json", _initial_content_strategy(manifest))
 
     # Creator-scope Production Rubric (ADR 0025): scaffolded valid and empty;
     # criteria arrive by seeding from boundaries and by the Rubric Ratchet.
@@ -425,6 +449,109 @@ def _next_intake_id(creator_slug, source_type, existing_ids):
     while f"{prefix}_{sequence:03d}" in existing_ids:
         sequence += 1
     return f"{prefix}_{sequence:03d}"
+
+
+def _slug_id(slug):
+    return slug.replace("-", "_")
+
+
+def _initial_gate(status="not_started", blocker="Awaiting setup."):
+    return {
+        "status": status,
+        "approved_on": None,
+        "approved_by": None,
+        "blockers": [blocker] if blocker else [],
+        "waivers": [],
+    }
+
+
+def _initial_readiness_gates(manifest):
+    slug_id = _slug_id(manifest["creator_slug"])
+    return {
+        "readiness_gates_id": f"readiness_gates_{slug_id}",
+        "creator_profile_id": manifest["creator_profile_id"],
+        "creator_slug": manifest["creator_slug"],
+        "updated_on": manifest["created_on"],
+        "gates": {
+            "profile": _initial_gate("in_progress", "Profile has not been approved."),
+            "foundation": {
+                **_initial_gate(
+                    "not_started",
+                    "Reference requirements have not been approved or waived.",
+                ),
+                "mode": None,
+            },
+            "strategy": _initial_gate("not_started", "Content strategy has not been created."),
+            "production": _initial_gate("not_started", "Content schedule has not been created."),
+        },
+        "permissions": {
+            "creator_image_generation_allowed": False,
+            "creator_video_generation_allowed": False,
+            "spoken_voice_generation_allowed": False,
+        },
+    }
+
+
+def _initial_channels(manifest):
+    slug_id = _slug_id(manifest["creator_slug"])
+    return {
+        "channels_id": f"channels_{slug_id}",
+        "creator_profile_id": manifest["creator_profile_id"],
+        "creator_slug": manifest["creator_slug"],
+        "updated_on": manifest["created_on"],
+        "channels": [
+            {
+                "channel_id": f"channel_{slug_id}_placeholder",
+                "platform": "instagram",
+                "intended_handle": None,
+                "public_url": None,
+                "account_status": "not_created",
+                "production_drafting_allowed": False,
+                "publishing_export_blocked": True,
+                "production_approved": False,
+                "notes": "Placeholder channel; replace during profile setup.",
+            }
+        ],
+    }
+
+
+def _initial_content_strategy(manifest):
+    slug_id = _slug_id(manifest["creator_slug"])
+    return {
+        "content_strategy_id": f"content_strategy_{slug_id}",
+        "creator_profile_id": manifest["creator_profile_id"],
+        "creator_slug": manifest["creator_slug"],
+        "updated_on": manifest["created_on"],
+        "strategy_status": "planned",
+        "monthly_mix": [
+            {
+                "monthly_mix_id": f"monthly_mix_{slug_id}_placeholder",
+                "platform": "instagram",
+                "variant_id": f"variant_{slug_id}_placeholder",
+                "target_count_per_month": 0,
+                "cadence_note": "Placeholder mix; replace during strategy setup.",
+            }
+        ],
+        "post_families": [
+            {
+                "family_id": f"family_{slug_id}_placeholder",
+                "name": "Placeholder",
+                "purpose": "Placeholder family; replace during strategy setup.",
+                "variants": [
+                    {
+                        "variant_id": f"variant_{slug_id}_placeholder",
+                        "platform": "instagram",
+                        "format_id": "format_short_form_video",
+                        "modality": "video",
+                        "role": "Placeholder variant.",
+                    }
+                ],
+            }
+        ],
+        "content_campaigns": [],
+        "conversion_paths": [],
+        "cadence_principles": ["Replace during strategy setup."],
+    }
 
 
 def _write_manifest(manifest_path, manifest):
@@ -550,9 +677,15 @@ def validate_creator_workspace(workspace_path):
         raise FileNotFoundError(f"Missing workspace paths: {', '.join(sorted(missing))}")
 
     _validate_workspace_record(workspace_dir, manifest, "creator_profile", "creator-profile")
+    _validate_workspace_record(workspace_dir, manifest, "readiness_gates", "readiness-gates")
+    _validate_workspace_record(workspace_dir, manifest, "channels", "channels")
+    _validate_workspace_record(workspace_dir, manifest, "content_strategy", "content-strategy")
     _validate_workspace_record(workspace_dir, manifest, "reference_library", "reference-library")
 
     creator_profile = load_json(workspace_dir / manifest["canonical_files"]["creator_profile"])
+    readiness_gates = load_json(workspace_dir / manifest["canonical_files"]["readiness_gates"])
+    channels = load_json(workspace_dir / manifest["canonical_files"]["channels"])
+    content_strategy = load_json(workspace_dir / manifest["canonical_files"]["content_strategy"])
     reference_library = load_json(workspace_dir / manifest["canonical_files"]["reference_library"])
 
     if creator_profile["creator_profile_id"] != manifest["creator_profile_id"]:
@@ -575,6 +708,21 @@ def validate_creator_workspace(workspace_path):
             "Reference library creator_profile_id does not match workspace manifest: "
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
+    for label, record in (
+        ("readiness gates", readiness_gates),
+        ("channels", channels),
+        ("content strategy", content_strategy),
+    ):
+        if record["creator_profile_id"] != manifest["creator_profile_id"]:
+            raise ValueError(
+                f"{label} creator_profile_id does not match workspace manifest: "
+                f"{record['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
+            )
+        if record["creator_slug"] != manifest["creator_slug"]:
+            raise ValueError(
+                f"{label} creator_slug does not match workspace manifest: "
+                f"{record['creator_slug']!r} != {manifest['creator_slug']!r}"
+            )
 
     duplicate_asset_ids = sorted(
         asset_id
@@ -590,7 +738,15 @@ def validate_creator_workspace(workspace_path):
 
     _resolve_reference_refs(creator_profile, reference_library)
     _validate_source_intakes(workspace_dir, manifest)
-    _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library)
+    _validate_readiness_gates(
+        workspace_dir,
+        manifest,
+        creator_profile,
+        reference_library,
+        readiness_gates,
+        channels,
+        content_strategy,
+    )
     # Slice 5 review follow-up: Phase 2 learning records must anchor to a
     # schema-valid project manifest at rest, not only in the recall-index
     # scan — the validators stay the strictest check, and both callers
@@ -720,76 +876,318 @@ def _named_primary_ids(refs, field):
     return list(value)
 
 
-def _validate_readiness_gates(workspace_dir, manifest, creator_profile, reference_library):
+def _stage_at_least(status, threshold):
+    return ONBOARDING_STATUS_ORDER[status] >= ONBOARDING_STATUS_ORDER[threshold]
+
+
+def _validate_readiness_gates(
+    workspace_dir,
+    manifest,
+    creator_profile,
+    reference_library,
+    readiness_gates,
+    channels,
+    content_strategy,
+):
     status = manifest["status"]
     if status not in READINESS_ENFORCED_STATUSES:
         return
 
     blockers = []
-    blockers.extend(_foundation_blockers(workspace_dir))
-
-    if not manifest["source_intakes"]:
-        blockers.append(
-            "no source intake recorded; import at least one setup source with import-intake"
-        )
-
     active_assets = [
         asset for asset in reference_library["assets"] if asset["asset_status"] != "retired"
     ]
-    kinds_present = {asset["asset_type"] for asset in active_assets}
 
-    required_kinds = {}
-    for medium in creator_profile["content_strategy"]["content_mediums"]:
-        for kind in MEDIUM_REQUIRED_ASSET_KINDS[medium]:
-            required_kinds.setdefault(kind, set()).add(medium)
+    if _stage_at_least(status, "profile_ready"):
+        blockers.extend(_profile_stage_blockers(creator_profile, readiness_gates, channels))
 
-    for kind in sorted(required_kinds):
-        if kind not in kinds_present:
-            mediums = ", ".join(sorted(required_kinds[kind]))
+    if _stage_at_least(status, "foundation_ready"):
+        blockers.extend(_foundation_stage_blockers(workspace_dir, readiness_gates))
+        blockers.extend(_foundation_blockers(workspace_dir))
+
+        if not manifest["source_intakes"]:
             blockers.append(
-                f"reference library has no {kind} asset (required by mediums: {mediums})"
+                "no source intake recorded; import at least one setup source with import-intake"
             )
 
-    blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
-    blockers.extend(_asset_source_ref_blockers(workspace_dir, manifest, active_assets))
-    blockers.extend(
-        _primary_ref_blockers(
-            status,
-            creator_profile,
-            {asset["asset_id"]: asset for asset in reference_library["assets"]},
-        )
-    )
+        kinds_present = {asset["asset_type"] for asset in active_assets}
 
-    if status == "generation_ready":
-        prompted_kinds = {
-            asset["asset_type"]
-            for asset in active_assets
-            if ASSET_STATUS_RANK[asset["asset_status"]] >= ASSET_STATUS_RANK["prompted"]
-        }
-        visual_required = sorted(
-            kind for kind, mediums in required_kinds.items() if mediums & VISUAL_MEDIUMS
-        )
-        for kind in visual_required:
-            if kind in kinds_present and kind not in prompted_kinds:
+        required_kinds = {}
+        for medium in creator_profile["content_strategy"]["content_mediums"]:
+            for kind in MEDIUM_REQUIRED_ASSET_KINDS[medium]:
+                required_kinds.setdefault(kind, set()).add(medium)
+
+        for kind in sorted(required_kinds):
+            if kind not in kinds_present:
+                mediums = ", ".join(sorted(required_kinds[kind]))
                 blockers.append(
-                    f"{kind} assets are still planned; generation_ready requires prompted or later"
+                    f"reference library has no {kind} asset (required by mediums: {mediums})"
                 )
-        approved_visual_assets = [
-            asset
-            for asset in active_assets
-            if asset["asset_type"] in GENERATION_READY_ASSET_TYPES
-            and asset["asset_status"] == "approved"
-        ]
-        if not approved_visual_assets:
-            blockers.append(
-                "generation_ready requires at least one approved visual asset of kind "
-                f"{sorted(GENERATION_READY_ASSET_TYPES)!r} in references/reference-library.json"
+
+        blockers.extend(_voice_design_prompt_blockers(creator_profile, active_assets))
+        blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
+        blockers.extend(_asset_source_ref_blockers(workspace_dir, manifest, active_assets))
+        blockers.extend(
+            _primary_ref_blockers(
+                status,
+                creator_profile,
+                {asset["asset_id"]: asset for asset in reference_library["assets"]},
             )
+        )
+
+        blockers.extend(
+            _media_permission_blockers(readiness_gates, creator_profile, active_assets)
+        )
+
+    if _stage_at_least(status, "strategy_ready"):
+        blockers.extend(
+            _strategy_stage_blockers(
+                workspace_dir, readiness_gates, content_strategy, creator_profile
+            )
+        )
+
+    if _stage_at_least(status, "production_ready"):
+        blockers.extend(_production_stage_blockers(workspace_dir, readiness_gates))
 
     if blockers:
         raise ValidationError(
             f"Readiness blockers for status {status!r}:\n- " + "\n- ".join(blockers)
         )
+
+
+def _profile_stage_blockers(creator_profile, readiness_gates, channels):
+    blockers = []
+    profile_gate = readiness_gates["gates"]["profile"]
+    if profile_gate["status"] not in {"ready", "waived"}:
+        blockers.append("profile gate is not ready or waived in readiness-gates.json")
+
+    selected = set(creator_profile["content_strategy"]["primary_surfaces"])
+    registered = {channel["platform"] for channel in channels["channels"]}
+    missing = sorted(selected - registered)
+    if missing:
+        blockers.append(
+            "selected channel(s) missing from channels.json: " + ", ".join(missing)
+        )
+    return blockers
+
+
+def _foundation_stage_blockers(workspace_dir, readiness_gates):
+    blockers = []
+    foundation_gate = readiness_gates["gates"]["foundation"]
+    if foundation_gate["status"] not in {"ready", "waived"}:
+        blockers.append("foundation gate is not ready or waived in readiness-gates.json")
+    if foundation_gate["mode"] not in {"media_ready", "prompt_ready"}:
+        blockers.append("foundation gate mode must be media_ready or prompt_ready")
+    if foundation_gate["mode"] == "media_ready" and foundation_gate["status"] != "ready":
+        blockers.append("media_ready foundation gate must be ready, not waived")
+    return blockers
+
+
+def _approved_assets_by_type(assets, asset_type):
+    return [
+        asset
+        for asset in assets
+        if asset["asset_type"] == asset_type
+        and asset["asset_status"] in ASSET_STATUSES_APPROVED_FOR_MEDIA
+        and (asset_type != "voice" or not _is_elevenlabs_voice_design_prompt_asset(asset))
+    ]
+
+
+def _voice_design_prompt_blockers(creator_profile, active_assets):
+    mediums = set(creator_profile["content_strategy"]["content_mediums"])
+    if not mediums.intersection({"audio", "video"}):
+        return []
+
+    if any(_is_elevenlabs_voice_design_prompt_asset(asset) for asset in active_assets):
+        return []
+
+    return [
+        "audio/video foundation requires a staged ElevenLabs Voice Design prompt "
+        "asset at references/voice/<creator-slug>-elevenlabs-voice-design.prompt.md"
+    ]
+
+
+def _is_elevenlabs_voice_design_prompt_asset(asset):
+    path = asset.get("path", "")
+    return (
+        asset["asset_type"] == "voice"
+        and ASSET_STATUS_RANK.get(asset["asset_status"], -1) >= ASSET_STATUS_RANK["prompted"]
+        and asset.get("prompt_path") == path
+        and path.startswith("references/voice/")
+        and path.endswith("-elevenlabs-voice-design.prompt.md")
+    )
+
+
+def _media_permission_blockers(readiness_gates, creator_profile, active_assets):
+    blockers = []
+    permissions = readiness_gates["permissions"]
+    refs = creator_profile["reference_refs"]
+    assets_by_id = {asset["asset_id"]: asset for asset in active_assets}
+
+    primary_character_assets = [
+        assets_by_id[asset_id]
+        for asset_id in _named_primary_ids(refs, "primary_character_asset_ids")
+        if asset_id in assets_by_id
+    ]
+    approved_primary_characters = [
+        asset
+        for asset in primary_character_assets
+        if asset["asset_status"] in ASSET_STATUSES_APPROVED_FOR_MEDIA
+    ]
+
+    if (
+        permissions["creator_image_generation_allowed"]
+        or permissions["creator_video_generation_allowed"]
+    ) and not approved_primary_characters:
+        blockers.append(
+            "creator_image_generation_allowed/creator_video_generation_allowed "
+            "requires approved visual identity reference(s)"
+        )
+
+    if permissions["creator_video_generation_allowed"]:
+        video_style_id = refs.get("primary_video_style_asset_id")
+        video_style = assets_by_id.get(video_style_id)
+        if not video_style or video_style["asset_status"] not in ASSET_STATUSES_APPROVED_FOR_MEDIA:
+            blockers.append(
+                "creator_video_generation_allowed requires an approved primary video_style reference"
+            )
+
+    if permissions["spoken_voice_generation_allowed"] and not _approved_assets_by_type(
+        active_assets, "voice"
+    ):
+        blockers.append(
+            "spoken_voice_generation_allowed requires an approved/imported voice reference; "
+            "an ElevenLabs Voice Design prompt package is not generated audio"
+        )
+
+    if readiness_gates["gates"]["foundation"]["mode"] == "media_ready":
+        visual_required = set()
+        for medium in creator_profile["content_strategy"]["content_mediums"]:
+            if medium in VISUAL_MEDIUMS:
+                visual_required.update(MEDIUM_REQUIRED_ASSET_KINDS[medium])
+        for kind in sorted(visual_required):
+            if not _approved_assets_by_type(active_assets, kind):
+                blockers.append(
+                    f"media_ready foundation requires an approved {kind} asset"
+                )
+    return blockers
+
+
+def _strategy_stage_blockers(workspace_dir, readiness_gates, content_strategy, creator_profile):
+    blockers = []
+    strategy_gate = readiness_gates["gates"]["strategy"]
+    if strategy_gate["status"] not in {"ready", "waived"}:
+        blockers.append("strategy gate is not ready or waived in readiness-gates.json")
+    if content_strategy["strategy_status"] != "approved":
+        blockers.append("content-strategy.json must have strategy_status 'approved'")
+
+    blockers.extend(_strategy_variant_ref_blockers(content_strategy))
+
+    conversion_assets, conversion_asset_blockers = _load_conversion_assets(
+        workspace_dir, creator_profile
+    )
+    blockers.extend(conversion_asset_blockers)
+    for asset_id in sorted(_strategy_conversion_asset_ids(content_strategy)):
+        asset = conversion_assets.get(asset_id)
+        if asset is None:
+            blockers.append(f"content-strategy.json references missing conversion asset {asset_id}")
+        elif asset["status"] not in CONVERSION_ASSET_READY_STATUSES:
+            blockers.append(
+                f"conversion asset {asset_id} is {asset['status']!r}; expected approved or published_or_ready"
+            )
+    return blockers
+
+
+def _strategy_variant_ref_blockers(content_strategy):
+    blockers = []
+    declared_variant_ids = {
+        variant["variant_id"]
+        for family in content_strategy["post_families"]
+        for variant in family["variants"]
+    }
+
+    for mix in content_strategy["monthly_mix"]:
+        variant_id = mix["variant_id"]
+        if variant_id not in declared_variant_ids:
+            blockers.append(
+                f"monthly_mix {mix['monthly_mix_id']} references missing variant {variant_id}"
+            )
+
+    for campaign in content_strategy["content_campaigns"]:
+        anchor_variant = campaign["anchor_variant"]
+        if anchor_variant not in declared_variant_ids:
+            blockers.append(
+                f"content_campaign {campaign['campaign_id']} references missing anchor_variant {anchor_variant}"
+            )
+        for variant_id in campaign["derivative_variants"]:
+            if variant_id not in declared_variant_ids:
+                blockers.append(
+                    f"content_campaign {campaign['campaign_id']} references missing derivative variant {variant_id}"
+                )
+    return blockers
+
+
+def _production_stage_blockers(workspace_dir, readiness_gates):
+    blockers = []
+    production_gate = readiness_gates["gates"]["production"]
+    if production_gate["status"] not in {"ready", "waived"}:
+        blockers.append("production gate is not ready or waived in readiness-gates.json")
+    schedule_path = workspace_dir / "content-schedule.json"
+    if not schedule_path.exists():
+        blockers.append("content-schedule.json is required for production_ready")
+    else:
+        try:
+            validate_file("creator-content-schedule", schedule_path)
+        except ValidationError as exc:
+            blockers.append(f"Invalid content-schedule.json: {exc}")
+    return blockers
+
+
+def _strategy_conversion_asset_ids(content_strategy):
+    asset_ids = set()
+    for campaign in content_strategy["content_campaigns"]:
+        asset_ids.update(campaign["conversion_asset_ids"])
+    for path in content_strategy["conversion_paths"]:
+        asset_ids.update(path["conversion_asset_ids"])
+    return asset_ids
+
+
+def _load_conversion_assets(workspace_dir, creator_profile):
+    assets = {}
+    blockers = []
+    for path in sorted((workspace_dir / "conversion-assets").glob("*.json")):
+        validate_file("conversion-asset", path)
+        record = load_json(path)
+        asset_id = record["conversion_asset_id"]
+        if record["creator_profile_id"] != creator_profile["creator_profile_id"]:
+            blockers.append(
+                f"conversion asset {asset_id} creator_profile_id does not match workspace creator"
+            )
+        if record["creator_slug"] != creator_profile["creator_slug"]:
+            blockers.append(
+                f"conversion asset {asset_id} creator_slug does not match workspace creator"
+            )
+        blockers.extend(_conversion_asset_file_ref_blockers(workspace_dir, record))
+        assets[record["conversion_asset_id"]] = record
+    return assets, blockers
+
+
+def _conversion_asset_file_ref_blockers(workspace_dir, conversion_asset):
+    blockers = []
+    conversion_root = (workspace_dir / "conversion-assets").resolve()
+    asset_id = conversion_asset["conversion_asset_id"]
+    for raw_path in conversion_asset["file_refs"]:
+        path = Path(raw_path)
+        resolved = (workspace_dir / path).resolve()
+        if path.is_absolute() or not resolved.is_relative_to(conversion_root):
+            blockers.append(
+                f"conversion asset {asset_id} file_refs path must stay inside conversion-assets/: {raw_path!r}"
+            )
+        elif not resolved.is_file():
+            blockers.append(
+                f"conversion asset {asset_id} file_refs path does not resolve to a workspace file: {raw_path!r}"
+            )
+    return blockers
 
 
 def _foundation_blockers(workspace_dir):
@@ -871,12 +1269,12 @@ def _primary_ref_blockers(status, creator_profile, assets_by_id):
             if asset["asset_status"] == "retired":
                 blockers.append(f"primary reference {asset_id} is retired")
             elif (
-                status == "generation_ready"
+                _stage_at_least(status, "foundation_ready")
                 and ASSET_STATUS_RANK[asset["asset_status"]] < ASSET_STATUS_RANK["prompted"]
             ):
                 blockers.append(
                     f"primary reference {asset_id} is still planned; "
-                    "generation_ready requires prompted or later"
+                    "foundation_ready requires prompted or later"
                 )
     return blockers
 

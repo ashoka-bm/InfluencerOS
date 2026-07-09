@@ -84,6 +84,7 @@ Current workflow coverage:
 | `create-personal-brand` | Creator setup |
 | `create-voice-samples` | Creator setup |
 | `create-reference-library` | Creator setup |
+| `elevenlabs-voice-design` | Creator setup |
 | `create-runtime-context` | Creator setup |
 | `wrap-up` | Skill/process improvement |
 | `memory-write` | Skill/process improvement |

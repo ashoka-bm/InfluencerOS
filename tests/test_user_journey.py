@@ -5,7 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_readiness_validation import place_asset_files, populate_foundation
+from tests.test_readiness_validation import (
+    place_asset_files,
+    populate_foundation,
+    write_channels,
+    write_readiness_gates,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +107,8 @@ def seed_creator_setup_outputs(workspace_dir):
     )
     populate_foundation(workspace_dir)
     place_asset_files(workspace_dir)
+    write_channels(workspace_dir)
+    write_readiness_gates(workspace_dir)
 
 
 def seed_research_outputs(workspace_dir):
@@ -233,7 +240,7 @@ class PhaseOneUserJourneyTests(unittest.TestCase):
                 "source_luna_fit_interview_001",
                 "reviewed",
             )
-            set_workspace_status(workspace_dir, "generation_ready")
+            set_workspace_status(workspace_dir, "foundation_ready")
             run_cli("validate", "workspace", workspace_dir)
 
             seed_research_outputs(workspace_dir)

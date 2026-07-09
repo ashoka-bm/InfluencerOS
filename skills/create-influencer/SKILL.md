@@ -74,7 +74,8 @@ input — its mechanics and persisted-row contract live there once — and
 distinguish generated/system-filled answers from user-provided answers in
 the persisted rows.
 
-Before setting readiness to `content_ready` or `generation_ready`, present a
+Before setting readiness to `profile_ready`, `foundation_ready`, `strategy_ready`,
+or `production_ready`, present a
 whole-foundation review package covering the Creator Profile, identity, soul,
 personal brand, voice, reference plan, provider boundary, and remaining
 blockers. Wait for explicit user approval. Validation alone is not approval,
@@ -90,17 +91,26 @@ Produce or update:
 - `context/MEMORY.md`
 - `creator-workspace.json`
 - `creator-profile.json`
+- `readiness-gates.json`
+- `channels.json`
+- `content-strategy.json`
 - `brand_context/identity.md`
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
 - `brand_context/voice-samples.md`
 - `references/reference-library.json`
+- `conversion-assets/*.json` when lead magnets, offers, or other conversion
+  assets are part of the strategy
 - provider-neutral prompt files under `references/`
 - copied source files under `sources/`
 - `progress/setup-interview.md`
 - `progress/setup-checklist.md`
 
-The workflow is complete when the Creator Workspace is `content_ready` or `generation_ready` for the accepted content strategy.
+The creator foundation step is complete when the Creator Workspace is
+`foundation_ready` for the accepted selected channels and foundation mode. The
+full onboarding setup is complete when the workspace is `production_ready`: the
+profile, foundation, strategy, conversion assets, and first calendar plan are
+all accepted or explicitly waived.
 
 ## Decision Interview
 
@@ -144,8 +154,8 @@ platforms. Map those platforms into content mediums and setup blockers:
 | --- | --- | --- |
 | X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | voice, editorial rules, topic/pillar strategy, publication style, optional portrait/avatar policy |
 | Instagram feed, Pinterest-style surfaces, image-led blog posts | image, text | person/avatar image policy, image style, brand visual system, optional location/object references |
-| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | character identity assets, video/photo style, primary locations, outfits, recurring objects, spoken/onscreen voice rules |
-| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | voice sample or accepted synthetic voice note, pronunciation/tone boundaries, video references when on-camera |
+| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | character identity assets, video/photo style, primary locations, outfits, recurring objects, ElevenLabs Voice Design prompt package, spoken/onscreen voice rules |
+| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | ElevenLabs Voice Design prompt package, imported/approved voice sample before spoken generation, pronunciation/tone boundaries, video references when on-camera |
 | Carousels and story sequences on Instagram, LinkedIn, or similar surfaces | image, text, story_sequence or carousel | slide/frame visual system, text overlay policy, brand reference, optional character/location references |
 
 Use the actual intended mediums as the authority. Platform names inform likely
@@ -154,10 +164,12 @@ needs, but the accepted content strategy decides the blockers.
 Per-medium reference requirements are the Medium-Based Blockers below (one
 home); asset-level staging detail lives in `create-reference-library`.
 
-Setup is not generation-ready for a selected medium until every required
+Setup is not `foundation_ready` for a selected medium until every required
 reference material for that medium is user-provided, approved, or prompt-staged
-with a stable reference asset ID. Provider-backed creation of the missing
-materials remains gated by explicit approval for the exact call or batch.
+with a stable reference asset ID, and media generation permissions remain false
+until the required approved/user-provided references exist. Provider-backed
+creation of the missing materials remains gated by explicit approval for the
+exact call or batch.
 
 ## Subskills
 
@@ -173,9 +185,14 @@ Run these internal phases in order:
 8. **Reference planning**: use `create-reference-library` to create `references/reference-library.json` entries for required real or planned assets.
 9. **Reference prompt staging**: if image or video is in scope, stage prompts in this order: user person image -> default video/photo style -> three character assets -> outfits -> locations -> objects. Use the canonical prompt templates under `docs/templates/creator-setup/reference-prompts/` unchanged.
 10. **Prompt drafting**: create separate provider-neutral `.prompt.md` files for missing images, locations, outfits, voice, and brand assets.
-11. **Readiness check**: run `python3 -m influencer_os validate workspace <workspace-path>` — at readiness statuses it fails with the full medium-based blocker list; mirror open blockers into `progress/setup-checklist.md`.
-12. **Acceptance gate**: ask for whole-foundation approval before marking the creator `content_ready`.
-13. **Generation gate**: stop before provider-backed generation unless the user approves the exact call or batch.
+11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
+    and `content-strategy.json` so selected channels, media permissions,
+    strategy mix, conversion paths, and related-post chains are machine-readable.
+12. **Readiness check**: run `python3 -m influencer_os validate workspace <workspace-path>` — at readiness statuses it fails with the full stage and medium-based blocker list; mirror open blockers into `progress/setup-checklist.md`.
+13. **Acceptance gate**: ask for approval before advancing each milestone:
+    `profile_ready`, `foundation_ready`, `strategy_ready`, and
+    `production_ready`.
+14. **Generation gate**: stop before provider-backed generation unless the user approves the exact call or batch.
 
 ## Medium-Based Blockers
 
@@ -185,14 +202,51 @@ Text-first creators require brand voice, publication style, and topic/pillar str
 
 Image creators require image policy, brand or visual system reference, image style guidance, and image prompts or approved references.
 
-Video creators require character identity plate, location reference, outfit or wardrobe reference, default video/photo style card, brand reference, and shot/motion constraints.
+Video creators require character identity plate, location reference, outfit or wardrobe reference, default video/photo style card, brand reference, ElevenLabs Voice Design prompt package, and shot/motion constraints.
 
 The default video/photo style card is a reusable `@video_style_reference`;
 its controls and scope rules live in `create-reference-library`.
 
-Voiceover creators require a voice sample or accepted synthetic voice style note plus pronunciation and tone boundaries.
+Voiceover and audio creators require a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken voice generation still requires an imported/approved voice sample or voice id brought back through the provider-boundary path plus pronunciation and tone boundaries.
 
 Carousel and story-sequence creators require sequence style, slide or frame visual system, and text overlay policy.
+
+## Setup Hierarchy Gate
+
+Run creator setup as an onboarding hierarchy:
+
+1. **Creator Foundation**: the accepted profile, identity, soul, personal brand,
+   voice, visual identity, reference requirements, provider boundary, and
+   medium-specific reference assets required by the recommended channels.
+2. **Strategy**: the platform roles, conversion path, lead magnet or offer
+   mechanism, game-theory cadence, monthly format mix per platform, and
+   related-post chains such as a Substack article feeding Instagram or TikTok
+   clips.
+3. **Production Readiness**: create required lead magnets or conversion assets,
+   confirm or skip channel handles, and translate the strategy into calendar
+   slots.
+4. **Post Production**: research and create individual posts only after the
+   creator foundation and strategy calendar are approved.
+
+If setup recommends image, video, voiceover, carousel, or story-sequence
+channels, do not treat the creator foundation as complete until the required
+reference assets for those channels are user-provided, approved, generated
+behind an exact provider-call approval gate, or explicitly waived. For
+Instagram, YouTube, TikTok, or other video/image-first channels, this normally
+includes identity-locking character images, video/photo style, recurring
+locations, wardrobe or object references when relevant, brand system, and a
+staged ElevenLabs Voice Design prompt package. Explicit no-voiceover policy can
+block spoken generation, but it does not replace the foundation voice-design
+prompt requirement for audio/video creators.
+
+Before generating those assets, present the exact reference-asset batch implied
+by the selected platforms and ask for approval. Do not move to strategy or post
+creation until this creator-foundation gate is resolved or explicitly waived.
+Do not create image or video content featuring the creator unless
+`creator_image_generation_allowed` or `creator_video_generation_allowed` is true
+in `readiness-gates.json`; do not create spoken voiceover content unless
+`spoken_voice_generation_allowed` is true or the strategy explicitly uses a
+no-voiceover policy.
 
 ## Provider Boundary
 
@@ -223,6 +277,11 @@ last.*
   recording rules live in `create-reference-library` §Asset Status.
 - 2026-07-07: Added the guided-run interview and whole-foundation-approval
   contract — see §Normal-User E2E Contract and §Decision Interview.
+- 2026-07-09: Added the three-layer onboarding hierarchy and selected-channel
+  reference gate — see §Setup Hierarchy Gate. Profile approval alone is not
+  enough for image/video/voice creators; strategy must produce a monthly
+  platform mix, conversion chains, and cadence principles before production
+  calendarization.
 
 ## Self-Update
 

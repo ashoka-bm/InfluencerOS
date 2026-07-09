@@ -1,0 +1,46 @@
+{
+  "readiness_gates_id": "readiness_gates_luna_fit",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "updated_on": "2026-07-09",
+  "gates": {
+    "profile": {
+      "status": "ready",
+      "approved_on": "2026-07-09",
+      "approved_by": "user",
+      "blockers": [],
+      "waivers": []
+    },
+    "foundation": {
+      "status": "ready",
+      "approved_on": "2026-07-09",
+      "approved_by": "user",
+      "mode": "media_ready",
+      "blockers": [],
+      "waivers": []
+    },
+    "strategy": {
+      "status": "in_progress",
+      "approved_on": null,
+      "approved_by": null,
+      "blockers": [
+        "Lead magnet draft is still missing."
+      ],
+      "waivers": []
+    },
+    "production": {
+      "status": "not_started",
+      "approved_on": null,
+      "approved_by": null,
+      "blockers": [
+        "Content schedule has not been created."
+      ],
+      "waivers": []
+    }
+  },
+  "permissions": {
+    "creator_image_generation_allowed": true,
+    "creator_video_generation_allowed": true,
+    "spoken_voice_generation_allowed": false
+  }
+}

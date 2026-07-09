@@ -318,8 +318,8 @@ drive readiness blockers.
 |---|---|---|
 | X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | Requires voice, publication style, audience language, topic/pillar strategy, and disclosure rules. |
 | Instagram feed, Pinterest-style surfaces, image-led blog posts | image, text | Requires image style, brand visual system, person/avatar policy, and any recurring outfit/object references. |
-| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | Requires character identity references, video/photo style, location references, wardrobe rules, recurring object policy, and spoken or onscreen voice rules. |
-| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | Requires voice sample or accepted synthetic voice note when spoken identity matters; on-camera video also requires visual references. |
+| TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | Requires character identity references, video/photo style, location references, wardrobe rules, recurring object policy, ElevenLabs Voice Design prompt package, and spoken or onscreen voice rules. |
+| YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | Requires ElevenLabs Voice Design prompt package; spoken generation later requires an imported/approved voice reference; on-camera video also requires visual references. |
 | Carousels and story sequences on Instagram, LinkedIn, or similar surfaces | image, text, carousel or story_sequence | Requires slide/frame visual system, text overlay policy, brand reference, and optional character/location references. |
 
 Do not add platform-specific publishing adapters during setup. Platform choices
@@ -370,8 +370,8 @@ Video creators additionally require:
 
 Voiceover or spoken-audio creators additionally require:
 
-- voice sample, if user-provided voice continuity matters
-- or accepted voice style note, if synthetic or non-specific voice is acceptable
+- ElevenLabs Voice Design prompt package before `foundation_ready`
+- imported/approved voice reference before spoken generation
 - pronunciation and tone boundaries
 
 Carousel and story-sequence creators additionally require:
@@ -393,7 +393,7 @@ Recommended visual-first minimum before content planning:
 - primary outfit or wardrobe reference
 - default video/photo style card
 - brand or visual system reference
-- voice sample or voice style note when spoken content is in scope
+- ElevenLabs Voice Design prompt package for audio/video creators
 
 For a text-first creator, the minimum may shift to:
 
@@ -414,12 +414,13 @@ medium:
   image or generated identity prompt, character/headshot identity assets, image
   style, brand visual system, and recurring outfit or object references when
   they are identity-bearing.
-- **Audio or music**: voice sample or synthetic voice style note when spoken
-  continuity matters, pronunciation/tone boundaries, sonic identity notes, and
-  rights/disclosure constraints.
+- **Audio or music**: ElevenLabs Voice Design prompt package, imported/approved
+  voice reference before spoken generation, pronunciation/tone boundaries, sonic
+  identity notes, and rights/disclosure constraints.
 - **Video**: all image requirements plus default video/photo style, primary
   filming locations, recurring shot families, wardrobe/outfit references,
-  recurring collaborators or characters, and signature objects.
+  recurring collaborators or characters, signature objects, and ElevenLabs Voice
+  Design prompt package.
 
 For video, each recurring location should have its own reference asset or
 prompt. A bedroom, kitchen, studio, gym, car, office, or outdoor route are
@@ -545,15 +546,21 @@ For an LLM-generated persona, the user may approve the whole generated foundatio
 Workspace readiness statuses:
 
 - `draft`: setup has started but required foundation material is missing.
-- `foundation_review`: the foundation has been drafted and is waiting for user review or acceptance.
-- `content_ready`: the creator can enter research and content planning for the accepted content strategy.
-- `generation_ready`: the creator has the reference assets or asset prompts needed for the intended generation medium, but actual provider calls still require approval.
+- `profile_ready`: the creator profile is accepted and selected channels are recorded.
+- `foundation_ready`: channel-derived foundation requirements are ready, either in `prompt_ready` mode with stable prompts or `media_ready` mode with approved/user-provided media.
+- `strategy_ready`: the monthly platform mix, cadence principles, conversion paths, related-post chains, and required conversion assets are accepted.
+- `production_ready`: the strategy has been translated into content calendar slots and the required lead magnets or conversion assets are ready for use.
 - `active`: the creator is in normal use.
 - `archived`: the creator is no longer active.
 
-`creator-workspace.json` stores the machine-readable status. `progress/setup-checklist.md` should explain medium-specific blockers and review notes.
+`creator-workspace.json` stores the milestone status. `readiness-gates.json`
+stores gate status, blockers, waivers, foundation mode, and media permission
+booleans. `channels.json` records selected social channels and handle/account
+readiness. `content-strategy.json` records the machine-readable monthly mix and
+conversion relationships. `progress/setup-checklist.md` should explain
+medium-specific blockers and review notes.
 
-The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `content_ready`, `generation_ready`, or `active` fails validation with the full blocker list until the medium-based blockers and foundation-quality floors are met. The quality floors are intentionally mechanical: required sections, minimum word counts below the target budgets, no `TBD`, context byte caps, and enough voice samples. Judgment-level review (whether the foundation is any good) stays human.
+The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, or `active` fails validation with the full blocker list until the stage requirements, medium-based blockers, and foundation-quality floors are met. The quality floors are intentionally mechanical: required sections, minimum word counts below the target budgets, no `TBD`, context byte caps, enough voice samples, selected-channel checks, ElevenLabs Voice Design prompt staging for audio/video creators, media permission checks, approved strategy records, approved conversion assets, and schedule presence. Judgment-level review (whether the foundation and strategy are good) stays human.
 
 ## Known Schema And CLI Gaps
 
@@ -562,13 +569,13 @@ The current implementation can scaffold the Creator Workspace, but it does not y
 Likely gaps:
 
 - no guided interview command
-- no explicit review or acceptance metadata beyond workspace status (source intakes track `pending`/`drafted`/`reviewed` via `set-intake-status`; the whole-foundation acceptance state does not)
+- no guided UI for stage approvals beyond writing `readiness-gates.json` and running validation
 - no provider-neutral prompt file generation command
 
 Closed gaps:
 
 - master intake import: `import-intake` copies setup sources into `sources/` and records `source_intakes` provenance; `validate workspace` resolves intake paths (Phase 1 slice 1, 2026-07-03).
-- reference-asset file existence and foundation completeness: `validate workspace` enforces the medium-based readiness blockers at `content_ready`, `generation_ready`, and `active` — populated foundation files with required sections and lower-bound word/sample floors, no `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, and lifecycle-appropriate asset/prompt file existence with workspace containment (Phase 1 slice 2, 2026-07-03; see `docs/workflows/creator-readiness-validation-implementation-plan.md`).
+- reference-asset file existence, foundation completeness, and onboarding stage gates: `validate workspace` enforces the readiness blockers at `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, and `active` — selected channels, populated foundation files with required sections and lower-bound word/sample floors, no `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, lifecycle-appropriate asset/prompt file existence with workspace containment, media generation permission requirements, approved strategy records, approved conversion assets, and content-schedule presence.
 
 ## Next Grilling Questions
 

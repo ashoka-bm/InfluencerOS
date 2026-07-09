@@ -43,6 +43,9 @@ Real creator state lives under `workspace-library/creators/<creator-slug>/`.
 AGENTS.md
 creator-workspace.json
 creator-profile.json
+readiness-gates.json
+channels.json
+content-strategy.json
 content-schedule.json
 context/SOUL.md
 context/USER.md
@@ -57,6 +60,8 @@ references/
   outfits/
   objects/
   video-style/
+conversion-assets/
+  <conversion-asset-id>.json
 research/
 boards/
 system/
@@ -69,7 +74,14 @@ progress/
     SKILL.local.md
 ```
 
-The Creator Profile is the typed contract for automation. The identity file, soul file, personal brand file, and reference library preserve richer creator continuity. Projects, output packages, published records, analytics, and memory stay creator-scoped so the Learning OS can improve future ideas without blending creator identities.
+The Creator Profile is the typed contract for automation. `channels.json`,
+`readiness-gates.json`, `content-strategy.json`, and
+`conversion-assets/*.json` make onboarding stage state, platform selection,
+strategy mix, and conversion mechanisms machine-readable. The identity file,
+soul file, personal brand file, and reference library preserve richer creator
+continuity. Projects, output packages, published records, analytics, and memory
+stay creator-scoped so the Learning OS can improve future ideas without
+blending creator identities.
 
 Creator runtime skills live under `.claude/skills/<skill-name>/SKILL.md` inside the Creator Workspace. They are copied from repo `skills/<skill-name>/SKILL.md` so an agent can run from the creator root. Creator-specific overrides live beside them as `SKILL.local.md`. Runtime sync refreshes copied baseline skills while preserving local overrides and creator-only skills.
 
@@ -201,6 +213,10 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | --- | --- | --- |
 | Creator Workspace | `schemas/creator-workspace.schema.json` | `examples/creator-workspace.example.json` |
 | Creator Profile | `schemas/creator-profile.schema.json` | `examples/creator-profile.example.json` |
+| Readiness Gates | `schemas/readiness-gates.schema.json` | `examples/readiness-gates.example.json` |
+| Channel Registry | `schemas/channels.schema.json` | `examples/channels.example.json` |
+| Content Strategy | `schemas/content-strategy.schema.json` | `examples/content-strategy.example.json` |
+| Conversion Asset | `schemas/conversion-asset.schema.json` | `examples/conversion-asset.example.json` |
 | Reference Library | `schemas/reference-library.schema.json` | `examples/reference-library.example.json` |
 | Project | `schemas/project.schema.json` | `examples/project.example.json` |
 | Output Package | `schemas/output-package.schema.json` | `examples/output-package.example.json` |

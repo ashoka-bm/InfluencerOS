@@ -334,10 +334,78 @@ def place_asset_files(workspace_dir):
             prompt.write_text(f"prompt for {asset['asset_id']}\n")
 
 
+def write_readiness_gates(
+    workspace_dir,
+    profile_status="ready",
+    foundation_status="ready",
+    foundation_mode="prompt_ready",
+    strategy_status="not_started",
+    production_status="not_started",
+    image_allowed=False,
+    video_allowed=False,
+    spoken_allowed=False,
+):
+    record = json.loads((ROOT / "examples" / "readiness-gates.example.json").read_text())
+    record["gates"]["profile"]["status"] = profile_status
+    record["gates"]["foundation"]["status"] = foundation_status
+    record["gates"]["foundation"]["mode"] = foundation_mode
+    record["gates"]["strategy"]["status"] = strategy_status
+    record["gates"]["production"]["status"] = production_status
+    for gate in record["gates"].values():
+        if gate["status"] == "ready":
+            gate["approved_on"] = "2026-07-09"
+            gate["approved_by"] = "user"
+            gate["blockers"] = []
+        else:
+            gate["approved_on"] = None
+            gate["approved_by"] = None
+            gate["blockers"] = ["Gate is not ready."]
+    record["permissions"] = {
+        "creator_image_generation_allowed": image_allowed,
+        "creator_video_generation_allowed": video_allowed,
+        "spoken_voice_generation_allowed": spoken_allowed,
+    }
+    (workspace_dir / "readiness-gates.json").write_text(json.dumps(record, indent=2) + "\n")
+
+
+def write_channels(workspace_dir):
+    record = json.loads((ROOT / "examples" / "channels.example.json").read_text())
+    record["channels"][1].update(
+        channel_id="channel_luna_fit_tiktok",
+        platform="tiktok",
+        intended_handle="@lunafit",
+        public_url="https://www.tiktok.com/@lunafit",
+        account_status="created",
+        publishing_export_blocked=False,
+        notes="Short-form testing channel.",
+    )
+    (workspace_dir / "channels.json").write_text(json.dumps(record, indent=2) + "\n")
+
+
+def write_content_strategy(workspace_dir, status="approved"):
+    record = json.loads((ROOT / "examples" / "content-strategy.example.json").read_text())
+    record["strategy_status"] = status
+    (workspace_dir / "content-strategy.json").write_text(json.dumps(record, indent=2) + "\n")
+
+
+def write_conversion_asset(workspace_dir, status="approved"):
+    record = json.loads((ROOT / "examples" / "conversion-asset.example.json").read_text())
+    record["status"] = status
+    target = workspace_dir / "conversion-assets" / f"{record['conversion_asset_id']}.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(record, indent=2) + "\n")
+    markdown = workspace_dir / "conversion-assets" / "luna-reset-checklist.md"
+    markdown.write_text("# 7 Tiny Reset Questions\n")
+
+
 def make_ready_workspace(temp_dir, status):
     workspace_dir = init_workspace_with_status(temp_dir, status)
     populate_foundation(workspace_dir)
     place_asset_files(workspace_dir)
+    write_readiness_gates(workspace_dir)
+    write_channels(workspace_dir)
+    write_content_strategy(workspace_dir, status="approved")
+    write_conversion_asset(workspace_dir)
     return workspace_dir
 
 
@@ -348,6 +416,144 @@ class DraftLenienceTests(unittest.TestCase):
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
+
+
+class OnboardingStageGateTests(unittest.TestCase):
+    def test_profile_ready_requires_selected_channels_in_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "profile_ready")
+            (workspace_dir / "creator-profile.json").write_text(
+                (ROOT / "examples" / "creator-profile.example.json").read_text()
+            )
+            (workspace_dir / "references" / "reference-library.json").write_text(
+                (ROOT / "examples" / "reference-library.example.json").read_text()
+            )
+            (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
+                (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
+            )
+            write_readiness_gates(workspace_dir, foundation_status="not_started")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("selected channel", str(ctx.exception))
+            self.assertIn("tiktok", str(ctx.exception))
+
+    def test_foundation_ready_requires_ready_foundation_gate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_gates(
+                workspace_dir,
+                foundation_status="blocked",
+                foundation_mode="prompt_ready",
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("foundation gate", str(ctx.exception))
+
+    def test_creator_video_permission_requires_approved_visual_identity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_gates(workspace_dir, foundation_mode="media_ready", video_allowed=True)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("creator_video_generation_allowed", message)
+            self.assertIn("approved visual identity", message)
+
+    def test_spoken_voice_permission_rejects_approved_voice_design_prompt_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_gates(workspace_dir, spoken_allowed=True)
+
+            def approve_voice_design_prompt(library):
+                for asset in library["assets"]:
+                    if asset["asset_id"] == "asset_luna_elevenlabs_voice_design":
+                        asset["asset_status"] = "approved"
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                approve_voice_design_prompt,
+            )
+            place_asset_files(workspace_dir)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("approved/imported voice reference", str(ctx.exception))
+
+    def test_strategy_ready_requires_approved_strategy_and_conversion_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_gates(workspace_dir, strategy_status="ready")
+            write_content_strategy(workspace_dir, status="drafted")
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("content-strategy.json", str(ctx.exception))
+            self.assertIn("approved", str(ctx.exception))
+
+    def test_strategy_ready_rejects_conversion_asset_from_another_creator(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_gates(workspace_dir, strategy_status="ready")
+
+            def mismatch_creator(asset):
+                asset["creator_profile_id"] = "creator_wrong"
+                asset["creator_slug"] = "wrong-creator"
+
+            rewrite_json(
+                workspace_dir
+                / "conversion-assets"
+                / "conversion_asset_luna_reset_checklist.json",
+                mismatch_creator,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("creator_profile_id", str(ctx.exception))
+
+    def test_strategy_ready_requires_conversion_asset_file_refs_to_exist(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_gates(workspace_dir, strategy_status="ready")
+            (workspace_dir / "conversion-assets" / "luna-reset-checklist.md").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("conversion asset", str(ctx.exception))
+            self.assertIn("file_refs", str(ctx.exception))
+
+    def test_strategy_ready_rejects_dangling_variant_refs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_gates(workspace_dir, strategy_status="ready")
+
+            def dangle_variants(strategy):
+                strategy["monthly_mix"][0]["variant_id"] = "variant_missing_mix"
+                strategy["content_campaigns"][0]["anchor_variant"] = "variant_missing_anchor"
+                strategy["content_campaigns"][0]["derivative_variants"] = [
+                    "variant_missing_derivative"
+                ]
+
+            rewrite_json(workspace_dir / "content-strategy.json", dangle_variants)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("variant", str(ctx.exception))
+
+    def test_production_ready_requires_content_schedule(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_gates(
+                workspace_dir,
+                strategy_status="ready",
+                production_status="ready",
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("content-schedule.json", str(ctx.exception))
 
 
 class ReferenceLibraryIntegrityTests(unittest.TestCase):
@@ -379,17 +585,17 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
             self.assertIn("asset_luna_brand_system", str(ctx.exception))
 
 
-class ContentReadyBlockerTests(unittest.TestCase):
-    def test_populated_content_ready_workspace_validates(self):
+class FoundationReadyBlockerTests(unittest.TestCase):
+    def test_populated_foundation_ready_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
 
     def test_scaffold_only_foundation_file_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             identity = workspace_dir / "brand_context" / "identity.md"
             identity.write_text("# Identity\n\n")
 
@@ -399,7 +605,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_tbd_placeholder_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             soul = workspace_dir / "brand_context" / "soul.md"
             soul.write_text(soul.read_text() + "\nHumor rules: TBD\n")
 
@@ -409,7 +615,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_oversized_context_file_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             soul = workspace_dir / "context" / "SOUL.md"
             soul.write_text(soul.read_text() + ("Luna keeps sessions tiny. " * 200))
 
@@ -420,7 +626,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_sentence_stub_foundation_file_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             personal_brand = workspace_dir / "brand_context" / "personal-brand.md"
             personal_brand.write_text(
                 "# Personal Brand\n\nShort-form vertical video first; no crash-diet content ever.\n"
@@ -433,7 +639,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_missing_required_foundation_sections_are_blockers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             personal_brand = workspace_dir / "brand_context" / "personal-brand.md"
             personal_brand.write_text(
                 "# Personal Brand\n\n"
@@ -450,7 +656,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_too_few_voice_samples_are_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             voice_samples = workspace_dir / "brand_context" / "voice-samples.md"
             voice_samples.write_text(
                 "# Voice Samples\n\n"
@@ -470,7 +676,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_missing_source_intake_provenance_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             rewrite_json(
                 workspace_dir / "creator-workspace.json",
                 lambda manifest: manifest.update(source_intakes=[]),
@@ -482,7 +688,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_missing_required_asset_kind_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def drop_outfit_and_brand(library):
                 library["assets"] = [
@@ -502,7 +708,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 
     def test_one_error_reports_every_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             (workspace_dir / "brand_context" / "identity.md").write_text("# Identity\n\n")
             soul = workspace_dir / "brand_context" / "soul.md"
             soul.write_text(soul.read_text() + "\nTriggers: TBD\n")
@@ -517,7 +723,7 @@ class ContentReadyBlockerTests(unittest.TestCase):
 class AssetLifecycleExistenceTests(unittest.TestCase):
     def test_approved_asset_with_missing_path_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             (workspace_dir / "references" / "video-style" / "default-video-photo-style.md").unlink()
 
             with self.assertRaises(ValidationError) as ctx:
@@ -526,7 +732,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
 
     def test_prompted_asset_without_prompt_path_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def strip_outfit_prompt(library):
                 for asset in library["assets"]:
@@ -543,7 +749,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
 
     def test_planned_asset_without_prompt_path_passes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def plan_outfit(library):
                 for asset in library["assets"]:
@@ -558,7 +764,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
 
     def test_retired_asset_with_dead_path_passes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def add_retired(library):
                 library["assets"].append(
@@ -582,7 +788,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
 
     def test_symlinked_asset_path_escaping_the_workspace_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             outside = Path(temp_dir) / "outside-style.md"
             outside.write_text("# Outside\n")
             style_path = workspace_dir / "references" / "video-style" / "default-video-photo-style.md"
@@ -594,10 +800,69 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
             self.assertIn("default-video-photo-style.md", str(ctx.exception))
 
 
-class GenerationReadyTests(unittest.TestCase):
-    def test_planned_required_kind_blocks_generation_ready(self):
+class FoundationGateTests(unittest.TestCase):
+    def test_video_foundation_ready_requires_elevenlabs_voice_design_prompt(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "generation_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def remove_voice_design_prompt(library):
+                library["assets"] = [
+                    asset
+                    for asset in library["assets"]
+                    if asset["asset_id"] != "asset_luna_elevenlabs_voice_design"
+                ]
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                remove_voice_design_prompt,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("ElevenLabs Voice Design prompt", str(ctx.exception))
+
+    def test_generic_voice_note_does_not_satisfy_video_voice_design_requirement(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def replace_voice_design_with_generic_note(library):
+                library["assets"] = [
+                    asset
+                    for asset in library["assets"]
+                    if asset["asset_id"] != "asset_luna_elevenlabs_voice_design"
+                ]
+                library["assets"].append(
+                    {
+                        "asset_id": "asset_luna_voice_note",
+                        "asset_type": "voice",
+                        "asset_status": "prompted",
+                        "role": "Generic voice note",
+                        "path": "references/voice/luna-voice-note.prompt.md",
+                        "prompt_path": "references/voice/luna-voice-note.prompt.md",
+                        "source": {
+                            "source_type": "derived",
+                            "source_ref": "brand_context/voice-samples.md",
+                        },
+                        "created_on": "2026-06-29",
+                        "usage_notes": "Generic synthetic voice note.",
+                        "semantic_index_allowed": True,
+                    }
+                )
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                replace_voice_design_with_generic_note,
+            )
+            place_asset_files(workspace_dir)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("ElevenLabs Voice Design prompt", str(ctx.exception))
+
+    def test_planned_required_kind_blocks_media_ready_generation_permission(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_gates(workspace_dir, foundation_mode="media_ready")
 
             def plan_outfit(library):
                 for asset in library["assets"]:
@@ -611,9 +876,9 @@ class GenerationReadyTests(unittest.TestCase):
                 validate_creator_workspace(workspace_dir)
             self.assertIn("outfit", str(ctx.exception))
 
-    def test_fully_prompted_generation_ready_workspace_validates(self):
+    def test_foundation_ready_prompt_ready_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "generation_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
@@ -622,7 +887,7 @@ class GenerationReadyTests(unittest.TestCase):
 class TextFirstCreatorTests(unittest.TestCase):
     def test_active_text_first_creator_validates_without_visual_assets(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "active")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def make_text_first(profile):
                 profile["content_strategy"]["content_mediums"] = ["text"]
@@ -692,7 +957,7 @@ class ReferenceRefResolutionTests(unittest.TestCase):
 
     def test_empty_primary_refs_for_video_creator_are_blockers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def empty_primaries(profile):
                 profile["reference_refs"]["primary_character_asset_ids"] = []
@@ -708,7 +973,7 @@ class ReferenceRefResolutionTests(unittest.TestCase):
 
     def test_missing_video_style_primary_for_video_creator_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             rewrite_json(
                 workspace_dir / "creator-profile.json",
                 lambda profile: profile["reference_refs"].pop("primary_video_style_asset_id"),
@@ -720,7 +985,7 @@ class ReferenceRefResolutionTests(unittest.TestCase):
 
     def test_retired_primary_ref_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def retire_primary_keep_kind(library):
                 for asset in library["assets"]:
@@ -755,9 +1020,9 @@ class ReferenceRefResolutionTests(unittest.TestCase):
             self.assertIn("retired", str(ctx.exception))
             self.assertIn("asset_luna_identity_plate", str(ctx.exception))
 
-    def test_generation_ready_requires_prompted_primary(self):
+    def test_foundation_ready_requires_prompted_primary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "generation_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def plan_primary_keep_kind(library):
                 for asset in library["assets"]:
@@ -799,7 +1064,7 @@ class AssetSourceRefTests(unittest.TestCase):
     def test_dangling_or_escaping_source_ref_is_a_blocker(self):
         for bad_ref in ("sources/intakes/does-not-exist.md", "../../outside.md", "old run"):
             with tempfile.TemporaryDirectory() as temp_dir:
-                workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+                workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
                 def corrupt_source_ref(library, ref=bad_ref):
                     for asset in library["assets"]:
@@ -817,7 +1082,7 @@ class AssetSourceRefTests(unittest.TestCase):
 
     def test_recorded_intake_id_source_ref_passes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_ready_workspace(temp_dir, "content_ready")
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
             def intake_id_source_ref(library):
                 for asset in library["assets"]:

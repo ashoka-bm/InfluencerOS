@@ -1,6 +1,8 @@
 ---
 name: create-reference-library
 description: Use to plan references/reference-library.json and provider-neutral prompt files for the creator's continuity assets.
+dependencies:
+  - elevenlabs-voice-design
 ---
 
 # Create Reference Library
@@ -41,7 +43,7 @@ Select based on content strategy:
 - outfit: wardrobe constants
 - object: meaningful props
 - video_style: camera source, lens feel, aspect ratio, lighting, framing defaults, movement feel, platform finish, recurring shot families
-- voice: samples or voice style notes
+- voice: ElevenLabs Voice Design prompt packages and approved/imported voice samples
 - brand: visual system, typography, colors, layout posture
 
 ## Platform And Medium Derivation
@@ -56,8 +58,8 @@ Use this mapping as setup guidance:
 | --- | --- |
 | text | voice samples, editorial rules, publication style, audience language, topic/pillar strategy, disclosure rules |
 | image | person/avatar policy, recommended user person reference image or generated identity prompt, character/headshot assets, image style, brand visual system, recurring outfit/object references when identity-bearing |
-| audio or music | voice sample or accepted synthetic voice style note when spoken identity matters, pronunciation/tone boundaries, sonic identity notes, rights/disclosure constraints |
-| video | image requirements plus default video/photo style, recurring locations, wardrobe/outfit references, recurring collaborators or characters, signature objects, recurring shot-family notes |
+| audio or music | ElevenLabs Voice Design prompt package for synthetic spoken continuity, imported/approved voice sample before spoken generation, pronunciation/tone boundaries, sonic identity notes, rights/disclosure constraints |
+| video | image requirements plus default video/photo style, recurring locations, wardrobe/outfit references, recurring collaborators or characters, signature objects, recurring shot-family notes, ElevenLabs Voice Design prompt package |
 | carousel or story_sequence | brand visual system, slide/frame visual system, text overlay policy, optional character/location references if the creator appears |
 
 Ask for public platforms early because they suggest likely mediums, but let the
@@ -148,7 +150,7 @@ For identity plate, turnaround sheet, and macro detail card:
 - do not apply the creator's `@video_style_reference`, location style, or brand aesthetic except for realism and accurate identity;
 - do not transfer background, lighting, camera angle, or other people from the user-provided reference image.
 
-If generated output violates these rules, keep it as `generated` or `prompted` but do not mark it `approved`. Regenerate with a stricter character prompt before generation readiness.
+If generated output violates these rules, keep it as `generated` or `prompted` but do not mark it `approved`. Regenerate with a stricter character prompt before allowing media generation permissions or `foundation_ready` in `media_ready` mode.
 
 ## Prompt Files
 
@@ -163,6 +165,24 @@ Provider-neutral prompts live beside the asset they describe:
 - `references/brand/<asset-slug>.prompt.md`
 
 Point to the prompt with `prompt_path`.
+
+## ElevenLabs Voice Design Prompt Staging
+
+When audio or video is an accepted creator medium, use
+`elevenlabs-voice-design` to create:
+
+```text
+references/voice/<creator-slug>-elevenlabs-voice-design.prompt.md
+```
+
+Register the prompt file as a `voice` reference asset with
+`asset_status: prompted`. `foundation_ready` for audio/video creators requires
+this staged ElevenLabs prompt package; a generic voice note is not enough. This
+is a human-in-the-loop prompt package only: the human copies it into ElevenLabs,
+evaluates generated voice options, and brings any selected sample or voice id
+back through the approved import/provider boundary. Do not call ElevenLabs,
+generate audio, or mark the voice asset `generated` or `approved` from the
+prompt file alone.
 
 ## Gap Questions
 
@@ -182,8 +202,10 @@ Ask only for gaps that block the intended medium:
 
 ## Provider Boundary
 
-Drafting reference records and prompts is allowed. Generating reference images, video, audio, or renders requires explicit approval for the exact call or batch.
+Drafting reference records and prompts is allowed, including ElevenLabs Voice
+Design prompt files. Generating reference images, video, audio, voices, or
+renders requires explicit approval for the exact call or batch.
 
 ## Completion Criteria
 
-Complete when every medium required by the content strategy has either approved assets or planned/prompted assets with stable IDs, source refs, usage notes, prompt paths where needed, the character/outfit/location/object prompt family has been staged when visual generation is in scope, and character identity assets obey the neutral-background hard rules before being marked `approved`.
+Complete when every medium required by the selected channels and content strategy has either approved assets or planned/prompted assets with stable IDs, source refs, usage notes, prompt paths where needed, the character/outfit/location/object prompt family has been staged when visual generation is in scope, and character identity assets obey the neutral-background hard rules before being marked `approved`. `media_ready` foundation mode and image/video generation permissions require approved or user-provided media references, not merely planned entries.

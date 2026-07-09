@@ -95,6 +95,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-creator-profile` | setup | `creator-profile.json`. | [BUILT] |
 | `create-runtime-context` | setup | `context/SOUL.md`,`USER.md`,`MEMORY.md`. | [BUILT] |
 | `create-reference-library` | setup | `references/reference-library.json` + prompts. | [BUILT] |
+| `elevenlabs-voice-design` | setup | Human-in-the-loop ElevenLabs Voice Design prompt files under `references/voice/`; no provider call. | [BUILT] |
 | `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
 | `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
 | `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [BUILT — Phase 1 slice 5] |
@@ -146,7 +147,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
 | source-intake provenance check | `source_intakes` paths are schema-pinned under `sources/(intakes\|imports\|notes)/`; `validate workspace` additionally fails on missing files and symlink escapes after `resolve()`; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
-| creator readiness check | Status-keyed medium-based blockers collected into one error: foundation population + required Markdown sections + lower-bound word/sample floors + `TBD` scan + context byte caps, intake provenance, required asset kinds per content medium, lifecycle asset/prompt existence with containment, typed + medium-required primary `reference_refs` (kind-checked at every status; non-retired and prompted-or-later at generation_ready), and asset `source_ref` resolution to a recorded intake id or contained workspace file; asset paths schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, Phase 1 slice 2] |
+| creator readiness check | Status-keyed onboarding and medium-based blockers collected into one error: selected channels at `profile_ready`; foundation population + required Markdown sections + lower-bound word/sample floors + `TBD` scan + context byte caps; intake provenance; required asset kinds per content medium; staged ElevenLabs Voice Design prompt package for audio/video creators; lifecycle asset/prompt existence with containment; typed + medium-required primary `reference_refs` (kind-checked at every status; non-retired and prompted-or-later at `foundation_ready`); media permission gates for creator image/video/spoken voice; approved strategy and conversion assets at `strategy_ready`; and `content-schedule.json` presence at `production_ready`. Asset paths remain schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, ADR 0028] |
 | connector layer | Env detection + kill switch + call cap, availability gating, canonical-record mapping, per-connector parsing (mock-hooked; no live calls), and `research-fetch-result` schema validation. | [BUILT — `test_connectors.py`, ADR 0022] |
 
 ### Deferred / gated subsystems
@@ -207,6 +208,7 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 6  Operational summary -> Skill(create-creator-profile)
   Phase 7  Runtime context   -> Skill(create-runtime-context)
   Phase 8  Reference planning -> Skill(create-reference-library)
+             voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
   Phases 1,9-13  intake, prompt staging, readiness, acceptance gate, generation gate (inline)
 ```
 
@@ -288,7 +290,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
-| Creator setup | intake | Creator Workspace + Profile (`creator-workspace`, `creator-profile`) | readiness status matches medium-based blockers | `validate workspace`: full medium-based readiness validator at `content_ready`/`generation_ready`/`active` (foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence) plus the generation-ready visual-asset gate [BUILT — WS14 + Phase 1 slice 2] | status transitions stay human |
+| Creator setup | intake | Creator Workspace + Profile + onboarding records (`creator-workspace`, `creator-profile`, `readiness-gates`, `channels`, `content-strategy`, `conversion-asset`) | readiness status matches selected channels, foundation mode, ElevenLabs voice prompt staging for audio/video, media permissions, approved strategy, conversion assets, and production calendar | `validate workspace`: full onboarding readiness validator at `profile_ready`/`foundation_ready`/`strategy_ready`/`production_ready`/`active` (selected channels, foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence, ElevenLabs Voice Design prompt asset, media permission assets, approved strategy/conversion assets, schedule presence) [BUILT — ADR 0028] | status transitions stay human |
 | Video understanding | public URLs or local real videos | `video-understanding-pack` | dated, source-linked; `/watch` or local equivalent only feeds distilled observations | `validate record video-understanding-pack` [BUILT — WS12] | exact approval for Whisper/API transcription fallback, batch processing, or first-run dependency installs |
 | Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` incl. JSONL line validation [BUILT — Phase 1 slice 3] | none |
 | Research acquisition (connector) | search plan + query | `research-fetch-result` → mapped `research-evidence` + `metric-snapshot` | provider output maps to canonical records; per-run call cap honored; no key → unavailable + built-in fallback | `research-fetch` validates against `research-fetch-result.schema.json` before emitting [BUILT — ADR 0022] | standing approval by key presence (api_backed/scraping_api only); kill switch + call cap bound it |
