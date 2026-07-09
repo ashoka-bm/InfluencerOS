@@ -98,7 +98,7 @@ python3 -m influencer_os validate workspace <workspace>
 ```
 
 Readiness is status-keyed: the workspace stays permissive at `draft` and must
-pass the medium-based blockers to claim `content_ready`, `generation_ready`,
+pass the medium-based blockers to claim `foundation_ready`, `strategy_ready`, `production_ready`,
 or `active`. Do not hand-set a status the validator has not confirmed.
 
 ## 6. Research → Ideas → Promotion → Production
@@ -120,6 +120,8 @@ Keep the projections fresh as records change:
 
 ```bash
 python3 -m influencer_os rebuild-board <workspace>
+python3 -m influencer_os rebuild-calendar <workspace>
+python3 -m influencer_os validate calendar <workspace>
 python3 -m influencer_os rebuild-index <workspace>
 python3 -m influencer_os rebuild-lookup <workspace>
 ```

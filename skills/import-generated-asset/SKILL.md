@@ -41,6 +41,16 @@ The file lands at the asset's declared `path`, and its `asset_status` and
 `source` block update per ADR 0013. Cite `--approval-record` when a recorded
 generation approval authorized the asset's creation.
 
+Prompt packages are immutable inputs to this route. Never import media into an
+asset whose `path` is its `prompt_path` or ends in `.prompt.md`; the CLI rejects
+that operation before writing. Register the resulting media as a separate
+Reference Library asset whose media `path` points to the imported file and whose
+`prompt_path` points back to the prompt package.
+
+Completion: the imported file has its own asset id and media path, the source
+prompt remains byte-for-byte unchanged, and the new asset preserves prompt
+provenance through `prompt_path`.
+
 ## Validation
 
 ```bash

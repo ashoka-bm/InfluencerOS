@@ -49,7 +49,9 @@
         "strategy_ready",
         "production_ready",
         "active",
-        "archived"
+        "archived",
+        "content_ready",
+        "generation_ready"
       ]
     },
     "root_path": {

@@ -32,7 +32,7 @@ The ignored local folder for one creator's private identity, references, researc
 The strict foundation workflow that turns minimal instructions, guided interview answers, source files, media references, or a generated persona request into a Creator Workspace. Setup is permissive at intake and strict at readiness.
 
 **Creator Readiness**:
-The setup status that says what the creator can safely do next. Readiness statuses are `draft`, `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, `active`, and `archived`. `readiness-gates.json` stores the milestone state, blockers, waivers, foundation mode, and media permission booleans that decide whether image, video, or spoken-voice content is allowed.
+The setup status that says what the creator can safely do next. Readiness statuses are `draft`, `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, `active`, and `archived`. The legacy-named `readiness-gates.json` file stores readiness milestone state, blockers, human waivers, foundation mode, and media permission booleans that decide whether image, video, or spoken-voice content is allowed. These milestones are deterministic checks, not pipeline Gates; only the two human approvals defined under Gate can block production authorization.
 
 **Project**:
 One selected content idea that moves into production as a publishable content unit or package. A Project may produce a video, carousel, single image post, story sequence, or multi-platform output package; it does not imply a posting cadence.
@@ -56,7 +56,7 @@ The creator's planned publishing direction: platform roles, monthly format mix, 
 The creator's selected and optional publishing channels. `channels.json` records platform, role, account or handle readiness, content mediums, expected format IDs, and whether a real handle is required before publishing/export. Selected channels drive the reference requirements for `foundation_ready`.
 
 **Conversion Asset**:
-A lead magnet, offer, newsletter asset, checklist, waitlist, landing page, or other conversion mechanism referenced by strategy or calendar slots. Conversion assets live under `conversion-assets/*.json`; `strategy_ready` requires referenced conversion assets to exist and be approved or published-ready.
+A lead magnet, offer, newsletter asset, checklist, waitlist, landing page, or other conversion mechanism referenced by strategy or calendar slots. Conversion assets live under `conversion-assets/*.json`; `strategy_ready` requires referenced records to exist, while a production slot that promotes one requires it to be approved or published-ready.
 
 **Reference Library**:
 The creator's reusable visual and audio continuity assets, such as character identity plates, turnaround sheets, macro detail cards, locations, outfits, props, video style cards, shot-family references, ElevenLabs Voice Design prompt packages, and approved/imported voice samples.
@@ -92,7 +92,9 @@ A creator-scoped planning record that captures cadence expectations,
 intentionally irregular publishing dates, content goals, platform or format
 targets when useful, open slots, time-sensitive insertions, and drift checks. It
 is separate from the Creator Profile because schedule state changes more often
-than creator identity.
+than creator identity. It references the accepted Content Strategy; slots may
+name their strategy campaign/variant and must name the approved use and platform
+when they promote a Conversion Asset.
 
 **Video Understanding Pack**:
 A dated evidence record created when InfluencerOS inspects real videos. It stores source URLs or local files, analysis method, hook observations, first-frame patterns, visual structure, transcript framing, template signals, and creator-fit findings.

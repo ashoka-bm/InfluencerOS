@@ -35,6 +35,8 @@ The workflow should create or refine:
   other conversion mechanism
 - `content-schedule.json` when the workspace is being moved to production
   readiness
+- `boards/content-calendar.html` as the rebuildable human-review projection of
+  `content-schedule.json`
 - source files under `sources/`
 - provider-neutral reference asset prompts when useful
 - `progress/setup-checklist.md`
@@ -61,20 +63,23 @@ read these files first:
 - `content-strategy.json`
 - `conversion-assets/*.json`
 - `content-schedule.json`, when present
+- `boards/content-calendar.html`, when present
 - `progress/setup-checklist.md`
 - `context/MEMORY.md`
 
 Machine-readable files own state:
 
 - `readiness-gates.json` owns the profile, foundation, strategy, and production
-  gate statuses.
+  readiness milestone statuses.
 - `content-strategy.json` owns platform roles, monthly mix, cadence principles,
   related-post chains, campaigns, and conversion paths.
 - `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
   waitlist, opt-in page, and partner asset status.
 - `content-schedule.json` owns calendar readiness.
+- `boards/content-calendar.html` is a derived review projection. It never owns
+  schedule state and must be rebuilt after every canonical calendar change.
 - Markdown explains decisions, blockers, and review notes. It must mirror the
-  canonical records instead of inventing additional gate names or stale blockers.
+  canonical records instead of inventing additional milestone names or stale blockers.
 
 After any user approval, accepted generation batch, conversion-asset review, or
 calendar update, run a same-turn state sync pass:
@@ -82,13 +87,18 @@ calendar update, run a same-turn state sync pass:
 1. update the canonical JSON record;
 2. remove stale blocker language from rich context files, progress notes,
    `AGENTS.md`, and `CLAUDE.md`;
-3. write the next gate into `progress/setup-checklist.md` and `context/MEMORY.md`;
-4. run `python3 -m influencer_os validate workspace <workspace-path>`.
+3. write the next readiness milestone into `progress/setup-checklist.md` and `context/MEMORY.md`;
+4. for a calendar update, run
+   `python3 -m influencer_os rebuild-calendar <workspace-path>` and present
+   `boards/content-calendar.html` for review;
+5. run `python3 -m influencer_os validate calendar <workspace-path>` when the
+   calendar exists;
+6. run `python3 -m influencer_os validate workspace <workspace-path>`.
 
 The validator rejects readiness states that still contain known stale setup
-phrases such as a pending portrait approval after the foundation gate is ready.
-It also enforces that `strategy_ready` has approved conversion assets and
-`production_ready` has a valid content schedule. A workspace with approved
+phrases such as a pending portrait approval after the foundation milestone is ready.
+It also enforces that `strategy_ready` references existing conversion asset records and
+`production_ready` has a valid content schedule whose promoted conversion assets are approved. A workspace with approved
 foundation and approved strategy, but a drafted lead magnet and no schedule, is
 not production-ready; its next step is lead magnet review, then calendar
 creation.
@@ -575,7 +585,7 @@ Prompts should specify:
 
 Generation requires a separate approval gate naming the exact image, video, audio, or render batch.
 
-## Readiness Gate
+## Readiness Milestone
 
 A creator can be marked ready for research and content planning only when all of these are true:
 
@@ -604,14 +614,29 @@ Workspace readiness statuses:
 - `active`: the creator is in normal use.
 - `archived`: the creator is no longer active.
 
-`creator-workspace.json` stores the milestone status. `readiness-gates.json`
-stores gate status, blockers, waivers, foundation mode, and media permission
+`creator-workspace.json` stores the milestone status. The legacy-named `readiness-gates.json`
+stores readiness status, blockers, human waivers, foundation mode, and media permission
 booleans. `channels.json` records selected social channels and handle/account
 readiness. `content-strategy.json` records the machine-readable monthly mix and
 conversion relationships. `progress/setup-checklist.md` should explain
 medium-specific blockers and review notes.
 
-The deterministic subset of these gates is enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, or `active` fails validation with the full blocker list until the stage requirements, medium-based blockers, and foundation-quality floors are met. The quality floors are intentionally mechanical: required sections, minimum word counts below the target budgets, no `TBD`, context byte caps, enough voice samples, selected-channel checks, ElevenLabs Voice Design prompt staging for audio/video creators, media permission checks, approved strategy records, approved conversion assets, and schedule presence. Judgment-level review (whether the foundation and strategy are good) stays human.
+Before marking `production_ready`, the operator must review the current
+`boards/content-calendar.html`. Generate it only from the validated canonical
+schedule:
+
+```bash
+python3 -m influencer_os rebuild-calendar <workspace-path>
+python3 -m influencer_os validate calendar <workspace-path>
+python3 -m influencer_os validate workspace <workspace-path>
+```
+
+The calendar validator deterministically re-renders from
+`creator-profile.json` and `content-schedule.json`; a stale or edited projection fails
+with an instruction to rebuild it. The projection itself is not a readiness
+dependency, so canonical schedule state remains authoritative.
+
+The deterministic readiness checks are enforced by `python3 -m influencer_os validate workspace <workspace-path>`: a workspace claiming `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, or `active` fails validation with the full blocker list until the stage requirements, medium-based blockers, and foundation-quality floors are met. The quality floors are intentionally mechanical: required sections, minimum word counts below the target budgets, no `TBD`, context byte caps, enough voice samples, selected-channel checks, ElevenLabs Voice Design prompt staging for audio/video creators, media permission checks, approved strategy records, existing strategy conversion-asset records, and approved production-slot conversion assets. Judgment-level review stays human; these checks are not pipeline Gates.
 
 ## Known Schema And CLI Gaps
 
@@ -626,7 +651,7 @@ Likely gaps:
 Closed gaps:
 
 - master intake import: `import-intake` copies setup sources into `sources/` and records `source_intakes` provenance; `validate workspace` resolves intake paths (Phase 1 slice 1, 2026-07-03).
-- reference-asset file existence, foundation completeness, and onboarding stage gates: `validate workspace` enforces the readiness blockers at `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, and `active` — selected channels, populated foundation files with required sections and lower-bound word/sample floors, no `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, lifecycle-appropriate asset/prompt file existence with workspace containment, media generation permission requirements, approved strategy records, approved conversion assets, and content-schedule presence.
+- reference-asset file existence, foundation completeness, and onboarding readiness milestones: `validate workspace` enforces the readiness blockers at `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, and `active` — selected channels, populated foundation files with required sections and lower-bound word/sample floors, no `TBD` placeholders, always-loaded context byte caps, at least one source intake, required asset kinds per declared content medium, lifecycle-appropriate asset/prompt file existence with workspace containment, media generation permission requirements, approved strategy records, conversion-asset provenance and production approval, and content-schedule integrity.
 
 ## Next Grilling Questions
 

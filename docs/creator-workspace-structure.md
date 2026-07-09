@@ -99,6 +99,7 @@ workspace-library/creators/<creator-slug>/
       <idea-promotion-id>.json
   boards/
     content-board.json
+    content-calendar.html
   system/
     project-warnings.jsonl
     creator-events.jsonl
@@ -173,6 +174,7 @@ research/
     <idea-promotion-id>.json             # permanent locked approval snapshots
 boards/
   content-board.json                     # rebuildable projection, not source of truth
+  content-calendar.html                  # interactive schedule-review projection
 system/
   project-warnings.jsonl
   creator-events.jsonl
@@ -242,7 +244,7 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `creator-profile.json` is the operational summary for automation. It should include stable IDs, audience, niche, positioning, persona summary, voice summary, visual identity summary, boundaries, goals, and pointers to richer files and references.
 
-`readiness-gates.json` is the operational onboarding state. It records profile, foundation, strategy, and production gate statuses; blockers; waivers; the foundation mode (`media_ready`, `prompt_ready`, or `null`); and media permission booleans for creator image, creator video, and spoken voice generation.
+`readiness-gates.json` is the legacy-named operational onboarding state. It records profile, foundation, strategy, and production readiness milestones; blockers; human waivers; the foundation mode (`media_ready`, `prompt_ready`, or `null`); and media permission booleans for creator image, creator video, and spoken voice generation. These milestones are deterministic checks, not the two human-owned pipeline Gates.
 
 `channels.json` is the selected-channel registry. It records the public platforms and roles the creator intends to use, expected formats, channel-derived mediums, handle/account readiness, and whether a concrete handle is required before publishing or export.
 
@@ -260,13 +262,19 @@ Tier 0 is the always-loaded layer plus file-first recall. It needs no SQL or sem
 
 `references/` stores reusable visual and audio continuity assets. `reference-library.json` gives each asset a stable ID, status, role, file path, source, creation date, and allowed usage. Planned or prompted assets may be tracked before the final media file exists so setup can explain generation blockers.
 
-`conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Strategy readiness requires referenced conversion assets to exist and be approved or published-ready.
+`conversion-assets/` stores lead magnets, offers, waitlists, newsletter assets, landing pages, and other conversion mechanisms referenced by strategy or production slots. Strategy readiness requires referenced asset records to exist; a production slot that promotes one requires it to be approved or published-ready.
 
-`content-schedule.json` is the Creator Content Schedule: cadence expectations, content goals, calendar slots, and drift checks. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
+`content-schedule.json` is the Creator Content Schedule: accepted-strategy reference, cadence expectations, content goals, calendar slots, and drift checks. Slots may reference strategy campaigns/variants; any slot promoting a conversion asset names the approved use and platform. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 
 `research/` stores Research Findings, dated Research Runs, Research Evidence, Metric Snapshots, research intelligence, Idea Queue entries, and Idea Promotions. Other modules read only the module's public records (`findings.md`, `idea-queue/`, `idea-promotions/`); run evidence and intelligence files are research-internal and resolve by ID through the local recall index.
 
 `boards/content-board.json` is the rebuildable Content Board projection for Kanban views. It is derived from canonical queue, promotion, and project records and is never the source of truth. Card IDs are derived deterministically from source record IDs so rebuilds preserve manual order.
+
+`boards/content-calendar.html` is the rebuildable human-review projection of
+`creator-profile.json` and `content-schedule.json`. Rebuild it after every
+calendar change with `python3 -m influencer_os rebuild-calendar <workspace>`;
+`python3 -m influencer_os validate calendar <workspace>` rejects a stale copy.
+The HTML is never canonical schedule state.
 
 `system/` holds creator-scoped operational projections: `project-warnings.jsonl` and `creator-events.jsonl`. Like the board, they are Kanban-readable projections and event streams, not canonical planning records.
 

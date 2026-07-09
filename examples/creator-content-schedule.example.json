@@ -2,6 +2,7 @@
   "creator_content_schedule_id": "content_schedule_luna_fit",
   "creator_profile_id": "creator_luna_fit",
   "creator_slug": "luna-fit",
+  "content_strategy_id": "content_strategy_luna_fit",
   "updated_on": "2026-07-03",
   "cadence_expectations": "Around three short-form posts per week, intentionally irregular; quality over cadence.",
   "content_goals": [
@@ -26,7 +27,21 @@
       "date_flexibility": "plus or minus two days",
       "content_goal_id": "goal_luna_desk_reset_education",
       "topic_cluster": "desk resets",
-      "status": "filled"
+      "status": "filled",
+      "working_title": "A two-minute desk reset between meetings",
+      "platform": "instagram",
+      "format_id": "format_short_form_video",
+      "theme": "Make movement easier to start during a busy workday.",
+      "funnel_role": "awareness to trust",
+      "cta": "Save this reset for your next break.",
+      "production_note": "Demonstrate the complete reset from a seated starting position.",
+      "week_label": "1",
+      "conversion_asset_ids": [
+        "conversion_asset_luna_reset_checklist"
+      ],
+      "conversion_use": "soft_cta",
+      "content_campaign_id": "campaign_luna_weekly_anchor",
+      "variant_id": "variant_luna_claim_teardown_instagram_reel"
     }
   ],
   "drift_checks": {

@@ -7,3 +7,6 @@ requires-python = ">=3.11"
 [tool.influencer-os]
 test-command = "python3 -m unittest discover -s tests"
 example-validation-command = "python3 -m influencer_os validate examples"
+
+[tool.setuptools.package-data]
+influencer_os = ["templates/*.html"]

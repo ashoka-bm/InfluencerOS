@@ -184,6 +184,12 @@ back through the approved import/provider boundary. Do not call ElevenLabs,
 generate audio, or mark the voice asset `generated` or `approved` from the
 prompt file alone.
 
+An approved or selected audio sample is always a second `voice` asset. Keep the
+Voice Design prompt asset at `asset_status: prompted` with its `.prompt.md`
+`path`. Give the sample its own asset id and audio `path`, set `prompt_path` to
+the Voice Design prompt, and use `user_provided`, `generated`, or `approved` as
+the sample's lifecycle status. Never replace prompt-file bytes with audio.
+
 ## Gap Questions
 
 Ask only for gaps that block the intended medium:

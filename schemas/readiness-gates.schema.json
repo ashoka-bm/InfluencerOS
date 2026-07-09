@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://influencer-os.local/schemas/readiness-gates.schema.json",
-  "title": "ReadinessGates",
+  "title": "ReadinessMilestones",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,7 +9,7 @@
     "creator_profile_id",
     "creator_slug",
     "updated_on",
-    "gates",
+    "milestones",
     "permissions"
   ],
   "properties": {
@@ -29,15 +29,15 @@
       "type": "string",
       "format": "date"
     },
-    "gates": {
+    "milestones": {
       "type": "object",
       "additionalProperties": false,
       "required": ["profile", "foundation", "strategy", "production"],
       "properties": {
-        "profile": { "$ref": "#/definitions/gate" },
-        "foundation": { "$ref": "#/definitions/foundation_gate" },
-        "strategy": { "$ref": "#/definitions/gate" },
-        "production": { "$ref": "#/definitions/gate" }
+        "profile": { "$ref": "#/definitions/milestone" },
+        "foundation": { "$ref": "#/definitions/foundation_milestone" },
+        "strategy": { "$ref": "#/definitions/milestone" },
+        "production": { "$ref": "#/definitions/milestone" }
       }
     },
     "permissions": {
@@ -56,63 +56,53 @@
     }
   },
   "definitions": {
-    "gate": {
+    "milestone": {
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "approved_on", "approved_by", "blockers", "waivers"],
       "properties": {
-        "status": {
-          "type": "string",
-          "enum": ["not_started", "in_progress", "blocked", "ready", "waived"]
-        },
-        "approved_on": {
-          "type": ["string", "null"],
-          "format": "date"
-        },
-        "approved_by": {
-          "type": ["string", "null"],
-          "enum": ["user", "system", null]
-        },
-        "blockers": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "waivers": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/waiver" }
-        }
+        "status": { "$ref": "#/definitions/milestone_status" },
+        "approved_on": { "$ref": "#/definitions/approval_date" },
+        "approved_by": { "$ref": "#/definitions/approval_actor" },
+        "blockers": { "$ref": "#/definitions/blocker_list" },
+        "waivers": { "$ref": "#/definitions/waiver_list" }
       }
     },
-    "foundation_gate": {
+    "foundation_milestone": {
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "approved_on", "approved_by", "mode", "blockers", "waivers"],
       "properties": {
-        "status": {
-          "type": "string",
-          "enum": ["not_started", "in_progress", "blocked", "ready", "waived"]
-        },
-        "approved_on": {
-          "type": ["string", "null"],
-          "format": "date"
-        },
-        "approved_by": {
-          "type": ["string", "null"],
-          "enum": ["user", "system", null]
-        },
+        "status": { "$ref": "#/definitions/milestone_status" },
+        "approved_on": { "$ref": "#/definitions/approval_date" },
+        "approved_by": { "$ref": "#/definitions/approval_actor" },
         "mode": {
           "type": ["string", "null"],
           "enum": ["media_ready", "prompt_ready", null]
         },
-        "blockers": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "waivers": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/waiver" }
-        }
+        "blockers": { "$ref": "#/definitions/blocker_list" },
+        "waivers": { "$ref": "#/definitions/waiver_list" }
       }
+    },
+    "milestone_status": {
+      "type": "string",
+      "enum": ["not_started", "in_progress", "blocked", "ready", "waived"]
+    },
+    "approval_date": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "approval_actor": {
+      "type": ["string", "null"],
+      "enum": ["user", null]
+    },
+    "blocker_list": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "waiver_list": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/waiver" }
     },
     "waiver": {
       "type": "object",

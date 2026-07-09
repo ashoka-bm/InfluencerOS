@@ -140,7 +140,8 @@ Write boundaries:
   `project.json`, and `evidence-brief.md`; production owns everything else
   under the project folder.
 - Production writes only under `projects/<project-id>/`.
-- `boards/`, `system/`, and the local indexes are derived projections:
+- `boards/` (including `content-board.json` and the interactive
+  `content-calendar.html`), `system/`, and the local indexes are derived projections:
   rebuildable from canonical records and never the source of truth.
 - Cross-module reads go through public interface records. Module-internal
   records resolve by ID through the local recall index instead of direct file

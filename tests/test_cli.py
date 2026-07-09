@@ -18,7 +18,7 @@ from tests.test_readiness_validation import (
     place_asset_files,
     populate_foundation,
     write_channels,
-    write_readiness_gates,
+    write_readiness_milestones,
 )
 
 
@@ -1490,7 +1490,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
             validate_project(project_dir)
 
 
-class ReadinessGateTests(unittest.TestCase):
+class ReadinessMilestoneTests(unittest.TestCase):
     def init_workspace_with_status(self, temp_dir, status):
         manifest = json.loads((ROOT / "examples" / "creator-workspace.example.json").read_text())
         manifest["status"] = status
@@ -1506,7 +1506,9 @@ class ReadinessGateTests(unittest.TestCase):
     def test_foundation_ready_image_permission_requires_approved_visual_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = self.init_workspace_with_status(temp_dir, "foundation_ready")
-            write_readiness_gates(workspace_dir, image_allowed=True)
+            write_readiness_milestones(
+                workspace_dir, foundation_mode="media_ready", image_allowed=True
+            )
 
             def demote_all_assets(library):
                 for asset in library["assets"]:
@@ -1527,14 +1529,17 @@ class ReadinessGateTests(unittest.TestCase):
     def test_foundation_ready_image_permission_passes_with_approved_visual_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = self.init_workspace_with_status(temp_dir, "foundation_ready")
-            write_readiness_gates(workspace_dir, image_allowed=True)
+            write_readiness_milestones(
+                workspace_dir, foundation_mode="media_ready", image_allowed=True
+            )
 
-            def approve_primary_character(library):
+            def approve_visual_assets(library):
                 for asset in library["assets"]:
-                    if asset["asset_id"] == "asset_luna_identity_plate":
+                    if asset["asset_type"] != "voice":
                         asset["asset_status"] = "approved"
 
-            rewrite_json(workspace_dir / "references" / "reference-library.json", approve_primary_character)
+            rewrite_json(workspace_dir / "references" / "reference-library.json", approve_visual_assets)
+            place_asset_files(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")

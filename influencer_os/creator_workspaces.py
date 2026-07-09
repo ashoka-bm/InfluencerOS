@@ -34,6 +34,7 @@ READINESS_ENFORCED_STATUSES = {
     "production_ready",
     "active",
 }
+DEPRECATED_WORKSPACE_STATUSES = {"content_ready", "generation_ready"}
 
 # Foundation files that must be populated beyond their scaffold at readiness.
 FOUNDATION_FILES = [
@@ -168,8 +169,8 @@ VOICE_SAMPLE_HEADING_PATTERN = re.compile(r"^#{2,3}\s+(?:\d+\.\s+|Sample:)", re.
 WORD_PATTERN = re.compile(r"\b[\w][\w'-]*\b")
 
 # Phrases that indicate stale setup prose is contradicting the canonical
-# readiness gates. Keep this list narrow: scaffolds may contain unchecked
-# work, but these phrases reopen gates that a machine-readable record has
+# readiness milestones. Keep this list narrow: scaffolds may contain unchecked
+# work, but these phrases reopen milestones that a machine-readable record has
 # already closed.
 FOUNDATION_READY_STALE_PATTERNS = (
     r"\bfoundation draft pending user approval\b",
@@ -358,7 +359,9 @@ def init_creator(manifest_path, workspace_root=DEFAULT_CREATOR_WORKSPACE_ROOT):
     for relative_path, data in JSON_SCAFFOLDS.items():
         _write_json_if_missing(workspace_dir / relative_path, data)
 
-    _write_json_if_missing(workspace_dir / "readiness-gates.json", _initial_readiness_gates(manifest))
+    _write_json_if_missing(
+        workspace_dir / "readiness-gates.json", _initial_readiness_milestones(manifest)
+    )
     _write_json_if_missing(workspace_dir / "channels.json", _initial_channels(manifest))
     _write_json_if_missing(workspace_dir / "content-strategy.json", _initial_content_strategy(manifest))
 
@@ -485,7 +488,7 @@ def _slug_id(slug):
     return slug.replace("-", "_")
 
 
-def _initial_gate(status="not_started", blocker="Awaiting setup."):
+def _initial_milestone(status="not_started", blocker="Awaiting setup."):
     return {
         "status": status,
         "approved_on": None,
@@ -495,24 +498,24 @@ def _initial_gate(status="not_started", blocker="Awaiting setup."):
     }
 
 
-def _initial_readiness_gates(manifest):
+def _initial_readiness_milestones(manifest):
     slug_id = _slug_id(manifest["creator_slug"])
     return {
         "readiness_gates_id": f"readiness_gates_{slug_id}",
         "creator_profile_id": manifest["creator_profile_id"],
         "creator_slug": manifest["creator_slug"],
         "updated_on": manifest["created_on"],
-        "gates": {
-            "profile": _initial_gate("in_progress", "Profile has not been approved."),
+        "milestones": {
+            "profile": _initial_milestone("in_progress", "Profile has not been approved."),
             "foundation": {
-                **_initial_gate(
+                **_initial_milestone(
                     "not_started",
                     "Reference requirements have not been approved or waived.",
                 ),
                 "mode": None,
             },
-            "strategy": _initial_gate("not_started", "Content strategy has not been created."),
-            "production": _initial_gate("not_started", "Content schedule has not been created."),
+            "strategy": _initial_milestone("not_started", "Content strategy has not been created."),
+            "production": _initial_milestone("not_started", "Content schedule has not been created."),
         },
         "permissions": {
             "creator_image_generation_allowed": False,
@@ -686,6 +689,7 @@ def validate_creator_workspace(workspace_path):
         raise FileNotFoundError(f"Missing creator workspace manifest: {manifest_path}")
 
     manifest = load_json(manifest_path)
+    deprecated_status = manifest.get("status") if manifest.get("status") in DEPRECATED_WORKSPACE_STATUSES else None
     validate_record("creator-workspace", manifest)
 
     expected_root_suffix = f"workspace-library/creators/{manifest['creator_slug']}/"
@@ -713,7 +717,7 @@ def validate_creator_workspace(workspace_path):
     _validate_workspace_record(workspace_dir, manifest, "reference_library", "reference-library")
 
     creator_profile = load_json(workspace_dir / manifest["canonical_files"]["creator_profile"])
-    readiness_gates = load_json(workspace_dir / manifest["canonical_files"]["readiness_gates"])
+    readiness_state = load_json(workspace_dir / manifest["canonical_files"]["readiness_gates"])
     channels = load_json(workspace_dir / manifest["canonical_files"]["channels"])
     content_strategy = load_json(workspace_dir / manifest["canonical_files"]["content_strategy"])
     reference_library = load_json(workspace_dir / manifest["canonical_files"]["reference_library"])
@@ -739,7 +743,7 @@ def validate_creator_workspace(workspace_path):
             f"{reference_library['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
         )
     for label, record in (
-        ("readiness gates", readiness_gates),
+        ("readiness milestones", readiness_state),
         ("channels", channels),
         ("content strategy", content_strategy),
     ):
@@ -768,12 +772,12 @@ def validate_creator_workspace(workspace_path):
 
     _resolve_reference_refs(creator_profile, reference_library)
     _validate_source_intakes(workspace_dir, manifest)
-    _validate_readiness_gates(
+    _validate_readiness_milestones(
         workspace_dir,
         manifest,
         creator_profile,
         reference_library,
-        readiness_gates,
+        readiness_state,
         channels,
         content_strategy,
     )
@@ -808,6 +812,12 @@ def validate_creator_workspace(workspace_path):
     )
 
     warnings = list(promotion_warnings)
+    if deprecated_status:
+        warnings.append(
+            f"warning: deprecated status {deprecated_status!r}; migrate this workspace "
+            "to a current Creator Readiness status before production"
+        )
+    warnings.extend(_onboarding_readiness_warnings(workspace_dir, manifest, readiness_state, channels))
     # Reflection trigger (ADR 0025): advisory only, by construction — the
     # report is computed after every failing check above, and a crossed
     # threshold appends a warning, never raises.
@@ -910,35 +920,41 @@ def _stage_at_least(status, threshold):
     return ONBOARDING_STATUS_ORDER[status] >= ONBOARDING_STATUS_ORDER[threshold]
 
 
-def _validate_readiness_gates(
+def _validate_readiness_milestones(
     workspace_dir,
     manifest,
     creator_profile,
     reference_library,
-    readiness_gates,
+    readiness_state,
     channels,
     content_strategy,
 ):
     status = manifest["status"]
+    blockers = _readiness_milestone_metadata_blockers(readiness_state)
+    blockers.extend(_permission_mode_invariant_blockers(readiness_state))
+    blockers.extend(_channel_state_blockers(channels))
     if status not in READINESS_ENFORCED_STATUSES:
+        if blockers:
+            raise ValidationError(
+                "Readiness milestone integrity blockers:\n- " + "\n- ".join(blockers)
+            )
         return
 
-    blockers = []
     active_assets = [
         asset for asset in reference_library["assets"] if asset["asset_status"] != "retired"
     ]
 
     if _stage_at_least(status, "profile_ready"):
-        blockers.extend(_profile_stage_blockers(creator_profile, readiness_gates, channels))
+        blockers.extend(_profile_stage_blockers(creator_profile, readiness_state, channels))
 
     if _stage_at_least(status, "foundation_ready"):
-        blockers.extend(_foundation_stage_blockers(workspace_dir, readiness_gates))
+        blockers.extend(_foundation_stage_blockers(workspace_dir, readiness_state))
         blockers.extend(_foundation_blockers(workspace_dir))
         blockers.extend(
             _setup_state_prose_blockers(
                 workspace_dir,
                 "foundation",
-                readiness_gates["gates"]["foundation"],
+                readiness_state["milestones"]["foundation"],
                 FOUNDATION_READY_STALE_PATTERNS,
             )
         )
@@ -974,26 +990,30 @@ def _validate_readiness_gates(
         )
 
         blockers.extend(
-            _media_permission_blockers(readiness_gates, creator_profile, active_assets)
+            _media_permission_blockers(readiness_state, creator_profile, active_assets)
         )
 
     if _stage_at_least(status, "strategy_ready"):
         blockers.extend(
             _strategy_stage_blockers(
-                workspace_dir, readiness_gates, content_strategy, creator_profile
+                workspace_dir, readiness_state, content_strategy, creator_profile
             )
         )
         blockers.extend(
             _setup_state_prose_blockers(
                 workspace_dir,
                 "strategy",
-                readiness_gates["gates"]["strategy"],
+                readiness_state["milestones"]["strategy"],
                 STRATEGY_READY_STALE_PATTERNS,
             )
         )
 
     if _stage_at_least(status, "production_ready"):
-        blockers.extend(_production_stage_blockers(workspace_dir, readiness_gates))
+        blockers.extend(
+            _production_stage_blockers(
+                workspace_dir, readiness_state, creator_profile, content_strategy, channels
+            )
+        )
 
     if blockers:
         raise ValidationError(
@@ -1001,11 +1021,11 @@ def _validate_readiness_gates(
         )
 
 
-def _profile_stage_blockers(creator_profile, readiness_gates, channels):
+def _profile_stage_blockers(creator_profile, readiness_state, channels):
     blockers = []
-    profile_gate = readiness_gates["gates"]["profile"]
-    if profile_gate["status"] not in {"ready", "waived"}:
-        blockers.append("profile gate is not ready or waived in readiness-gates.json")
+    profile_milestone = readiness_state["milestones"]["profile"]
+    if profile_milestone["status"] not in {"ready", "waived"}:
+        blockers.append("profile readiness milestone is not ready or waived in readiness-gates.json")
 
     selected = set(creator_profile["content_strategy"]["primary_surfaces"])
     registered = {channel["platform"] for channel in channels["channels"]}
@@ -1017,8 +1037,47 @@ def _profile_stage_blockers(creator_profile, readiness_gates, channels):
     return blockers
 
 
-def _setup_state_prose_blockers(workspace_dir, gate_name, gate, stale_patterns):
-    if gate["status"] not in {"ready", "waived"}:
+def _channel_state_blockers(channels):
+    blockers = []
+    for channel in channels["channels"]:
+        if (
+            channel["account_status"] not in {"created", "connected"}
+            and not channel["publishing_export_blocked"]
+        ):
+            blockers.append(
+                f"channel {channel['channel_id']} must set publishing_export_blocked "
+                f"while account_status is {channel['account_status']!r}"
+            )
+    return blockers
+
+
+def _readiness_milestone_metadata_blockers(readiness_state):
+    blockers = []
+    for name, milestone in readiness_state["milestones"].items():
+        if milestone["status"] == "ready" and (
+            milestone["approved_by"] != "user" or milestone["approved_on"] is None
+        ):
+            blockers.append(
+                f"{name} readiness milestone marked ready requires user approval metadata"
+            )
+        if milestone["status"] == "waived" and not milestone["waivers"]:
+            blockers.append(
+                f"{name} readiness milestone marked waived requires a human-approved waiver"
+            )
+    return blockers
+
+
+def _permission_mode_invariant_blockers(readiness_state):
+    foundation_mode = readiness_state["milestones"]["foundation"]["mode"]
+    if foundation_mode == "prompt_ready" and any(readiness_state["permissions"].values()):
+        return [
+            "prompt_ready foundation requires creator image, video, and spoken voice permissions to remain false"
+        ]
+    return []
+
+
+def _setup_state_prose_blockers(workspace_dir, milestone_name, milestone, stale_patterns):
+    if milestone["status"] not in {"ready", "waived"}:
         return []
 
     blockers = []
@@ -1034,21 +1093,21 @@ def _setup_state_prose_blockers(workspace_dir, gate_name, gate, stale_patterns):
         )
         if found:
             blockers.append(
-                f"{relative_path} contains stale {gate_name} blocker language after "
-                f"{gate_name} gate is {gate['status']}: " + ", ".join(sorted(found))
+                f"{relative_path} contains stale {milestone_name} blocker language after "
+                f"{milestone_name} milestone is {milestone['status']}: " + ", ".join(sorted(found))
             )
     return blockers
 
 
-def _foundation_stage_blockers(workspace_dir, readiness_gates):
+def _foundation_stage_blockers(workspace_dir, readiness_state):
     blockers = []
-    foundation_gate = readiness_gates["gates"]["foundation"]
-    if foundation_gate["status"] not in {"ready", "waived"}:
-        blockers.append("foundation gate is not ready or waived in readiness-gates.json")
-    if foundation_gate["mode"] not in {"media_ready", "prompt_ready"}:
-        blockers.append("foundation gate mode must be media_ready or prompt_ready")
-    if foundation_gate["mode"] == "media_ready" and foundation_gate["status"] != "ready":
-        blockers.append("media_ready foundation gate must be ready, not waived")
+    foundation_milestone = readiness_state["milestones"]["foundation"]
+    if foundation_milestone["status"] not in {"ready", "waived"}:
+        blockers.append("foundation readiness milestone is not ready or waived in readiness-gates.json")
+    if foundation_milestone["mode"] not in {"media_ready", "prompt_ready"}:
+        blockers.append("foundation readiness mode must be media_ready or prompt_ready")
+    if foundation_milestone["mode"] == "media_ready" and foundation_milestone["status"] != "ready":
+        blockers.append("media_ready foundation milestone must be ready, not waived")
     return blockers
 
 
@@ -1087,9 +1146,9 @@ def _is_elevenlabs_voice_design_prompt_asset(asset):
     )
 
 
-def _media_permission_blockers(readiness_gates, creator_profile, active_assets):
+def _media_permission_blockers(readiness_state, creator_profile, active_assets):
     blockers = []
-    permissions = readiness_gates["permissions"]
+    permissions = readiness_state["permissions"]
     refs = creator_profile["reference_refs"]
     assets_by_id = {asset["asset_id"]: asset for asset in active_assets}
 
@@ -1129,11 +1188,16 @@ def _media_permission_blockers(readiness_gates, creator_profile, active_assets):
             "an ElevenLabs Voice Design prompt package is not generated audio"
         )
 
-    if readiness_gates["gates"]["foundation"]["mode"] == "media_ready":
+    foundation_mode = readiness_state["milestones"]["foundation"]["mode"]
+    if foundation_mode == "media_ready":
         visual_required = set()
         for medium in creator_profile["content_strategy"]["content_mediums"]:
             if medium in VISUAL_MEDIUMS:
-                visual_required.update(MEDIUM_REQUIRED_ASSET_KINDS[medium])
+                visual_required.update(
+                    kind
+                    for kind in MEDIUM_REQUIRED_ASSET_KINDS[medium]
+                    if kind != "voice"
+                )
         for kind in sorted(visual_required):
             if not _approved_assets_by_type(active_assets, kind):
                 blockers.append(
@@ -1142,11 +1206,11 @@ def _media_permission_blockers(readiness_gates, creator_profile, active_assets):
     return blockers
 
 
-def _strategy_stage_blockers(workspace_dir, readiness_gates, content_strategy, creator_profile):
+def _strategy_stage_blockers(workspace_dir, readiness_state, content_strategy, creator_profile):
     blockers = []
-    strategy_gate = readiness_gates["gates"]["strategy"]
-    if strategy_gate["status"] not in {"ready", "waived"}:
-        blockers.append("strategy gate is not ready or waived in readiness-gates.json")
+    strategy_milestone = readiness_state["milestones"]["strategy"]
+    if strategy_milestone["status"] not in {"ready", "waived"}:
+        blockers.append("strategy readiness milestone is not ready or waived in readiness-gates.json")
     if content_strategy["strategy_status"] != "approved":
         blockers.append("content-strategy.json must have strategy_status 'approved'")
 
@@ -1157,13 +1221,8 @@ def _strategy_stage_blockers(workspace_dir, readiness_gates, content_strategy, c
     )
     blockers.extend(conversion_asset_blockers)
     for asset_id in sorted(_strategy_conversion_asset_ids(content_strategy)):
-        asset = conversion_assets.get(asset_id)
-        if asset is None:
+        if asset_id not in conversion_assets:
             blockers.append(f"content-strategy.json references missing conversion asset {asset_id}")
-        elif asset["status"] not in CONVERSION_ASSET_READY_STATUSES:
-            blockers.append(
-                f"conversion asset {asset_id} is {asset['status']!r}; expected approved or published_or_ready"
-            )
     return blockers
 
 
@@ -1196,11 +1255,13 @@ def _strategy_variant_ref_blockers(content_strategy):
     return blockers
 
 
-def _production_stage_blockers(workspace_dir, readiness_gates):
+def _production_stage_blockers(
+    workspace_dir, readiness_state, creator_profile, content_strategy, channels
+):
     blockers = []
-    production_gate = readiness_gates["gates"]["production"]
-    if production_gate["status"] not in {"ready", "waived"}:
-        blockers.append("production gate is not ready or waived in readiness-gates.json")
+    production_milestone = readiness_state["milestones"]["production"]
+    if production_milestone["status"] not in {"ready", "waived"}:
+        blockers.append("production readiness milestone is not ready or waived in readiness-gates.json")
     schedule_path = workspace_dir / "content-schedule.json"
     if not schedule_path.exists():
         blockers.append("content-schedule.json is required for production_ready")
@@ -1209,7 +1270,177 @@ def _production_stage_blockers(workspace_dir, readiness_gates):
             validate_file("creator-content-schedule", schedule_path)
         except ValidationError as exc:
             blockers.append(f"Invalid content-schedule.json: {exc}")
+        else:
+            schedule = load_json(schedule_path)
+            if schedule["creator_profile_id"] != creator_profile["creator_profile_id"]:
+                blockers.append("content-schedule.json creator_profile_id does not match workspace creator")
+            if schedule["creator_slug"] != creator_profile["creator_slug"]:
+                blockers.append("content-schedule.json creator_slug does not match workspace creator")
+            if schedule["content_strategy_id"] != content_strategy["content_strategy_id"]:
+                blockers.append(
+                    "content-schedule.json content_strategy_id does not match the accepted strategy"
+                )
+            goals = {goal["goal_id"] for goal in schedule["content_goals"]}
+            campaigns = {
+                campaign["campaign_id"]: campaign
+                for campaign in content_strategy["content_campaigns"]
+            }
+            variants = {
+                variant["variant_id"]: variant
+                for family in content_strategy["post_families"]
+                for variant in family["variants"]
+            }
+            if not schedule["calendar_slots"]:
+                blockers.append("content-schedule.json requires at least one production calendar slot")
+            for slot in schedule["calendar_slots"]:
+                if slot["content_goal_id"] not in goals:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} references missing content goal "
+                        f"{slot['content_goal_id']}"
+                    )
+                campaign_id = slot.get("content_campaign_id")
+                if campaign_id and campaign_id not in campaigns:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} references missing content campaign {campaign_id}"
+                    )
+                variant_id = slot.get("variant_id")
+                if variant_id and variant_id not in variants:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} references missing strategy variant {variant_id}"
+                    )
+                variant = variants.get(variant_id)
+                if variant is not None:
+                    platform = slot.get("platform")
+                    if platform and variant["platform"] != platform:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} variant platform "
+                            f"{variant['platform']!r} does not match slot platform {platform!r}"
+                        )
+                    format_id = slot.get("format_id")
+                    if format_id and variant["format_id"] != format_id:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} variant format "
+                            f"{variant['format_id']!r} does not match slot format {format_id!r}"
+                        )
+                campaign = campaigns.get(campaign_id)
+                if campaign is not None:
+                    campaign_variants = {
+                        campaign["anchor_variant"], *campaign["derivative_variants"]
+                    }
+                    if not variant_id:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} must name a strategy variant "
+                            f"when it references campaign {campaign_id}"
+                        )
+                    elif variant_id not in campaign_variants:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} variant {variant_id} does not "
+                            f"belong to campaign {campaign_id}"
+                        )
+            channels_by_platform = {
+                channel["platform"]: channel for channel in channels["channels"]
+            }
+            for slot in schedule["calendar_slots"]:
+                platform = slot.get("platform")
+                if not platform:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} must name a platform for production readiness"
+                    )
+                    continue
+                channel = channels_by_platform.get(platform)
+                if channel is None:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} platform {platform} is missing from channels.json"
+                    )
+                elif not channel["production_drafting_allowed"] or not channel["production_approved"]:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} platform {platform} is not approved for production drafting"
+                    )
+                elif channel["account_status"] not in {"created", "connected", "skipped"}:
+                    blockers.append(
+                        f"calendar slot {slot['slot_id']} platform {platform} requires an account or an explicit skip"
+                    )
+            conversion_assets, asset_blockers = _load_conversion_assets(
+                workspace_dir, creator_profile
+            )
+            blockers.extend(asset_blockers)
+            for slot in schedule["calendar_slots"]:
+                campaign_id = slot.get("content_campaign_id")
+                campaign = campaigns.get(campaign_id)
+                for asset_id in slot.get("conversion_asset_ids", []):
+                    if (
+                        campaign is not None
+                        and asset_id not in campaign["conversion_asset_ids"]
+                    ):
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} conversion asset {asset_id} "
+                            f"does not belong to campaign {campaign_id}"
+                        )
+                    asset = conversion_assets.get(asset_id)
+                    if asset is None:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} references missing conversion asset {asset_id}"
+                        )
+                    elif asset["status"] not in CONVERSION_ASSET_READY_STATUSES:
+                        blockers.append(
+                            f"calendar slot {slot['slot_id']} promotes conversion asset {asset_id} "
+                            f"with status {asset['status']!r}; expected approved or published_or_ready"
+                        )
+                    else:
+                        conversion_use = slot.get("conversion_use")
+                        platform = slot.get("platform")
+                        if not conversion_use:
+                            blockers.append(
+                                f"calendar slot {slot['slot_id']} must name conversion_use for promoted assets"
+                            )
+                        elif conversion_use not in asset["approved_uses"]:
+                            blockers.append(
+                                f"conversion asset {asset_id} is not approved for use {conversion_use!r}"
+                            )
+                        if not platform:
+                            blockers.append(
+                                f"calendar slot {slot['slot_id']} must name a platform for promoted assets"
+                            )
+                        elif platform not in asset["platforms"]:
+                            blockers.append(
+                                f"conversion asset {asset_id} is not approved for platform {platform}"
+                            )
     return blockers
+
+
+def _onboarding_readiness_warnings(workspace_dir, manifest, readiness_state, channels):
+    warnings = []
+    status = manifest.get("status")
+    if status in READINESS_ENFORCED_STATUSES:
+        if readiness_state["milestones"]["foundation"]["mode"] == "prompt_ready":
+            warnings.append(
+                "warning: foundation is prompt_ready; creator image, video, and spoken "
+                "media generation remain limited by explicit permissions and approved references"
+            )
+        for channel in channels["channels"]:
+            if (
+                channel["account_status"] == "skipped"
+                and not channel.get("intended_handle")
+                and not channel.get("public_url")
+            ):
+                warnings.append(
+                    f"warning: channel {channel['platform']} explicitly skipped real account/handle setup; "
+                    "publishing/export remains blocked"
+                )
+    if status in {"profile_ready", "foundation_ready", "strategy_ready"}:
+        schedule_path = Path(workspace_dir) / "content-schedule.json"
+        has_slots = False
+        if schedule_path.exists():
+            try:
+                schedule = load_json(schedule_path)
+                has_slots = bool(schedule.get("calendar_slots"))
+            except (OSError, ValueError):
+                pass
+        if not has_slots:
+            warnings.append(
+                "warning: no production calendar slots exist before production_ready"
+            )
+    return warnings
 
 
 def _strategy_conversion_asset_ids(content_strategy):

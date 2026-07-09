@@ -1,4 +1,4 @@
-# ADR 0028: Onboarding Stage Gates And Strategy Calendar
+# ADR 0028: Onboarding Readiness Milestones And Strategy Calendar
 
 ## Status
 
@@ -138,10 +138,13 @@ Strict downstream permissions:
   shot plans, prompts, or strategy artifacts, but must not produce the missing
   media.
 
-### Decision 7: Readiness Gates Use A Separate Canonical Record
+### Decision 7: Readiness Milestones Use A Separate Canonical Record
 
-Readiness gate state should live in a separate canonical record, tentatively
+Readiness milestone state should live in a separate canonical record, historically
 `readiness-gates.json`, referenced from `creator-workspace.json`.
+
+These are deterministic onboarding checks, not the human-owned pipeline Gates
+defined in `CONTEXT.md`. The legacy filename remains stable for v1 compatibility.
 
 This record is operational state, not identity. It should be the source of truth
 for onboarding UI pages and validator gating:
@@ -154,13 +157,13 @@ for onboarding UI pages and validator gating:
 - waivers;
 - permissions such as visual generation allowed and spoken generation allowed.
 
-`creator-profile.json` should not carry this mutable operational gate state. It
+`creator-profile.json` should not carry this mutable operational readiness state. It
 may expose only the accepted channels/surfaces that determine downstream
 requirements.
 
-### Decision 8: Gate State Vocabulary And Media Permissions
+### Decision 8: Milestone State Vocabulary And Media Permissions
 
-Each onboarding gate in `readiness-gates.json` should use the same status
+Each onboarding milestone in `readiness-gates.json` should use the same status
 vocabulary:
 
 - `not_started`
@@ -169,20 +172,20 @@ vocabulary:
 - `ready`
 - `waived`
 
-Each gate may record:
+Each milestone may record:
 
 - `approved_on`;
 - `approved_by`;
 - `blockers`;
 - `waivers`.
 
-The foundation gate additionally records mode:
+The foundation milestone additionally records mode:
 
 - `media_ready`
 - `prompt_ready`
 - `null`
 
-Media permissions are explicit booleans, separate from gate readiness:
+Media permissions are explicit booleans, separate from milestone readiness:
 
 - `creator_image_generation_allowed`;
 - `creator_video_generation_allowed`;
@@ -226,8 +229,10 @@ Stage 3 strategy and Stage 4 calendarization should be separate records:
 - `content-strategy.json`: platform roles, monthly content mix, post families,
   related-post chains, conversion paths, conversion assets, and game-theory
   cadence principles.
-- `content-schedule.json`: production/calendar slots, actual target dates or
-  flexible windows, slot statuses, and the projects/posts that fill them.
+- `content-schedule.json`: accepted strategy reference, production/calendar
+  slots, actual target dates or flexible windows, slot statuses, optional
+  campaign/variant refs, conversion-asset use/platform, and the projects/posts
+  that fill them.
 
 The existing `content-schedule.json` concept remains the operational calendar
 record. Strategy should not be forced into fixed dates.
@@ -266,7 +271,7 @@ one by one using validation-based migration:
 
 ### Decision 13: Old Test Workspace Deletion Is Separate Cleanup
 
-Do not delete old creator workspaces as part of the stage-gate implementation.
+Do not delete old creator workspaces as part of the readiness-milestone implementation.
 Deletion is a separate explicit cleanup pass or issue. The implementation should
 remain focused on forward behavior and non-destructive schema/validator changes.
 
@@ -277,7 +282,7 @@ extension points so they can support a UI later without repeated migrations.
 
 V1 records:
 
-- `readiness-gates.json`: gate statuses, blockers, waivers, foundation mode,
+- `readiness-gates.json`: readiness milestone statuses, blockers, waivers, foundation mode,
   and media permission booleans.
 - `channels.json`: intended channels, handles/URLs, account status,
   production-drafting permission, publishing/export blocking state, and skip
@@ -346,7 +351,7 @@ Blocking validation failures:
   asset.
 - spoken voice generation allowed without an approved/imported voice reference.
 - `strategy_ready` without `content-strategy.json`.
-- strategy references missing conversion assets.
+- strategy references missing conversion asset records, regardless of their draft lifecycle status.
 - `production_ready` without `content-schedule.json`.
 - calendar slots or planned posts promote conversion assets that are not
   approved or ready for that use.

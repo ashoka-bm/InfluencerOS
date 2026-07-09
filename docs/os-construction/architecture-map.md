@@ -116,7 +116,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | --- | --- | --- |
 | `cli.py` | Command surface; routes to helpers (`register-output-package`, `list-connectors`, `research-fetch` included), holds no product rules. | [BUILT] |
 | `validation.py` | Fail-closed schema subset (`$ref`/`oneOf`/`anyOf`/`allOf`); disk-derived example coverage. | [BUILT — WS13] |
-| `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness gates. | [BUILT — WS11; intake commands Phase 1 slice 1] |
+| `creator_workspaces.py` | `init-creator`, `import-intake`/`set-intake-status` (source intake provenance), `sync-creator-runtime`, `update-creators` (backup-protected), readiness milestones. | [BUILT — WS11; intake commands Phase 1 slice 1] |
 | `projects.py` | Project scaffolding + validation + promotion-anchored provenance resolution. | [BUILT — WS12 + Phase 1 slice 3] |
 | `research.py` | Search-plan, JSONL, source-yield, and frontmatter validation; `validate research`/`validate queue` (incl. run-scoped consistency), promotion gate. | [BUILT — Phase 1 slice 3; run-scoped checks slice 4 batch A; intelligence hardening 2026-07-04] |
 | `recall_index.py` | Rebuildable SQLite recall-index projection (ADR 0010); `rebuild-index` per-creator rebuilds covering research, project, board, and Phase 2 learning records (schema-validated and manifest-anchored via the shared `projects.py` seam that `validate workspace` also runs at rest; `analytics/raw/` never scanned); never a validation dependency. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
@@ -134,7 +134,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Path | Role | Status |
 | --- | --- | --- |
 | `test_schema_validation.py` | All examples validate; coverage derived from disk; fail-closed subset tests. | [BUILT — WS13] |
-| `test_cli.py` | CLI behavior incl. provenance resolution and readiness gates. | [BUILT] |
+| `test_cli.py` | CLI behavior incl. provenance resolution and readiness milestones. | [BUILT] |
 | `test_recall_index.py` | Index resolution per record kind (incl. Phase 2 learning records), idempotent per-creator rebuilds, fail-closed ambiguity, raw-analytics exclusion, delete-and-rebuild equivalence, default ADR 0010 path. | [BUILT — Phase 1 slice 4 batch B; Phase 2 slice 5 extension] |
 | `test_boards.py` | Board derivation (cards, badges, parent/child), metadata preservation, agreement validation, CLI. | [BUILT — Phase 1 slice 4 batch C] |
 | `test_prune.py` | Retention rules (dry-run, apply, protection, idempotence) + pruned-ids reconciliation. | [BUILT — Phase 1 slice 4 batch D] |
@@ -147,7 +147,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | project-output-layout check | Project scaffolding deterministic; paths pinned in `project.schema.json`. | [BUILT — WS12] |
 | Tier-0 memory policy check | Root `context/MEMORY.md` byte cap enforced. | [BUILT — `test_drift_checks.py`] |
 | source-intake provenance check | `source_intakes` paths are schema-pinned under `sources/(intakes\|imports\|notes)/`; `validate workspace` additionally fails on missing files and symlink escapes after `resolve()`; intake import and forward-only status transitions covered. | [BUILT — `test_intake_import.py`, Phase 1 slice 1] |
-| creator readiness check | Status-keyed onboarding and medium-based blockers collected into one error: selected channels at `profile_ready`; foundation population + required Markdown sections + lower-bound word/sample floors + `TBD` scan + context byte caps; intake provenance; required asset kinds per content medium; staged ElevenLabs Voice Design prompt package for audio/video creators; lifecycle asset/prompt existence with containment; typed + medium-required primary `reference_refs` (kind-checked at every status; non-retired and prompted-or-later at `foundation_ready`); media permission gates for creator image/video/spoken voice; approved strategy and conversion assets at `strategy_ready`; and `content-schedule.json` presence at `production_ready`. Asset paths remain schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, ADR 0028] |
+| creator readiness check | Status-keyed onboarding and medium-based blockers collected into one error: selected channels at `profile_ready`; foundation population + required Markdown sections + lower-bound word/sample floors + `TBD` scan + context byte caps; intake provenance; required asset kinds per content medium; staged ElevenLabs Voice Design prompt package for audio/video creators; lifecycle asset/prompt existence with containment; typed + medium-required primary `reference_refs`; explicit creator-media permissions; approved strategy plus existing conversion-asset records at `strategy_ready`; and creator-scoped, goal-consistent, nonempty `content-schedule.json` slots with approved promoted conversion assets at `production_ready`. Asset paths remain schema-pinned under `references/`. | [BUILT — `test_readiness_validation.py`, ADR 0028] |
 | connector layer | Env detection + kill switch + call cap, availability gating, canonical-record mapping, per-connector parsing (mock-hooked; no live calls), and `research-fetch-result` schema validation. | [BUILT — `test_connectors.py`, ADR 0022] |
 
 ### Deferred / gated subsystems
@@ -209,7 +209,7 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 7  Runtime context   -> Skill(create-runtime-context)
   Phase 8  Reference planning -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
-  Phases 1,9-13  intake, prompt staging, readiness, acceptance gate, generation gate (inline)
+  Phases 1,9-13  intake, prompt staging, readiness, milestone acceptance, generation gate (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)
@@ -254,7 +254,8 @@ Freshly-initialized workspaces contain `.claude/skills/` because `init-creator` 
 
 ```text
 influencer_os/cli.py
-  -> creator_workspaces.py   (workspace scaffold/sync/update/validate + readiness gates)
+  -> creator_workspaces.py   (workspace scaffold/sync/update/validate + readiness milestones)
+  -> calendars.py            (content-schedule -> interactive calendar projection)
   -> projects.py             (project scaffold/validate + provenance resolution)
   -> memory.py               (bounded memory-write + log-learning writers)
   -> runs.py                 (dry-run init)
@@ -290,7 +291,7 @@ Each creation-flow boundary must have: input record(s) → output record + schem
 
 | Boundary | Input(s) | Output + schema | Acceptance criterion | Validation | Gate |
 | --- | --- | --- | --- | --- | --- |
-| Creator setup | intake | Creator Workspace + Profile + onboarding records (`creator-workspace`, `creator-profile`, `readiness-gates`, `channels`, `content-strategy`, `conversion-asset`) | readiness status matches selected channels, foundation mode, ElevenLabs voice prompt staging for audio/video, media permissions, approved strategy, conversion assets, and production calendar | `validate workspace`: full onboarding readiness validator at `profile_ready`/`foundation_ready`/`strategy_ready`/`production_ready`/`active` (selected channels, foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence, ElevenLabs Voice Design prompt asset, media permission assets, approved strategy/conversion assets, schedule presence) [BUILT — ADR 0028] | status transitions stay human |
+| Creator setup | intake | Creator Workspace + Profile + onboarding records (`creator-workspace`, `creator-profile`, `readiness-gates`, `channels`, `content-strategy`, `conversion-asset`) | readiness status matches selected channels, foundation mode, ElevenLabs voice prompt staging for audio/video, media permissions, approved strategy, conversion-asset provenance, and production calendar | `validate workspace`: full onboarding readiness validator at `profile_ready`/`foundation_ready`/`strategy_ready`/`production_ready`/`active` (selected channels, foundation population, required sections, lower-bound word/sample floors, context byte caps, intake provenance, required asset kinds per medium, lifecycle file existence, ElevenLabs Voice Design prompt asset, media permission assets, approved strategy, creator-scoped schedule integrity, approved slot conversion assets) [BUILT — ADR 0028] | readiness transitions stay human; not a pipeline Gate |
 | Video understanding | public URLs or local real videos | `video-understanding-pack` | dated, source-linked; `/watch` or local equivalent only feeds distilled observations | `validate record video-understanding-pack` [BUILT — WS12] | exact approval for Whisper/API transcription fallback, batch processing, or first-run dependency installs |
 | Research run | profile + schedule (+ VUP) | `research-run`, `research-evidence`, `metric-snapshot` | dated, sourced, platform-scoped, evidence-linked | `validate research` incl. JSONL line validation [BUILT — Phase 1 slice 3] | none |
 | Research acquisition (connector) | search plan + query | `research-fetch-result` → mapped `research-evidence` + `metric-snapshot` | provider output maps to canonical records; per-run call cap honored; no key → unavailable + built-in fallback | `research-fetch` validates against `research-fetch-result.schema.json` before emitting [BUILT — ADR 0022] | standing approval by key presence (api_backed/scraping_api only); kill switch + call cap bound it |

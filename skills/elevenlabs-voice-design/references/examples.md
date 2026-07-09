@@ -35,9 +35,9 @@ Source refs:
 
 ## Voice Design Prompt
 
-Native English, African American and Ghanaian American woman from Brooklyn with educated African American cadence, subtle New York warmth, and light transatlantic professional intonation. Female, 34-38. Excellent quality.
+Native English, US/UK transatlantic delivery. Female, 34-38. Excellent quality.
 Persona: disciplined mentor. Emotion: warm, composed, authoritative.
-A smooth, grounded, mid-low female voice with natural texture, calm confidence, and a caring teacher's presence. Her delivery carries African American family-register warmth while staying precise, professional, and measured; never salesy, bubbly, theatrical, or generically corporate.
+A smooth, grounded, mid-low voice with natural texture, calm confidence, and a caring teacher's presence. Use educated African American cadence, subtle Brooklyn warmth, light British professional clarity, and natural Ghanaian name pronunciation without caricature; never salesy, bubbly, theatrical, or generically corporate.
 
 ## Preview Text
 
@@ -48,13 +48,20 @@ But writing the number down gave both families power.
 [dry laugh] The seven-dollar latte is not the enemy. The seven-hundred-dollar housing decision is the lever.
 My grandmother called it keeping your business straight.
 Same lesson. Different language.
+[warmer]
+When I slow down after a number, it is because the number deserves context.
+A budget is not a punishment, and a receipt is not a confession. We read the
+paper, name the tradeoff, and choose what the next dollar, pound, or cedi is
+allowed to protect. That is how a financial habit becomes a family practice.
 [firm, calm]
 Discipline can be inherited, practiced, and taught.
 That is the work.
 
 ## Guidance Scale
 
-40% — keep cadence and persona specific while preserving natural audio quality.
+Recommended starting value: 40%.
+Iteration range: 35%-45%.
+Keep cadence and persona specific while preserving natural audio quality.
 
 ## Iteration Notes
 

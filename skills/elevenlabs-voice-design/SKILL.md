@@ -1,6 +1,6 @@
 ---
 name: elevenlabs-voice-design
-description: Use to stage provider-neutral ElevenLabs Voice Design prompt files for creator voice continuity. Produces a references/voice prompt package with identity fields, ethnicity/cultural background, Voice Design prompt, preview text, guidance scale, and human-in-the-loop instructions; never calls ElevenLabs or generates audio.
+description: Use when staging an ElevenLabs Voice Design prompt package for creator voice continuity; never generate, upload, or approve audio.
 ---
 
 # ElevenLabs Voice Design
@@ -69,16 +69,23 @@ context when the source materials do not support them.
 3. **Write the Voice Design prompt.** Use this structure:
 
    ```text
-   Native <Language + dialect>. <Gender>, <Age range>. <Quality level>.
+   Native <Language>, <dialect or regional delivery>. <Gender>, <Age range>. <Quality level>.
    Persona: <2-5 words>. Emotion: <2-3 adjectives>.
    <1-2 sentences about timbre, pacing, delivery, accent/cadence, cultural register, and avoid-list>
    ```
+
+   Keep language and dialect distinct from cadence. Use an ElevenLabs quality
+   descriptor exactly: `Excellent quality`, `Studio quality`, or `Broadcast
+   quality`. Do not substitute vague wording such as `high-quality natural
+   voice`.
 
    Completion: the prompt is paste-ready, concise, and does not include
    unrelated biography.
 
 4. **Write preview text.** Match the preview to the creator's actual voice
-   samples and content modes. Use a cost-aware length:
+   samples and content modes. Default identity-, dialect-, or cadence-heavy
+   voices to `medium`; use `short` for broad/neutral voices or when the operator
+   explicitly prioritizes generation cost:
    - `short`: 50-90 words
    - `medium`: 100-160 words
    - `long`: 170-260 words
@@ -95,9 +102,12 @@ context when the source materials do not support them.
    Completion: the preview demonstrates cadence, pacing, emotion, and cultural
    register without becoming theatrical.
 
-5. **Recommend guidance and iteration notes.** Recommend:
-   - `25%-35%` when naturalness matters more than exact identity traits.
-   - `35%-45%` when dialect, cadence, or persona accuracy matters.
+5. **Recommend guidance and iteration notes.** Emit one starting value, plus an
+   optional iteration range:
+   - Start at `30%` (`25%-35%` iteration range) when naturalness matters more
+     than exact identity traits.
+   - Start at `40%` (`35%-45%` iteration range) when dialect, cadence, or persona
+     accuracy matters.
    - Higher only when the user explicitly prioritizes strict adherence over
      audio quality.
 
@@ -151,14 +161,17 @@ Source refs:
 
 ## Guidance Scale
 
-<percentage + rationale>
+Recommended starting value: <integer>%.
+Iteration range: <low>%-<high>%.
+<one-sentence rationale>
 
 ## Human-In-The-Loop Instructions
 
 1. Copy the Voice Design Prompt and Preview Text into ElevenLabs.
 2. Generate voice options manually.
 3. Select a candidate only if it matches the identity fields and avoid-list.
-4. Bring the exported voice sample or voice id back into InfluencerOS through the approved import/provider-boundary path.
+4. Register a separate voice-sample asset with an audio path and `prompt_path` pointing back to this prompt asset.
+5. Bring the exported voice sample into that separate asset through the approved import/provider-boundary path.
 
 ## Iteration Notes
 
@@ -187,6 +200,35 @@ update a `references/reference-library.json` asset like:
   "semantic_index_allowed": true
 }
 ```
+
+The prompt asset remains `prompted`. Never import generated or approved audio
+into its `.prompt.md` path.
+
+## Approved Voice Sample Entry
+
+Before importing a selected preview, add a separate Reference Library asset:
+
+```json
+{
+  "asset_id": "asset_<slug>_approved_voice_preview",
+  "asset_type": "voice",
+  "asset_status": "planned",
+  "role": "Approved voice preview for synthetic spoken voice continuity",
+  "path": "references/voice/<slug>-approved-voice-preview.mp3",
+  "prompt_path": "references/voice/<slug>-elevenlabs-voice-design.prompt.md",
+  "source": {
+    "source_type": "derived",
+    "source_ref": "references/voice/<slug>-elevenlabs-voice-design.prompt.md"
+  },
+  "created_on": "YYYY-MM-DD",
+  "usage_notes": "Import the human-selected preview here, then mark it approved only after explicit human approval.",
+  "semantic_index_allowed": false
+}
+```
+
+Importing updates the sample asset's provenance and lifecycle. Explicit human
+approval may then advance the sample to `approved`; it never changes the prompt
+asset's status or bytes.
 
 ## References
 

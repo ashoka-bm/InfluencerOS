@@ -24,6 +24,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.boards import rebuild_board, validate_board
+from influencer_os.calendars import rebuild_calendar, validate_calendar
 from influencer_os.full_validation import validate_all
 from influencer_os.analytics import import_analytics_csv
 from influencer_os.projects import init_project, validate_project
@@ -41,7 +42,7 @@ def main(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate_parser = subparsers.add_parser("validate", help="Validate repository records.")
-    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "all"], help="Validation target ('all' composes workspace, research, queue, board, and every project — the alpha release gate).")
+    validate_parser.add_argument("target", choices=["examples", "workspace", "project", "record", "research", "queue", "board", "calendar", "all"], help="Validation target ('all' composes workspace, research, queue, projections, and every project — the alpha release gate).")
     validate_parser.add_argument("path", nargs="?", help="Path for workspace/project/research/queue/board validation, or schema name for record validation.")
     validate_parser.add_argument("record_path", nargs="?", help="Record path for record validation.")
 
@@ -111,6 +112,9 @@ def main(argv=None):
     board_parser = subparsers.add_parser("rebuild-board", help="Rebuild the Content Board projection from canonical records.")
     board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
+    calendar_parser = subparsers.add_parser("rebuild-calendar", help="Rebuild the interactive content calendar projection from canonical records.")
+    calendar_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
     prune_parser = subparsers.add_parser("prune", help="Apply research retention rules (dry-run unless --apply).")
     prune_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
     prune_parser.add_argument("--apply", action="store_true", help="Delete prunable records; without this flag prune only reports.")
@@ -145,7 +149,7 @@ def main(argv=None):
     import_asset_parser.add_argument("--attribution", help="Required attribution, when applicable.")
     import_asset_parser.add_argument("--warning", action="append", default=[], help="Provenance warning to record (repeatable).")
     import_asset_parser.add_argument("--notes", help="Free-form provenance notes.")
-    import_asset_parser.add_argument("--reference-asset", help="Route the import to this Reference Library asset id instead of a project.")
+    import_asset_parser.add_argument("--reference-asset", help="Route the import to this Reference Library media asset id instead of a project. Prompt-package assets reject media imports; register resulting media as a separate asset.")
     import_asset_parser.add_argument("--approval-record", help="Reference route only: the gen_approval_ record that authorized the generation, when one exists.")
 
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
@@ -259,6 +263,13 @@ def main(argv=None):
                 result = validate_board(args.path)
                 print(f"Validated content board: {result['board_path']}")
                 print(f"Checked {result['card_count']} board cards.")
+                return 0
+            if args.target == "calendar":
+                if not args.path:
+                    raise ValueError("validate calendar requires a creator workspace path")
+                result = validate_calendar(args.path)
+                print(f"Validated content calendar: {result['calendar_path']}")
+                print(f"Checked {result['post_count']} scheduled posts.")
                 return 0
             if args.target == "all":
                 if not args.path:
@@ -425,6 +436,13 @@ def main(argv=None):
                 f"({result['idea_cards']} ideas, {result['project_cards']} projects)"
             )
             print(f"Board: {result['board_path']}")
+            return 0
+
+        if args.command == "rebuild-calendar":
+            result = rebuild_calendar(args.creator_workspace)
+            count = result["post_count"]
+            print(f"Rebuilt content calendar: {count} scheduled {'post' if count == 1 else 'posts'}")
+            print(f"Calendar: {result['calendar_path']}")
             return 0
 
         if args.command == "prune":

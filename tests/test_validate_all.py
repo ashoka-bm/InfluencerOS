@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from influencer_os.boards import rebuild_board
+from influencer_os.calendars import rebuild_calendar
 from influencer_os.creator_workspaces import init_creator
 from influencer_os.full_validation import validate_all
 from influencer_os.projects import validate_project
@@ -79,6 +80,16 @@ def rewrite_json(path, mutate):
 
 
 class ValidateAllTests(unittest.TestCase):
+    def test_full_validation_checks_calendar_when_projection_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            rebuild_calendar(workspace_dir)
+
+            result = validate_all(workspace_dir)
+
+            layer_names = [name for name, _summary in result["layers"]]
+            self.assertIn("calendar", layer_names)
+
     def test_full_workspace_passes_every_layer(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)

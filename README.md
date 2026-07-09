@@ -95,7 +95,7 @@ python3 -m influencer_os validate examples
 ## Validate A Whole Creator Workspace (Release Gate)
 
 Run every validator over one Creator Workspace in a single command — the
-workspace manifest and readiness gates, research state, idea queue, content
+workspace manifest and readiness milestones, research state, idea queue, content
 board, and every project under `projects/`:
 
 ```bash
@@ -104,7 +104,7 @@ python3 -m influencer_os validate all workspace-library/creators/luna-fit
 
 `validate all` is the alpha release gate: the scoped commands below
 (`validate workspace`, `validate research`, `validate queue`,
-`validate board`, `validate project`) each enforce their own layer, and only
+`validate board`, `validate calendar`, `validate project`) each enforce their own layer, and only
 the composed run proves the full provenance chain. Layers that legitimately
 do not exist yet (no queue manifest before the first research run, no board
 before `rebuild-board`) are reported as skipped, queue entries without a
@@ -136,13 +136,34 @@ After authoring `creator-profile.json` and `references/reference-library.json`, 
 python3 -m influencer_os validate workspace workspace-library/creators/luna-fit
 ```
 
-Validation is status-keyed: a `draft` workspace stays permissive, while a workspace claiming `content_ready`, `generation_ready`, or `active` must pass the medium-based readiness blockers (populated foundation files without `TBD` placeholders, context byte caps, recorded source intake, required reference-asset kinds per declared content medium, and lifecycle-appropriate asset/prompt files on disk). Failures report the full blocker list in one run.
+Validation is status-keyed: a `draft` workspace stays permissive, while a workspace claiming `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, or `active` must pass the corresponding readiness checks. Deprecated `content_ready` and `generation_ready` fixtures validate only far enough to emit a migration warning. Failures report the full blocker list in one run.
+
+After authoring or changing `content-schedule.json`, rebuild the interactive
+human-review projection and verify that it still matches the canonical source:
+
+```bash
+python3 -m influencer_os rebuild-calendar workspace-library/creators/luna-fit
+python3 -m influencer_os validate calendar workspace-library/creators/luna-fit
+```
+
+The generated file is `boards/content-calendar.html`. It is a rebuildable view,
+not a second schedule record.
 
 Creator Workspaces run copied baseline skills from `.claude/skills/`. Refresh those copied runtime skills after root skill changes with:
 
 ```bash
 python3 -m influencer_os sync-creator-runtime workspace-library/creators/luna-fit
 ```
+
+When the conductor is installed as a global Codex skill, refresh that adapter
+from the same repository source after changing `skills/influencer-os/SKILL.md`:
+
+```bash
+rsync -a skills/influencer-os/SKILL.md "$HOME/.codex/skills/influencer-os/SKILL.md"
+```
+
+The repository file remains authoritative; the global file is only a runtime
+copy.
 
 Refresh every Creator Workspace at once (each replaced skill folder is backed up to `.claude/skills-backup/`, and `SKILL.local.md` files, creator-only skills, and creator state are preserved):
 

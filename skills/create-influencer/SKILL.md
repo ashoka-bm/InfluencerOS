@@ -129,14 +129,14 @@ milestone, read the canonical state records first:
 Treat machine-readable records as authoritative:
 
 - `readiness-gates.json` owns profile, foundation, strategy, and production
-  gate state.
+  readiness milestone state.
 - `content-strategy.json` owns approved platform strategy, monthly mix,
   cadence principles, campaigns, and conversion paths.
 - `conversion-assets/*.json` owns lead magnet, offer, newsletter asset,
   waitlist, and landing/opt-in asset status.
 - `content-schedule.json` owns calendar readiness.
 - Markdown files explain the current state; they must not invent a parallel
-  gate model or reopen a gate already closed by the canonical records.
+  readiness model or reopen a milestone already closed by the canonical records.
 
 After any user approval, provider-approved generation batch, conversion-asset
 draft/review, or calendar update, run a state sync pass in the same turn:
@@ -144,7 +144,7 @@ draft/review, or calendar update, run a state sync pass in the same turn:
 1. update the relevant machine-readable record;
 2. remove stale blocker language from `brand_context/*`, `context/MEMORY.md`,
    `progress/setup-checklist.md`, `AGENTS.md`, and `CLAUDE.md`;
-3. mirror the next gate in `progress/setup-checklist.md`;
+3. mirror the next readiness milestone in `progress/setup-checklist.md`;
 4. run `python3 -m influencer_os validate workspace <workspace-path>`.
 
 If validation says the workspace is not `production_ready`, do not create post
@@ -234,7 +234,7 @@ Run these internal phases in order:
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-13. **Acceptance gate**: ask for approval before advancing each milestone:
+13. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
 14. **Generation gate**: stop before provider-backed generation unless the user approves the exact call or batch.
@@ -256,7 +256,7 @@ Voiceover and audio creators require a staged ElevenLabs Voice Design prompt pac
 
 Carousel and story-sequence creators require sequence style, slide or frame visual system, and text overlay policy.
 
-## Setup Hierarchy Gate
+## Setup Readiness Hierarchy
 
 Run creator setup as an onboarding hierarchy:
 
@@ -286,12 +286,12 @@ prompt requirement for audio/video creators.
 
 Before generating those assets, present the exact reference-asset batch implied
 by the selected platforms and ask for approval. Do not move to strategy or post
-creation until this creator-foundation gate is resolved or explicitly waived.
+creation until this creator-foundation readiness milestone is resolved or explicitly waived.
 Do not create image or video content featuring the creator unless
 `creator_image_generation_allowed` or `creator_video_generation_allowed` is true
 in `readiness-gates.json`; do not create spoken voiceover content unless
-`spoken_voice_generation_allowed` is true or the strategy explicitly uses a
-no-voiceover policy.
+`spoken_voice_generation_allowed` is true. A no-voiceover policy prohibits
+spoken generation; it never waives the permission requirement.
 
 ## Provider Boundary
 
@@ -323,13 +323,16 @@ last.*
 - 2026-07-07: Added the guided-run interview and whole-foundation-approval
   contract — see §Normal-User E2E Contract and §Decision Interview.
 - 2026-07-09: Added the three-layer onboarding hierarchy and selected-channel
-  reference gate — see §Setup Hierarchy Gate. Profile approval alone is not
+  reference milestone — see §Setup Readiness Hierarchy. Profile approval alone is not
   enough for image/video/voice creators; strategy must produce a monthly
   platform mix, conversion chains, and cadence principles before production
   calendarization.
 - 2026-07-09: Added setup-state reconciliation after a real creator run exposed
-  state drift between approved gates and stale Markdown blockers — see §Setup
+  state drift between accepted milestones and stale Markdown blockers — see §Setup
   State Reconciliation. Canonical JSON records own state; Markdown mirrors it.
+- 2026-07-09: Corrected no-voiceover handling — see §Setup Readiness Hierarchy.
+  A no-voiceover policy prohibits spoken generation; it never grants permission
+  or substitutes for approved/imported voice evidence.
 
 ## Self-Update
 

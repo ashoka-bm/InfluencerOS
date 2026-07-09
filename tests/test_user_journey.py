@@ -9,7 +9,7 @@ from tests.test_readiness_validation import (
     place_asset_files,
     populate_foundation,
     write_channels,
-    write_readiness_gates,
+    write_readiness_milestones,
 )
 
 
@@ -108,7 +108,7 @@ def seed_creator_setup_outputs(workspace_dir):
     populate_foundation(workspace_dir)
     place_asset_files(workspace_dir)
     write_channels(workspace_dir)
-    write_readiness_gates(workspace_dir)
+    write_readiness_milestones(workspace_dir)
 
 
 def seed_research_outputs(workspace_dir):

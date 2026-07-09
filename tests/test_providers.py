@@ -549,6 +549,90 @@ class ImportGeneratedAssetTests(unittest.TestCase):
             self.assertEqual(asset["asset_status"], "user_provided")
             self.assertEqual(asset["source"]["source_type"], "user_provided")
 
+    def test_reference_route_refuses_to_overwrite_prompt_asset_with_media(self):
+        from influencer_os.generation import import_reference_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_generation_ready_project(temp_dir)
+            library_path = workspace_dir / "references" / "reference-library.json"
+            library = json.loads(library_path.read_text())
+            prompt_asset = next(
+                asset
+                for asset in library["assets"]
+                if asset["asset_id"] == "asset_luna_elevenlabs_voice_design"
+            )
+            prompt_path = workspace_dir / prompt_asset["path"]
+            prompt_path.parent.mkdir(parents=True, exist_ok=True)
+            prompt_body = b"# Voice Design Prompt\n"
+            prompt_path.write_bytes(prompt_body)
+            source = self.stage_source(temp_dir, name="voice-preview.mp3")
+
+            with self.assertRaisesRegex(
+                ValidationError, "separate Reference Library asset"
+            ):
+                import_reference_asset(
+                    workspace_dir,
+                    source,
+                    prompt_asset["asset_id"],
+                    origin="user_provided",
+                )
+
+            self.assertEqual(prompt_path.read_bytes(), prompt_body)
+            self.assertEqual(
+                json.loads(library_path.read_text()),
+                library,
+            )
+
+    def test_reference_route_imports_voice_sample_as_separate_asset(self):
+        from influencer_os.generation import import_reference_asset
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_generation_ready_project(temp_dir)
+            library_path = workspace_dir / "references" / "reference-library.json"
+            library = json.loads(library_path.read_text())
+            prompt_path = (
+                "references/voice/luna-fit-elevenlabs-voice-design.prompt.md"
+            )
+            library["assets"].append(
+                {
+                    "asset_id": "asset_luna_approved_voice_preview",
+                    "asset_type": "voice",
+                    "asset_status": "planned",
+                    "role": "Approved voice preview for spoken continuity",
+                    "path": "references/voice/luna-approved-voice-preview.mp3",
+                    "prompt_path": prompt_path,
+                    "source": {
+                        "source_type": "derived",
+                        "source_ref": prompt_path,
+                    },
+                    "created_on": "2026-07-09",
+                    "usage_notes": "Import the selected preview here after approval.",
+                    "semantic_index_allowed": False,
+                }
+            )
+            write_json(library_path, library)
+            source = self.stage_source(temp_dir, name="voice-preview.mp3")
+
+            destination = import_reference_asset(
+                workspace_dir,
+                source,
+                "asset_luna_approved_voice_preview",
+                origin="user_provided",
+            )
+
+            self.assertEqual(
+                destination,
+                workspace_dir / "references/voice/luna-approved-voice-preview.mp3",
+            )
+            imported_library = json.loads(library_path.read_text())
+            imported_asset = next(
+                asset
+                for asset in imported_library["assets"]
+                if asset["asset_id"] == "asset_luna_approved_voice_preview"
+            )
+            self.assertEqual(imported_asset["asset_status"], "user_provided")
+            self.assertEqual(imported_asset["prompt_path"], prompt_path)
+
     def test_reference_route_dangling_approval_refused(self):
         from influencer_os.generation import import_reference_asset
 

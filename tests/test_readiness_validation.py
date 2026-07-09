@@ -334,7 +334,7 @@ def place_asset_files(workspace_dir):
             prompt.write_text(f"prompt for {asset['asset_id']}\n")
 
 
-def write_readiness_gates(
+def write_readiness_milestones(
     workspace_dir,
     profile_status="ready",
     foundation_status="ready",
@@ -346,20 +346,20 @@ def write_readiness_gates(
     spoken_allowed=False,
 ):
     record = json.loads((ROOT / "examples" / "readiness-gates.example.json").read_text())
-    record["gates"]["profile"]["status"] = profile_status
-    record["gates"]["foundation"]["status"] = foundation_status
-    record["gates"]["foundation"]["mode"] = foundation_mode
-    record["gates"]["strategy"]["status"] = strategy_status
-    record["gates"]["production"]["status"] = production_status
-    for gate in record["gates"].values():
-        if gate["status"] == "ready":
-            gate["approved_on"] = "2026-07-09"
-            gate["approved_by"] = "user"
-            gate["blockers"] = []
+    record["milestones"]["profile"]["status"] = profile_status
+    record["milestones"]["foundation"]["status"] = foundation_status
+    record["milestones"]["foundation"]["mode"] = foundation_mode
+    record["milestones"]["strategy"]["status"] = strategy_status
+    record["milestones"]["production"]["status"] = production_status
+    for milestone in record["milestones"].values():
+        if milestone["status"] == "ready":
+            milestone["approved_on"] = "2026-07-09"
+            milestone["approved_by"] = "user"
+            milestone["blockers"] = []
         else:
-            gate["approved_on"] = None
-            gate["approved_by"] = None
-            gate["blockers"] = ["Gate is not ready."]
+            milestone["approved_on"] = None
+            milestone["approved_by"] = None
+            milestone["blockers"] = ["Milestone is not ready."]
     record["permissions"] = {
         "creator_image_generation_allowed": image_allowed,
         "creator_video_generation_allowed": video_allowed,
@@ -407,7 +407,7 @@ def make_ready_workspace(temp_dir, status):
     workspace_dir = init_workspace_with_status(temp_dir, status)
     populate_foundation(workspace_dir)
     place_asset_files(workspace_dir)
-    write_readiness_gates(workspace_dir)
+    write_readiness_milestones(workspace_dir)
     write_channels(workspace_dir)
     write_content_strategy(workspace_dir, status="approved")
     write_conversion_asset(workspace_dir)
@@ -422,8 +422,61 @@ class DraftLenienceTests(unittest.TestCase):
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
 
+    def test_draft_workspace_rejects_a_falsely_ready_milestone_without_human_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
 
-class OnboardingStageGateTests(unittest.TestCase):
+            def falsely_mark_ready(readiness):
+                readiness["milestones"]["profile"]["status"] = "ready"
+                readiness["milestones"]["profile"]["approved_on"] = None
+                readiness["milestones"]["profile"]["approved_by"] = None
+
+            rewrite_json(workspace_dir / "readiness-gates.json", falsely_mark_ready)
+
+            with self.assertRaisesRegex(ValidationError, "user approval metadata"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_draft_workspace_rejects_contradictory_channel_export_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+
+            def unblock_missing_account(channels):
+                channels["channels"][0]["account_status"] = "not_created"
+                channels["channels"][0]["publishing_export_blocked"] = False
+
+            rewrite_json(workspace_dir / "channels.json", unblock_missing_account)
+
+            with self.assertRaisesRegex(ValidationError, "publishing_export_blocked"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_draft_workspace_rejects_prompt_ready_media_permission(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+
+            def contradict_prompt_mode(readiness):
+                readiness["milestones"]["foundation"]["mode"] = "prompt_ready"
+                readiness["permissions"]["creator_image_generation_allowed"] = True
+
+            rewrite_json(workspace_dir / "readiness-gates.json", contradict_prompt_mode)
+
+            with self.assertRaisesRegex(ValidationError, "prompt_ready.*permissions.*false"):
+                validate_creator_workspace(workspace_dir)
+
+
+class OnboardingReadinessMilestoneTests(unittest.TestCase):
+    def test_deprecated_workspace_status_warns_instead_of_crashing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = init_workspace_with_status(temp_dir, "draft")
+
+            def use_deprecated_status(manifest):
+                manifest["status"] = "content_ready"
+
+            rewrite_json(workspace_dir / "creator-workspace.json", use_deprecated_status)
+
+            result = validate_creator_workspace(workspace_dir)
+
+            self.assertTrue(any("deprecated status 'content_ready'" in warning for warning in result["warnings"]))
+
     def test_profile_ready_requires_selected_channels_in_registry(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = init_workspace_with_status(temp_dir, "profile_ready")
@@ -436,17 +489,17 @@ class OnboardingStageGateTests(unittest.TestCase):
             (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
                 (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
             )
-            write_readiness_gates(workspace_dir, foundation_status="not_started")
+            write_readiness_milestones(workspace_dir, foundation_status="not_started")
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("selected channel", str(ctx.exception))
             self.assertIn("tiktok", str(ctx.exception))
 
-    def test_foundation_ready_requires_ready_foundation_gate(self):
+    def test_foundation_ready_requires_ready_foundation_milestone(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
-            write_readiness_gates(
+            write_readiness_milestones(
                 workspace_dir,
                 foundation_status="blocked",
                 foundation_mode="prompt_ready",
@@ -454,12 +507,12 @@ class OnboardingStageGateTests(unittest.TestCase):
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
-            self.assertIn("foundation gate", str(ctx.exception))
+            self.assertIn("foundation readiness milestone", str(ctx.exception))
 
     def test_creator_video_permission_requires_approved_visual_identity(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
-            write_readiness_gates(workspace_dir, foundation_mode="media_ready", video_allowed=True)
+            write_readiness_milestones(workspace_dir, foundation_mode="media_ready", video_allowed=True)
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -470,7 +523,7 @@ class OnboardingStageGateTests(unittest.TestCase):
     def test_spoken_voice_permission_rejects_approved_voice_design_prompt_only(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
-            write_readiness_gates(workspace_dir, spoken_allowed=True)
+            write_readiness_milestones(workspace_dir, spoken_allowed=True)
 
             def approve_voice_design_prompt(library):
                 for asset in library["assets"]:
@@ -487,10 +540,55 @@ class OnboardingStageGateTests(unittest.TestCase):
                 validate_creator_workspace(workspace_dir)
             self.assertIn("approved/imported voice reference", str(ctx.exception))
 
+    def test_prompt_ready_foundation_rejects_all_creator_media_permissions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_milestones(
+                workspace_dir,
+                foundation_mode="prompt_ready",
+                image_allowed=True,
+            )
+
+            with self.assertRaisesRegex(ValidationError, "prompt_ready.*permissions.*false"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_media_ready_video_foundation_does_not_require_voice_when_spoken_generation_is_disabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            write_readiness_milestones(workspace_dir, foundation_mode="media_ready", spoken_allowed=False)
+
+            def approve_visual_assets(library):
+                for asset in library["assets"]:
+                    if asset["asset_type"] != "voice":
+                        asset["asset_status"] = "approved"
+
+            rewrite_json(
+                workspace_dir / "references" / "reference-library.json",
+                approve_visual_assets,
+            )
+            place_asset_files(workspace_dir)
+
+            result = validate_creator_workspace(workspace_dir)
+
+            self.assertEqual(result["creator_slug"], "luna-fit")
+
+    def test_ready_readiness_milestone_requires_human_approval_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "profile_ready")
+
+            def remove_approval_metadata(readiness):
+                readiness["milestones"]["profile"]["approved_on"] = None
+                readiness["milestones"]["profile"]["approved_by"] = None
+
+            rewrite_json(workspace_dir / "readiness-gates.json", remove_approval_metadata)
+
+            with self.assertRaisesRegex(ValidationError, "user approval metadata"):
+                validate_creator_workspace(workspace_dir)
+
     def test_strategy_ready_requires_approved_strategy_and_conversion_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
-            write_readiness_gates(workspace_dir, strategy_status="ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
             write_content_strategy(workspace_dir, status="drafted")
 
             with self.assertRaises(ValidationError) as ctx:
@@ -498,10 +596,20 @@ class OnboardingStageGateTests(unittest.TestCase):
             self.assertIn("content-strategy.json", str(ctx.exception))
             self.assertIn("approved", str(ctx.exception))
 
+    def test_strategy_ready_allows_a_drafted_conversion_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
+            write_conversion_asset(workspace_dir, status="drafted")
+
+            result = validate_creator_workspace(workspace_dir)
+
+            self.assertEqual(result["creator_slug"], "luna-fit")
+
     def test_strategy_ready_rejects_conversion_asset_from_another_creator(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
-            write_readiness_gates(workspace_dir, strategy_status="ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
 
             def mismatch_creator(asset):
                 asset["creator_profile_id"] = "creator_wrong"
@@ -521,7 +629,7 @@ class OnboardingStageGateTests(unittest.TestCase):
     def test_strategy_ready_requires_conversion_asset_file_refs_to_exist(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
-            write_readiness_gates(workspace_dir, strategy_status="ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
             (workspace_dir / "conversion-assets" / "luna-reset-checklist.md").unlink()
 
             with self.assertRaises(ValidationError) as ctx:
@@ -532,7 +640,7 @@ class OnboardingStageGateTests(unittest.TestCase):
     def test_strategy_ready_rejects_dangling_variant_refs(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
-            write_readiness_gates(workspace_dir, strategy_status="ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
 
             def dangle_variants(strategy):
                 strategy["monthly_mix"][0]["variant_id"] = "variant_missing_mix"
@@ -550,7 +658,7 @@ class OnboardingStageGateTests(unittest.TestCase):
     def test_production_ready_requires_content_schedule(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "production_ready")
-            write_readiness_gates(
+            write_readiness_milestones(
                 workspace_dir,
                 strategy_status="ready",
                 production_status="ready",
@@ -559,6 +667,201 @@ class OnboardingStageGateTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
             self.assertIn("content-schedule.json", str(ctx.exception))
+
+    def test_production_ready_rejects_schedule_for_another_creator(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def mismatch_creator(schedule):
+                schedule["creator_profile_id"] = "creator_wrong"
+
+            rewrite_json(workspace_dir / "content-schedule.json", mismatch_creator)
+
+            with self.assertRaisesRegex(ValidationError, "creator_profile_id"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_rejects_schedule_for_another_strategy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+            rewrite_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule.update(content_strategy_id="content_strategy_wrong"),
+            )
+
+            with self.assertRaisesRegex(ValidationError, "content_strategy_id"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_requires_slot_strategy_relationships_to_agree(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def contradict_strategy(strategy):
+                strategy["content_campaigns"][0]["conversion_asset_ids"] = []
+
+            def contradict_variant(schedule):
+                schedule["calendar_slots"][0]["variant_id"] = (
+                    "variant_luna_claim_teardown_linkedin_text"
+                )
+
+            rewrite_json(workspace_dir / "content-strategy.json", contradict_strategy)
+            rewrite_json(workspace_dir / "content-schedule.json", contradict_variant)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("variant platform 'linkedin' does not match slot platform 'instagram'", message)
+            self.assertIn("variant format 'format_thread' does not match slot format 'format_short_form_video'", message)
+            self.assertIn("conversion asset", message)
+            self.assertIn("does not belong to campaign", message)
+
+    def test_production_ready_requires_at_least_one_calendar_slot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+            rewrite_json(workspace_dir / "content-schedule.json", lambda schedule: schedule["calendar_slots"].clear())
+
+            with self.assertRaisesRegex(ValidationError, "calendar slot"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_rejects_dangling_content_goal(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+            rewrite_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(content_goal_id="goal_missing"),
+            )
+
+            with self.assertRaisesRegex(ValidationError, "missing content goal"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_rejects_unapproved_promoted_conversion_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_conversion_asset(workspace_dir, status="drafted")
+            write_content_schedule(workspace_dir)
+
+            with self.assertRaisesRegex(ValidationError, "drafted.*approved"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_requires_channel_approval_for_scheduled_platform(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def disallow_instagram_production(channels):
+                channels["channels"][0]["production_drafting_allowed"] = False
+
+            rewrite_json(workspace_dir / "channels.json", disallow_instagram_production)
+
+            with self.assertRaisesRegex(ValidationError, "not approved for production drafting"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_requires_every_slot_to_name_a_platform(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def remove_platform_and_conversion(schedule):
+                slot = schedule["calendar_slots"][0]
+                slot.pop("platform")
+                slot.pop("conversion_asset_ids")
+                slot.pop("conversion_use")
+
+            rewrite_json(workspace_dir / "content-schedule.json", remove_platform_and_conversion)
+
+            with self.assertRaisesRegex(ValidationError, "must name a platform"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_requires_explicit_skip_when_channel_account_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def leave_instagram_uncreated(channels):
+                channels["channels"][0].update(
+                    account_status="not_created",
+                    publishing_export_blocked=True,
+                )
+
+            rewrite_json(workspace_dir / "channels.json", leave_instagram_uncreated)
+
+            with self.assertRaisesRegex(ValidationError, "explicit skip"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_requires_conversion_asset_approval_for_use_and_platform(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready", production_status="ready")
+            write_content_schedule(workspace_dir)
+
+            def remove_slot_approval(asset):
+                asset["approved_uses"] = ["email_capture"]
+                asset["platforms"] = ["linkedin"]
+
+            rewrite_json(
+                workspace_dir / "conversion-assets" / "conversion_asset_luna_reset_checklist.json",
+                remove_slot_approval,
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("not approved for use 'soft_cta'", str(ctx.exception))
+            self.assertIn("not approved for platform instagram", str(ctx.exception))
+
+    def test_channel_without_account_cannot_claim_export_is_unblocked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "profile_ready")
+
+            def contradict_account_state(channels):
+                channels["channels"][0]["account_status"] = "skipped"
+                channels["channels"][0]["publishing_export_blocked"] = False
+
+            rewrite_json(workspace_dir / "channels.json", contradict_account_state)
+
+            with self.assertRaisesRegex(ValidationError, "publishing_export_blocked"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_prompt_ready_and_skipped_handle_are_reported_as_warnings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def skip_account(channels):
+                channels["channels"][0].update(
+                    account_status="skipped",
+                    intended_handle=None,
+                    public_url=None,
+                    publishing_export_blocked=True,
+                    notes="Account setup intentionally skipped for now.",
+                )
+
+            rewrite_json(workspace_dir / "channels.json", skip_account)
+
+            result = validate_creator_workspace(workspace_dir)
+
+            self.assertTrue(any("prompt_ready" in warning for warning in result["warnings"]))
+            self.assertTrue(any("skipped" in warning and "handle" in warning for warning in result["warnings"]))
+
+    def test_strategy_ready_without_calendar_slots_reports_warning(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="ready")
+
+            result = validate_creator_workspace(workspace_dir)
+
+            self.assertTrue(any("no production calendar slots" in warning for warning in result["warnings"]))
 
     def test_foundation_ready_rejects_stale_foundation_blocker_prose(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -602,7 +905,7 @@ class OnboardingStageGateTests(unittest.TestCase):
     def test_mara_style_state_stays_blocked_before_production(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "production_ready")
-            write_readiness_gates(
+            write_readiness_milestones(
                 workspace_dir,
                 strategy_status="ready",
                 production_status="ready",
@@ -861,7 +1164,7 @@ class AssetLifecycleExistenceTests(unittest.TestCase):
             self.assertIn("default-video-photo-style.md", str(ctx.exception))
 
 
-class FoundationGateTests(unittest.TestCase):
+class FoundationReadinessTests(unittest.TestCase):
     def test_video_foundation_ready_requires_elevenlabs_voice_design_prompt(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
@@ -923,7 +1226,7 @@ class FoundationGateTests(unittest.TestCase):
     def test_planned_required_kind_blocks_media_ready_generation_permission(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
-            write_readiness_gates(workspace_dir, foundation_mode="media_ready")
+            write_readiness_milestones(workspace_dir, foundation_mode="media_ready")
 
             def plan_outfit(library):
                 for asset in library["assets"]:

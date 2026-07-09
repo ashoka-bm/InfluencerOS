@@ -57,7 +57,7 @@ Setup subskills are covered by the `Creator setup` workflow row until they need 
 | `create-personal-brand` | draft personal brand | `brand_context/personal-brand.md` |
 | `create-voice-samples` | extract or curate voice samples | `brand_context/voice-samples.md` |
 | `create-reference-library` | plan visual/audio references | `references/reference-library.json` |
-| `elevenlabs-voice-design` | stage ElevenLabs voice design prompt | `references/voice/<asset-slug>.prompt.md` |
+| `elevenlabs-voice-design` | stage ElevenLabs voice design prompt | `references/voice/<asset-slug>.prompt.md`; resulting approved audio is registered separately and links back through `prompt_path` |
 | `create-runtime-context` | create tiny runtime context | `context/SOUL.md`, `context/USER.md`, `context/MEMORY.md` |
 
 ## System Skills

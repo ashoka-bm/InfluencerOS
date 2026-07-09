@@ -407,6 +407,6 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
             self.assertTrue(review_files)
             self.assertFalse(any((project_dir / "generation" / "approval-records").glob("*.json")))
             self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
-            self.assertIn("Layers passed: 5; skipped: 0; warnings: 0.", result.stdout)
+            self.assertIn("Layers passed: 5; skipped: 0; warnings: 1.", result.stdout)
             project_cards = [card for card in board["cards"] if card["card_type"] == "project"]
             self.assertEqual(project_cards[0]["status"], "ready_for_generation")

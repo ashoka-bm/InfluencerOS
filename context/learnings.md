@@ -22,6 +22,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-03: Nia Sol run review: checklist grouped wording (completed or prompted) hid which assets existed; scaffold and skill now track per-asset lifecycle status, and generated assets record date/tool/deviations in usage_notes.
 - 2026-07-04: Creator setup onboarding should begin with a briefing and three paths: load existing files, guided interview, or generate from basic information; system-filled blanks stay in review.
 - 2026-07-09: Creator setup should run as Creator Foundation -> Strategy -> Post Production. For image/video/voice channels, profile approval is not enough; require stable visual and voice references or an explicit waiver before strategy calendars and post production.
+- 2026-07-09: 2026-07-09: A no-voiceover policy prohibits spoken generation; it never waives spoken_voice_generation_allowed or substitutes for approved voice evidence.
 
 ### wrap-up
 
@@ -32,6 +33,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-06: No feedback - routine session after Phase 2 full review.
 - 2026-07-07: No feedback - routine session after repository hardening fixes.
 - 2026-07-09: No feedback - routine session after creator-to-video workflow visualization.
+- 2026-07-09: 2026-07-09: No feedback — routine session after onboarding readiness and calendar review remediation.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.
@@ -56,6 +58,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### tdd
 - 2026-07-04: Phase 1 user-journey tests should exercise CLI gates end to end and seed only authored artifacts that skills currently produce.
+- 2026-07-09: 2026-07-09: Readiness fixes stayed reliable when each review finding became a public-seam regression before implementation.
 
 ### create-reference-library
 - 2026-07-04: Reference planning should derive required assets from platform-to-medium mapping and explicitly handle person reference images, recurring locations, collaborators, and identity-attached objects.

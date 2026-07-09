@@ -251,7 +251,7 @@ class RealCreatorRunbookDriftTests(unittest.TestCase):
     # means either the CLI or the runbook changed without the other.
     VALIDATE_TARGETS = {
         "examples", "workspace", "project", "record", "research",
-        "queue", "board", "all",
+        "queue", "board", "calendar", "all",
     }
     FETCH_CONNECTORS = {
         "reddit", "x", "firecrawl", "linkedin", "youtube-search",

@@ -276,9 +276,15 @@ class SchemaValidationTests(unittest.TestCase):
             with self.subTest(status=status):
                 validate_record("creator-workspace", valid)
 
-    def test_creator_workspace_rejects_deprecated_readiness_statuses(self):
+    def test_creator_workspace_only_accepts_deprecated_statuses_that_can_be_warned(self):
         example = load_json("examples/creator-workspace.example.json")
-        for status in ("foundation_review", "content_ready", "generation_ready"):
+        for status in ("content_ready", "generation_ready"):
+            legacy = deepcopy(example)
+            legacy["status"] = status
+            with self.subTest(status=status):
+                validate_record("creator-workspace", legacy)
+
+        for status in ("foundation_review", "unknown_ready"):
             invalid = deepcopy(example)
             invalid["status"] = status
             with self.subTest(status=status):

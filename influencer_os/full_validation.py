@@ -2,8 +2,8 @@
 
 ``validate all <creator-workspace>`` runs every validator over one Creator
 Workspace so the Product Invariant is enforced by a single command instead of
-a hand-chained sequence: the workspace manifest and readiness gates, research
-state, the idea queue, the content board, and every project under
+a hand-chained sequence: the workspace manifest and readiness milestones, research
+state, the idea queue, rebuildable board/calendar projections when present, and every project under
 ``projects/``. Layer errors carry the failing layer's name.
 
 The queue and board layers are lifecycle-aware: a workspace that has not
@@ -16,6 +16,7 @@ them would leave every entry unvalidated.
 from pathlib import Path
 
 from influencer_os.boards import board_path_for, validate_board
+from influencer_os.calendars import calendar_path_for, validate_calendar
 from influencer_os.creator_workspaces import validate_creator_workspace
 from influencer_os.projects import validate_project
 from influencer_os.research import (
@@ -73,6 +74,11 @@ def validate_all(workspace_path):
         layers.append(("board", f"{result['card_count']} board cards"))
     else:
         skipped.append(("board", "no content board yet (run rebuild-board)"))
+
+    calendar_path = calendar_path_for(workspace_dir)
+    if calendar_path.exists():
+        result = _run_layer("calendar", validate_calendar, workspace_dir)
+        layers.append(("calendar", f"{result['post_count']} scheduled posts"))
 
     manifests = _run_layer("projects", collect_project_manifests, workspace_dir)
     projects_dir = workspace_dir / "projects"

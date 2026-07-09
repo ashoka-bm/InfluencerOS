@@ -340,6 +340,14 @@ def import_reference_asset(
     if not source_path.is_file():
         raise FileNotFoundError(f"Missing import source file: {source_path}")
 
+    prompt_path = asset.get("prompt_path")
+    if asset["path"] == prompt_path or asset["path"].endswith(".prompt.md"):
+        raise ValidationError(
+            f"reference asset {reference_asset_id!r} is a prompt package, not a "
+            "media destination; register the imported file as a separate "
+            "Reference Library asset and point its prompt_path back to this prompt"
+        )
+
     if approval_record_id is not None:
         approval_path = (
             workspace_dir / REFERENCE_APPROVALS_DIR / f"{approval_record_id}.json"

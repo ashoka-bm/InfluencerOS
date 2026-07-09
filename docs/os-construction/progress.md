@@ -1209,6 +1209,21 @@ discover -s tests` passes (799 tests), `python3 -m influencer_os validate
 examples` validates 49 examples, and `python3 -m compileall -q influencer_os
 tests` passes.
 
+Onboarding readiness and strategy-calendar hardening (2026-07-09): completed
+ADR 0028's forward behavior and closed two independent review rounds. The
+legacy-named `readiness-gates.json` now models deterministic `milestones`
+without colliding with the two human-owned pipeline Gates. Workspace validation
+enforces human milestone approval metadata, prompt-ready media prohibition,
+channel publish/drafting consistency, creator- and strategy-scoped schedules,
+nonempty goal-resolving slots, explicit production platforms, campaign/variant
+refs, and conversion-asset lifecycle/use/platform approval. Strategy readiness
+permits planned/drafted conversion assets while production fails closed. The
+portable calendar projection is a documented plan task; validation re-renders
+and compares the complete HTML so visible tampering fails. Deprecated workspace
+statuses remain readable only to emit migration warnings. Verification: 856
+unit tests pass, 53 examples validate, compilation and whitespace checks pass;
+registry/context-matrix drift tests pass. No provider-backed calls were made.
+
 ## Next Work Queue
 
 1. Exercise the manual research-intelligence loop against real creator runs before approving any scheduled research automation. **Run 2 (live connector smoke, ADR 0022) completed 2026-07-07** with `INFLUENCER_OS_CONNECTOR_MAX_CALLS=3` per connector: `reddit_openai` discovery works live (12-17 candidates per topic, 1 paid call, parsed shapes match the mirrored parser), but reddit.com answers the free direct-JSON enrichment reads with HTTP 403 "Blocked" — the enrichment leg never attaches engagement metrics live. Found and fixed in the same batch: `enriched_count` counted attempts, not successes, so the fetch result claimed full enrichment while attaching nothing; it now counts only candidates with engagement attached and notes the failures (regression test `test_blocked_enrichment_counts_zero_and_notes_failure`). `youtube_data_api` works live (5 candidates, 2 paid calls, engagement present). `firecrawl_web` works on public article URLs but reddit.com also blocks it (HTTP 403 at the Firecrawl layer). `x_xai` fails with HTTP 403 `permission-denied` — the xAI team account has no credits; operator action: purchase credits at console.x.ai, then re-run one bounded fetch. `linkedin_apify` untested (no `APIFY_API_KEY`). Consequence for research quality: Reddit evidence currently carries discovery relevance but no visible metrics, so evidence strength for Reddit sources stays capped until an alternative engagement path (e.g. authenticated Reddit API) is approved in its own ADR. **Remaining before any automation decision:** exercise the full manual research-intelligence loop (run → findings → intelligence updates) against a real creator using the working connectors.

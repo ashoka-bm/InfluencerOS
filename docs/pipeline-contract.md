@@ -213,7 +213,7 @@ Agents should combine SQL and semantic lookup: SQL for exact metric and record q
 | --- | --- | --- |
 | Creator Workspace | `schemas/creator-workspace.schema.json` | `examples/creator-workspace.example.json` |
 | Creator Profile | `schemas/creator-profile.schema.json` | `examples/creator-profile.example.json` |
-| Readiness Gates | `schemas/readiness-gates.schema.json` | `examples/readiness-gates.example.json` |
+| Readiness Milestones | `schemas/readiness-gates.schema.json` | `examples/readiness-gates.example.json` |
 | Channel Registry | `schemas/channels.schema.json` | `examples/channels.example.json` |
 | Content Strategy | `schemas/content-strategy.schema.json` | `examples/content-strategy.example.json` |
 | Conversion Asset | `schemas/conversion-asset.schema.json` | `examples/conversion-asset.example.json` |

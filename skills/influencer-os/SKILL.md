@@ -31,7 +31,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 
 ## Phase Order
 
-1. **Creator Profile, Content Strategy, and Schedule**: identify or create the creator profile and creator content schedule. Audience and niche are inputs, not agent guesses. Use accepted content strategy and schedule state to scope research and medium-specific blockers.
+1. **Creator Profile, Content Strategy, and Schedule**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. After drafting or changing calendar slots, run `python3 -m influencer_os rebuild-calendar <creator-workspace>`, present `boards/content-calendar.html` for human review, and run `python3 -m influencer_os validate calendar <creator-workspace>`. The HTML is a rebuildable projection, never a second schedule record. Do not advance the production readiness milestone until accepted changes are written back to `content-schedule.json`, the calendar is rebuilt, and workspace validation passes. Use accepted content strategy and schedule state to scope research and medium-specific blockers.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
 3. **Research Intelligence and Findings**: create a run-local search plan before browsing, capture dated public evidence, record source-yield outcomes after browsing, then synthesize current platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding or source-intelligence learning.
 4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
@@ -52,6 +52,15 @@ conversation or under `progress/`. Each checklist update must name:
 - validation command;
 - whether the next step is a human gate, dry-run drafting step, or provider
   boundary.
+
+For Phase 1 calendar review, the required sequence is:
+
+1. validate `content-schedule.json` against `creator-content-schedule`;
+2. rebuild `boards/content-calendar.html` from canonical records;
+3. present that projection at the human schedule-review checkpoint;
+4. write accepted changes to `content-schedule.json` and rebuild;
+5. run `validate calendar` and `validate workspace` before claiming
+   `production_ready`.
 
 After production planning, offer or run the advisory creative review phase
 before presenting prompts as ready for generation approval. The advisory
