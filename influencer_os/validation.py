@@ -111,6 +111,15 @@ RESEARCH_PLATFORMS = (
     "youtube",
 )
 
+def research_platform_for_surface(surface):
+    """Map a distribution surface (e.g. ``youtube_shorts``) to its canonical
+    research platform, or None for surfaces off the research set."""
+    for platform in RESEARCH_PLATFORMS:
+        if surface == platform or surface.startswith(f"{platform}_"):
+            return platform
+    return None
+
+
 # Source provenance may include background public-web records. Keep this
 # separate from RESEARCH_PLATFORMS because the latter also drives production
 # platform-fit checks and approval surfaces.

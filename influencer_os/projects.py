@@ -11,6 +11,7 @@ from influencer_os.validation import (
     TEXT_FORMAT_IDS,
     ValidationError,
     load_json,
+    research_platform_for_surface,
     validate_file,
     validate_record,
 )
@@ -1299,13 +1300,6 @@ def _resolve_concept_approval(project, workspace_dir):
     return approval, concept
 
 
-def _research_platform_for_surface(surface):
-    for platform in RESEARCH_PLATFORMS:
-        if surface == platform or surface.startswith(f"{platform}_"):
-            return platform
-    return None
-
-
 def _validate_approval_surface(project, approval):
     """A project stays within the locked approval's approved surface.
 
@@ -1327,7 +1321,7 @@ def _validate_approval_surface(project, approval):
     unapproved_surfaces = sorted(
         surface
         for surface in project.get("platform_targets", [])
-        if (platform := _research_platform_for_surface(surface)) is not None
+        if (platform := research_platform_for_surface(surface)) is not None
         and platform not in approval["approved_platforms"]
     )
     if unapproved_surfaces:

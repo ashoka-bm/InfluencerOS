@@ -32,7 +32,12 @@ from influencer_os.constructors import (
 )
 from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.json_io import write_json_atomic
-from influencer_os.validation import ValidationError, load_json, validate_record
+from influencer_os.validation import (
+    ValidationError,
+    load_json,
+    research_platform_for_surface,
+    validate_record,
+)
 
 CAMPAIGNS_DIR = "campaigns"
 OPPORTUNITY_QUEUE_DIR = Path("research") / "content-opportunity-queue"
@@ -675,15 +680,6 @@ def check_project_expression_against_approval(project, approval, concept):
 # --- projections ------------------------------------------------------------
 
 
-def _research_platform_for_surface(surface):
-    from influencer_os.validation import RESEARCH_PLATFORMS
-
-    for platform in RESEARCH_PLATFORMS:
-        if surface == platform or surface.startswith(f"{platform}_"):
-            return platform
-    return None
-
-
 def derive_pressure_projection(creator_workspace):
     """Advisory per-platform Pressure Projection over the current schedule
     horizon (ADR 0030/0032): every Project-linked slot contributes one
@@ -732,7 +728,7 @@ def derive_pressure_projection(creator_workspace):
         platforms = {
             platform
             for platform in (
-                _research_platform_for_surface(surface)
+                research_platform_for_surface(surface)
                 for surface in project.get("platform_targets", [])
             )
             if platform is not None
