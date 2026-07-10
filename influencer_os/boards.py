@@ -150,8 +150,24 @@ def derive_board_cards(workspace_dir):
     def badge_list(severities):
         return sorted(severities or (), key=SEVERITY_RANK.__getitem__)
 
-    children = {}
-    orphan_projects = []
+    # Pillar -> Campaign -> Concept -> Project hierarchy (ADR 0029): pillar
+    # cards come from the creator profile, campaigns hang from their primary
+    # pillar, concepts from their campaign, and projects resolve their parent
+    # concept through the locked approval. Unassigned opportunities stay
+    # top-level queue cards.
+    campaigns = {}
+    for campaign_path in sorted(workspace_dir.glob("campaigns/*/campaign.json")):
+        record = _load_validated(campaign_path, "campaign")
+        campaigns[record["campaign_id"]] = record
+
+    pillars = {}
+    profile_path = workspace_dir / "creator-profile.json"
+    if profile_path.exists():
+        profile = _load_validated(profile_path, "creator-profile")
+        for pillar in profile["content_pillars"]:
+            pillars[pillar["pillar_id"]] = pillar
+
+    project_parents = {}
     for project_id, project in sorted(projects.items()):
         approval_id = project["source_refs"]["concept_approval_id"]
         approval = approvals.get(approval_id)
@@ -160,58 +176,89 @@ def derive_board_cards(workspace_dir):
                 f"project {project_id} names concept approval {approval_id!r} "
                 "with no approval record; cannot resolve its parent card"
             )
-        concept = concepts.get(approval["campaign_concept_id"])
-        if concept is None:
+        concept_id = approval["campaign_concept_id"]
+        if concept_id not in concepts:
             raise ValidationError(
                 f"project {project_id} resolves to concept "
-                f"{approval['campaign_concept_id']!r} with no concept record; "
+                f"{concept_id!r} with no concept record; "
                 "cannot build its parent card"
             )
-        entry_id = concept.get("source_content_opportunity_id")
-        if entry_id is not None:
-            if entry_id not in entries:
-                raise ValidationError(
-                    f"project {project_id} resolves to opportunity "
-                    f"{entry_id!r} with no entry file; cannot build its "
-                    "parent card"
-                )
-            children.setdefault(entry_id, []).append(project_id)
-        else:
-            # Campaign-scoped concept: no opportunity card to hang from.
-            # The Pillar -> Campaign -> Concept hierarchy joins the board
-            # in the projection slice.
-            orphan_projects.append(project_id)
+        project_parents[project_id] = concept_id
 
-    def project_card(project_id, parent_card_id=None):
-        card = {
-            "content_card_id": f"card_{project_id}",
-            "card_type": "project",
-            "status": projects[project_id]["status"],
-            "source_record_type": "project",
-            "source_record_id": project_id,
-            "warning_badges": badge_list(project_badges.get(project_id)),
-            "child_card_ids": [],
+    concept_children = {}
+    for project_id, concept_id in sorted(project_parents.items()):
+        concept_children.setdefault(concept_id, []).append(project_id)
+    campaign_children = {}
+    for concept_id, concept in sorted(concepts.items()):
+        campaign_id = concept["campaign_id"]
+        if campaign_id not in campaigns:
+            raise ValidationError(
+                f"concept {concept_id} names campaign {campaign_id!r} with "
+                "no campaign record; cannot build its parent card"
+            )
+        campaign_children.setdefault(campaign_id, []).append(concept_id)
+    pillar_children = {}
+    for campaign_id, campaign in sorted(campaigns.items()):
+        pillar_id = campaign["primary_content_pillar_id"]
+        if pillar_id not in pillars:
+            raise ValidationError(
+                f"campaign {campaign_id} names pillar {pillar_id!r} that is "
+                "not on the creator profile; cannot build its parent card"
+            )
+        pillar_children.setdefault(pillar_id, []).append(campaign_id)
+
+    def card(record_id, card_type, source_record_type, status,
+             child_ids=(), parent_id=None, badges=None):
+        record_card = {
+            "content_card_id": f"card_{record_id}",
+            "card_type": card_type,
+            "status": status,
+            "source_record_type": source_record_type,
+            "source_record_id": record_id,
+            "warning_badges": badge_list(badges),
+            "child_card_ids": [f"card_{child}" for child in child_ids],
         }
-        if parent_card_id is not None:
-            card["parent_card_id"] = parent_card_id
-        return card
+        if parent_id is not None:
+            record_card["parent_card_id"] = f"card_{parent_id}"
+        return record_card
 
     cards = []
+    # Pillars appear only when campaign work exists under them; a pillar
+    # with no campaigns is profile state, not board state.
+    for pillar_id in sorted(pillar_children):
+        cards.append(card(
+            pillar_id, "pillar", "content_pillar", "active",
+            child_ids=sorted(pillar_children[pillar_id]),
+        ))
+        for campaign_id in sorted(pillar_children[pillar_id]):
+            campaign = campaigns[campaign_id]
+            cards.append(card(
+                campaign_id, "campaign", "campaign", campaign["status"],
+                child_ids=sorted(campaign_children.get(campaign_id, ())),
+                parent_id=pillar_id,
+            ))
+            for concept_id in sorted(campaign_children.get(campaign_id, ())):
+                concept = concepts[concept_id]
+                cards.append(card(
+                    concept_id, "concept", "campaign_concept",
+                    concept["status"],
+                    child_ids=sorted(concept_children.get(concept_id, ())),
+                    parent_id=campaign_id,
+                ))
+                for project_id in sorted(
+                    concept_children.get(concept_id, ())
+                ):
+                    cards.append(card(
+                        project_id, "project", "project",
+                        projects[project_id]["status"],
+                        parent_id=concept_id,
+                        badges=project_badges.get(project_id),
+                    ))
     for entry_id, entry in sorted(entries.items()):
-        child_ids = sorted(children.get(entry_id, ()))
-        cards.append({
-            "content_card_id": f"card_{entry_id}",
-            "card_type": "opportunity",
-            "status": entry["status"],
-            "source_record_type": "content_opportunity",
-            "source_record_id": entry_id,
-            "warning_badges": badge_list(opportunity_badges.get(entry_id)),
-            "child_card_ids": [f"card_{project_id}" for project_id in child_ids],
-        })
-        for project_id in child_ids:
-            cards.append(project_card(project_id, f"card_{entry_id}"))
-    for project_id in sorted(orphan_projects):
-        cards.append(project_card(project_id))
+        cards.append(card(
+            entry_id, "opportunity", "content_opportunity", entry["status"],
+            badges=opportunity_badges.get(entry_id),
+        ))
     return cards
 
 

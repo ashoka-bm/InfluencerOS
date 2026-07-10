@@ -1,44 +1,80 @@
 {
-  "content_board_id": "content_board_luna_fit",
-  "creator_profile_id": "creator_luna_fit",
-  "updated_on": "2026-07-03T10:00:00",
-  "columns": [
-    {
-      "column_id": "column_queue",
-      "title": "Idea Queue"
-    },
-    {
-      "column_id": "column_in_production",
-      "title": "In Production"
-    }
-  ],
-  "cards": [
-    {
-      "content_card_id": "card_content_opportunity_luna_fit_001",
-      "card_type": "opportunity",
-      "status": "assigned",
-      "source_record_type": "content_opportunity",
-      "source_record_id": "content_opportunity_luna_fit_001",
-      "warning_badges": [],
-      "child_card_ids": [
-        "card_project_luna_tiny_reset_001"
-      ]
-    },
-    {
-      "content_card_id": "card_project_luna_tiny_reset_001",
-      "card_type": "project",
-      "status": "planning",
-      "source_record_type": "project",
-      "source_record_id": "project_luna_tiny_reset_001",
-      "warning_badges": [
-        "important"
-      ],
-      "child_card_ids": [],
-      "parent_card_id": "card_content_opportunity_luna_fit_001"
-    }
-  ],
-  "manual_order": [
-    "card_content_opportunity_luna_fit_001",
+ "content_board_id": "content_board_luna_fit",
+ "creator_profile_id": "creator_luna_fit",
+ "updated_on": "2026-07-03T10:00:00",
+ "columns": [
+  {
+   "column_id": "column_queue",
+   "title": "Idea Queue"
+  },
+  {
+   "column_id": "column_in_production",
+   "title": "In Production"
+  }
+ ],
+ "cards": [
+  {
+   "content_card_id": "card_pillar_tiny_home_workouts",
+   "card_type": "pillar",
+   "status": "active",
+   "source_record_type": "content_pillar",
+   "source_record_id": "pillar_tiny_home_workouts",
+   "warning_badges": [],
+   "child_card_ids": [
+    "card_campaign_luna_fit_001"
+   ]
+  },
+  {
+   "content_card_id": "card_campaign_luna_fit_001",
+   "card_type": "campaign",
+   "status": "active",
+   "source_record_type": "campaign",
+   "source_record_id": "campaign_luna_fit_001",
+   "warning_badges": [],
+   "child_card_ids": [
+    "card_campaign_concept_luna_fit_001"
+   ],
+   "parent_card_id": "card_pillar_tiny_home_workouts"
+  },
+  {
+   "content_card_id": "card_campaign_concept_luna_fit_001",
+   "card_type": "concept",
+   "status": "active",
+   "source_record_type": "campaign_concept",
+   "source_record_id": "campaign_concept_luna_fit_001",
+   "warning_badges": [],
+   "child_card_ids": [
     "card_project_luna_tiny_reset_001"
-  ]
+   ],
+   "parent_card_id": "card_campaign_luna_fit_001"
+  },
+  {
+   "content_card_id": "card_project_luna_tiny_reset_001",
+   "card_type": "project",
+   "status": "planning",
+   "source_record_type": "project",
+   "source_record_id": "project_luna_tiny_reset_001",
+   "warning_badges": [
+    "important"
+   ],
+   "child_card_ids": [],
+   "parent_card_id": "card_campaign_concept_luna_fit_001"
+  },
+  {
+   "content_card_id": "card_content_opportunity_luna_fit_001",
+   "card_type": "opportunity",
+   "status": "assigned",
+   "source_record_type": "content_opportunity",
+   "source_record_id": "content_opportunity_luna_fit_001",
+   "warning_badges": [],
+   "child_card_ids": []
+  }
+ ],
+ "manual_order": [
+  "card_pillar_tiny_home_workouts",
+  "card_campaign_luna_fit_001",
+  "card_campaign_concept_luna_fit_001",
+  "card_project_luna_tiny_reset_001",
+  "card_content_opportunity_luna_fit_001"
+ ]
 }

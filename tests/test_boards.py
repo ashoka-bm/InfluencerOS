@@ -24,6 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 IDEA_CARD = f"card_{ENTRY_ID}"
 PROJECT_CARD = f"card_{PROJECT_ID}"
+PILLAR_CARD = "card_pillar_tiny_home_workouts"
+CAMPAIGN_CARD = "card_campaign_luna_fit_001"
+CONCEPT_CARD = "card_campaign_concept_luna_fit_001"
+HIERARCHY_ORDER = [
+    PILLAR_CARD, CAMPAIGN_CARD, CONCEPT_CARD, PROJECT_CARD, IDEA_CARD,
+]
 
 
 def load_board(workspace_dir):
@@ -47,20 +53,32 @@ class RebuildBoardTests(unittest.TestCase):
             board = load_board(workspace_dir)
             self.assertEqual(board["content_board_id"], "content_board_luna_fit")
             self.assertEqual(board["columns"], list(DEFAULT_BOARD_COLUMNS))
-            self.assertEqual(board["manual_order"], [IDEA_CARD, PROJECT_CARD])
+            self.assertEqual(board["manual_order"], HIERARCHY_ORDER)
 
             cards = {card["content_card_id"]: card for card in board["cards"]}
+            pillar = cards[PILLAR_CARD]
+            self.assertEqual(pillar["card_type"], "pillar")
+            self.assertEqual(pillar["child_card_ids"], [CAMPAIGN_CARD])
+            campaign = cards[CAMPAIGN_CARD]
+            self.assertEqual(campaign["card_type"], "campaign")
+            self.assertEqual(campaign["status"], "active")
+            self.assertEqual(campaign["parent_card_id"], PILLAR_CARD)
+            self.assertEqual(campaign["child_card_ids"], [CONCEPT_CARD])
+            concept = cards[CONCEPT_CARD]
+            self.assertEqual(concept["card_type"], "concept")
+            self.assertEqual(concept["parent_card_id"], CAMPAIGN_CARD)
+            self.assertEqual(concept["child_card_ids"], [PROJECT_CARD])
             idea = cards[IDEA_CARD]
             self.assertEqual(idea["card_type"], "opportunity")
             self.assertEqual(idea["status"], "assigned")
-            self.assertEqual(idea["child_card_ids"], [PROJECT_CARD])
-            # The example warning targets promoted work, so the badge belongs
-            # to the project card, not the parent idea card.
+            self.assertEqual(idea["child_card_ids"], [])
+            # The example warning targets approved work, so the badge belongs
+            # to the project card, not the opportunity card.
             self.assertEqual(idea["warning_badges"], [])
             project = cards[PROJECT_CARD]
             self.assertEqual(project["card_type"], "project")
             self.assertEqual(project["status"], "planning")
-            self.assertEqual(project["parent_card_id"], IDEA_CARD)
+            self.assertEqual(project["parent_card_id"], CONCEPT_CARD)
             self.assertEqual(project["warning_badges"], ["important"])
 
             validate_board(workspace_dir)
@@ -82,7 +100,11 @@ class RebuildBoardTests(unittest.TestCase):
 
             rebuild_board(workspace_dir)
             rebuilt = load_board(workspace_dir)
-            self.assertEqual(rebuilt["manual_order"], [PROJECT_CARD, IDEA_CARD])
+            self.assertEqual(
+                rebuilt["manual_order"],
+                [PROJECT_CARD, IDEA_CARD, PILLAR_CARD, CAMPAIGN_CARD,
+                 CONCEPT_CARD],
+            )
             self.assertEqual(
                 [column["column_id"] for column in rebuilt["columns"]],
                 ["column_queue", "column_in_production"],
@@ -108,7 +130,7 @@ class RebuildBoardTests(unittest.TestCase):
             board = load_board(workspace_dir)
             self.assertEqual(
                 board["manual_order"],
-                [IDEA_CARD, PROJECT_CARD, "card_content_opportunity_luna_fit_002"],
+                HIERARCHY_ORDER + ["card_content_opportunity_luna_fit_002"],
             )
 
     def test_rebuild_drops_stale_cards(self):
@@ -123,10 +145,13 @@ class RebuildBoardTests(unittest.TestCase):
 
             rebuild_board(workspace_dir)
             board = load_board(workspace_dir)
-            self.assertEqual(board["manual_order"], [IDEA_CARD])
+            self.assertEqual(
+                board["manual_order"],
+                [PILLAR_CARD, CAMPAIGN_CARD, CONCEPT_CARD, IDEA_CARD],
+            )
             cards = board_cards_by_id(workspace_dir)
             self.assertNotIn(PROJECT_CARD, cards)
-            self.assertEqual(cards[IDEA_CARD]["child_card_ids"], [])
+            self.assertEqual(cards[CONCEPT_CARD]["child_card_ids"], [])
 
     def test_resolved_warning_does_not_badge(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -263,14 +288,14 @@ class BoardCliTests(unittest.TestCase):
                 cwd=ROOT, text=True, capture_output=True, check=False,
             )
             self.assertEqual(rebuild.returncode, 0, rebuild.stderr)
-            self.assertIn("Rebuilt content board: 2 cards", rebuild.stdout)
+            self.assertIn("Rebuilt content board: 5 cards", rebuild.stdout)
 
             validate = subprocess.run(
                 [sys.executable, "-m", "influencer_os", "validate", "board", str(workspace_dir)],
                 cwd=ROOT, text=True, capture_output=True, check=False,
             )
             self.assertEqual(validate.returncode, 0, validate.stderr)
-            self.assertIn("Checked 2 board cards.", validate.stdout)
+            self.assertIn("Checked 5 board cards.", validate.stdout)
 
 
 if __name__ == "__main__":

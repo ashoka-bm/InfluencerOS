@@ -492,6 +492,70 @@ class StageConceptApprovalTests(unittest.TestCase):
                 self.seed, self.workspace, "campaign_concept_luna_fit_001"
             )
         self.assertIn("intent pair", str(caught.exception))
+    def test_multi_format_bundle_creates_exact_project_set(self):
+        # Runnable exit criterion 1 (campaign-concept-pressure plan): one
+        # approved concept transactionally creates a Substack article, two
+        # Instagram posts, one Reel, and two Stories — six projects, one
+        # owning concept, individually valid production paths.
+        def project_seed(slug, unit, platforms):
+            return {
+                "project_slug": slug,
+                "content_unit_type": unit,
+                "platform_targets": platforms,
+                "learning_goal": f"Test the {unit} angle of the reset concept.",
+                "acceptance_criteria": [
+                    f"A validated production plan exists for the {unit} format."
+                ],
+                "commercial_expression": {
+                    "commercial_function": "lead_capture",
+                    "offer_integration": "embedded",
+                    "cta_intensity": "soft",
+                },
+            }
+
+        seed = {
+            "approved_platforms": ["instagram", "tiktok", "youtube",
+                                   "substack"],
+            "approved_formats": [
+                "format_article", "format_single_image_post",
+                "format_short_form_video", "format_story_sequence",
+            ],
+            "max_offer_integration": "embedded",
+            "max_cta_intensity": "soft",
+            "projects": [
+                project_seed("reset-article", "article", ["substack"]),
+                project_seed("reset-post-one", "single_image_post",
+                             ["instagram"]),
+                project_seed("reset-post-two", "single_image_post",
+                             ["instagram"]),
+                project_seed("reset-reel", "short_form_video",
+                             ["instagram_reels"]),
+                project_seed("reset-story-one", "story_sequence",
+                             ["instagram_stories"]),
+                project_seed("reset-story-two", "story_sequence",
+                             ["instagram_stories"]),
+            ],
+        }
+        staged = stage_concept_approval(
+            seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        self.assertEqual(len(staged["approval"]["project_ids_created"]), 6)
+        result = commit_stage(staged["stage_id"], self.workspace)
+        self.assertEqual(len(result["project_dirs"]), 6)
+        approval = load_json(result["approval_path"])
+        for project_dir in result["project_dirs"]:
+            manifest = load_json(project_dir / "project.json")
+            self.assertEqual(
+                manifest["source_refs"]["concept_approval_id"],
+                approval["concept_approval_id"],
+            )
+            self.assertEqual(
+                manifest["source_refs"]["campaign_concept_id"],
+                "campaign_concept_luna_fit_001",
+            )
+            validate_project(project_dir)
+        validate_all(self.workspace)
+
 
 
 class PlanFetchTests(unittest.TestCase):

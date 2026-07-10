@@ -60,6 +60,9 @@
           "card_type": {
             "type": "string",
             "enum": [
+              "pillar",
+              "campaign",
+              "concept",
               "opportunity",
               "project"
             ]
@@ -71,6 +74,9 @@
           "source_record_type": {
             "type": "string",
             "enum": [
+              "content_pillar",
+              "campaign",
+              "campaign_concept",
               "content_opportunity",
               "project"
             ]

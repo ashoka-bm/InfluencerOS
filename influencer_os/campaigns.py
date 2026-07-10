@@ -654,6 +654,182 @@ def check_project_expression_against_approval(project, approval, concept):
         )
 
 
+# --- projections ------------------------------------------------------------
+
+
+def _research_platform_for_surface(surface):
+    from influencer_os.validation import RESEARCH_PLATFORMS
+
+    for platform in RESEARCH_PLATFORMS:
+        if surface == platform or surface.startswith(f"{platform}_"):
+            return platform
+    return None
+
+
+def derive_pressure_projection(creator_workspace):
+    """Advisory per-platform Pressure Projection over the current schedule
+    horizon (ADR 0030/0032): every Project-linked slot contributes one
+    Audience Touch per targeted platform, tiers come from each project's
+    derived Commercial Pressure, pre-Project slots count as unresolved —
+    unknown is never reported as low — and a platform whose known
+    high-pressure share exceeds the advisory threshold gets a warning that
+    never blocks anything."""
+    from influencer_os.pressure import (
+        HIGH_PRESSURE_SHARE_ADVISORY_THRESHOLD,
+        PRESSURE_TIERS,
+        derive_commercial_pressure,
+        pressure_indicator,
+    )
+
+    workspace_dir = Path(creator_workspace)
+    schedule_path = workspace_dir / "content-schedule.json"
+    if not schedule_path.exists():
+        raise FileNotFoundError(f"Missing content schedule: {schedule_path}")
+    schedule = load_json(schedule_path)
+    validate_record("creator-content-schedule", schedule)
+    projects = _workspace_project_manifests(workspace_dir)
+
+    touches_by_platform = {}
+    unresolved_slots = []
+    resolved_slots = []
+    for slot in schedule.get("calendar_slots", []):
+        project_id = slot.get("project_id")
+        if project_id is None:
+            unresolved_slots.append(slot["slot_id"])
+            continue
+        project = projects.get(project_id)
+        if project is None:
+            raise ValidationError(
+                f"calendar slot {slot['slot_id']} names project "
+                f"{project_id!r}, which does not exist"
+            )
+        expression = project.get("commercial_expression")
+        if expression is None:
+            unresolved_slots.append(slot["slot_id"])
+            continue
+        tier = derive_commercial_pressure(
+            expression["offer_integration"], expression["cta_intensity"]
+        )
+        resolved_slots.append(slot["slot_id"])
+        platforms = {
+            platform
+            for platform in (
+                _research_platform_for_surface(surface)
+                for surface in project.get("platform_targets", [])
+            )
+            if platform is not None
+        }
+        for platform in sorted(platforms):
+            touches_by_platform.setdefault(platform, []).append(tier)
+
+    platforms = {}
+    for platform, tiers in sorted(touches_by_platform.items()):
+        indicator = pressure_indicator(tiers)
+        indicator["advisory_warning"] = (
+            indicator["high_share"] is not None
+            and indicator["high_share"] > HIGH_PRESSURE_SHARE_ADVISORY_THRESHOLD
+        )
+        platforms[platform] = indicator
+
+    total_slots = len(resolved_slots) + len(unresolved_slots)
+    return {
+        "platforms": platforms,
+        "tiers": list(PRESSURE_TIERS),
+        "unresolved_slot_ids": unresolved_slots,
+        "unresolved_slot_count": len(unresolved_slots),
+        "known_slot_count": len(resolved_slots),
+        "known_coverage": (
+            len(resolved_slots) / total_slots if total_slots else None
+        ),
+    }
+
+
+def derive_campaign_evaluation(creator_workspace):
+    """Rebuildable Campaign and Concept evaluation summaries aggregated
+    solely from canonical records (ADR 0032): lifecycle and delivery
+    counts, commercial function and pressure mix, and the campaign's
+    declared measurable outcome. Missing analytics stay unknown — no
+    inferred conversion credit, fractional attribution, or duplicated
+    success."""
+    from influencer_os.pressure import derive_commercial_pressure
+
+    workspace_dir = Path(creator_workspace)
+    projects = _workspace_project_manifests(workspace_dir)
+    campaigns = {}
+    for campaign_path in sorted(
+        workspace_dir.glob("campaigns/*/campaign.json")
+    ):
+        campaign = load_json(campaign_path)
+        validate_record("campaign", campaign)
+        campaign_id = campaign["campaign_id"]
+        concepts = {}
+        for concept_path in sorted(
+            workspace_dir.glob(f"campaigns/{campaign_id}/concepts/*.json")
+        ):
+            concept = load_json(concept_path)
+            concepts[concept["campaign_concept_id"]] = concept
+        approvals = []
+        for approval_path in sorted(
+            workspace_dir.glob(f"campaigns/{campaign_id}/approvals/*.json")
+        ):
+            approvals.append(load_json(approval_path))
+
+        concept_summaries = {}
+        for concept_id, concept in concepts.items():
+            concept_project_ids = []
+            for approval in approvals:
+                if (
+                    approval["campaign_concept_id"] == concept_id
+                    and approval["approval_status"] == "active"
+                ):
+                    concept_project_ids.extend(approval["project_ids_created"])
+            status_counts = {}
+            function_counts = {}
+            pressure_counts = {}
+            published = 0
+            for project_id in concept_project_ids:
+                project = projects.get(project_id)
+                if project is None:
+                    continue
+                status = project["status"]
+                status_counts[status] = status_counts.get(status, 0) + 1
+                if status in ("published", "analyzed"):
+                    published += 1
+                expression = project.get("commercial_expression")
+                if expression is not None:
+                    function = expression["commercial_function"]
+                    function_counts[function] = (
+                        function_counts.get(function, 0) + 1
+                    )
+                    tier = derive_commercial_pressure(
+                        expression["offer_integration"],
+                        expression["cta_intensity"],
+                    )
+                    pressure_counts[tier] = pressure_counts.get(tier, 0) + 1
+            concept_summaries[concept_id] = {
+                "status": concept["status"],
+                "primary_commercial_function": concept[
+                    "primary_commercial_function"
+                ],
+                "project_count": len(concept_project_ids),
+                "project_status_counts": status_counts,
+                "published_project_count": published,
+                "commercial_function_counts": function_counts,
+                "pressure_tier_counts": pressure_counts,
+            }
+
+        campaigns[campaign_id] = {
+            "name": campaign["name"],
+            "objective": campaign["objective"],
+            "status": campaign["status"],
+            "measurable_outcome": campaign["measurable_outcome"],
+            "measured_progress": "unknown",
+            "concept_count": len(concepts),
+            "concepts": concept_summaries,
+        }
+    return {"workspace_path": workspace_dir, "campaigns": campaigns}
+
+
 # --- workspace walker -------------------------------------------------------
 
 

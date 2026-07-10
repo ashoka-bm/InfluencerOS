@@ -169,6 +169,12 @@ def main(argv=None):
     query_parser.add_argument("--db", dest="db_path", help="Index database path; defaults to workspace-library/index/influencer-os.sqlite.")
     query_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to return (default 8).")
 
+    pressure_parser = subparsers.add_parser("pressure-projection", help="Report the advisory per-platform Commercial Pressure projection over the current schedule horizon (ADR 0030/0032). Reporting only; never blocks approvals or creation.")
+    pressure_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
+    campaign_status_parser = subparsers.add_parser("campaign-status", help="Report rebuildable Campaign and Concept evaluation summaries aggregated from canonical records; missing analytics stay unknown (ADR 0032).")
+    campaign_status_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
+
     board_parser = subparsers.add_parser("rebuild-board", help="Rebuild the Content Board projection from canonical records.")
     board_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
@@ -665,6 +671,71 @@ def main(argv=None):
                 if len(snippet) > 160:
                     snippet = snippet[:157] + "..."
                 print(f"{hit['final_score']:.4f} {locator}{heading}: {snippet}")
+            return 0
+
+        if args.command == "pressure-projection":
+            from influencer_os.campaigns import derive_pressure_projection
+
+            result = derive_pressure_projection(args.creator_workspace)
+            coverage = result["known_coverage"]
+            print(
+                f"Pressure projection: {result['known_slot_count']} known "
+                f"slot(s), {result['unresolved_slot_count']} unresolved "
+                f"(coverage {coverage:.0%})" if coverage is not None else
+                "Pressure projection: no calendar slots in the horizon"
+            )
+            for platform, indicator in result["platforms"].items():
+                counts = indicator["tier_counts"]
+                tier_text = ", ".join(
+                    f"{tier}={counts[tier]}" for tier in result["tiers"]
+                )
+                share = indicator["high_share"]
+                print(
+                    f"- {platform}: {indicator['known_touches']} touch(es), "
+                    f"score {indicator['score']}, high share {share:.0%} "
+                    f"({tier_text})"
+                )
+                if indicator["advisory_warning"]:
+                    print(
+                        f"  advisory: {platform} known high-pressure share "
+                        "exceeds 25% (guides, never gates)",
+                        file=sys.stderr,
+                    )
+            if result["unresolved_slot_ids"]:
+                print(
+                    "Unresolved pre-Project slots (never counted as low): "
+                    + ", ".join(result["unresolved_slot_ids"])
+                )
+            return 0
+
+        if args.command == "campaign-status":
+            from influencer_os.campaigns import derive_campaign_evaluation
+
+            result = derive_campaign_evaluation(args.creator_workspace)
+            if not result["campaigns"]:
+                print("No campaigns yet.")
+                return 0
+            for campaign_id, summary in result["campaigns"].items():
+                print(
+                    f"{campaign_id} [{summary['status']}] "
+                    f"{summary['objective']}: {summary['name']}"
+                )
+                print(f"  outcome: {summary['measurable_outcome']}")
+                print(f"  measured progress: {summary['measured_progress']}")
+                for concept_id, concept in summary["concepts"].items():
+                    pressure_text = ", ".join(
+                        f"{tier}={count}"
+                        for tier, count in sorted(
+                            concept["pressure_tier_counts"].items()
+                        )
+                    ) or "none derived"
+                    print(
+                        f"  - {concept_id} [{concept['status']}] "
+                        f"{concept['primary_commercial_function']}: "
+                        f"{concept['project_count']} project(s), "
+                        f"{concept['published_project_count']} published; "
+                        f"pressure {pressure_text}"
+                    )
             return 0
 
         if args.command == "rebuild-board":

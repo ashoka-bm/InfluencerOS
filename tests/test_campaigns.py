@@ -896,5 +896,136 @@ class MigrateContentSeriesTests(unittest.TestCase):
         self.assertEqual(strategy_path.read_text(), before)
 
 
+class PressureProjectionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace_dir = _campaign_workspace(self.temp.name)
+
+    def _write_schedule_and_project(self, offer="embedded", cta="soft"):
+        project = _example("project.example.json")
+        project["commercial_expression"] = {
+            "commercial_function": "lead_capture",
+            "offer_integration": offer,
+            "cta_intensity": cta,
+        }
+        project_dir = self.workspace_dir / "projects" / project["project_slug"]
+        project_dir.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(project_dir / "project.json", project)
+
+        schedule = _example("creator-content-schedule.example.json")
+        filled = dict(schedule["calendar_slots"][0])
+        filled["slot_id"] = "slot_luna_projected"
+        filled["project_id"] = project["project_id"]
+        schedule["calendar_slots"].append(filled)
+        write_json_atomic(
+            self.workspace_dir / "content-schedule.json", schedule
+        )
+        return project
+
+    def test_projection_reports_touches_per_platform(self):
+        from influencer_os.campaigns import derive_pressure_projection
+
+        project = self._write_schedule_and_project()
+        result = derive_pressure_projection(self.workspace_dir)
+        # project.example targets youtube_shorts/instagram_reels/tiktok ->
+        # one touch each on youtube/instagram/tiktok.
+        self.assertEqual(
+            sorted(result["platforms"]), ["instagram", "tiktok", "youtube"]
+        )
+        for indicator in result["platforms"].values():
+            self.assertEqual(indicator["known_touches"], 1)
+            self.assertEqual(indicator["tier_counts"]["low"], 1)
+            self.assertEqual(indicator["score"], 33)
+            self.assertEqual(indicator["high_share"], 0.0)
+            self.assertFalse(indicator["advisory_warning"])
+        self.assertEqual(result["known_slot_count"], 1)
+        self.assertEqual(result["unresolved_slot_count"], 1)
+        self.assertEqual(result["known_coverage"], 0.5)
+
+    def test_high_share_above_threshold_warns_advisory_only(self):
+        from influencer_os.campaigns import derive_pressure_projection
+
+        self._write_schedule_and_project(offer="contextual", cta="direct")
+        result = derive_pressure_projection(self.workspace_dir)
+        for indicator in result["platforms"].values():
+            self.assertEqual(indicator["tier_counts"]["high"], 1)
+            self.assertEqual(indicator["high_share"], 1.0)
+            self.assertTrue(indicator["advisory_warning"])
+
+    def test_unresolved_slots_are_never_counted_as_low(self):
+        from influencer_os.campaigns import derive_pressure_projection
+
+        schedule = _example("creator-content-schedule.example.json")
+        write_json_atomic(
+            self.workspace_dir / "content-schedule.json", schedule
+        )
+        result = derive_pressure_projection(self.workspace_dir)
+        self.assertEqual(result["platforms"], {})
+        self.assertEqual(result["known_slot_count"], 0)
+        self.assertEqual(result["unresolved_slot_count"], 1)
+
+    def test_projection_is_deterministic(self):
+        from influencer_os.campaigns import derive_pressure_projection
+
+        self._write_schedule_and_project()
+        first = derive_pressure_projection(self.workspace_dir)
+        second = derive_pressure_projection(self.workspace_dir)
+        self.assertEqual(first, second)
+
+
+class CampaignEvaluationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace_dir = _campaign_workspace(self.temp.name)
+        scaffold_campaign(_campaign_seed_from_example(), self.workspace_dir)
+        activate_campaign(self.workspace_dir, "campaign_luna_fit_001")
+        _write_opportunity_fixture(self.workspace_dir)
+        scaffold_campaign_concept(
+            _concept_seed_from_example(), self.workspace_dir
+        )
+        approval = _example("concept-approval.example.json")
+        approvals_dir = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "approvals"
+        )
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(
+            approvals_dir / f"{approval['concept_approval_id']}.json", approval
+        )
+        project = _example("project.example.json")
+        project_dir = self.workspace_dir / "projects" / project["project_slug"]
+        project_dir.mkdir(parents=True)
+        write_json_atomic(project_dir / "project.json", project)
+
+    def test_evaluation_aggregates_only_canonical_facts(self):
+        from influencer_os.campaigns import derive_campaign_evaluation
+
+        result = derive_campaign_evaluation(self.workspace_dir)
+        campaign = result["campaigns"]["campaign_luna_fit_001"]
+        self.assertEqual(campaign["status"], "active")
+        self.assertEqual(campaign["objective"], "lead_generation")
+        self.assertEqual(campaign["measured_progress"], "unknown")
+        self.assertEqual(campaign["concept_count"], 1)
+        concept = campaign["concepts"]["campaign_concept_luna_fit_001"]
+        self.assertEqual(concept["project_count"], 1)
+        self.assertEqual(concept["project_status_counts"], {"planning": 1})
+        self.assertEqual(concept["published_project_count"], 0)
+        self.assertEqual(
+            concept["commercial_function_counts"], {"lead_capture": 1}
+        )
+        # embedded + soft derives low (ADR 0030); pressure is derived,
+        # never read from a stored field.
+        self.assertEqual(concept["pressure_tier_counts"], {"low": 1})
+
+    def test_evaluation_is_deterministic(self):
+        from influencer_os.campaigns import derive_campaign_evaluation
+
+        first = derive_campaign_evaluation(self.workspace_dir)
+        second = derive_campaign_evaluation(self.workspace_dir)
+        self.assertEqual(first, second)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -318,5 +318,5 @@ class PhaseOneUserJourneyTests(unittest.TestCase):
 
             self.assertEqual(project["status"], "packaged")
             self.assertTrue((project_dir / "output-package" / "output-package.json").exists())
-            self.assertEqual(len(board["cards"]), 2)
+            self.assertEqual(len(board["cards"]), 5)
             self.assertTrue((run_root / "index.sqlite").exists())

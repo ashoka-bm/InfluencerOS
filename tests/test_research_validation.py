@@ -83,6 +83,8 @@ def scaffold_research_workspace(temp_dir):
 
     # Research validation pins every record to the owning workspace creator.
     write_json(workspace_dir / "creator-workspace.json", load_example("creator-workspace"))
+    # The campaign hierarchy resolves pillars from the profile.
+    write_json(workspace_dir / "creator-profile.json", load_example("creator-profile"))
 
     schedule = load_example("creator-content-schedule")
     schedule["calendar_slots"][0].update(
