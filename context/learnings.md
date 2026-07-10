@@ -40,6 +40,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: No feedback - routine session after creator-to-video workflow visualization.
 - 2026-07-09: 2026-07-09: No feedback — routine session after onboarding readiness and calendar review remediation.
 - 2026-07-09: No feedback — routine session after lean routing and ownership cleanup.
+- 2026-07-10: Codex CLI on this machine cannot execute tools (codex-code-mode-host missing); smoke-test with a tool-using task before delegating reviews or implementation to it.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.
@@ -81,3 +82,9 @@ Creator performance learnings belong in Creator Workspaces, not here.
 ### create-lead-magnet
 - 2026-07-09: First real run (margot) user-approved; integration audit found the conductor gap — create-influencer must dispatch create-lead-magnet explicitly in its lead-magnet conversion phase.
 - 2026-07-09: Adversarial hardening: Part A references only existing files; approval and strategy provenance fail closed at record/workspace seams; non-lead types halt; render state stays in root .tmp; browser helpers need success-path boundary tests.
+
+### approve-concept
+- 2026-07-10: The gate enforces approval.evidence_refs == concept.evidence_refs verbatim; there is no injected-run rule anymore — never rewrite the concept's research package at approval time.
+
+### manage-opportunity-queue
+- 2026-07-10: Assignment is one transaction inside the campaign-concept constructor: the opportunity flip is never hand-edited, and only open statuses (new/reviewed/shortlisted/needs_more_research) can be assigned.

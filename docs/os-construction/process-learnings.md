@@ -91,3 +91,26 @@ When a visual document depends on reusable assets, sequence it after asset
 planning and link by typed identity rather than copying file paths. This makes
 wrong-category images fail validation, supports prompt-ready placeholders, and
 makes the projection stale when its source asset records change.
+
+## 2026-07-10 — Campaign Model Implementation (ADRs 0029-0032)
+
+- The ADR 0031 cutover landed as four slices on top of the ADR 0042
+  constructor foundation: records+pressure rules, content-series rename,
+  the idea-record replacement, and projections. Retargeting the staging
+  engine (rather than rebuilding it) for transactional Concept Approvals
+  worked as planned; the promotion gate's checks all mapped to approval
+  equivalents, with the injected-run rule subsumed by the stronger
+  approval-evidence == concept-evidence verbatim rule.
+- Plan prose left one contract implicit that mattered: the ADR 0024
+  intent trio needed a home on CampaignConcept (copied from the
+  opportunity at assignment, copied onto the approval at staging) for the
+  downstream hook/payoff reviews to keep their by-reference resolution.
+- "One unchanged Concept may receive later Concept Approvals" means
+  multiple simultaneously ACTIVE approvals per concept — the old
+  supersede-on-expansion promotion rule intentionally did not carry over,
+  because earlier approvals are the provenance lock for their projects.
+- Mechanical vocabulary sweeps (scripted token maps) safely covered ~90%
+  of the ~185 code references and the test fixtures; the closure/gate
+  semantics needed hand-rewritten tests. The drift checks (schema-example
+  bijection, skill CLI invocations, registry/matrix rows) caught every
+  reconciliation gap they were designed for.
