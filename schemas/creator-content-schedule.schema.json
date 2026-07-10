@@ -10,6 +10,7 @@
     "creator_slug",
     "content_strategy_id",
     "updated_on",
+    "research_basis",
     "cadence_expectations",
     "content_goals",
     "calendar_slots",
@@ -35,6 +36,30 @@
     "updated_on": {
       "type": "string",
       "format": "date"
+    },
+    "research_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "research_run_ids"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "strategy_scaffold",
+            "research_informed"
+          ]
+        },
+        "research_run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+          }
+        }
+      }
     },
     "cadence_expectations": {
       "type": "string",
@@ -127,6 +152,40 @@
             "type": "string",
             "pattern": "^goal_[a-zA-Z0-9_-]+$"
           },
+          "research_state": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "research_run_ids"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "unresearched",
+                  "candidates_ready",
+                  "selected",
+                  "inherits_anchor"
+                ]
+              },
+              "research_run_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+                }
+              },
+              "selected_idea_queue_entry_id": {
+                "type": "string",
+                "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+              },
+              "anchor_slot_id": {
+                "type": "string",
+                "pattern": "^slot_[a-zA-Z0-9_-]+$"
+              }
+            }
+          },
           "topic_cluster": {
             "type": "string",
             "minLength": 1
@@ -218,6 +277,7 @@
           "target_date",
           "date_flexibility",
           "content_goal_id",
+          "research_state",
           "topic_cluster",
           "status"
         ]

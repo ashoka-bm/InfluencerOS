@@ -6,7 +6,7 @@ import html
 import os
 import re
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 
@@ -41,9 +41,92 @@ FORMAT_LABELS = {
     "format_thread": "Thread",
 }
 
+RESEARCH_STATE_LABELS = {
+    "unresearched": "Research pending",
+    "candidates_ready": "Candidates ready",
+    "selected": "Idea selected",
+    "inherits_anchor": "Inherits anchor research",
+}
+
 
 def calendar_path_for(workspace_dir):
     return Path(workspace_dir) / "boards" / "content-calendar.html"
+
+
+def schedule_research_state_errors(schedule):
+    """Return cross-slot research-state errors that JSON Schema cannot express."""
+    errors = []
+    slots = schedule.get("calendar_slots", [])
+    slot_ids = [slot["slot_id"] for slot in slots]
+    duplicates = sorted(
+        slot_id for slot_id, count in Counter(slot_ids).items() if count > 1
+    )
+    if duplicates:
+        errors.append(f"content-schedule.json has duplicate slot_ids: {duplicates}")
+
+    by_id = {slot["slot_id"]: slot for slot in slots}
+    for slot in slots:
+        slot_id = slot["slot_id"]
+        state = slot["research_state"]
+        state_status = state["status"]
+        run_ids = state["research_run_ids"]
+        selected_entry_id = state.get("selected_idea_queue_entry_id")
+        anchor_id = state.get("anchor_slot_id")
+        if len(run_ids) != len(set(run_ids)):
+            errors.append(
+                f"calendar slot {slot_id} research_state contains duplicate research_run_ids"
+            )
+        if state_status == "unresearched":
+            if run_ids or selected_entry_id or anchor_id:
+                errors.append(
+                    f"calendar slot {slot_id} is unresearched but carries research, "
+                    "selection, or anchor provenance"
+                )
+        elif state_status == "candidates_ready":
+            if not run_ids or selected_entry_id or anchor_id:
+                errors.append(
+                    f"calendar slot {slot_id} candidates_ready requires research_run_ids "
+                    "and forbids a selected idea or anchor"
+                )
+        elif state_status == "selected":
+            if not run_ids or not selected_entry_id or anchor_id:
+                errors.append(
+                    f"calendar slot {slot_id} selected research requires research_run_ids "
+                    "and selected_idea_queue_entry_id, with no anchor"
+                )
+        elif state_status == "inherits_anchor":
+            if run_ids or selected_entry_id or not anchor_id:
+                errors.append(
+                    f"calendar slot {slot_id} inherits_anchor requires anchor_slot_id "
+                    "and forbids direct research or selection provenance"
+                )
+        if slot["status"] == "filled" and state_status not in {
+            "selected",
+            "inherits_anchor",
+        }:
+            errors.append(
+                f"calendar slot {slot_id} is filled but research_state is "
+                f"{state_status!r}; filled slots require selected research or an anchor"
+            )
+        if state_status != "inherits_anchor":
+            continue
+        if not anchor_id:
+            continue
+        if anchor_id == slot_id:
+            errors.append(f"calendar slot {slot_id} cannot inherit research from itself")
+            continue
+        anchor = by_id.get(anchor_id)
+        if anchor is None:
+            errors.append(
+                f"calendar slot {slot_id} inherits research from missing anchor {anchor_id}"
+            )
+            continue
+        if slot["status"] == "filled" and anchor["research_state"]["status"] != "selected":
+            errors.append(
+                f"filled calendar slot {slot_id} inherits from {anchor_id}, but the "
+                "anchor research_state is not selected"
+            )
+    return errors
 
 
 def _source_digest(profile_path, schedule_path):
@@ -70,6 +153,9 @@ def _load_sources(workspace_dir):
     validate_file("creator-content-schedule", schedule_path)
     profile = load_json(profile_path)
     schedule = load_json(schedule_path)
+    state_errors = schedule_research_state_errors(schedule)
+    if state_errors:
+        raise ValidationError("; ".join(state_errors))
     check_creator_scope(profile, scope, profile_path)
     check_creator_scope(schedule, scope, schedule_path)
     return profile_path, schedule_path, profile, schedule
@@ -119,6 +205,9 @@ def _project_events(schedule):
             "cta": slot.get("cta", ""),
             "note": slot.get("production_note") or slot["date_flexibility"],
             "status": slot["status"],
+            "research_state": RESEARCH_STATE_LABELS[
+                slot["research_state"]["status"]
+            ],
         })
     return sorted(events, key=lambda event: (event["date"], event["id"]))
 
@@ -157,6 +246,7 @@ def _render_post(event):
         _detail_row("Funnel", event["funnel"]),
         _detail_row("CTA", event["cta"]),
         _detail_row("Status", event["status"]),
+        _detail_row("Research", event["research_state"]),
         _detail_row("Note", event["note"]),
     ])
     return (
@@ -269,18 +359,36 @@ def rebuild_calendar(workspace_path):
 
 def _render_calendar_document(profile_path, schedule_path, profile, schedule, events):
     source_digest = _source_digest(profile_path, schedule_path)
+    research_status = schedule["research_basis"]["status"]
+    state_counts = Counter(
+        slot["research_state"]["status"] for slot in schedule["calendar_slots"]
+    )
+    status_label = (
+        "Rolling content calendar - "
+        f"{state_counts['selected']} selected, "
+        f"{state_counts['candidates_ready']} candidates ready, "
+        f"{state_counts['unresearched']} research pending, "
+        f"{state_counts['inherits_anchor']} inherit anchor"
+    )
+    description = {
+        "strategy_scaffold": (
+            "A planning scaffold derived from the accepted content strategy. "
+            "Each slot remains provisional until its own research status advances."
+        ),
+        "research_informed": (
+            "The baseline strategy has been informed by current research. Each slot remains "
+            "gated by its own research status; hover or focus a post for details."
+        ),
+    }[research_status]
     replacements = {
         "__SOURCE_DIGEST__": source_digest,
         "__DOCUMENT_TITLE__": html.escape(f"{profile['display_name']} Content Calendar"),
         "__HEADING__": html.escape(f"{profile['display_name']} Content Calendar"),
-        "__DESCRIPTION__": html.escape(
-            "A review calendar derived from the canonical InfluencerOS content schedule. "
-            "Hover or focus any post to see its planning details."
-        ),
+        "__DESCRIPTION__": html.escape(description),
         "__SCHEDULE_WINDOW__": html.escape(
             f"{_display_date(events[0]['date'])} - {_display_date(events[-1]['date'])}"
         ),
-        "__STATUS__": "Planning projection",
+        "__STATUS__": html.escape(status_label),
         "__SCHEDULING_NOTE__": html.escape(schedule["cadence_expectations"]),
         "__LEGEND__": _render_legend(events),
         "__MONTHS__": _render_months(events),

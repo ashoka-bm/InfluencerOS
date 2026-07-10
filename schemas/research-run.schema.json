@@ -11,6 +11,7 @@
     "completed_on",
     "mode",
     "scope",
+    "schedule_slot_ids",
     "platforms",
     "material_update",
     "outputs",
@@ -48,6 +49,13 @@
     "scope": {
       "type": "string",
       "minLength": 1
+    },
+    "schedule_slot_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^slot_[a-zA-Z0-9_-]+$"
+      }
     },
     "platforms": {
       "type": "array",

@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from influencer_os.brand_boards import validate_brand_board
+from influencer_os.calendars import schedule_research_state_errors
 
 from influencer_os.generation import validate_reference_approval_records
 from influencer_os.json_io import write_json_atomic
@@ -1506,6 +1507,58 @@ def _strategy_variant_ref_blockers(content_strategy):
     return blockers
 
 
+def _schedule_research_basis_blockers(workspace_dir, schedule, creator_profile):
+    basis = schedule["research_basis"]
+    if basis["status"] != "research_informed":
+        return [
+            "content-schedule.json is still a strategy_scaffold; complete research, "
+            "revise the schedule, and mark it research_informed before production_ready"
+        ]
+
+    blockers = []
+    run_ids = basis["research_run_ids"]
+    if not run_ids:
+        return [
+            "research_informed content-schedule.json requires at least one research_run_id"
+        ]
+    if len(run_ids) != len(set(run_ids)):
+        blockers.append(
+            "content-schedule.json research_basis contains duplicate research_run_ids"
+        )
+    for run_id in run_ids:
+        run_path = workspace_dir / "research" / "runs" / run_id / "research-run.json"
+        if not run_path.exists():
+            blockers.append(
+                f"content-schedule.json references missing research run {run_id}"
+            )
+            continue
+        try:
+            validate_file("research-run", run_path)
+        except ValidationError as exc:
+            blockers.append(f"Invalid schedule research run {run_id}: {exc}")
+            continue
+        run = load_json(run_path)
+        if run["research_run_id"] != run_id:
+            blockers.append(
+                f"schedule research run folder {run_id} contains mismatched "
+                f"research_run_id {run['research_run_id']}"
+            )
+        if run["creator_profile_id"] != creator_profile["creator_profile_id"]:
+            blockers.append(
+                f"schedule research run {run_id} belongs to another creator"
+            )
+        if run["run_status"] == "failed":
+            blockers.append(
+                f"schedule research run {run_id} failed and cannot inform production readiness"
+            )
+        if run["completed_on"][:10] > schedule["updated_on"]:
+            blockers.append(
+                f"content-schedule.json updated_on predates research run {run_id}; "
+                "revise the schedule after research"
+            )
+    return blockers
+
+
 def _production_stage_blockers(
     workspace_dir, readiness_state, creator_profile, content_strategy, channels
 ):
@@ -1531,6 +1584,10 @@ def _production_stage_blockers(
                 blockers.append(
                     "content-schedule.json content_strategy_id does not match the accepted strategy"
                 )
+            blockers.extend(
+                _schedule_research_basis_blockers(workspace_dir, schedule, creator_profile)
+            )
+            blockers.extend(schedule_research_state_errors(schedule))
             goals = {goal["goal_id"] for goal in schedule["content_goals"]}
             campaigns = {
                 campaign["campaign_id"]: campaign
@@ -1689,7 +1746,7 @@ def _onboarding_readiness_warnings(workspace_dir, manifest, readiness_state, cha
                 pass
         if not has_slots:
             warnings.append(
-                "warning: no production calendar slots exist before production_ready"
+                "warning: no strategy scaffold calendar slots exist before production_ready"
             )
     return warnings
 

@@ -4,6 +4,10 @@
   "creator_slug": "luna-fit",
   "content_strategy_id": "content_strategy_luna_fit",
   "updated_on": "2026-07-03",
+  "research_basis": {
+    "status": "strategy_scaffold",
+    "research_run_ids": []
+  },
   "cadence_expectations": "Around three short-form posts per week, intentionally irregular; quality over cadence.",
   "content_goals": [
     {
@@ -26,9 +30,13 @@
       "target_date": "2026-07-09",
       "date_flexibility": "plus or minus two days",
       "content_goal_id": "goal_luna_desk_reset_education",
+      "research_state": {
+        "status": "unresearched",
+        "research_run_ids": []
+      },
       "topic_cluster": "desk resets",
-      "status": "filled",
-      "working_title": "A two-minute desk reset between meetings",
+      "status": "open",
+      "working_title": "Open research slot: desk-reset education",
       "platform": "instagram",
       "format_id": "format_short_form_video",
       "theme": "Make movement easier to start during a busy workday.",

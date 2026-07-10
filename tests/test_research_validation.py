@@ -13,6 +13,7 @@ from influencer_os.research import (
     validate_queue,
     validate_research,
 )
+from influencer_os.migrations import migrate_slot_research
 from influencer_os.validation import ValidationError, validate_jsonl_file
 
 
@@ -81,7 +82,17 @@ def scaffold_research_workspace(temp_dir):
     # Research validation pins every record to the owning workspace creator.
     write_json(workspace_dir / "creator-workspace.json", load_example("creator-workspace"))
 
-    write_json(workspace_dir / "content-schedule.json", load_example("creator-content-schedule"))
+    schedule = load_example("creator-content-schedule")
+    schedule["calendar_slots"][0].update(
+        status="filled",
+        working_title="A two-minute desk reset between meetings",
+        research_state={
+            "status": "selected",
+            "research_run_ids": [RUN_ID],
+            "selected_idea_queue_entry_id": ENTRY_ID,
+        },
+    )
+    write_json(workspace_dir / "content-schedule.json", schedule)
 
     run_dir = research / "runs" / RUN_ID
     write_json(run_dir / "research-run.json", load_example("research-run"))
@@ -168,7 +179,7 @@ def make_research_phase_only(workspace_dir):
     return workspace_dir
 
 
-class ResearchStateValidationTests(unittest.TestCase):
+class SlotResearchProvenanceTests(unittest.TestCase):
     def test_full_research_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
@@ -181,6 +192,230 @@ class ResearchStateValidationTests(unittest.TestCase):
             self.assertIn(f"research/runs/{RUN_ID}/source-yield.jsonl", checked)
             self.assertIn(f"research/runs/{RUN_ID}/evidence.jsonl", checked)
             self.assertIn("boards/content-board.json", checked)
+
+    def test_selected_slot_must_resolve_its_queue_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
+                    selected_idea_queue_entry_id="idea_queue_entry_luna_fit_missing"
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "selected queue entry.*does not exist"
+            ):
+                validate_research(workspace_dir)
+
+    def test_selected_slot_research_must_support_selected_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
+                    research_run_ids=[RUN_ID_2]
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "does not cite evidence from its selected research runs"
+            ):
+                validate_research(workspace_dir)
+
+    def test_candidate_runs_must_be_focused_on_the_slot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(run_path, lambda run: run.__setitem__("schedule_slot_ids", []))
+            edit_json(plan_path, lambda plan: plan.__setitem__("schedule_slot_ids", []))
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    status="open",
+                    research_state={
+                        "status": "candidates_ready",
+                        "research_run_ids": [RUN_ID],
+                    },
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "is not a focused scheduled_needs run"
+            ):
+                validate_research(workspace_dir)
+
+    def test_queue_rejects_slot_run_manifest_id_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            edit_json(
+                run_path,
+                lambda run: run.__setitem__("research_run_id", RUN_ID_2),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "declares research_run_id"
+            ):
+                validate_queue(workspace_dir)
+
+
+class ResearchStateValidationTests(unittest.TestCase):
+    def test_migration_backfills_unambiguous_promoted_slot_provenance(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            schedule_path = workspace_dir / "content-schedule.json"
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(
+                schedule_path,
+                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
+            )
+            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
+            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
+
+            result = migrate_slot_research(workspace_dir)
+
+            schedule = json.loads(schedule_path.read_text())
+            run = json.loads(run_path.read_text())
+            plan = json.loads(plan_path.read_text())
+            self.assertEqual(
+                schedule["calendar_slots"][0]["research_state"],
+                {
+                    "status": "selected",
+                    "research_run_ids": [RUN_ID],
+                    "selected_idea_queue_entry_id": ENTRY_ID,
+                },
+            )
+            self.assertEqual(
+                run["schedule_slot_ids"], ["slot_luna_2026_07_09_midweek"]
+            )
+            self.assertEqual(plan["schedule_slot_ids"], run["schedule_slot_ids"])
+            self.assertEqual(len(result["changed_paths"]), 3)
+            validate_research(workspace_dir)
+
+    def test_migration_refuses_ambiguous_filled_slot_without_partial_writes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_research_phase_only(
+                scaffold_research_workspace(temp_dir)
+            )
+            schedule_path = workspace_dir / "content-schedule.json"
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(
+                schedule_path,
+                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
+            )
+            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
+            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
+            before = {
+                path: path.read_bytes() for path in (schedule_path, run_path, plan_path)
+            }
+
+            with self.assertRaisesRegex(
+                ValidationError, "needs exactly one active promotion"
+            ):
+                migrate_slot_research(workspace_dir)
+
+            self.assertEqual(
+                before,
+                {path: path.read_bytes() for path in before},
+            )
+
+    def test_cli_migrates_slot_research_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            schedule_path = workspace_dir / "content-schedule.json"
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(
+                schedule_path,
+                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
+            )
+            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
+            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "migrate-slot-research",
+                    str(workspace_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Migrated slot research provenance", result.stdout)
+
+    def test_migration_accumulates_multiple_slots_on_one_legacy_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            schedule_path = workspace_dir / "content-schedule.json"
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            second_slot_id = "slot_luna_2026_07_11_followup"
+
+            def make_legacy_two_slot_schedule(schedule):
+                first = schedule["calendar_slots"][0]
+                first.pop("research_state")
+                second = dict(first)
+                second["slot_id"] = second_slot_id
+                second["target_date"] = "2026-07-11"
+                schedule["calendar_slots"].append(second)
+
+            edit_json(schedule_path, make_legacy_two_slot_schedule)
+            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
+            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
+            edit_json(
+                promotion_path,
+                lambda promotion: promotion["schedule_slot_ids"].append(
+                    second_slot_id
+                ),
+            )
+
+            migrate_slot_research(workspace_dir)
+
+            run = json.loads(run_path.read_text())
+            self.assertEqual(
+                run["schedule_slot_ids"],
+                ["slot_luna_2026_07_09_midweek", second_slot_id],
+            )
+            validate_research(workspace_dir)
+
+    def test_migration_repairs_run_fields_when_slot_state_already_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
+            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
+
+            migrate_slot_research(workspace_dir)
+
+            run = json.loads(run_path.read_text())
+            self.assertEqual(
+                run["schedule_slot_ids"], ["slot_luna_2026_07_09_midweek"]
+            )
+            validate_research(workspace_dir)
 
     def test_completed_run_without_search_plan_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1193,7 +1428,9 @@ class RunScopeConsistencyTests(unittest.TestCase):
                 / "idea_promotion_luna_fit_001.json"
             )
             promotion = json.loads(promotion_path.read_text())
-            promotion["evidence_refs"][0]["research_run_id"] = RUN_ID_2
+            mismatched_ref = dict(promotion["evidence_refs"][0])
+            mismatched_ref["research_run_id"] = RUN_ID_2
+            promotion["evidence_refs"].append(mismatched_ref)
             write_json(promotion_path, promotion)
 
             result = validate_research(workspace_dir)
@@ -1237,7 +1474,7 @@ class PromotionGateTests(unittest.TestCase):
                 validate_research(workspace_dir)
             self.assertIn("does not point to a real idea queue entry", str(ctx.exception))
 
-    def test_unresolved_evidence_warns_for_human_approved_promotion(self):
+    def test_unresolved_only_evidence_fails_scheduled_human_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             # Deleting evidence.jsonl outright would now hard-fail outputs
@@ -1252,10 +1489,70 @@ class PromotionGateTests(unittest.TestCase):
             promotion["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
             write_json(promotion_path, promotion)
 
+            with self.assertRaisesRegex(
+                ValidationError, "focused scheduled_needs run"
+            ):
+                validate_research(workspace_dir)
+
+    def test_unresolved_extra_evidence_warns_when_valid_ref_supports_slot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            promotion = json.loads(promotion_path.read_text())
+            unresolved_ref = dict(promotion["evidence_refs"][0])
+            unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
+            promotion["evidence_refs"].append(unresolved_ref)
+            write_json(promotion_path, promotion)
+
             result = validate_research(workspace_dir)
+
             self.assertEqual(len(result["warnings"]), 1)
             self.assertIn("unresolved evidence refs", result["warnings"][0])
             self.assertIn("human-approved", result["warnings"][0])
+
+    def test_unresolved_evidence_does_not_bypass_focused_slot_gate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(run_path, lambda run: run.__setitem__("schedule_slot_ids", []))
+            edit_json(plan_path, lambda plan: plan.__setitem__("schedule_slot_ids", []))
+
+            promotion = load_example("idea-promotion")
+            unresolved_ref = dict(promotion["evidence_refs"][0])
+            unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
+            promotion["evidence_refs"].append(unresolved_ref)
+
+            with self.assertRaisesRegex(
+                ValidationError, "focused scheduled_needs run"
+            ):
+                validate_promotion_gate(workspace_dir, promotion)
+
+    def test_promotion_cannot_inject_slot_research_absent_from_queue_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
+                    research_run_ids=[RUN_ID_2]
+                ),
+            )
+            promotion = load_example("idea-promotion")
+            promotion["evidence_refs"] = [{
+                "research_run_id": RUN_ID_2,
+                "evidence_id": "evidence_luna_fit_002",
+                "metric_snapshot_ids": [],
+                "video_understanding_pack_ids": [],
+            }]
+
+            with self.assertRaisesRegex(
+                ValidationError, "queue entry does not cite that run"
+            ):
+                validate_promotion_gate(workspace_dir, promotion)
 
     def test_unresolved_video_pack_warns_for_human_approved_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1272,6 +1569,16 @@ class PromotionGateTests(unittest.TestCase):
             entry = json.loads(entry_path.read_text())
             entry["evidence_refs"][0].pop("video_understanding_pack_ids", None)
             write_json(entry_path, entry)
+
+            promotion_path = (
+                workspace_dir / "research" / "idea-promotions"
+                / "idea_promotion_luna_fit_001.json"
+            )
+            promotion = json.loads(promotion_path.read_text())
+            valid_ref = dict(promotion["evidence_refs"][0])
+            valid_ref.pop("video_understanding_pack_ids", None)
+            promotion["evidence_refs"].append(valid_ref)
+            write_json(promotion_path, promotion)
 
             result = validate_research(workspace_dir)
             self.assertEqual(len(result["warnings"]), 1)
@@ -1728,6 +2035,36 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             self.assertIn("filled", message)
             self.assertIn("'open'", message)
 
+    def test_active_promotion_requires_focused_run_naming_claimed_slot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
+            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
+            edit_json(run_path, lambda run: run.__setitem__("schedule_slot_ids", []))
+            edit_json(plan_path, lambda plan: plan.__setitem__("schedule_slot_ids", []))
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("focused scheduled_needs run", message)
+            self.assertIn("slot_luna_2026_07_09_midweek", message)
+
+    def test_active_promotion_must_match_slot_selected_idea(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
+                    selected_idea_queue_entry_id="idea_queue_entry_luna_fit_other"
+                ),
+            )
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_research(workspace_dir)
+            message = str(ctx.exception)
+            self.assertIn("selected idea_queue_entry_luna_fit_other", message)
+            self.assertIn(ENTRY_ID, message)
+
     def test_slot_claimed_by_two_active_promotions_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
@@ -1852,12 +2189,12 @@ class ValidatorPathParityTests(unittest.TestCase):
         # channel at all.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            edit_json(
-                self.promotion_path(workspace_dir),
-                lambda promo: promo["evidence_refs"][0].__setitem__(
-                    "evidence_id", "evidence_luna_fit_never_existed"
-                ),
-            )
+            def append_unresolved_ref(promo):
+                unresolved_ref = dict(promo["evidence_refs"][0])
+                unresolved_ref["evidence_id"] = "evidence_luna_fit_never_existed"
+                promo["evidence_refs"].append(unresolved_ref)
+
+            edit_json(self.promotion_path(workspace_dir), append_unresolved_ref)
 
             result = validate_queue(workspace_dir)
             self.assertTrue(result["warnings"])

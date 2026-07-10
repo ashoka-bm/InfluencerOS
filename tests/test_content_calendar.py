@@ -56,6 +56,13 @@ class ContentCalendarTests(unittest.TestCase):
             self.assertEqual(result["calendar_path"], calendar_path)
             self.assertEqual(result["post_count"], 1)
             self.assertIn("Luna Fit Content Calendar", html)
+            self.assertIn(
+                "Rolling content calendar - 0 selected, 0 candidates ready, "
+                "1 research pending, 0 inherit anchor",
+                html,
+            )
+            self.assertIn("Each slot remains provisional", html)
+            self.assertIn("Research pending", html)
             self.assertIn("Instagram", html)
             self.assertIn("The &lt;script&gt;alert(", html)
             self.assertIn(")&lt;/script&gt; desk reset", html)
@@ -115,6 +122,44 @@ class ContentCalendarTests(unittest.TestCase):
                 "creator-content-schedule",
                 workspace_dir / "content-schedule.json",
             )
+
+    def test_research_informed_calendar_summarizes_per_slot_readiness(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_calendar_workspace(temp_dir)
+            schedule_path = workspace_dir / "content-schedule.json"
+            schedule = json.loads(schedule_path.read_text())
+            schedule["research_basis"] = {
+                "status": "research_informed",
+                "research_run_ids": ["research_run_luna_schedule_001"],
+            }
+            write_json(schedule_path, schedule)
+
+            rebuild_calendar(workspace_dir)
+
+            html = (workspace_dir / "boards" / "content-calendar.html").read_text()
+            self.assertIn(
+                "Rolling content calendar - 0 selected, 0 candidates ready, "
+                "1 research pending, 0 inherit anchor",
+                html,
+            )
+            self.assertIn(
+                "Each slot remains gated by its own research status",
+                html,
+            )
+            self.assertNotIn("Research-informed production calendar", html)
+
+    def test_filled_slot_requires_selected_or_inherited_research(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_calendar_workspace(temp_dir)
+            schedule_path = workspace_dir / "content-schedule.json"
+            schedule = json.loads(schedule_path.read_text())
+            schedule["calendar_slots"][0]["status"] = "filled"
+            write_json(schedule_path, schedule)
+
+            with self.assertRaisesRegex(
+                ValidationError, "filled.*research_state.*unresearched"
+            ):
+                rebuild_calendar(workspace_dir)
 
     def test_cli_rebuilds_and_validates_calendar(self):
         with tempfile.TemporaryDirectory() as temp_dir:

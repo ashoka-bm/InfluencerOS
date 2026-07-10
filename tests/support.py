@@ -19,6 +19,11 @@ def _copy_example_record(example_name, destination):
     destination.write_text((ROOT / "examples" / example_name).read_text())
 
 
+def _copy_example_jsonl(example_name, destination):
+    record = json.loads((ROOT / "examples" / example_name).read_text())
+    destination.write_text(json.dumps(record) + "\n")
+
+
 def _rewrite_json(path, mutate):
     record = json.loads(path.read_text())
     mutate(record)
@@ -51,6 +56,29 @@ def populate_video_understanding_packs(workspace_dir):
 
 
 def populate_promotion_records(workspace_dir):
+    run_dir = (
+        workspace_dir
+        / "research"
+        / "runs"
+        / "research_run_luna_fit_2026_07_03_001"
+    )
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _copy_example_record("research-run.example.json", run_dir / "research-run.json")
+    _copy_example_record(
+        "research-search-plan.example.json", run_dir / "search-plan.json"
+    )
+    source_yield = json.loads(
+        (ROOT / "examples" / "research-source-yield.example.json").read_text()
+    )
+    source_yield["source_key"] = "ad_hoc_project_fixture"
+    source_yield.pop("source_plan_id", None)
+    (run_dir / "source-yield.jsonl").write_text(json.dumps(source_yield) + "\n")
+    _copy_example_jsonl(
+        "research-evidence.example.json", run_dir / "evidence.jsonl"
+    )
+    _copy_example_jsonl(
+        "metric-snapshot.example.json", run_dir / "metric-snapshots.jsonl"
+    )
     promotion_path = (
         workspace_dir
         / "research"
@@ -71,6 +99,18 @@ def populate_promotion_records(workspace_dir):
     _copy_example_record(
         "creator-content-schedule.example.json",
         workspace_dir / "content-schedule.json",
+    )
+    _rewrite_json(
+        workspace_dir / "content-schedule.json",
+        lambda schedule: schedule["calendar_slots"][0].update(
+            status="filled",
+            working_title="A two-minute desk reset between meetings",
+            research_state={
+                "status": "selected",
+                "research_run_ids": ["research_run_luna_fit_2026_07_03_001"],
+                "selected_idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+            },
+        ),
     )
 
 

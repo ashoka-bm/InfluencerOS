@@ -16,6 +16,7 @@ from tests.test_readiness_validation import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_ID = "research_run_luna_fit_2026_07_03_001"
+ENTRY_ID = "idea_queue_entry_luna_fit_001"
 PROJECT_SLUG = "tiny-reset-after-laptop-day"
 
 
@@ -154,6 +155,18 @@ def seed_research_outputs(workspace_dir):
     copy_example(
         "creator-content-schedule.example.json", workspace_dir / "content-schedule.json"
     )
+    schedule_path = workspace_dir / "content-schedule.json"
+    schedule = json.loads(schedule_path.read_text())
+    schedule["calendar_slots"][0].update(
+        status="filled",
+        working_title="A two-minute desk reset between meetings",
+        research_state={
+            "status": "selected",
+            "research_run_ids": [RUN_ID],
+            "selected_idea_queue_entry_id": ENTRY_ID,
+        },
+    )
+    schedule_path.write_text(json.dumps(schedule, indent=2) + "\n")
     copy_example(
         "idea-queue.example.json",
         workspace_dir / "research" / "idea-queue" / "queue.json",

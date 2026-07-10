@@ -86,6 +86,15 @@ def seed_guided_public_web_research(workspace_dir):
     run_dir = research / "runs" / RUN_ID
 
     schedule = load_example("creator-content-schedule")
+    schedule["calendar_slots"][0].update(
+        status="filled",
+        working_title="A two-minute desk reset between meetings",
+        research_state={
+            "status": "selected",
+            "research_run_ids": [RUN_ID],
+            "selected_idea_queue_entry_id": ENTRY_ID,
+        },
+    )
     write_json(workspace_dir / "content-schedule.json", schedule)
 
     run = load_example("research-run")

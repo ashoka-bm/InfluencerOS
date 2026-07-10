@@ -13,6 +13,7 @@ from influencer_os.memory import (
     creator_lessons_workspace,
     write_memory_fact,
 )
+from influencer_os.migrations import migrate_slot_research
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     INTAKE_DESTINATIONS,
@@ -35,6 +36,7 @@ from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import validate_queue, validate_research
 from influencer_os.semantic_lookup import query_lookup, rebuild_lookup
+from influencer_os.skill_runtime import sync_codex_skills, validate_codex_skill_drift
 from influencer_os.validation import ValidationError, validate_examples, validate_file
 
 
@@ -56,6 +58,30 @@ def main(argv=None):
 
     update_creators_parser = subparsers.add_parser("update-creators", help="Refresh copied runtime skills across every Creator Workspace under a root.")
     update_creators_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
+
+    migrate_slot_parser = subparsers.add_parser(
+        "migrate-slot-research",
+        help="Backfill slot-first research provenance in one legacy Creator Workspace.",
+    )
+    migrate_slot_parser.add_argument(
+        "creator_workspace", help="Path to the Creator Workspace."
+    )
+
+    sync_codex_parser = subparsers.add_parser(
+        "sync-codex-skills",
+        help="Refresh repository-owned skills in the global Codex runtime.",
+    )
+    sync_codex_parser.add_argument(
+        "--target-root", help="Codex skills directory; defaults to ~/.codex/skills."
+    )
+
+    check_codex_parser = subparsers.add_parser(
+        "check-codex-skills",
+        help="Fail when global Codex skill copies differ from repository sources.",
+    )
+    check_codex_parser.add_argument(
+        "--target-root", help="Codex skills directory; defaults to ~/.codex/skills."
+    )
 
     intake_parser = subparsers.add_parser("import-intake", help="Import a setup source file into a Creator Workspace and record source intake provenance.")
     intake_parser.add_argument("source_file", help="Path to the source file to import.")
@@ -309,6 +335,36 @@ def main(argv=None):
             print(f"Synced creator runtime: {result['workspace_path']}")
             print(f"Synced {len(result['synced_skills'])} skills into {result['skills_path']}")
             print(f"Preserved {result['preserved_overrides']} local overrides")
+            return 0
+
+        if args.command == "migrate-slot-research":
+            result = migrate_slot_research(args.creator_workspace)
+            print(f"Migrated slot research provenance: {result['workspace_path']}")
+            print(f"Changed {len(result['changed_paths'])} records.")
+            for path in result["changed_paths"]:
+                print(f"- {path}")
+            return 0
+
+        if args.command == "sync-codex-skills":
+            kwargs = {"target_root": args.target_root} if args.target_root else {}
+            result = sync_codex_skills(**kwargs)
+            print(
+                f"Synced Codex skills: {len(result['synced_skills'])} into "
+                f"{result['target_root']}"
+            )
+            print(
+                f"Backed up {result['backed_up_skills']} skills; preserved "
+                f"{result['preserved_overrides']} local overrides."
+            )
+            return 0
+
+        if args.command == "check-codex-skills":
+            kwargs = {"target_root": args.target_root} if args.target_root else {}
+            result = validate_codex_skill_drift(**kwargs)
+            print(
+                f"Codex skill copies match {result['skill_count']} repository "
+                f"sources in {result['target_root']}"
+            )
             return 0
 
         if args.command == "import-intake":

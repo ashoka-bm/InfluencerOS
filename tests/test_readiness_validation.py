@@ -430,8 +430,36 @@ def write_conversion_asset(workspace_dir, status="approved"):
     markdown.write_text("# 7 Tiny Reset Questions\n")
 
 
-def write_content_schedule(workspace_dir):
+def write_content_schedule(workspace_dir, *, research_informed=True):
     record = json.loads((ROOT / "examples" / "creator-content-schedule.example.json").read_text())
+    if research_informed:
+        run_id = "research_run_luna_schedule_001"
+        record["research_basis"] = {
+            "status": "research_informed",
+            "research_run_ids": [run_id],
+        }
+        run_dir = workspace_dir / "research" / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        run = {
+            "research_run_id": run_id,
+            "creator_profile_id": "creator_luna_fit",
+            "started_on": "2026-07-02T10:00:00",
+            "completed_on": "2026-07-02T11:00:00",
+            "mode": "scheduled_needs",
+            "scope": "Validate the first production calendar topics.",
+            "schedule_slot_ids": [],
+            "platforms": ["instagram"],
+            "material_update": False,
+            "outputs": {
+                "finding_ids": [],
+                "idea_queue_entry_ids": [],
+                "evidence_ids": [],
+                "metric_snapshot_ids": [],
+                "research_intelligence_updates": [],
+            },
+            "run_status": "completed_no_material_update",
+        }
+        (run_dir / "research-run.json").write_text(json.dumps(run, indent=2) + "\n")
     (workspace_dir / "content-schedule.json").write_text(json.dumps(record, indent=2) + "\n")
 
 
@@ -769,6 +797,40 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
                 validate_creator_workspace(workspace_dir)
             self.assertIn("content-schedule.json", str(ctx.exception))
 
+    def test_production_ready_rejects_strategy_scaffold(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(
+                workspace_dir,
+                strategy_status="ready",
+                production_status="ready",
+            )
+            write_content_schedule(workspace_dir, research_informed=False)
+
+            with self.assertRaisesRegex(ValidationError, "strategy_scaffold.*complete research"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_production_ready_rejects_missing_schedule_research_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "production_ready")
+            write_readiness_milestones(
+                workspace_dir,
+                strategy_status="ready",
+                production_status="ready",
+            )
+            write_content_schedule(workspace_dir)
+            run_path = (
+                workspace_dir
+                / "research"
+                / "runs"
+                / "research_run_luna_schedule_001"
+                / "research-run.json"
+            )
+            run_path.unlink()
+
+            with self.assertRaisesRegex(ValidationError, "missing research run"):
+                validate_creator_workspace(workspace_dir)
+
     def test_production_ready_rejects_schedule_for_another_creator(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "production_ready")
@@ -962,7 +1024,7 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
 
             result = validate_creator_workspace(workspace_dir)
 
-            self.assertTrue(any("no production calendar slots" in warning for warning in result["warnings"]))
+            self.assertTrue(any("no strategy scaffold calendar slots" in warning for warning in result["warnings"]))
 
     def test_foundation_ready_rejects_stale_foundation_blocker_prose(self):
         with tempfile.TemporaryDirectory() as temp_dir:

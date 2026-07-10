@@ -10,6 +10,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.rubric import validate_events_ledger
 from influencer_os.validation import (
@@ -158,7 +159,7 @@ def check_promotion_created_projects(promotion, projects_by_id):
             )
 
 
-def check_promotion_slot_claims(workspace_dir, promotion):
+def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None):
     """An active promotion's claimed schedule slots must resolve and be
     filled. Superseded/cancelled promotions impose nothing: the schedule is
     mutable planning state, so freed slots legitimately reopen or disappear
@@ -179,10 +180,20 @@ def check_promotion_slot_claims(workspace_dir, promotion):
     # project, which does not otherwise validate the schedule, and a
     # malformed slot must fail cleanly, not crash on a missing key.
     validate_file("creator-content-schedule", schedule_path)
+    schedule = load_json(schedule_path)
+    state_errors = schedule_research_state_errors(schedule)
+    if state_errors:
+        raise ValidationError("; ".join(state_errors))
     slots = {
         slot["slot_id"]: slot
-        for slot in load_json(schedule_path).get("calendar_slots", [])
+        for slot in schedule.get("calendar_slots", [])
     }
+    promotion_entry_id = promotion["idea_queue_entry_id"]
+    promotion_run_ids = (
+        set(resolved_run_ids)
+        if resolved_run_ids is not None
+        else {ref["research_run_id"] for ref in promotion["evidence_refs"]}
+    )
     for slot_id in claimed:
         if slot_id not in slots:
             raise ValidationError(
@@ -195,6 +206,128 @@ def check_promotion_slot_claims(workspace_dir, promotion):
                 f"Idea promotion {promotion_id} is active but claimed slot "
                 f"{slot_id} has status {status!r}; a claimed slot must be "
                 "'filled'"
+            )
+        slot = slots[slot_id]
+        research_state = slot["research_state"]
+        source_slot_id = slot_id
+        if research_state["status"] == "inherits_anchor":
+            source_slot_id = research_state["anchor_slot_id"]
+            source_slot = slots[source_slot_id]
+            research_state = source_slot["research_state"]
+        if research_state["status"] != "selected":
+            raise ValidationError(
+                f"Idea promotion {promotion_id} claims slot {slot_id}, but its "
+                f"research source slot {source_slot_id} is not selected"
+            )
+        selected_entry_id = research_state["selected_idea_queue_entry_id"]
+        if selected_entry_id != promotion_entry_id:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} promotes {promotion_entry_id}, but "
+                f"slot {slot_id} selected {selected_entry_id}"
+            )
+
+        qualifying_runs = []
+        for run_id in research_state["research_run_ids"]:
+            run_path = (
+                Path(workspace_dir)
+                / "research"
+                / "runs"
+                / run_id
+                / "research-run.json"
+            )
+            if not run_path.exists():
+                raise ValidationError(
+                    f"calendar slot {source_slot_id} references missing focused "
+                    f"research run {run_id}"
+                )
+            validate_file("research-run", run_path)
+            run = load_json(run_path)
+            if run["research_run_id"] != run_id:
+                raise ValidationError(
+                    f"calendar slot {source_slot_id} references run path {run_id}, "
+                    f"but its manifest declares research_run_id "
+                    f"{run['research_run_id']!r}"
+                )
+            if (
+                run["mode"] == "scheduled_needs"
+                and run["run_status"] != "failed"
+                and source_slot_id in run["schedule_slot_ids"]
+                and run_id in promotion_run_ids
+            ):
+                qualifying_runs.append(run_id)
+        if not qualifying_runs:
+            raise ValidationError(
+                f"Idea promotion {promotion_id} claims slot {slot_id} without "
+                "carrying evidence from a completed focused scheduled_needs run "
+                f"that names source slot {source_slot_id}"
+            )
+
+
+def check_schedule_research_provenance(workspace_dir, entries):
+    """Resolve selected schedule state against the canonical idea queue."""
+    schedule_path = Path(workspace_dir) / "content-schedule.json"
+    if not schedule_path.exists():
+        return
+    validate_file("creator-content-schedule", schedule_path)
+    schedule = load_json(schedule_path)
+    state_errors = schedule_research_state_errors(schedule)
+    if state_errors:
+        raise ValidationError("; ".join(state_errors))
+    for slot in schedule.get("calendar_slots", []):
+        state = slot["research_state"]
+        if state["status"] not in {"candidates_ready", "selected"}:
+            continue
+        slot_id = slot["slot_id"]
+        for run_id in state["research_run_ids"]:
+            run_path = (
+                Path(workspace_dir)
+                / "research"
+                / "runs"
+                / run_id
+                / "research-run.json"
+            )
+            if not run_path.exists():
+                raise ValidationError(
+                    f"calendar slot {slot_id} references missing research run {run_id}"
+                )
+            validate_file("research-run", run_path)
+            run = load_json(run_path)
+            if run["research_run_id"] != run_id:
+                raise ValidationError(
+                    f"calendar slot {slot_id} references run path {run_id}, but "
+                    f"its manifest declares research_run_id {run['research_run_id']!r}"
+                )
+            if (
+                run["mode"] != "scheduled_needs"
+                or run["run_status"] == "failed"
+                or slot_id not in run["schedule_slot_ids"]
+            ):
+                raise ValidationError(
+                    f"calendar slot {slot_id} research run {run_id} is not a "
+                    "focused scheduled_needs run naming that slot"
+                )
+        if state["status"] != "selected":
+            continue
+        entry_id = state["selected_idea_queue_entry_id"]
+        if entry_id not in entries:
+            raise ValidationError(
+                f"calendar slot {slot['slot_id']} selected queue entry "
+                f"{entry_id!r}, but that entry does not exist"
+            )
+        entry = entries[entry_id]
+        if entry["status"] not in {"shortlisted", "promoted"}:
+            raise ValidationError(
+                f"calendar slot {slot['slot_id']} selected queue entry {entry_id}, "
+                f"but its status is {entry['status']!r}; expected 'shortlisted' "
+                "or 'promoted'"
+            )
+        entry_run_ids = {
+            ref["research_run_id"] for ref in entry["evidence_refs"]
+        }
+        if not entry_run_ids.intersection(state["research_run_ids"]):
+            raise ValidationError(
+                f"calendar slot {slot['slot_id']} selected {entry_id}, but the "
+                "entry does not cite evidence from its selected research runs"
             )
 
 
@@ -347,7 +480,11 @@ def validate_research(workspace_path):
     schedule_path = workspace_dir / "content-schedule.json"
     if schedule_path.exists():
         validate_file("creator-content-schedule", schedule_path)
-        check_creator_scope(load_json(schedule_path), scope, schedule_path)
+        schedule = load_json(schedule_path)
+        state_errors = schedule_research_state_errors(schedule)
+        if state_errors:
+            raise ValidationError("; ".join(state_errors))
+        check_creator_scope(schedule, scope, schedule_path)
         checked.append("content-schedule.json")
 
     findings_path = research_dir / "findings.md"
@@ -409,6 +546,12 @@ def validate_research(workspace_path):
                     raise ValidationError(
                         f"{search_plan_path}: mode {search_plan['mode']!r} "
                         f"does not match research-run.json mode {run_record['mode']!r}"
+                    )
+                if search_plan["schedule_slot_ids"] != run_record["schedule_slot_ids"]:
+                    raise ValidationError(
+                        f"{search_plan_path}: schedule_slot_ids "
+                        f"{search_plan['schedule_slot_ids']!r} do not match "
+                        f"research-run.json {run_record['schedule_slot_ids']!r}"
                     )
                 missing_run_platforms = sorted(
                     set(run_record["platforms"]) - set(search_plan["platforms"])
@@ -683,7 +826,8 @@ def validate_research(workspace_path):
     # entry <-> promotion <-> project closure).
     queue_manifest_path = workspace_dir / "research" / "idea-queue" / "queue.json"
     if queue_manifest_path.exists():
-        _check_queue_consistency(workspace_dir, scope)
+        entries = _check_queue_consistency(workspace_dir, scope)
+        check_schedule_research_provenance(workspace_dir, entries)
         checked.append("research/idea-queue/queue.json")
 
     return {"workspace_path": workspace_dir, "checked_paths": checked, "warnings": warnings}
@@ -702,6 +846,7 @@ def validate_queue(workspace_path):
     # scope, filename==id, slot claims, gate warnings) so no promotion state
     # can validate on one command and fail the other.
     entries = _check_queue_consistency(workspace_dir, scope)
+    check_schedule_research_provenance(workspace_dir, entries)
     warnings, _promotion_paths, _promotions_by_id = validate_promotions(
         workspace_dir, scope=scope
     )
@@ -952,7 +1097,6 @@ def validate_promotion_gate(
     if projects_by_id is None:
         projects_by_id = collect_project_manifests(workspace_dir)
     check_promotion_created_projects(promotion, projects_by_id)
-    check_promotion_slot_claims(workspace_dir, promotion)
 
     if research_ids is None:
         research_ids = collect_research_record_ids(workspace_dir)
@@ -962,22 +1106,44 @@ def validate_promotion_gate(
     warnings = []
 
     unresolved = []
+    resolved_run_ids = set()
     for ref in promotion["evidence_refs"]:
-        unresolved.extend(
-            resolve_evidence_ref(
-                ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence
-            )
+        problems = resolve_evidence_ref(
+            ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence
         )
+        unresolved.extend(problems)
+        if not problems:
+            resolved_run_ids.add(ref["research_run_id"])
+    unresolved_message = None
     if unresolved:
-        message = (
+        unresolved_message = (
             f"idea promotion {promotion_id} has unresolved evidence refs: "
             + "; ".join(sorted(set(unresolved)))
         )
         if promotion["approved_by"] != "user":
-            raise ValidationError(message)
+            raise ValidationError(unresolved_message)
         warnings.append(
-            f"warning: {message} (human-approved promotion: warning only)"
+            f"warning: {unresolved_message} (human-approved promotion: warning only)"
         )
+    entry_run_ids = {
+        ref["research_run_id"] for ref in entry["evidence_refs"]
+    }
+    injected_run_ids = resolved_run_ids - entry_run_ids
+    if promotion.get("schedule_slot_ids") and injected_run_ids:
+        raise ValidationError(
+            f"idea promotion {promotion_id} uses resolved slot research runs "
+            f"{sorted(injected_run_ids)}, but its queue entry does not cite that run"
+        )
+    try:
+        check_promotion_slot_claims(
+            workspace_dir,
+            promotion,
+            resolved_run_ids=resolved_run_ids.intersection(entry_run_ids),
+        )
+    except ValidationError as exc:
+        if unresolved_message is not None:
+            raise ValidationError(f"{unresolved_message}; {exc}") from None
+        raise
 
     if known_finding_ids is None:
         known_finding_ids = collect_finding_ids(workspace_dir)
@@ -1030,16 +1196,6 @@ def validate_promotions(workspace_path, scope=None):
                     f"{promotion['idea_promotion_id']!r}"
                 )
             check_creator_scope(promotion, scope, promotion_path)
-            warnings.extend(
-                validate_promotion_gate(
-                    workspace_dir,
-                    promotion,
-                    projects_by_id=projects_by_id,
-                    research_ids=research_ids,
-                    video_pack_ids=video_pack_ids,
-                    known_finding_ids=known_finding_ids,
-                )
-            )
             if promotion["promotion_status"] == "active":
                 for slot_id in promotion.get("schedule_slot_ids", []):
                     earlier = claimed_slots.setdefault(
@@ -1051,6 +1207,16 @@ def validate_promotions(workspace_path, scope=None):
                             f"one active promotion: {earlier} and "
                             f"{promotion['idea_promotion_id']}"
                         )
+            warnings.extend(
+                validate_promotion_gate(
+                    workspace_dir,
+                    promotion,
+                    projects_by_id=projects_by_id,
+                    research_ids=research_ids,
+                    video_pack_ids=video_pack_ids,
+                    known_finding_ids=known_finding_ids,
+                )
+            )
             promotions_by_id[promotion["idea_promotion_id"]] = promotion
             checked.append(str(promotion_path.relative_to(workspace_dir)))
     return warnings, checked, promotions_by_id

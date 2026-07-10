@@ -14,6 +14,7 @@ from influencer_os.creator_workspaces import (
 )
 from influencer_os.projects import validate_project
 from influencer_os.projects import register_output_package
+from influencer_os.skill_runtime import sync_codex_skills, validate_codex_skill_drift
 from influencer_os.validation import ValidationError, validate_record
 from tests.test_readiness_validation import (
     place_asset_files,
@@ -1405,6 +1406,126 @@ class ReadinessMilestoneTests(unittest.TestCase):
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")
+
+
+class CodexSkillRuntimeTests(unittest.TestCase):
+    def test_sync_repairs_drift_and_preserves_local_override(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_root = root / "source"
+            target_root = root / "target"
+            source_skill = source_root / "influencer-os"
+            target_skill = target_root / "influencer-os"
+            source_skill.mkdir(parents=True)
+            target_skill.mkdir(parents=True)
+            (source_skill / "SKILL.md").write_text("# Current\n")
+            (source_skill / "references.md").write_text("# Canonical\n")
+            (target_skill / "SKILL.md").write_text("# Stale\n")
+            (target_skill / "obsolete.md").write_text("remove me\n")
+            (target_skill / "SKILL.local.md").write_text("# Keep this\n")
+
+            with self.assertRaisesRegex(ValidationError, "Codex skill drift"):
+                validate_codex_skill_drift(
+                    target_root=target_root, source_skills_dir=source_root
+                )
+
+            result = sync_codex_skills(
+                target_root=target_root, source_skills_dir=source_root
+            )
+
+            validate_codex_skill_drift(
+                target_root=target_root, source_skills_dir=source_root
+            )
+            self.assertEqual((target_skill / "SKILL.md").read_text(), "# Current\n")
+            self.assertEqual(
+                (target_skill / "SKILL.local.md").read_text(), "# Keep this\n"
+            )
+            self.assertFalse((target_skill / "obsolete.md").exists())
+            self.assertEqual(result["synced_skills"], ["influencer-os"])
+
+    def test_cli_syncs_and_checks_global_codex_skill_copies(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target_root = Path(temp_dir) / "skills"
+            sync = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "sync-codex-skills",
+                    "--target-root",
+                    str(target_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            check = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "check-codex-skills",
+                    "--target-root",
+                    str(target_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(sync.returncode, 0, sync.stderr)
+            self.assertIn("Synced Codex skills", sync.stdout)
+            self.assertEqual(check.returncode, 0, check.stderr)
+            self.assertIn("Codex skill copies match", check.stdout)
+
+    def test_sync_accepts_skill_symlinked_to_canonical_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_skill = root / "source" / "canonical"
+            target_root = root / "target"
+            source_skill.mkdir(parents=True)
+            target_root.mkdir()
+            (source_skill / "SKILL.md").write_text("# Current\n")
+            (target_root / "canonical").symlink_to(source_skill)
+
+            validate_codex_skill_drift(
+                target_root=target_root,
+                source_skills_dir=source_skill.parent,
+            )
+            sync_codex_skills(
+                target_root=target_root,
+                source_skills_dir=source_skill.parent,
+            )
+
+            self.assertTrue((target_root / "canonical").is_symlink())
+
+    def test_sync_preflights_foreign_symlinks_before_copying(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_root = root / "source"
+            target_root = root / "target"
+            foreign = root / "foreign"
+            for name in ("alpha", "beta"):
+                skill = source_root / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(f"# {name}\n")
+            (target_root / "alpha").mkdir(parents=True)
+            (target_root / "alpha" / "SKILL.md").write_text("# stale\n")
+            foreign.mkdir()
+            (foreign / "SKILL.md").write_text("# foreign\n")
+            (target_root / "beta").symlink_to(foreign)
+
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sync_codex_skills(
+                    target_root=target_root,
+                    source_skills_dir=source_root,
+                )
+
+            self.assertEqual(
+                (target_root / "alpha" / "SKILL.md").read_text(), "# stale\n"
+            )
 
 
 class ValidateRecordCliTests(unittest.TestCase):

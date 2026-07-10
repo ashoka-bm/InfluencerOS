@@ -5,6 +5,9 @@
   "completed_on": "2026-07-03T09:40:00",
   "mode": "scheduled_needs",
   "scope": "Desk-reset trends for the open midweek education slot.",
+  "schedule_slot_ids": [
+    "slot_luna_2026_07_09_midweek"
+  ],
   "platforms": [
     "instagram",
     "tiktok"
