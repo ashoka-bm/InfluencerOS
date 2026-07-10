@@ -436,6 +436,119 @@ class StageConceptApprovalTests(unittest.TestCase):
         )
         self.assertTrue(staged["stage_dir"].exists())
 
+    def test_mutated_staged_record_fails_commit(self):
+        # ADR 0042: the human approves exactly the staged bytes; a staged
+        # record edited after presentation must never commit, even when the
+        # edit is schema-valid and upstream inputs are unchanged.
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        _rewrite_json(
+            staged["stage_dir"] / "records" / "projects"
+            / "tiny-reset-after-laptop-day" / "project.json",
+            lambda project: project.update(
+                learning_goal="Unapproved goal injected after presentation."
+            ),
+        )
+        with self.assertRaises(ValidationError) as caught:
+            commit_stage(staged["stage_id"], self.workspace)
+        self.assertIn("pinned at staging", str(caught.exception))
+        self.assertFalse(
+            (
+                self.workspace / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
+            ).exists()
+        )
+        self.assertFalse(
+            (self.workspace / "projects" / "tiny-reset-after-laptop-day").exists()
+        )
+
+    def test_added_staged_record_fails_commit(self):
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        (staged["stage_dir"] / "records" / "extra.json").write_text("{}\n")
+        with self.assertRaises(ValidationError) as caught:
+            commit_stage(staged["stage_id"], self.workspace)
+        self.assertIn("pinned at staging", str(caught.exception))
+
+    def test_stage_fails_closed_on_dangling_evidence_refs(self):
+        # A fresh approval never enters canon with dangling provenance:
+        # the human-approved leniency is for at-rest re-validation of
+        # historical approvals only, never the staged-commit gate.
+        _rewrite_json(
+            self.concept_path,
+            lambda concept: concept["evidence_refs"][0].update(
+                evidence_id="evidence_luna_fit_pruned_999"
+            ),
+        )
+        seed = json.loads(json.dumps(self.seed))
+        seed["projects"][0]["schedule_slot_ids"] = []
+        with self.assertRaises(ValidationError) as caught:
+            stage_concept_approval(
+                seed, self.workspace, "campaign_concept_luna_fit_001"
+            )
+        self.assertIn("unresolved evidence refs", str(caught.exception))
+
+    def test_failed_commit_rolls_back_every_canonical_write(self):
+        # ADR 0029: a partial approval/project set never rests canonical.
+        # Inject a failure on the second project write and require the
+        # approval, first project, concept flip, and slot flip all undone.
+        seed = json.loads(json.dumps(self.seed))
+        seed["projects"].append(
+            {
+                **seed["projects"][0],
+                "project_slug": "second-reset-variation",
+                "schedule_slot_ids": [],
+                "evidence_brief": "# Evidence Brief\n\nSecond variation.\n",
+            }
+        )
+        staged = stage_concept_approval(
+            seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        from influencer_os import staging
+
+        real_create = staging.create_project_from_manifest
+        created = []
+
+        def fail_on_second(project, creator_workspace):
+            if created:
+                raise OSError("injected: disk full mid-commit")
+            created.append(project["project_id"])
+            return real_create(project, creator_workspace)
+
+        with mock.patch.object(
+            staging, "create_project_from_manifest", fail_on_second
+        ):
+            with self.assertRaises(OSError):
+                commit_stage(staged["stage_id"], self.workspace)
+
+        self.assertFalse(
+            (
+                self.workspace / "campaigns" / "campaign_luna_fit_001"
+                / "approvals" / "concept_approval_luna_fit_001.json"
+            ).exists()
+        )
+        self.assertFalse(
+            (self.workspace / "projects" / "tiny-reset-after-laptop-day").exists()
+        )
+        self.assertFalse(
+            (self.workspace / "projects" / "second-reset-variation").exists()
+        )
+        self.assertEqual(
+            load_json(self.concept_path)["status"], "ready_for_approval"
+        )
+        slot = load_json(self.workspace / "content-schedule.json")[
+            "calendar_slots"
+        ][0]
+        self.assertEqual(slot["status"], "open")
+        self.assertNotIn("project_id", slot)
+        # The stage survives for retry; the workspace validates clean.
+        self.assertTrue(staged["stage_dir"].exists())
+        validate_all(self.workspace)
+        commit_stage(staged["stage_id"], self.workspace)
+        validate_all(self.workspace)
+
     def test_active_concept_accepts_a_later_additional_approval(self):
         # One unchanged concept may receive later approvals for additional
         # projects (campaign-concept-pressure plan).

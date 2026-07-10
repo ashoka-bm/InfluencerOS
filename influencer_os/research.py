@@ -1063,13 +1063,17 @@ def validate_approval_gate(
     known_finding_ids=None,
     concept=None,
     schedule=None,
+    strict_evidence=False,
 ):
     """Enforce the concept approval gate (ADR 0029/0031).
 
     An approval must point to a real campaign concept and carry the
-    concept's evidence and intent verbatim. Unresolved evidence refs warn
-    for human-approved records (the human saw the evidence) and fail for
-    any future automated path. Returns warning strings.
+    concept's evidence and intent verbatim. Unresolved evidence refs fail
+    for any automated path; for human-approved records they warn at rest
+    (already-canonical approvals may outlive pruned research) but fail
+    when ``strict_evidence`` is set — the staged-commit gate sets it so a
+    fresh approval never commits with dangling provenance. Returns warning
+    strings.
 
     The optional research_ids / video_pack_ids / known_finding_ids caches
     let validate_approvals collect the research corpus once instead of per
@@ -1141,7 +1145,7 @@ def validate_approval_gate(
             f"concept approval {approval_id} has unresolved evidence refs: "
             + "; ".join(sorted(set(unresolved)))
         )
-        if approval["approved_by"] != "user":
+        if strict_evidence or approval["approved_by"] != "user":
             raise ValidationError(unresolved_message)
         warnings.append(
             f"warning: {unresolved_message} (human-approved: warning only)"
@@ -1172,7 +1176,7 @@ def validate_approval_gate(
             "with finding refs that resolve to no findings frontmatter, "
             f"stable finding, or run output: {unresolved_findings}"
         )
-        if approval["approved_by"] != "user":
+        if strict_evidence or approval["approved_by"] != "user":
             raise ValidationError(message)
         warnings.append(
             f"warning: {message} (human-approved: warning only)"

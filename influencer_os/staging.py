@@ -12,16 +12,19 @@ will write).
 
 ``commit_stage`` re-verifies content hashes of the upstream inputs the
 stage was derived from (a stale stage fails closed and is re-staged, never
-patched), stamps the approval fields, writes the records in the required
-construction order, applies the flips, runs at-rest validation, and
-rebuilds the board and recall-index projections. Every record is built and
-gate-checked before the first canonical write, so a mid-sequence failure
-is a filesystem fault, not a planning fault; ``validate all`` pinpoints
-any residue.
+patched) and of the staged records themselves (the human approves exactly
+the staged bytes; a post-presentation edit fails closed), stamps the
+approval fields, writes the records in the required construction order,
+applies the flips, runs at-rest validation, and rebuilds the board and
+recall-index projections.
 
 The approval and its exact project set are one transactional operation
 (ADR 0029): project ids are allocated into the approval snapshot at stage
-time, and a partial approval/project set never reaches canonical state.
+time, and an in-process failure mid-commit rolls back every canonical
+write, so a partial approval/project set never rests canonical. Only a
+hard crash inside the write window can leave residue, which at-rest
+validation rejects (an approval listing a missing project is invalid
+state); ``validate all`` pinpoints it.
 """
 
 import datetime
@@ -99,6 +102,20 @@ BUNDLE_PROJECT_SEED_OPTIONAL = (
 
 def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def _staged_record_hashes(records_dir):
+    """Content hashes of every staged record file, keyed by posix path
+    relative to the records dir. The stage manifest pins these so commit
+    writes exactly the bytes the human reviewed (ADR 0042); any edit,
+    addition, or removal under records/ after staging fails the commit."""
+    return {
+        path.relative_to(records_dir).as_posix(): _sha256_bytes(
+            path.read_bytes()
+        )
+        for path in sorted(records_dir.rglob("*"))
+        if path.is_file()
+    }
 
 
 def _sha256_record(record):
@@ -222,6 +239,10 @@ def _gate_preflight(workspace_dir, approval, staged_projects, concept, today):
         projects_by_id=projects_by_id,
         concept=flipped_concept,
         schedule=flipped_schedule,
+        # A fresh approval never enters canon with dangling provenance; the
+        # human-approved leniency exists only for at-rest re-validation of
+        # historical approvals whose research was later pruned.
+        strict_evidence=True,
     )
 
 
@@ -415,6 +436,7 @@ def stage_concept_approval(seed, creator_workspace, concept_id, now=None):
             claimed_slot_ids,
             approval_id,
         ),
+        "record_hashes": _staged_record_hashes(records_dir),
         "gate_warnings": warnings,
     }
     write_json_atomic(stage_dir / STAGE_MANIFEST_NAME, stage_manifest)
@@ -479,7 +501,16 @@ def commit_stage(stage, creator_workspace, now=None):
             "current concept/schedule (stages are never patched)"
         )
 
+    # Byte-pin check: the human approved exactly the staged bytes; a stage
+    # whose records were touched after presentation fails closed, like a
+    # stale stage (a missing record_hashes block also mismatches and fails).
     records_dir = stage_dir / "records"
+    if stage_manifest.get("record_hashes") != _staged_record_hashes(records_dir):
+        raise ValidationError(
+            f"stage {stage_manifest['stage_id']} records do not match the "
+            "hashes pinned at staging; the human approves exactly the staged "
+            "bytes (ADR 0042) — discard and re-stage"
+        )
     approval = load_json(records_dir / "concept-approval.json")
     approval["approved_on"] = today
     validate_record("concept-approval", approval)
@@ -533,33 +564,57 @@ def commit_stage(stage, creator_workspace, now=None):
     if approval_path.exists():
         raise FileExistsError(f"Approval already exists: {approval_path}")
 
+    # Snapshot the two overwritten files so a failed commit restores them
+    # byte-identically; created paths are simply removed on rollback.
+    concept_path = _concept_path(workspace_dir, concept)
+    original_concept_bytes = concept_path.read_bytes()
+    original_schedule_bytes = (
+        _schedule_path(workspace_dir).read_bytes()
+        if flipped_schedule is not None
+        else None
+    )
+
     # Construction order (approve-concept contract): approval -> projects ->
     # evidence briefs -> concept flip -> schedule slots -> validate ->
-    # rebuild.
+    # rebuild. A partial approval/project set is invalid (ADR 0029), so any
+    # in-process failure before validation completes rolls every write back
+    # and re-raises; the stage survives for retry or discard.
     approval_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(approval_path, approval)
     project_dirs = []
-    for project in staged_projects:
-        project_dir = create_project_from_manifest(project, workspace_dir)
-        brief = briefs.get(project["project_slug"])
-        if brief is not None:
-            (project_dir / "evidence-brief.md").write_text(brief)
-        project_dirs.append(project_dir)
-    write_json_atomic(_concept_path(workspace_dir, concept), flipped_concept)
-    if flipped_schedule is not None:
-        write_json_atomic(_schedule_path(workspace_dir), flipped_schedule)
+    try:
+        write_json_atomic(approval_path, approval)
+        for project in staged_projects:
+            project_dir = create_project_from_manifest(project, workspace_dir)
+            brief = briefs.get(project["project_slug"])
+            if brief is not None:
+                (project_dir / "evidence-brief.md").write_text(brief)
+            project_dirs.append(project_dir)
+        write_json_atomic(concept_path, flipped_concept)
+        if flipped_schedule is not None:
+            write_json_atomic(_schedule_path(workspace_dir), flipped_schedule)
 
-    queue_manifest_path = (
-        workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
-    )
-    if queue_manifest_path.exists():
-        validate_queue(workspace_dir)
-    validate_research(workspace_dir)
-    from influencer_os.campaigns import validate_campaign_records
+        queue_manifest_path = (
+            workspace_dir / "research" / "content-opportunity-queue"
+            / "queue.json"
+        )
+        if queue_manifest_path.exists():
+            validate_queue(workspace_dir)
+        validate_research(workspace_dir)
+        from influencer_os.campaigns import validate_campaign_records
 
-    validate_campaign_records(workspace_dir)
-    for project_dir in project_dirs:
-        validate_project(project_dir)
+        validate_campaign_records(workspace_dir)
+        for project_dir in project_dirs:
+            validate_project(project_dir)
+    except BaseException:
+        approval_path.unlink(missing_ok=True)
+        for slug in stage_manifest["project_slugs"]:
+            # Safe to remove wholesale: the slug-collision check above
+            # guarantees none of these folders predate this commit.
+            shutil.rmtree(workspace_dir / "projects" / slug, ignore_errors=True)
+        concept_path.write_bytes(original_concept_bytes)
+        if original_schedule_bytes is not None:
+            _schedule_path(workspace_dir).write_bytes(original_schedule_bytes)
+        raise
     # Projections are rebuildable derivations of the now-validated canonical
     # records; a rebuild fault (e.g. a non-standard index root) must not fail
     # the committed approval.
