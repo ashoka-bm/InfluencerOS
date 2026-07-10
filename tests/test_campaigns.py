@@ -1031,6 +1031,40 @@ class CampaignEvaluationTests(unittest.TestCase):
         # never read from a stored field.
         self.assertEqual(concept["pressure_tier_counts"], {"low": 1})
 
+    def test_evaluation_counts_superseded_approval_projects(self):
+        # Projects locked to a superseded approval are delivered history,
+        # not deletable state; the summary must not drop them.
+        from influencer_os.campaigns import derive_campaign_evaluation
+
+        approval = _example("concept-approval.example.json")
+        approval["concept_approval_id"] = "concept_approval_luna_fit_000"
+        approval["approval_status"] = "superseded"
+        approval["project_ids_created"] = ["project_luna_early_reset_001"]
+        write_json_atomic(
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "approvals" / "concept_approval_luna_fit_000.json",
+            approval,
+        )
+        project = _example("project.example.json")
+        project["project_id"] = "project_luna_early_reset_001"
+        project["project_slug"] = "early-reset-variation"
+        project["status"] = "published"
+        project_dir = (
+            self.workspace_dir / "projects" / "early-reset-variation"
+        )
+        project_dir.mkdir(parents=True)
+        write_json_atomic(project_dir / "project.json", project)
+
+        result = derive_campaign_evaluation(self.workspace_dir)
+        concept = result["campaigns"]["campaign_luna_fit_001"]["concepts"][
+            "campaign_concept_luna_fit_001"
+        ]
+        self.assertEqual(concept["project_count"], 2)
+        self.assertEqual(
+            concept["project_status_counts"], {"planning": 1, "published": 1}
+        )
+        self.assertEqual(concept["published_project_count"], 1)
+
     def test_evaluation_is_deterministic(self):
         from influencer_os.campaigns import derive_campaign_evaluation
 

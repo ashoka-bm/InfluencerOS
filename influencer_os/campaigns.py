@@ -790,13 +790,15 @@ def derive_campaign_evaluation(creator_workspace):
 
         concept_summaries = {}
         for concept_id, concept in concepts.items():
-            concept_project_ids = []
-            for approval in approvals:
-                if (
-                    approval["campaign_concept_id"] == concept_id
-                    and approval["approval_status"] == "active"
-                ):
-                    concept_project_ids.extend(approval["project_ids_created"])
+            # Superseded/cancelled approvals still count: projects are never
+            # deleted in v1, so their delivered work stays in the history a
+            # summary reports (2026-07-10 adversarial review).
+            concept_project_ids = list(dict.fromkeys(
+                project_id
+                for approval in approvals
+                if approval["campaign_concept_id"] == concept_id
+                for project_id in approval["project_ids_created"]
+            ))
             status_counts = {}
             function_counts = {}
             pressure_counts = {}
