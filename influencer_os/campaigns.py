@@ -601,6 +601,95 @@ def _check_opportunity_queue(workspace_dir, scope, checked, concept_ids):
     return entries
 
 
+def _workspace_project_manifests(workspace_dir):
+    projects = {}
+    for manifest_path in sorted(
+        Path(workspace_dir).glob("projects/*/project.json")
+    ):
+        manifest = load_json(manifest_path)
+        projects[manifest["project_id"]] = manifest
+    return projects
+
+
+def _check_schedule_ownership(workspace_dir, campaign_ids,
+                              concepts_by_campaign, approvals_by_campaign):
+    """All populated calendar-slot ownership refs must agree (ADR 0029):
+    the slot's concept belongs to the slot's campaign, and the slot's
+    project resolves — transitively through its concept approval when one
+    exists — to the same concept and campaign."""
+    schedule_path = Path(workspace_dir) / "content-schedule.json"
+    if not schedule_path.exists():
+        return
+    schedule = load_json(schedule_path)
+    concept_owners = {
+        concept_id: campaign_id
+        for campaign_id, concepts in concepts_by_campaign.items()
+        for concept_id in concepts
+    }
+    approvals_by_id = {
+        approval_id: approval
+        for approvals in approvals_by_campaign.values()
+        for approval_id, approval in approvals.items()
+    }
+    projects = None
+    for slot in schedule.get("calendar_slots", []):
+        slot_id = slot["slot_id"]
+        campaign_ref = slot.get("campaign_id")
+        concept_ref = slot.get("campaign_concept_id")
+        project_ref = slot.get("project_id")
+        if campaign_ref and campaign_ref not in campaign_ids:
+            raise ValidationError(
+                f"calendar slot {slot_id} names campaign {campaign_ref!r}, "
+                "which does not exist"
+            )
+        if concept_ref:
+            owner = concept_owners.get(concept_ref)
+            if owner is None:
+                raise ValidationError(
+                    f"calendar slot {slot_id} names concept {concept_ref!r}, "
+                    "which does not exist"
+                )
+            if campaign_ref and owner != campaign_ref:
+                raise ValidationError(
+                    f"calendar slot {slot_id} ownership disagrees: concept "
+                    f"{concept_ref} belongs to campaign {owner}, not "
+                    f"{campaign_ref}"
+                )
+        if project_ref:
+            if projects is None:
+                projects = _workspace_project_manifests(workspace_dir)
+            project = projects.get(project_ref)
+            if project is None:
+                raise ValidationError(
+                    f"calendar slot {slot_id} names project {project_ref!r}, "
+                    "which does not exist"
+                )
+            approval_id = project.get("source_refs", {}).get(
+                "concept_approval_id"
+            )
+            if approval_id:
+                approval = approvals_by_id.get(approval_id)
+                if approval is None:
+                    raise ValidationError(
+                        f"calendar slot {slot_id} project {project_ref} names "
+                        f"concept approval {approval_id!r}, which does not exist"
+                    )
+                approval_concept = approval["campaign_concept_id"]
+                if concept_ref and approval_concept != concept_ref:
+                    raise ValidationError(
+                        f"calendar slot {slot_id} ownership disagrees: project "
+                        f"{project_ref} was approved under concept "
+                        f"{approval_concept}, not {concept_ref}"
+                    )
+                approval_campaign = concept_owners.get(approval_concept)
+                if campaign_ref and approval_campaign != campaign_ref:
+                    raise ValidationError(
+                        f"calendar slot {slot_id} ownership disagrees: project "
+                        f"{project_ref} resolves to campaign "
+                        f"{approval_campaign}, not {campaign_ref}"
+                    )
+
+
 def validate_campaign_records(workspace_path):
     """Validate the campaign hierarchy and opportunity queue at rest.
 
@@ -701,4 +790,7 @@ def validate_campaign_records(workspace_path):
                 )
 
     _check_opportunity_queue(workspace_dir, scope, checked, all_concept_ids)
+    _check_schedule_ownership(
+        workspace_dir, campaign_ids, concepts_by_campaign, approvals_by_campaign
+    )
     return {"workspace_path": workspace_dir, "checked_paths": checked}

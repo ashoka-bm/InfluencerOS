@@ -773,8 +773,8 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
 
             def dangle_variants(strategy):
                 strategy["monthly_mix"][0]["variant_id"] = "variant_missing_mix"
-                strategy["content_campaigns"][0]["anchor_variant"] = "variant_missing_anchor"
-                strategy["content_campaigns"][0]["derivative_variants"] = [
+                strategy["content_series"][0]["anchor_variant"] = "variant_missing_anchor"
+                strategy["content_series"][0]["derivative_variants"] = [
                     "variant_missing_derivative"
                 ]
 
@@ -865,7 +865,7 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
             write_content_schedule(workspace_dir)
 
             def contradict_strategy(strategy):
-                strategy["content_campaigns"][0]["conversion_asset_ids"] = []
+                strategy["content_series"][0]["conversion_asset_ids"] = []
 
             def contradict_variant(schedule):
                 schedule["calendar_slots"][0]["variant_id"] = (
@@ -881,7 +881,7 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
             self.assertIn("variant platform 'linkedin' does not match slot platform 'instagram'", message)
             self.assertIn("variant format 'format_thread' does not match slot format 'format_short_form_video'", message)
             self.assertIn("conversion asset", message)
-            self.assertIn("does not belong to campaign", message)
+            self.assertIn("does not belong to content series", message)
 
     def test_production_ready_requires_at_least_one_calendar_slot(self):
         with tempfile.TemporaryDirectory() as temp_dir:

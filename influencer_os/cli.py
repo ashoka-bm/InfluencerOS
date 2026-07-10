@@ -13,7 +13,7 @@ from influencer_os.memory import (
     creator_lessons_workspace,
     write_memory_fact,
 )
-from influencer_os.migrations import migrate_slot_research
+from influencer_os.migrations import migrate_content_series, migrate_slot_research
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     INTAKE_DESTINATIONS,
@@ -65,6 +65,14 @@ def main(argv=None):
         help="Backfill slot-first research provenance in one legacy Creator Workspace.",
     )
     migrate_slot_parser.add_argument(
+        "creator_workspace", help="Path to the Creator Workspace."
+    )
+
+    migrate_series_parser = subparsers.add_parser(
+        "migrate-content-series",
+        help="Rename legacy content_strategy.content_campaigns to content_series (ADR 0031) in one Creator Workspace, including calendar-slot refs.",
+    )
+    migrate_series_parser.add_argument(
         "creator_workspace", help="Path to the Creator Workspace."
     )
 
@@ -371,6 +379,14 @@ def main(argv=None):
         if args.command == "migrate-slot-research":
             result = migrate_slot_research(args.creator_workspace)
             print(f"Migrated slot research provenance: {result['workspace_path']}")
+            print(f"Changed {len(result['changed_paths'])} records.")
+            for path in result["changed_paths"]:
+                print(f"- {path}")
+            return 0
+
+        if args.command == "migrate-content-series":
+            result = migrate_content_series(args.creator_workspace)
+            print(f"Migrated content series naming: {result['workspace_path']}")
             print(f"Changed {len(result['changed_paths'])} records.")
             for path in result["changed_paths"]:
                 print(f"- {path}")

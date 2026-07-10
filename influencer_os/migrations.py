@@ -8,6 +8,65 @@ from influencer_os.json_io import write_json_atomic
 from influencer_os.validation import ValidationError, load_json, validate_record
 
 
+def migrate_content_series(workspace_path):
+    """Rename legacy strategy campaigns to Content Series (ADR 0031).
+
+    `content_strategy.content_campaigns` records describe recurring
+    anchor-and-derivative publishing patterns, not the operational Campaign
+    boundary, so they become `content_series` with `content_series_*` ids;
+    calendar-slot `content_campaign_id` refs follow the same mechanical
+    rename. All records are prepared and validated before any write."""
+    workspace_dir = Path(workspace_path)
+    strategy_path = workspace_dir / "content-strategy.json"
+    if not strategy_path.exists():
+        raise FileNotFoundError(f"Missing content strategy: {strategy_path}")
+
+    def renamed_series_id(campaign_id):
+        return "content_series_" + campaign_id.removeprefix("campaign_")
+
+    strategy = deepcopy(load_json(strategy_path))
+    if "content_campaigns" in strategy and "content_series" in strategy:
+        raise ValidationError(
+            f"{strategy_path} carries both content_campaigns and "
+            "content_series; resolve that conflict before migration"
+        )
+    if "content_campaigns" in strategy:
+        series_list = []
+        for legacy in strategy.pop("content_campaigns"):
+            legacy = deepcopy(legacy)
+            series = {"content_series_id": renamed_series_id(legacy.pop("campaign_id"))}
+            series.update(legacy)
+            series_list.append(series)
+        strategy["content_series"] = series_list
+    strategy.setdefault("content_series", [])
+
+    schedule_path = workspace_dir / "content-schedule.json"
+    schedule = None
+    if schedule_path.exists():
+        schedule = deepcopy(load_json(schedule_path))
+        for slot in schedule.get("calendar_slots", []):
+            if "content_campaign_id" in slot:
+                slot["content_series_id"] = renamed_series_id(
+                    slot.pop("content_campaign_id")
+                )
+
+    validate_record("content-strategy", strategy)
+    if schedule is not None:
+        validate_record("creator-content-schedule", schedule)
+
+    pending = [(strategy_path, strategy)]
+    if schedule is not None:
+        pending.append((schedule_path, schedule))
+    changed = [path for path, record in pending if load_json(path) != record]
+    for path, record in pending:
+        if path in changed:
+            write_json_atomic(path, record)
+    return {
+        "workspace_path": workspace_dir,
+        "changed_paths": [path.relative_to(workspace_dir) for path in changed],
+    }
+
+
 def migrate_slot_research(workspace_path):
     """Backfill slot-first research provenance without inventing weak links.
 

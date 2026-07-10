@@ -12,7 +12,7 @@
     "strategy_status",
     "monthly_mix",
     "post_families",
-    "content_campaigns",
+    "content_series",
     "conversion_paths",
     "cadence_principles"
   ],
@@ -29,10 +29,18 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$"
     },
-    "updated_on": { "type": "string", "format": "date" },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
     "strategy_status": {
       "type": "string",
-      "enum": ["planned", "drafted", "approved", "retired"]
+      "enum": [
+        "planned",
+        "drafted",
+        "approved",
+        "retired"
+      ]
     },
     "monthly_mix": {
       "type": "array",
@@ -40,13 +48,33 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["monthly_mix_id", "platform", "variant_id", "target_count_per_month", "cadence_note"],
+        "required": [
+          "monthly_mix_id",
+          "platform",
+          "variant_id",
+          "target_count_per_month",
+          "cadence_note"
+        ],
         "properties": {
-          "monthly_mix_id": { "type": "string", "pattern": "^monthly_mix_[a-zA-Z0-9_-]+$" },
-          "platform": { "$ref": "#/definitions/platform" },
-          "variant_id": { "type": "string", "pattern": "^variant_[a-zA-Z0-9_-]+$" },
-          "target_count_per_month": { "type": "integer", "minimum": 0 },
-          "cadence_note": { "type": "string", "minLength": 1 }
+          "monthly_mix_id": {
+            "type": "string",
+            "pattern": "^monthly_mix_[a-zA-Z0-9_-]+$"
+          },
+          "platform": {
+            "$ref": "#/definitions/platform"
+          },
+          "variant_id": {
+            "type": "string",
+            "pattern": "^variant_[a-zA-Z0-9_-]+$"
+          },
+          "target_count_per_month": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cadence_note": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -56,21 +84,46 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["family_id", "name", "purpose", "variants"],
+        "required": [
+          "family_id",
+          "name",
+          "purpose",
+          "variants"
+        ],
         "properties": {
-          "family_id": { "type": "string", "pattern": "^family_[a-zA-Z0-9_-]+$" },
-          "name": { "type": "string", "minLength": 1 },
-          "purpose": { "type": "string", "minLength": 1 },
+          "family_id": {
+            "type": "string",
+            "pattern": "^family_[a-zA-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
           "variants": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["variant_id", "platform", "format_id", "modality", "role"],
+              "required": [
+                "variant_id",
+                "platform",
+                "format_id",
+                "modality",
+                "role"
+              ],
               "properties": {
-                "variant_id": { "type": "string", "pattern": "^variant_[a-zA-Z0-9_-]+$" },
-                "platform": { "$ref": "#/definitions/platform" },
+                "variant_id": {
+                  "type": "string",
+                  "pattern": "^variant_[a-zA-Z0-9_-]+$"
+                },
+                "platform": {
+                  "$ref": "#/definitions/platform"
+                },
                 "format_id": {
                   "type": "string",
                   "enum": [
@@ -82,21 +135,32 @@
                     "format_thread"
                   ]
                 },
-                "modality": { "type": "string", "enum": ["text", "image", "video", "audio"] },
-                "role": { "type": "string", "minLength": 1 }
+                "modality": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "image",
+                    "video",
+                    "audio"
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             }
           }
         }
       }
     },
-    "content_campaigns": {
+    "content_series": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "campaign_id",
+          "content_series_id",
           "name",
           "anchor_variant",
           "derivative_variants",
@@ -106,20 +170,44 @@
           "cadence_note"
         ],
         "properties": {
-          "campaign_id": { "type": "string", "pattern": "^campaign_[a-zA-Z0-9_-]+$" },
-          "name": { "type": "string", "minLength": 1 },
-          "anchor_variant": { "type": "string", "pattern": "^variant_[a-zA-Z0-9_-]+$" },
+          "content_series_id": {
+            "type": "string",
+            "pattern": "^content_series_[a-zA-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "anchor_variant": {
+            "type": "string",
+            "pattern": "^variant_[a-zA-Z0-9_-]+$"
+          },
           "derivative_variants": {
             "type": "array",
-            "items": { "type": "string", "pattern": "^variant_[a-zA-Z0-9_-]+$" }
+            "items": {
+              "type": "string",
+              "pattern": "^variant_[a-zA-Z0-9_-]+$"
+            }
           },
           "conversion_asset_ids": {
             "type": "array",
-            "items": { "type": "string", "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$" }
+            "items": {
+              "type": "string",
+              "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$"
+            }
           },
-          "monthly_target": { "type": "integer", "minimum": 0 },
-          "relationship_rule": { "type": "string", "minLength": 1 },
-          "cadence_note": { "type": "string", "minLength": 1 }
+          "monthly_target": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "relationship_rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cadence_note": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -128,34 +216,67 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["conversion_path_id", "name", "entry_platforms", "conversion_asset_ids", "notes"],
+        "required": [
+          "conversion_path_id",
+          "name",
+          "entry_platforms",
+          "conversion_asset_ids",
+          "notes"
+        ],
         "properties": {
-          "conversion_path_id": { "type": "string", "pattern": "^conversion_path_[a-zA-Z0-9_-]+$" },
-          "name": { "type": "string", "minLength": 1 },
+          "conversion_path_id": {
+            "type": "string",
+            "pattern": "^conversion_path_[a-zA-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
           "entry_platforms": {
             "type": "array",
             "minItems": 1,
-            "items": { "$ref": "#/definitions/platform" }
+            "items": {
+              "$ref": "#/definitions/platform"
+            }
           },
           "conversion_asset_ids": {
             "type": "array",
             "minItems": 1,
-            "items": { "type": "string", "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$" }
+            "items": {
+              "type": "string",
+              "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$"
+            }
           },
-          "notes": { "type": "string", "minLength": 1 }
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
     "cadence_principles": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   },
   "definitions": {
     "platform": {
       "type": "string",
-      "enum": ["x", "instagram", "tiktok", "substack", "medium", "reddit", "facebook", "linkedin", "youtube"]
+      "enum": [
+        "x",
+        "instagram",
+        "tiktok",
+        "substack",
+        "medium",
+        "reddit",
+        "facebook",
+        "linkedin",
+        "youtube"
+      ]
     }
   }
 }

@@ -36,9 +36,9 @@
       ]
     }
   ],
-  "content_campaigns": [
+  "content_series": [
     {
-      "campaign_id": "campaign_luna_weekly_anchor",
+      "content_series_id": "content_series_luna_weekly_anchor",
       "name": "Weekly Anchor And Derivatives",
       "anchor_variant": "variant_luna_claim_teardown_linkedin_text",
       "derivative_variants": [

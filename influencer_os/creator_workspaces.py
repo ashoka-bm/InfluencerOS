@@ -612,7 +612,7 @@ def _initial_content_strategy(manifest):
                 ],
             }
         ],
-        "content_campaigns": [],
+        "content_series": [],
         "conversion_paths": [],
         "cadence_principles": ["Replace during strategy setup."],
     }
@@ -1493,16 +1493,16 @@ def _strategy_variant_ref_blockers(content_strategy):
                 f"monthly_mix {mix['monthly_mix_id']} references missing variant {variant_id}"
             )
 
-    for campaign in content_strategy["content_campaigns"]:
-        anchor_variant = campaign["anchor_variant"]
+    for series in content_strategy["content_series"]:
+        anchor_variant = series["anchor_variant"]
         if anchor_variant not in declared_variant_ids:
             blockers.append(
-                f"content_campaign {campaign['campaign_id']} references missing anchor_variant {anchor_variant}"
+                f"content_series {series['content_series_id']} references missing anchor_variant {anchor_variant}"
             )
-        for variant_id in campaign["derivative_variants"]:
+        for variant_id in series["derivative_variants"]:
             if variant_id not in declared_variant_ids:
                 blockers.append(
-                    f"content_campaign {campaign['campaign_id']} references missing derivative variant {variant_id}"
+                    f"content_series {series['content_series_id']} references missing derivative variant {variant_id}"
                 )
     return blockers
 
@@ -1589,9 +1589,9 @@ def _production_stage_blockers(
             )
             blockers.extend(schedule_research_state_errors(schedule))
             goals = {goal["goal_id"] for goal in schedule["content_goals"]}
-            campaigns = {
-                campaign["campaign_id"]: campaign
-                for campaign in content_strategy["content_campaigns"]
+            series_by_id = {
+                series["content_series_id"]: series
+                for series in content_strategy["content_series"]
             }
             variants = {
                 variant["variant_id"]: variant
@@ -1606,10 +1606,10 @@ def _production_stage_blockers(
                         f"calendar slot {slot['slot_id']} references missing content goal "
                         f"{slot['content_goal_id']}"
                     )
-                campaign_id = slot.get("content_campaign_id")
-                if campaign_id and campaign_id not in campaigns:
+                content_series_id = slot.get("content_series_id")
+                if content_series_id and content_series_id not in series_by_id:
                     blockers.append(
-                        f"calendar slot {slot['slot_id']} references missing content campaign {campaign_id}"
+                        f"calendar slot {slot['slot_id']} references missing content series {content_series_id}"
                     )
                 variant_id = slot.get("variant_id")
                 if variant_id and variant_id not in variants:
@@ -1630,20 +1630,20 @@ def _production_stage_blockers(
                             f"calendar slot {slot['slot_id']} variant format "
                             f"{variant['format_id']!r} does not match slot format {format_id!r}"
                         )
-                campaign = campaigns.get(campaign_id)
-                if campaign is not None:
-                    campaign_variants = {
-                        campaign["anchor_variant"], *campaign["derivative_variants"]
+                series = series_by_id.get(content_series_id)
+                if series is not None:
+                    series_variants = {
+                        series["anchor_variant"], *series["derivative_variants"]
                     }
                     if not variant_id:
                         blockers.append(
                             f"calendar slot {slot['slot_id']} must name a strategy variant "
-                            f"when it references campaign {campaign_id}"
+                            f"when it references content series {content_series_id}"
                         )
-                    elif variant_id not in campaign_variants:
+                    elif variant_id not in series_variants:
                         blockers.append(
                             f"calendar slot {slot['slot_id']} variant {variant_id} does not "
-                            f"belong to campaign {campaign_id}"
+                            f"belong to content series {content_series_id}"
                         )
             channels_by_platform = {
                 channel["platform"]: channel for channel in channels["channels"]
@@ -1673,16 +1673,16 @@ def _production_stage_blockers(
             )
             blockers.extend(asset_blockers)
             for slot in schedule["calendar_slots"]:
-                campaign_id = slot.get("content_campaign_id")
-                campaign = campaigns.get(campaign_id)
+                content_series_id = slot.get("content_series_id")
+                series = series_by_id.get(content_series_id)
                 for asset_id in slot.get("conversion_asset_ids", []):
                     if (
-                        campaign is not None
-                        and asset_id not in campaign["conversion_asset_ids"]
+                        series is not None
+                        and asset_id not in series["conversion_asset_ids"]
                     ):
                         blockers.append(
                             f"calendar slot {slot['slot_id']} conversion asset {asset_id} "
-                            f"does not belong to campaign {campaign_id}"
+                            f"does not belong to content series {content_series_id}"
                         )
                     asset = conversion_assets.get(asset_id)
                     if asset is None:
@@ -1753,8 +1753,8 @@ def _onboarding_readiness_warnings(workspace_dir, manifest, readiness_state, cha
 
 def _strategy_conversion_asset_ids(content_strategy):
     asset_ids = set()
-    for campaign in content_strategy["content_campaigns"]:
-        asset_ids.update(campaign["conversion_asset_ids"])
+    for series in content_strategy["content_series"]:
+        asset_ids.update(series["conversion_asset_ids"])
     for path in content_strategy["conversion_paths"]:
         asset_ids.update(path["conversion_asset_ids"])
     return asset_ids

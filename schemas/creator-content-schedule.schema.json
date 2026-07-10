@@ -263,9 +263,21 @@
             "type": "string",
             "minLength": 1
           },
-          "content_campaign_id": {
+          "content_series_id": {
+            "type": "string",
+            "pattern": "^content_series_[a-zA-Z0-9_-]+$"
+          },
+          "campaign_id": {
             "type": "string",
             "pattern": "^campaign_[a-zA-Z0-9_-]+$"
+          },
+          "campaign_concept_id": {
+            "type": "string",
+            "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$"
+          },
+          "project_id": {
+            "type": "string",
+            "pattern": "^project_[a-zA-Z0-9_-]+$"
           },
           "variant_id": {
             "type": "string",

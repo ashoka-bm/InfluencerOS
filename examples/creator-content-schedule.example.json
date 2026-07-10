@@ -48,8 +48,8 @@
         "conversion_asset_luna_reset_checklist"
       ],
       "conversion_use": "soft_cta",
-      "content_campaign_id": "campaign_luna_weekly_anchor",
-      "variant_id": "variant_luna_claim_teardown_instagram_reel"
+      "variant_id": "variant_luna_claim_teardown_instagram_reel",
+      "content_series_id": "content_series_luna_weekly_anchor"
     }
   ],
   "drift_checks": {

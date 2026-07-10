@@ -594,5 +594,175 @@ class ValidateCampaignRecordsTests(unittest.TestCase):
             validate_campaign_records(self.workspace_dir)
 
 
+class ScheduleOwnershipTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace_dir = _campaign_workspace(self.temp.name)
+        scaffold_campaign(_campaign_seed_from_example(), self.workspace_dir)
+        activate_campaign(self.workspace_dir, "campaign_luna_fit_001")
+        _write_opportunity_fixture(self.workspace_dir)
+        scaffold_campaign_concept(
+            _concept_seed_from_example(), self.workspace_dir
+        )
+
+    def _write_schedule(self, **slot_refs):
+        schedule = _example("creator-content-schedule.example.json")
+        schedule["calendar_slots"][0].update(slot_refs)
+        write_json_atomic(
+            self.workspace_dir / "content-schedule.json", schedule
+        )
+
+    def test_agreeing_ownership_refs_pass(self):
+        self._write_schedule(
+            campaign_id="campaign_luna_fit_001",
+            campaign_concept_id="campaign_concept_luna_fit_001",
+        )
+        validate_campaign_records(self.workspace_dir)
+
+    def test_missing_campaign_ref_rejected(self):
+        self._write_schedule(campaign_id="campaign_luna_fit_404")
+        with self.assertRaisesRegex(ValidationError, "does not exist"):
+            validate_campaign_records(self.workspace_dir)
+
+    def test_disagreeing_concept_ownership_rejected(self):
+        seed = _campaign_seed_from_example()
+        seed["name"] = "Second campaign"
+        scaffold_campaign(seed, self.workspace_dir)
+        self._write_schedule(
+            campaign_id="campaign_luna_fit_002",
+            campaign_concept_id="campaign_concept_luna_fit_001",
+        )
+        with self.assertRaisesRegex(ValidationError, "ownership disagrees"):
+            validate_campaign_records(self.workspace_dir)
+
+    def test_dangling_project_ref_rejected(self):
+        self._write_schedule(project_id="project_luna_fit_ghost_001")
+        with self.assertRaisesRegex(ValidationError, "does not exist"):
+            validate_campaign_records(self.workspace_dir)
+
+    def test_project_approval_chain_must_agree(self):
+        approval = _example("concept-approval.example.json")
+        approvals_dir = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "approvals"
+        )
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(
+            approvals_dir / f"{approval['concept_approval_id']}.json", approval
+        )
+        project = _example("project.example.json")
+        project["source_refs"]["concept_approval_id"] = (
+            approval["concept_approval_id"]
+        )
+        project_dir = (
+            self.workspace_dir / "projects" / project["project_slug"]
+        )
+        project_dir.mkdir(parents=True)
+        write_json_atomic(project_dir / "project.json", project)
+
+        self._write_schedule(
+            campaign_id="campaign_luna_fit_001",
+            campaign_concept_id="campaign_concept_luna_fit_001",
+            project_id=project["project_id"],
+        )
+        validate_campaign_records(self.workspace_dir)
+
+        seed = _campaign_seed_from_example()
+        seed["name"] = "Second campaign"
+        scaffold_campaign(seed, self.workspace_dir)
+        self._write_schedule(
+            campaign_id="campaign_luna_fit_002",
+            project_id=project["project_id"],
+        )
+        with self.assertRaisesRegex(ValidationError, "ownership disagrees"):
+            validate_campaign_records(self.workspace_dir)
+
+
+class MigrateContentSeriesTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace_dir = _campaign_workspace(self.temp.name)
+
+    def _write_legacy_records(self):
+        from influencer_os.migrations import migrate_content_series  # noqa: F401
+
+        strategy = _example("content-strategy.example.json")
+        legacy_campaigns = []
+        for series in strategy.pop("content_series"):
+            legacy = {
+                "campaign_id": "campaign_"
+                + series["content_series_id"].removeprefix("content_series_")
+            }
+            legacy.update(
+                {k: v for k, v in series.items() if k != "content_series_id"}
+            )
+            legacy_campaigns.append(legacy)
+        strategy["content_campaigns"] = legacy_campaigns
+        (self.workspace_dir / "content-strategy.json").write_text(
+            json.dumps(strategy, indent=2) + "\n"
+        )
+        schedule = _example("creator-content-schedule.example.json")
+        for slot in schedule["calendar_slots"]:
+            if "content_series_id" in slot:
+                slot["content_campaign_id"] = "campaign_" + slot.pop(
+                    "content_series_id"
+                ).removeprefix("content_series_")
+        (self.workspace_dir / "content-schedule.json").write_text(
+            json.dumps(schedule, indent=2) + "\n"
+        )
+
+    def test_legacy_records_migrate_mechanically(self):
+        from influencer_os.migrations import migrate_content_series
+
+        self._write_legacy_records()
+        result = migrate_content_series(self.workspace_dir)
+        changed = {str(path) for path in result["changed_paths"]}
+        self.assertEqual(
+            changed, {"content-strategy.json", "content-schedule.json"}
+        )
+        strategy = load_json(self.workspace_dir / "content-strategy.json")
+        self.assertNotIn("content_campaigns", strategy)
+        self.assertEqual(
+            strategy["content_series"][0]["content_series_id"],
+            "content_series_luna_weekly_anchor",
+        )
+        schedule = load_json(self.workspace_dir / "content-schedule.json")
+        renamed_slots = [
+            slot
+            for slot in schedule["calendar_slots"]
+            if slot.get("content_series_id") == "content_series_luna_weekly_anchor"
+        ]
+        self.assertTrue(renamed_slots)
+        self.assertFalse(
+            any(
+                "content_campaign_id" in slot
+                for slot in schedule["calendar_slots"]
+            )
+        )
+
+    def test_migration_is_idempotent(self):
+        from influencer_os.migrations import migrate_content_series
+
+        self._write_legacy_records()
+        migrate_content_series(self.workspace_dir)
+        result = migrate_content_series(self.workspace_dir)
+        self.assertEqual(result["changed_paths"], [])
+
+    def test_conflicting_strategy_fails_before_writes(self):
+        from influencer_os.migrations import migrate_content_series
+
+        self._write_legacy_records()
+        strategy_path = self.workspace_dir / "content-strategy.json"
+        strategy = load_json(strategy_path)
+        strategy["content_series"] = []
+        strategy_path.write_text(json.dumps(strategy, indent=2) + "\n")
+        before = strategy_path.read_text()
+        with self.assertRaisesRegex(ValidationError, "both"):
+            migrate_content_series(self.workspace_dir)
+        self.assertEqual(strategy_path.read_text(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
