@@ -263,6 +263,24 @@ def create_project_from_manifest(project, creator_workspace):
         return init_project(manifest_path, creator_workspace)
 
 
+def rebuild_projections(creator_workspace):
+    """Constructor post-write pipeline (docs/record-constructors.md): the
+    board and recall-index projections rebuild in the same invocation as
+    the canonical write. Projections are rebuildable derivations of the
+    validated records, so a rebuild fault (e.g. a non-standard index root)
+    degrades to a warning instead of failing the committed write."""
+    from influencer_os.boards import rebuild_board
+    from influencer_os.recall_index import rebuild_index
+
+    warnings = []
+    for rebuild in (rebuild_board, rebuild_index):
+        try:
+            rebuild(creator_workspace)
+        except (ValidationError, ValueError, FileNotFoundError) as exc:
+            warnings.append(f"warning: {rebuild.__name__} failed: {exc}")
+    return warnings
+
+
 def _load_approval(workspace_dir, approval_id):
     from influencer_os.research import find_concept_approval
 
@@ -337,7 +355,11 @@ def scaffold_project(seed, creator_workspace, now=None):
         today=_now(now).strftime("%Y-%m-%d"),
     )
     project_dir = create_project_from_manifest(project, workspace_dir)
-    return {"project_dir": project_dir, "project_id": project_id}
+    return {
+        "project_dir": project_dir,
+        "project_id": project_id,
+        "warnings": rebuild_projections(workspace_dir),
+    }
 
 
 # --- search plan / research run pair ---------------------------------------
@@ -565,4 +587,5 @@ def complete_run(run_dir, creator_workspace, *, material_update,
         "research_run_id": run_id,
         "run_status": run_status,
         "outputs": outputs,
+        "warnings": rebuild_projections(workspace_dir),
     }

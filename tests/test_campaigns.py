@@ -169,6 +169,18 @@ class ScaffoldCampaignTests(unittest.TestCase):
         written = load_json(result["campaign_path"])
         self.assertEqual(written, _example("campaign.example.json"))
 
+    def test_scaffold_rebuilds_projections_in_same_invocation(self):
+        # Constructor contract (docs/record-constructors.md): any
+        # constructor write runs the projection rebuilds itself, never
+        # deferring board freshness to the next refresh-workspace.
+        result = scaffold_campaign(
+            _campaign_seed_from_example(), self.workspace_dir
+        )
+        board_path = self.workspace_dir / "boards" / "content-board.json"
+        self.assertTrue(board_path.exists())
+        self.assertIn("campaign_luna_fit_001", board_path.read_text())
+        self.assertIn("warnings", result)
+
     def test_scaffold_starts_draft_without_activation(self):
         result = scaffold_campaign(
             _campaign_seed_from_example(), self.workspace_dir

@@ -28,6 +28,7 @@ from influencer_os.constructors import (
     load_seed,
     load_workspace_manifest,
     next_sequenced_id,
+    rebuild_projections,
 )
 from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
 from influencer_os.json_io import write_json_atomic
@@ -259,7 +260,11 @@ def scaffold_campaign(seed, creator_workspace, now=None):
     campaign_path.parent.mkdir(parents=True, exist_ok=False)
     write_json_atomic(campaign_path, campaign)
     validate_campaign_records(workspace_dir)
-    return {"campaign_path": campaign_path, "campaign_id": campaign_id}
+    return {
+        "campaign_path": campaign_path,
+        "campaign_id": campaign_id,
+        "warnings": rebuild_projections(workspace_dir),
+    }
 
 
 def activate_campaign(creator_workspace, campaign_id, activation_note=None,
@@ -284,7 +289,11 @@ def activate_campaign(creator_workspace, campaign_id, activation_note=None,
     campaign_path = _campaign_path(workspace_dir, campaign_id)
     write_json_atomic(campaign_path, campaign)
     validate_campaign_records(workspace_dir)
-    return {"campaign_path": campaign_path, "campaign_id": campaign_id}
+    return {
+        "campaign_path": campaign_path,
+        "campaign_id": campaign_id,
+        "warnings": rebuild_projections(workspace_dir),
+    }
 
 
 # --- campaign concept -------------------------------------------------------
@@ -492,7 +501,11 @@ def scaffold_campaign_concept(seed, creator_workspace, now=None):
         write_json_atomic(_queue_path(workspace_dir), flipped_queue)
     write_json_atomic(concept_path, concept)
     validate_campaign_records(workspace_dir)
-    return {"concept_path": concept_path, "campaign_concept_id": concept_id}
+    return {
+        "concept_path": concept_path,
+        "campaign_concept_id": concept_id,
+        "warnings": rebuild_projections(workspace_dir),
+    }
 
 
 def set_concept_status(creator_workspace, concept_id, new_status, now=None):
@@ -520,7 +533,11 @@ def set_concept_status(creator_workspace, concept_id, new_status, now=None):
     validate_record("campaign-concept", concept)
     write_json_atomic(concept_path, concept)
     validate_campaign_records(concept_path.parents[3])
-    return {"concept_path": concept_path, "campaign_concept_id": concept_id}
+    return {
+        "concept_path": concept_path,
+        "campaign_concept_id": concept_id,
+        "warnings": rebuild_projections(concept_path.parents[3]),
+    }
 
 
 # --- content opportunity ----------------------------------------------------
@@ -603,6 +620,7 @@ def scaffold_content_opportunity(seed, creator_workspace, now=None):
         "entry_path": entry_path,
         "queue_path": queue_path,
         "content_opportunity_id": opportunity_id,
+        "warnings": rebuild_projections(workspace_dir),
     }
 
 

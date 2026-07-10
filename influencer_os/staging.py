@@ -34,7 +34,6 @@ import shutil
 from copy import deepcopy
 from pathlib import Path
 
-from influencer_os.boards import rebuild_board
 from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.campaigns import campaign_dir
 from influencer_os.constructors import (
@@ -47,10 +46,10 @@ from influencer_os.constructors import (
     load_seed,
     load_workspace_manifest,
     next_sequenced_id,
+    rebuild_projections,
 )
 from influencer_os.json_io import write_json_atomic
 from influencer_os.projects import validate_project
-from influencer_os.recall_index import rebuild_index
 from influencer_os.research import (
     collect_project_manifests,
     find_campaign_concept,
@@ -615,14 +614,7 @@ def commit_stage(stage, creator_workspace, now=None):
         if original_schedule_bytes is not None:
             _schedule_path(workspace_dir).write_bytes(original_schedule_bytes)
         raise
-    # Projections are rebuildable derivations of the now-validated canonical
-    # records; a rebuild fault (e.g. a non-standard index root) must not fail
-    # the committed approval.
-    for rebuild in (rebuild_board, rebuild_index):
-        try:
-            rebuild(workspace_dir)
-        except (ValidationError, ValueError, FileNotFoundError) as exc:
-            warnings.append(f"warning: {rebuild.__name__} failed: {exc}")
+    warnings.extend(rebuild_projections(workspace_dir))
 
     shutil.rmtree(stage_dir)
     return {
