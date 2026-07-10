@@ -53,13 +53,14 @@ For architecture, roadmap, workflow, or product-scope work, read:
 
 ## Product Invariant
 
-Every Idea Queue Entry, Project, format-specific production plan, Base Video Generation Plan, and Output Record must trace back to:
+Every Content Opportunity, Campaign Concept, Project, format-specific production plan, Base Video Generation Plan, and Output Record must trace back to:
 
 - Creator Profile,
 - current Research Evidence, and the Research Findings it supports when material findings exist,
 - Video Understanding Pack evidence when real videos were analyzed,
-- the Idea Queue Entry that captured the idea,
-- the human-approved Idea Promotion once work enters production,
+- the owning Campaign and its Content Pillar,
+- the Content Opportunity that captured the direction, when one exists,
+- the human-approved Concept Approval once work enters production,
 - the Applied Social Template when one is used,
 - the intended payoff,
 - the format-specific production plan for the chosen format,
@@ -68,8 +69,8 @@ Every Idea Queue Entry, Project, format-specific production plan, Base Video Gen
 
 Traceability may be transitive: each record must reference its immediate
 upstream record, and deeper provenance resolves through that chain (for
-example, a Project resolves findings and evidence through its locked Idea
-Promotion).
+example, a Project resolves findings and evidence through its locked Concept
+Approval).
 
 ## Operating Rules
 

@@ -5,10 +5,11 @@ InfluencerOS is an agent operating system for creating researched content plans 
 ## Language
 
 The Campaign, Content Opportunity, and commercial-expression terms below are
-accepted implementation targets under ADRs 0029-0032. They describe the next
-runtime model and are not claims about schemas or commands that have already
-shipped. Terms explicitly marked Deferred are compatibility targets only and
-must not create obligations in the initial implementation.
+the shipped runtime model (ADRs 0029-0032, landed 2026-07-10): the campaign,
+concept, approval, opportunity, and queue schemas, constructors, and staged
+approval commands are implemented, and the idea-queue records they replace
+are gone (ADR 0031). Terms explicitly marked Deferred remain compatibility
+targets only and must not create obligations in the current implementation.
 
 **InfluencerOS**:
 The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Content Opportunity Queue, and turn one approved Campaign Concept into format-specific production plans, starting with the universal short-form base video generation plan.
