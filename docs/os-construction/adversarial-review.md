@@ -1133,3 +1133,55 @@ All `determinism-gap`-typed findings (any dimension):
 
 No — the repo does NOT document the file-granular orchestrator→conductor→subskill call graph the owner explicitly wants mapped, and this manifests in three concrete ways. First, both conductors declare their call graph only in PROSE: skills/create-influencer/SKILL.md lists a ## Subskills section naming create-identity..create-runtime-context across 7 phases, but its frontmatter carries no dependencies:, no allowed-tools:, no per-phase owner column, and no Skill() invocation contract — a grep for `dependencies`, `## Dependencies`, `Skill(`, or `allowed-tools` across every skills/*/SKILL.md returns zero, even though agentic-os's own docs/building-skills.md mandates a ## Dependencies section and its 00-social-content orchestrator declares all of this machine-actionably (dependencies block, allowed-tools, Skill(skill: "mkt-brand-voice") invocation, phase-owner table, spawned subagents). Second, skills/influencer-os/SKILL.md — the flagship content conductor — names NO owning skill for ANY of its ten phases, and the six producers it would call (create-social-research-pack, create-content-idea-set, apply-social-template, create-production-plan, create-output-package, distill-creator-learning) sit under a skill-registry.md table literally titled "Missing Future Skills" and do not exist on disk. So there are zero skill→skill edges anywhere. Third, the one artifact that looks like the answer — repository-map.md's "Creation Flow Call Map" — is mislabeled: its body is a RECORD data-flow map (every edge is "create <Record>" / "route by target_format_id") with exactly one skill node and no other skill/function nodes; the only real call graph in the repo is the disjoint CLI helper chain (cli.py -> creator_workspaces.py -> projects.py -> runs.py -> validation.py), which produces none of the pipeline records. Additionally, the copy plan never inspected agentic-os's .claude/agents/ subagent subsystem, so the template's proven orchestrator→subagent pattern is not even on the table. What is MISSING and must be created: (a) a true Skill Call Graph doc listing skill→skill edges at file granularity (e.g. influencer-os/SKILL.md -> create-social-research-pack/SKILL.md) for both conductors, separate from the record data-flow map; (b) ## Dependencies sections and per-phase owners + exact Skill() invocations in each conductor SKILL.md, mirroring 00-social-content; and (c) a decision on whether the content conductor inlines its phases or calls real subskills — either build the six "Missing Future Skills" and wire them, or remove the phantom producers so the graph is honest. This is a parity fix against agentic-os's own convention, not a new divergence, so no ADR is required.
 
+
+## Campaign Model Review Adjudication (2026-07-10)
+
+A second adversarial review targeted the nine campaign-model commits of
+2026-07-10 (`b06c42f..31913e0`, ADRs 0029-0032 and 0042). Ten findings were
+verified against the code and the campaign-concept-pressure implementation
+plan; seven were adopted, three declined. Where the review graded sequential
+writes against literal filesystem transactions, the ruling standard is the
+repo's own contract: crash prefixes must be *detectably invalid* and rejected
+by validators; only silent invalid state is release-blocking.
+
+### Adopted
+
+- **Staged records not byte-pinned** (the strongest finding: mutated staged
+  records committed silently, violating ADR 0042's approve-exact-bytes rule)
+  → fixed in `c26e503`; the stage manifest now hashes every staged record and
+  commit fails closed on any post-presentation change.
+- **Approval bundle not rolled back on in-process failure** (severity one
+  notch below the review's claim — the partial state was already rejected by
+  `check_approval_created_projects` at the next validation, so it was stuck,
+  not silent) → fixed in `c26e503`; commit_stage now undoes the approval,
+  projects, concept flip, and schedule flip and re-raises.
+- **Approval gate fails open on dangling evidence for human approvals**
+  (inherited idea-promotion-era policy, not a new hole) → split in `c26e503`:
+  the staged-commit gate is strict; at-rest re-validation of historical
+  approvals keeps the documented leniency for pruned research.
+- **CONTEXT.md/AGENTS.md contradict the shipped model** → fixed in `59973c5`.
+- **Constructors leave board/index projections stale** (self-healing at next
+  refresh-workspace, but a contract violation) → fixed in `786f69e`.
+- **Duplicated surface-to-platform mapping** → fixed in `2a3238a`.
+- **Evaluation drops projects locked to superseded approvals** → fixed in
+  `f2faa94`.
+
+### Declined
+
+- **Evaluation reads no publication/analytics/Performance Summary records and
+  emits `measured_progress: unknown`** — declined. ADR 0032 deliberately
+  scopes the first projection small, the plan states "missing analytics
+  remain unknown," and the operating rules forbid adding analytics unless
+  explicitly requested. Revisit when analytics are requested.
+- **Pressure Projection lacks per-platform unknown coverage** — declined for
+  now. The implementation matches the plan's body text ("unresolved
+  pre-Project slot count and coverage" — global); exit criterion 4's grammar
+  is ambiguous. Known sharp edge, accepted: a platform whose slots are all
+  unresolved does not appear in `platforms`; the global unresolved count is
+  the honest signal. Revisit if the projection starts driving decisions.
+- **Opportunity assignment and campaign migration are not transactional** —
+  declined. Assignment ordering is a documented design (a crash leaves a
+  detectably invalid, never double-assignable state, which validators
+  reject). Migration validates everything before its write phase, is a
+  one-time operator tool, and runs only against disposable test-fixture
+  workspaces that are wiped before real onboarding.
