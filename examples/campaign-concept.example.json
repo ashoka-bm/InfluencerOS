@@ -1,0 +1,33 @@
+{
+ "campaign_concept_id": "campaign_concept_luna_fit_001",
+ "campaign_id": "campaign_luna_fit_001",
+ "creator_profile_id": "creator_luna_fit",
+ "title": "Lunch-break resets beat willpower plans",
+ "hypothesis": "Desk workers act on a reset they can finish inside a lunch break, not on plans that ask for a schedule change.",
+ "audience_tension": "By midday the body feels wrecked, but every fitness plan seems to demand an hour that does not exist.",
+ "promise": "A ninety-second reset you can run beside the desk today, no outfit change, no equipment.",
+ "audience_segment": "Time-constrained women who want low-pressure home movement.",
+ "content_pillar_id": "pillar_tiny_home_workouts",
+ "primary_commercial_function": "lead_capture",
+ "supporting_commercial_functions": [
+  "trust_building"
+ ],
+ "status": "draft",
+ "source_content_opportunity_id": "content_opportunity_luna_fit_001",
+ "evidence_refs": [
+  {
+   "research_run_id": "research_run_luna_fit_2026_07_03_001",
+   "evidence_id": "evidence_luna_fit_001",
+   "metric_snapshot_ids": [
+    "metric_snapshot_luna_fit_001"
+   ],
+   "video_understanding_pack_ids": [
+    "video_research_luna_fit_001"
+   ]
+  }
+ ],
+ "related_concepts": [],
+ "created_on": "2026-07-03",
+ "updated_on": "2026-07-03",
+ "notes": "Assigned from the lunch-break reset opportunity; hooks and formats vary per project."
+}

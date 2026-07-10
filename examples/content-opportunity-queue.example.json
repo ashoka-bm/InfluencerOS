@@ -1,0 +1,14 @@
+{
+ "content_opportunity_queue_id": "content_opportunity_queue_luna_fit",
+ "creator_profile_id": "creator_luna_fit",
+ "updated_on": "2026-07-03",
+ "entry_refs": [
+  {
+   "content_opportunity_id": "content_opportunity_luna_fit_001",
+   "status": "new"
+  }
+ ],
+ "status_counts": {
+  "new": 1
+ }
+}

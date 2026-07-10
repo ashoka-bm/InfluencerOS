@@ -230,6 +230,110 @@ fully populated variant.)
 
 ---
 
+## 4. Campaign (`scaffold_campaign` / `activate_campaign`)
+
+Upstream input: the creator profile (pillars) and `conversion-assets/`
+(paid offer, when named). New campaigns are born `draft`;
+`activate_campaign` records the human activation decision (approval
+metadata, not a new production Gate — ADR 0029).
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `name`, `objective`, `measurable_outcome` | authored | Objective from the ADR 0029 vocabulary |
+| `primary_content_pillar_id`, `supporting_content_pillar_ids` | authored | Must resolve to creator-profile pillars |
+| `primary_audience_segment`, `supporting_audience_segments` | authored | Audience is a creator-profile input; free-form, never invented |
+| `primary_offer_conversion_asset_id`, `supporting_conversion_asset_ids` | authored | Offer required when objective is `paid_conversion`; must resolve under `conversion-assets/` |
+| `notes` | authored | Optional |
+| `campaign_id` | derived | `campaign_<creator>_<seq>`; seed may pin |
+| `creator_profile_id`, `created_on`, `updated_on` | derived | |
+| `status` | derived | `draft` |
+| `activation` | stamped | `approved_by: user` + `activated_on` at activation |
+
+Canonical seed:
+
+```json
+{
+  "name": "Desk-reset habit builder",
+  "objective": "lead_generation",
+  "primary_content_pillar_id": "pillar_tiny_home_workouts",
+  "supporting_content_pillar_ids": ["pillar_no_shame_fitness"],
+  "primary_audience_segment": "Time-constrained women who want low-pressure home movement.",
+  "supporting_audience_segments": ["Beginners returning to movement after a long break"],
+  "primary_offer_conversion_asset_id": "conversion_asset_luna_reset_checklist",
+  "supporting_conversion_asset_ids": [],
+  "measurable_outcome": "Grow reset-checklist downloads from desk-reset content to 200 per month.",
+  "notes": "Runs indefinitely; a paid-offer change would open a new campaign."
+}
+```
+
+## 5. CampaignConcept (`scaffold_campaign_concept`)
+
+Upstream input: the owning Campaign, and the assigned Content Opportunity
+when one exists. A concept only selects Campaign-approved audience
+segments and pillars; evidence is copied from the assigned opportunity
+(authored directly only for campaign-scoped research with no opportunity).
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `campaign_id` | authored | The owning campaign |
+| `title`, `hypothesis`, `audience_tension`, `promise` | authored | The testable hypothesis; a material change creates a new linked concept |
+| `audience_segment`, `content_pillar_id` | authored | Must be Campaign-approved |
+| `primary_commercial_function`, `supporting_commercial_functions` | authored | ADR 0030 vocabulary |
+| `source_content_opportunity_id` | authored | The assignment judgment, when assigning from the queue |
+| `evidence_refs` | copied / authored | Copied from the assigned opportunity; authored only without one |
+| `related_concepts`, `notes` | authored | Optional |
+| `campaign_concept_id` | derived | `campaign_concept_<creator>_<seq>`; seed may pin |
+| `creator_profile_id`, `created_on`, `updated_on` | derived | |
+| `status` | derived | `draft` |
+
+Canonical seed:
+
+```json
+{
+  "campaign_id": "campaign_luna_fit_001",
+  "title": "Lunch-break resets beat willpower plans",
+  "hypothesis": "Desk workers act on a reset they can finish inside a lunch break, not on plans that ask for a schedule change.",
+  "audience_tension": "By midday the body feels wrecked, but every fitness plan seems to demand an hour that does not exist.",
+  "promise": "A ninety-second reset you can run beside the desk today, no outfit change, no equipment.",
+  "audience_segment": "Time-constrained women who want low-pressure home movement.",
+  "content_pillar_id": "pillar_tiny_home_workouts",
+  "primary_commercial_function": "lead_capture",
+  "supporting_commercial_functions": ["trust_building"],
+  "source_content_opportunity_id": "content_opportunity_luna_fit_001",
+  "related_concepts": [],
+  "notes": "Assigned from the lunch-break reset opportunity; hooks and formats vary per project."
+}
+```
+
+## 6. ContentOpportunity (`scaffold_content_opportunity`)
+
+Wildcard research output without a Campaign owner (ADR 0031). The
+constructor writes the entry and upserts the queue manifest in the same
+invocation, so entry and manifest never drift. Assignment (flipping to
+`assigned` and linking the created concept) is part of the Slice 3
+workflow cutover.
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `title`, `hook`, `premise_summary`, `intended_payoff`, `topic_cluster` | authored | |
+| `platform_recommendations`, `format_recommendations`, `schedule_fit_type` | authored | Canonical enums |
+| `evidence_refs`, `scores` | authored | Research provenance and the eight scored dimensions |
+| intent pair + notes fields (`intended_emotion`, `core_message`, `urgency_window`, ...) | authored | Optional |
+| `content_opportunity_id` | derived | `content_opportunity_<creator>_<seq>`; seed may pin |
+| `creator_profile_id`, `created_on`, `updated_on` | derived | |
+| `status` | derived | `new` |
+| queue manifest (`entry_refs`, `status_counts`, `updated_on`) | derived | Upserted with the entry |
+| `linked_campaign_concept_ids` | stamped | At assignment (Slice 3) |
+
+The canonical seed is the example entry minus constructor-owned fields
+(`examples/content-opportunity.example.json`); the fixture test derives it
+mechanically.
+
+ConceptApproval intentionally has no standalone scaffold: an approval and
+its exact Project set are one transactional operation behind the human
+gate (ADR 0029), so its constructor is the staged approval bundle that
+replaces `stage promotion`/`commit-stage` at the workflow cutover.
+
 ## Anticipation Points
 
 | Trigger | Deterministic work started |

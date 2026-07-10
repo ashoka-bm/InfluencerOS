@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/campaign-concept.schema.json",
+  "title": "CampaignConcept",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "campaign_concept_id",
+    "campaign_id",
+    "creator_profile_id",
+    "title",
+    "hypothesis",
+    "audience_tension",
+    "promise",
+    "audience_segment",
+    "content_pillar_id",
+    "primary_commercial_function",
+    "supporting_commercial_functions",
+    "status",
+    "evidence_refs",
+    "created_on",
+    "updated_on"
+  ],
+  "properties": {
+    "campaign_concept_id": {
+      "type": "string",
+      "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$"
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^campaign_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "audience_tension": {
+      "type": "string",
+      "minLength": 1
+    },
+    "promise": {
+      "type": "string",
+      "minLength": 1
+    },
+    "audience_segment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_pillar_id": {
+      "type": "string",
+      "pattern": "^pillar_[a-zA-Z0-9_-]+$"
+    },
+    "primary_commercial_function": {
+      "$ref": "#/definitions/commercial_function"
+    },
+    "supporting_commercial_functions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/commercial_function"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "researching",
+        "ready_for_approval",
+        "active",
+        "retired"
+      ]
+    },
+    "source_content_opportunity_id": {
+      "type": "string",
+      "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "research_run_id": {
+            "type": "string",
+            "pattern": "^research_run_[a-zA-Z0-9_-]+$"
+          },
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^evidence_[a-zA-Z0-9_-]+$"
+          },
+          "metric_snapshot_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^metric_snapshot_[a-zA-Z0-9_-]+$"
+            }
+          },
+          "video_understanding_pack_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^video_research_[a-zA-Z0-9_-]+$"
+            }
+          }
+        },
+        "required": [
+          "research_run_id",
+          "evidence_id"
+        ]
+      }
+    },
+    "related_concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relation",
+          "campaign_concept_id"
+        ],
+        "properties": {
+          "relation": {
+            "type": "string",
+            "enum": [
+              "builds_on",
+              "refines",
+              "contrasts_with",
+              "replaces"
+            ]
+          },
+          "campaign_concept_id": {
+            "type": "string",
+            "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$"
+          }
+        }
+      }
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "definitions": {
+    "commercial_function": {
+      "type": "string",
+      "enum": [
+        "problem_awareness",
+        "demand_creation",
+        "trust_building",
+        "authority_building",
+        "objection_resolution",
+        "proof",
+        "lead_capture",
+        "direct_conversion"
+      ]
+    }
+  }
+}

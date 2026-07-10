@@ -161,6 +161,10 @@
               "research_article"
             ]
           }
+        },
+        "concept_approval_id": {
+          "type": "string",
+          "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
         }
       }
     },
@@ -270,6 +274,48 @@
     "notes": {
       "type": "string",
       "minLength": 1
+    },
+    "commercial_expression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commercial_function",
+        "offer_integration",
+        "cta_intensity"
+      ],
+      "properties": {
+        "commercial_function": {
+          "type": "string",
+          "enum": [
+            "problem_awareness",
+            "demand_creation",
+            "trust_building",
+            "authority_building",
+            "objection_resolution",
+            "proof",
+            "lead_capture",
+            "direct_conversion"
+          ]
+        },
+        "offer_integration": {
+          "type": "string",
+          "enum": [
+            "absent",
+            "embedded",
+            "contextual",
+            "central"
+          ]
+        },
+        "cta_intensity": {
+          "type": "string",
+          "enum": [
+            "none",
+            "soft",
+            "direct"
+          ]
+        }
+      },
+      "$comment": "ADR 0030: exact planned values at or below the Concept Approval ceilings; Commercial Pressure is derived from these, never stored."
     }
   }
 }

@@ -599,6 +599,14 @@ def validate_record_semantics(schema_name, record):
         validate_system_event_semantics(record)
     if schema_name == "improvement-claim":
         validate_improvement_claim_semantics(record)
+    if schema_name == "campaign":
+        validate_campaign_semantics(record)
+    if schema_name == "campaign-concept":
+        validate_campaign_concept_semantics(record)
+    if schema_name == "concept-approval":
+        validate_concept_approval_semantics(record)
+    if schema_name == "project" and "commercial_expression" in record:
+        validate_project_commercial_expression(record)
 
 
 def validate_beat_spine(record, field_name, record_name, require_coverage):
@@ -960,6 +968,118 @@ def validate_improvement_claim_semantics(record):
             raise ValidationError(
                 f"claim {claim_id}: {status} claims require {missing}"
             )
+
+
+def _duplicate_values(values):
+    return sorted({value for value in values if values.count(value) > 1})
+
+
+def validate_campaign_semantics(record):
+    """Campaign semantics (ADR 0029): a paid-conversion campaign names its
+    one primary paid offer; active/paused/completed carry the human
+    activation metadata (archived may come straight from an unactivated
+    draft, so it carries no requirement); supporting lists never repeat
+    the primary."""
+    campaign_id = record.get("campaign_id", "<unknown>")
+    primary_offer = record.get("primary_offer_conversion_asset_id")
+    if record.get("objective") == "paid_conversion" and not primary_offer:
+        raise ValidationError(
+            f"campaign {campaign_id}: a paid_conversion campaign requires "
+            "primary_offer_conversion_asset_id (ADR 0029)"
+        )
+    if record.get("status") in ("active", "paused", "completed") and (
+        "activation" not in record
+    ):
+        raise ValidationError(
+            f"campaign {campaign_id}: status {record.get('status')!r} requires "
+            "the human activation record"
+        )
+    if record.get("primary_content_pillar_id") in record.get(
+        "supporting_content_pillar_ids", []
+    ):
+        raise ValidationError(
+            f"campaign {campaign_id}: supporting pillars repeat the primary "
+            f"pillar {record.get('primary_content_pillar_id')!r}"
+        )
+    if record.get("primary_audience_segment") in record.get(
+        "supporting_audience_segments", []
+    ):
+        raise ValidationError(
+            f"campaign {campaign_id}: supporting audience segments repeat "
+            "the primary segment"
+        )
+    if primary_offer and primary_offer in record.get(
+        "supporting_conversion_asset_ids", []
+    ):
+        raise ValidationError(
+            f"campaign {campaign_id}: supporting conversion assets repeat "
+            "the primary offer"
+        )
+
+
+def validate_campaign_concept_semantics(record):
+    """CampaignConcept semantics (ADR 0030): one primary Commercial Function,
+    supporting functions never repeat it; related concepts are unique and
+    never self-referential."""
+    concept_id = record.get("campaign_concept_id", "<unknown>")
+    supporting = record.get("supporting_commercial_functions", [])
+    if record.get("primary_commercial_function") in supporting:
+        raise ValidationError(
+            f"concept {concept_id}: supporting commercial functions repeat "
+            f"the primary {record.get('primary_commercial_function')!r}"
+        )
+    if _duplicate_values(supporting):
+        raise ValidationError(
+            f"concept {concept_id}: supporting commercial functions repeat"
+        )
+    related_ids = [
+        related.get("campaign_concept_id")
+        for related in record.get("related_concepts", [])
+    ]
+    if concept_id in related_ids:
+        raise ValidationError(
+            f"concept {concept_id}: a concept cannot relate to itself"
+        )
+    duplicates = _duplicate_values(related_ids)
+    if duplicates:
+        raise ValidationError(
+            f"concept {concept_id}: duplicate related concepts {duplicates!r}"
+        )
+
+
+def validate_concept_approval_semantics(record):
+    """ConceptApproval semantics (ADR 0029): the approval authorizes an
+    exact project set — ids are unique, and so are claimed slots."""
+    approval_id = record.get("concept_approval_id", "<unknown>")
+    duplicate_projects = _duplicate_values(record.get("project_ids_created", []))
+    if duplicate_projects:
+        raise ValidationError(
+            f"concept approval {approval_id}: duplicate project ids "
+            f"{duplicate_projects!r}"
+        )
+    duplicate_slots = _duplicate_values(record.get("schedule_slot_ids", []))
+    if duplicate_slots:
+        raise ValidationError(
+            f"concept approval {approval_id}: duplicate schedule slots "
+            f"{duplicate_slots!r}"
+        )
+
+
+def validate_project_commercial_expression(record):
+    """Project commercial expression (ADR 0030): the planned offer
+    integration and CTA intensity must form a valid pressure-matrix cell —
+    pressure itself is derived, never stored."""
+    from influencer_os.pressure import derive_commercial_pressure
+
+    expression = record["commercial_expression"]
+    try:
+        derive_commercial_pressure(
+            expression["offer_integration"], expression["cta_intensity"]
+        )
+    except ValidationError as exc:
+        raise ValidationError(
+            f"project {record.get('project_id', '<unknown>')}: {exc}"
+        ) from None
 
 
 def validate_generation_manifest_semantics(record):

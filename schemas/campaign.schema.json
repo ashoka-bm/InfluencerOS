@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/campaign.schema.json",
+  "title": "Campaign",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "campaign_id",
+    "creator_profile_id",
+    "name",
+    "objective",
+    "status",
+    "primary_content_pillar_id",
+    "supporting_content_pillar_ids",
+    "primary_audience_segment",
+    "supporting_audience_segments",
+    "measurable_outcome",
+    "created_on",
+    "updated_on"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^campaign_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objective": {
+      "type": "string",
+      "enum": [
+        "awareness",
+        "audience_growth",
+        "trust_nurture",
+        "lead_generation",
+        "paid_conversion",
+        "customer_retention",
+        "reactivation"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "paused",
+        "completed",
+        "archived"
+      ]
+    },
+    "primary_content_pillar_id": {
+      "type": "string",
+      "pattern": "^pillar_[a-zA-Z0-9_-]+$"
+    },
+    "supporting_content_pillar_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^pillar_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "primary_audience_segment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supporting_audience_segments": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "primary_offer_conversion_asset_id": {
+      "type": "string",
+      "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$"
+    },
+    "supporting_conversion_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^conversion_asset_[a-zA-Z0-9_-]+$"
+      }
+    },
+    "measurable_outcome": {
+      "type": "string",
+      "minLength": 1
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_by",
+        "activated_on"
+      ],
+      "properties": {
+        "approved_by": {
+          "type": "string",
+          "enum": [
+            "user"
+          ]
+        },
+        "activated_on": {
+          "type": "string",
+          "format": "date"
+        },
+        "activation_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+ "content_opportunity_id": "content_opportunity_luna_fit_001",
+ "creator_profile_id": "creator_luna_fit",
+ "status": "new",
+ "title": "The lunch-break reset that fits in 90 seconds",
+ "hook": "Your lunch break is long enough for this.",
+ "premise_summary": "Three desk-side moves in ninety seconds that undo the morning's sitting, filmed in Luna's apartment kitchen.",
+ "intended_payoff": "Viewer feels the reset is doable today and saves it for tomorrow's lunch.",
+ "intended_emotion": "relieved and capable",
+ "core_message": "Two minutes beside the desk is enough to reset your body before a meeting.",
+ "topic_cluster": "desk resets",
+ "platform_recommendations": [
+  "instagram",
+  "tiktok"
+ ],
+ "format_recommendations": [
+  "format_short_form_video"
+ ],
+ "schedule_fit_type": "scheduled_slot",
+ "evidence_refs": [
+  {
+   "research_run_id": "research_run_luna_fit_2026_07_03_001",
+   "evidence_id": "evidence_luna_fit_001",
+   "metric_snapshot_ids": [
+    "metric_snapshot_luna_fit_001"
+   ],
+   "video_understanding_pack_ids": [
+    "video_research_luna_fit_001"
+   ]
+  }
+ ],
+ "scores": {
+  "evidence_strength": {
+   "score": 78,
+   "rationale": "Two adjacent creators outperforming baseline on the same premise."
+  },
+  "viral_potential": {
+   "score": 66,
+   "rationale": "Strong hook pattern, but the niche caps ceiling."
+  },
+  "audience_nurture_value": {
+   "score": 82,
+   "rationale": "Directly serves desk-worker reset habit building."
+  },
+  "creator_fit": {
+   "score": 88,
+   "rationale": "Matches Luna's calm two-minute reset persona exactly."
+  },
+  "schedule_fit": {
+   "score": 71,
+   "rationale": "Fits the open midweek education slot."
+  },
+  "production_readiness": {
+   "score": 75,
+   "rationale": "Single location, existing style card, no new assets."
+  },
+  "urgency": {
+   "score": 55,
+   "rationale": "Trend is rising but not spiking; two-week window."
+  },
+  "measurement_clarity": {
+   "score": 70,
+   "rationale": "Saves and completion rate map cleanly to the payoff."
+  }
+ },
+ "created_on": "2026-07-03",
+ "updated_on": "2026-07-03",
+ "source_finding_ids": [
+  "finding_luna_fit_desk_reset_lunch"
+ ],
+ "content_pillar_ids": [
+  "pillar_tiny_resets"
+ ],
+ "urgency_window": "Post within two weeks while the lunch-reset pattern is rising.",
+ "creator_fit_notes": "Calm, no-shame framing; names the feeling in the payoff line."
+}

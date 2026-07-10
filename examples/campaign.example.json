@@ -1,0 +1,26 @@
+{
+ "campaign_id": "campaign_luna_fit_001",
+ "creator_profile_id": "creator_luna_fit",
+ "name": "Desk-reset habit builder",
+ "objective": "lead_generation",
+ "status": "active",
+ "primary_content_pillar_id": "pillar_tiny_home_workouts",
+ "supporting_content_pillar_ids": [
+  "pillar_no_shame_fitness"
+ ],
+ "primary_audience_segment": "Time-constrained women who want low-pressure home movement.",
+ "supporting_audience_segments": [
+  "Beginners returning to movement after a long break"
+ ],
+ "primary_offer_conversion_asset_id": "conversion_asset_luna_reset_checklist",
+ "supporting_conversion_asset_ids": [],
+ "measurable_outcome": "Grow reset-checklist downloads from desk-reset content to 200 per month.",
+ "activation": {
+  "approved_by": "user",
+  "activated_on": "2026-07-03",
+  "activation_note": "Approved after the July slot-research review."
+ },
+ "created_on": "2026-07-01",
+ "updated_on": "2026-07-03",
+ "notes": "Runs indefinitely; a paid-offer change would open a new campaign."
+}

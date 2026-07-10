@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/content-opportunity-queue.schema.json",
+  "title": "ContentOpportunityQueue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content_opportunity_queue_id",
+    "creator_profile_id",
+    "updated_on",
+    "entry_refs"
+  ],
+  "properties": {
+    "content_opportunity_queue_id": {
+      "type": "string",
+      "pattern": "^content_opportunity_queue_[a-zA-Z0-9_-]+$"
+    },
+    "creator_profile_id": {
+      "type": "string",
+      "pattern": "^creator_[a-zA-Z0-9_-]+$"
+    },
+    "updated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "entry_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content_opportunity_id": {
+            "type": "string",
+            "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "reviewed",
+              "shortlisted",
+              "needs_more_research",
+              "assigned",
+              "rejected",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "content_opportunity_id",
+          "status"
+        ]
+      }
+    },
+    "status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "new": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shortlisted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_more_research": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "assigned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "grouping_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

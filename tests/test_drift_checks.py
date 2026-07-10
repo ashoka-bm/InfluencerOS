@@ -49,6 +49,7 @@ RESEARCH_FORMATS = [
 # copies must stay pinned too.
 ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + (
     "project", "output-package", "applied-social-template", "creator-profile",
+    "content-opportunity", "concept-approval",
 )
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",

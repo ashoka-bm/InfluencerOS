@@ -1,0 +1,37 @@
+{
+ "concept_approval_id": "concept_approval_luna_fit_001",
+ "campaign_concept_id": "campaign_concept_luna_fit_001",
+ "creator_profile_id": "creator_luna_fit",
+ "approved_by": "user",
+ "approved_on": "2026-07-03",
+ "approval_status": "active",
+ "approved_platforms": [
+  "instagram",
+  "tiktok",
+  "youtube"
+ ],
+ "approved_formats": [
+  "format_short_form_video"
+ ],
+ "max_offer_integration": "embedded",
+ "max_cta_intensity": "soft",
+ "project_ids_created": [
+  "project_luna_fit_tiny_reset_after_laptop_day_001"
+ ],
+ "schedule_slot_ids": [
+  "slot_2026_07_08_reel"
+ ],
+ "evidence_refs": [
+  {
+   "research_run_id": "research_run_luna_fit_2026_07_03_001",
+   "evidence_id": "evidence_luna_fit_001",
+   "metric_snapshot_ids": [
+    "metric_snapshot_luna_fit_001"
+   ],
+   "video_understanding_pack_ids": [
+    "video_research_luna_fit_001"
+   ]
+  }
+ ],
+ "approval_note": "Checklist mention stays embedded with a soft save-for-later CTA."
+}
