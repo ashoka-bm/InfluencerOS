@@ -4,6 +4,12 @@ InfluencerOS is an agent operating system for creating researched content plans 
 
 ## Language
 
+The Campaign, Content Opportunity, and commercial-expression terms below are
+accepted implementation targets under ADRs 0029-0032. They describe the next
+runtime model and are not claims about schemas or commands that have already
+shipped. Terms explicitly marked Deferred are compatibility targets only and
+must not create obligations in the initial implementation.
+
 **InfluencerOS**:
 The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Idea Queue, and turn one promoted idea into format-specific production plans, starting with the universal short-form base video generation plan.
 
@@ -38,7 +44,13 @@ The strict foundation workflow that turns minimal instructions, guided interview
 The setup status that says what the creator can safely do next. Readiness statuses are `draft`, `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, `active`, and `archived`. The legacy-named `readiness-gates.json` file stores readiness milestone state, blockers, human waivers, foundation mode, and media permission booleans that decide whether image, video, or spoken-voice content is allowed. These milestones are deterministic checks, not pipeline Gates; only the two human approvals defined under Gate can block production authorization.
 
 **Project**:
-One selected content idea that moves into production as a publishable content unit or package. A Project may produce a video, carousel, single image post, story sequence, or multi-platform output package; it does not imply a posting cadence.
+One independently planned publishable content unit created from a Concept Approval and owned by exactly one Campaign Concept. It is the source of truth for exact planned Offer Integration, CTA Intensity, and derived Commercial Pressure; it has one format, one materially stable Hook-Retain-Payoff execution and core asset, and its own lifecycle, output package, publications, analytics, and evaluation. Platform adaptations remain one Project, while a materially changed execution is another.
+
+**Assisted Campaign Attribution (Accepted Target; Deferred)**:
+A predeclared secondary contribution from a Project owned by another Campaign Concept. It may inform assisted evaluation but never turns one Project or publication into two independently owned successes.
+
+**Campaign Outcome Attribution (Accepted Target; Deferred)**:
+The evidence-qualified classification of an outcome as directly attributed, assisted, or unattributed. Direct attribution requires an observable source such as a tracked link, platform conversion, coupon, or declared response; incomplete journeys remain unattributed rather than receiving invented last-touch or fractional credit.
 
 **Identity**:
 The human-readable long-form identity document for one creator. It captures biography, lore, relationship to audience, recurring facts, voice examples, and continuity rules that are too rich for the typed Creator Profile.
@@ -54,6 +66,95 @@ The creator's compact set of gold-standard voice examples. It stores exact sampl
 
 **Content Strategy**:
 The creator's planned publishing direction: platform roles, monthly format mix, intentionally irregular cadence principles, related-post chains, conversion paths, lead magnet or offer references, topic and pillar strategy, intended audience response, and research implications. `content-strategy.json` is the machine-readable strategy record; `brand_context/personal-brand.md` remains the rich narrative source; `creator-profile.json` stores the operational summary.
+
+**Content Series**:
+A recurring anchor-and-derivative publishing pattern in Content Strategy. It
+defines how formats relate and recur, while a Campaign defines why a stream of
+work exists and what outcome it pursues. A calendar slot may belong to both a
+Content Series and a Campaign.
+_Avoid_: operational campaign, objective
+
+**Content Pillar**:
+A durable thematic territory the creator intends to own across many campaigns. A Pillar describes what the creator consistently talks about, not whether a particular campaign nurtures, sells, or converts.
+_Avoid_: funnel stage, campaign objective
+
+**Campaign**:
+A stable identity for a coordinated stream of work with one typed primary objective and, for sales, one primary paid offer. Its lifecycle is `draft`, `active`, `paused`, `completed`, or `archived`; it may run indefinitely, while a material objective or primary-offer change creates a separate Campaign. Immutable Campaign Revisions and Waves are accepted but deferred.
+_Avoid_: temporary content batch, objective-changing phase
+
+**Campaign Revision (Accepted Target; Deferred)**:
+An immutable sequential version of one Campaign's approved measurable target, primary and supporting Audience Segments, primary and supporting Content Pillars, and effective policy scope. Exactly one Revision is current, while every Campaign Wave and Concept Approval retains the Revision that governed it.
+_Avoid_: in-place campaign edit
+
+**Campaign Objective**:
+The one OS-typed primary outcome category that defines Campaign identity and benchmark cohort, paired with a specific measurable outcome. The initial vocabulary is `awareness`, `audience_growth`, `trust_nurture`, `lead_generation`, `paid_conversion`, `customer_retention`, and `reactivation`; supporting benefits may be recorded but never act as equal primary objectives.
+_Avoid_: tactic, format, metric name
+
+**Audience Segment**:
+A named subset of the creator's target audience with a distinct context, need, or buying state. A Campaign declares one primary Segment and optional supporting Segments, and every Campaign Concept targets exactly one Segment from that approved set.
+_Avoid_: arbitrary per-post audience
+
+**Campaign Wave (Accepted Target; Deferred)**:
+A bounded tactical period within one Campaign with one emphasis, cadence, Pressure target, and measurement plan. Exactly one Wave may be active per Campaign; parallel Concepts and experiments run inside it, and an unchanged Campaign Concept may continue into later Waves through new Approvals.
+_Avoid_: objective change, campaign replacement
+
+**Campaign Concept**:
+A stable, testable message, framing, or commercial hypothesis owned by exactly one Campaign and expressed through multiple Projects with different hooks, formats, examples, and CTAs. It selects exactly one Audience Segment and one Content Pillar from the Campaign's approved primary or supporting sets. Its lifecycle is `draft`, `researching`, `ready_for_approval`, `active`, or `retired`; first completed Approval activates it, while a material change to tension, promise, audience, or hypothesis creates a linked Concept.
+_Avoid_: loose idea, post idea
+
+**Content Opportunity Queue**:
+The creator-scoped backlog of researched Content Opportunities that do not yet belong to a Campaign. It preserves wildcard discoveries without creating placeholder Campaigns or nullable Campaign Concepts.
+_Avoid_: campaign queue, placeholder campaign
+
+**Content Opportunity**:
+A researched direction with evidence and potential creator fit that has not yet been assigned to a Campaign. Its lifecycle is `new`, `researching`, `ready`, `assigned`, or `closed`; assignment records the resulting Campaign Concept, while closure records a reason such as rejected, expired, or duplicate.
+_Avoid_: Campaign Concept with no campaign
+
+**Concept Approval**:
+An immutable human-approved snapshot of a Campaign Concept that authorizes an exact set of named Projects under maximum Offer Integration and CTA Intensity. An unchanged Concept may receive multiple Approvals as production scope expands; later Approvals never rewrite or revoke prior authorization. A future Campaign Wave or Campaign Revision may be attached without changing this base contract.
+_Avoid_: editable concept state
+
+**Commercial Function**:
+The job content is expected to perform for a Campaign. The initial vocabulary is `problem_awareness`, `demand_creation`, `trust_building`, `authority_building`, `objection_resolution`, `proof`, `lead_capture`, and `direct_conversion`. A Campaign Concept declares one primary Function for evaluation and may declare supporting Functions; each Project declares one execution Function from that approved set. Commercial Function is independent of how visibly an offer appears.
+
+**Offer Integration**:
+How prominently an offer appears in a Project: absent, embedded, contextual, or central. A Concept Approval sets the allowed ceiling and each Project declares its exact planned level; it is distinct from CTA Intensity so content can contribute to selling without behaving like a direct-response advertisement.
+
+**CTA Intensity**:
+The strength of the action requested from the audience: none, soft, or direct. A Concept Approval sets the allowed ceiling and each Project declares its exact planned level; CTA Intensity combines with Offer Integration to determine experienced Commercial Pressure.
+
+**Commercial Pressure**:
+The audience-facing sales pressure `none`, `low`, `moderate`, or `high`, derived from Offer Integration and CTA Intensity through one OS-wide matrix. Creators may set limits on Pressure but cannot redefine its inputs or derivation; it is never manually assigned and remains distinct from the content's underlying Commercial Function.
+
+**Audience Touch**:
+One planned or published content unit on one platform for Commercial Pressure accounting. Every high-pressure publication counts, while supporting credit is earned once per distinct Project-platform pair; a carousel or Story sequence is one Touch regardless of slides or frames, and a cross-platform release creates one Touch on each platform.
+_Avoid_: asset, frame, slide
+
+**Pressure Policy (Accepted Target; Deferred)**:
+A versioned set of creator-baseline or Campaign-specific Commercial Pressure target bands. The initial 3:1 supporting-to-high-pressure mix is a default prior; the combined creator-platform band remains the final audience-experience constraint, departures require an explicit portfolio experiment, and evidence may recommend future policy versions without rewriting historical approvals.
+
+**Pressure Profile (Accepted Target; Deferred)**:
+A rebuildable aggregate of pressure-tier distribution, offer and CTA patterns, sequencing, and audience or conversion outcomes over a declared scope. Standard per-platform windows are the most recent 5 Audience Touches, most recent 20, current Campaign Wave, and Campaign or selected Campaign Revision range; custom windows are supplemental, and component measures remain available beside the Pressure Indicator.
+
+**Pressure Projection**:
+The initial rebuildable per-platform view over the current Creator Content
+Schedule horizon. It reports known Project-linked Touches by pressure tier,
+the Pressure Indicator, the share of known Touches at high pressure, and the
+number of unresolved pre-Project slots. It warns above 25% high pressure but
+never treats unresolved slots as low pressure or blocks work.
+
+**Pressure Indicator**:
+A versioned 0–100 projection that initially maps `none`, `low`, `moderate`, and `high` to weights 0, 1, 2, and 3, then normalizes their weighted mean by the maximum weight. Raw profile components remain canonical; changing weights or formula rebuilds the projection and never changes Audience Touch classifications or historical policy snapshots.
+
+**Pressure Experiment (Accepted Target; Deferred)**:
+A human-approved, bounded test of a proposed Pressure target outside the effective creator-platform policy. It declares its hypothesis, scope, target band, maximum Audience Touch count, expiration date, one primary success measure, at least one audience-harm guardrail, and stop conditions; direct harm measures are preferred, unavailable measures use marked proxies, and missing data is unmeasurable rather than zero. It ends at the first duration boundary reached, and automation may recommend or stop a test but cannot approve or extend it.
+_Avoid_: override flag, permanent exception
+
+**Cross-Creator Pressure Benchmark (Accepted Target; Deferred)**:
+A shared benchmark built from each creator's de-identified outcome changes relative to their own baseline, aggregated initially by platform and Campaign objective. Raw content, audience data, creator identity, and Creator Workspace records never enter the benchmark; additional cohort dimensions require enough data to avoid sparse comparisons.
+
+**Pressure Evidence Maturity (Accepted Target; Deferred)**:
+The human-readable confidence ladder `observed`, `directional`, `repeatable`, and `candidate_default` for cross-creator Pressure findings. Initial thresholds are one measurable experiment; three experiments across two creators; six across three; and ten across five, with consistent direction and no unresolved repeated audience-harm signal. Maturity may recommend a policy version but never changes policy without human approval.
 
 **Channel Registry**:
 The creator's selected and optional publishing channels. `channels.json` records platform, role, account or handle readiness, content mediums, expected format IDs, and whether a real handle is required before publishing/export. Selected channels drive the reference requirements for `foundation_ready`.
@@ -128,21 +229,14 @@ What a piece of content is fundamentally made of: text, image, video, or audio. 
 **Format Subtype**:
 An optional refinement of a Social Post Format that names the specific craft being made — for example an op-ed, reported feature, or newsletter dispatch for an article; designed slides or a photo set for a carousel; or a reply chain versus a single throughline post for a thread. It is advisory, chosen at production time, and never forces a piece to be classified.
 
-**Idea Queue**:
-The creator-scoped Kanban-style backlog of researched content opportunities.
-Queue entries are scored, tied to research findings and evidence, and may be
-updated as trends heat up or go stale.
+**Idea Queue (Deprecated; Replace With Content Opportunity Queue)**:
+The legacy creator-scoped backlog name for researched content opportunities. The initial Campaign implementation migrates it to Content Opportunity Queue and retains no permanent dual-write compatibility.
 
-**Idea Queue Entry**:
-One potential content idea in the Idea Queue. It records the premise, intended
-payoff, platform or format recommendations, source findings, evidence links,
-scores, status, urgency, schedule fit, and promotion readiness.
+**Idea Queue Entry (Deprecated; Replace With Content Opportunity)**:
+The legacy record for one researched direction. The initial Campaign implementation migrates unassigned records to Content Opportunities and assigned production directions into Campaign Concepts with source provenance.
 
-**Idea Promotion**:
-The human-approved act of moving one Idea Queue Entry into the creation funnel.
-Promotion may immediately create one or more Projects and must preserve links to
-the research findings, evidence, metrics, and reusable creative elements that
-sparked the idea.
+**Idea Promotion (Deprecated; Replace With Concept Approval)**:
+The legacy human-approval record that authorizes Projects. The initial Campaign implementation migrates it to Concept Approval and updates downstream references without retaining a second approval hierarchy.
 
 **Social Template**:
 A reusable visual post structure such as hook-problem-solution, before-process-payoff, hook-steps-payoff, or identity-signal. Each template is a named arrangement of the Content Beat Spine. It improves retention, clarity, and emotional movement without defining the content idea itself.
