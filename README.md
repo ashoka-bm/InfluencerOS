@@ -152,15 +152,27 @@ Creator Workspaces run copied baseline skills from `.claude/skills/`. Refresh th
 python3 -m influencer_os sync-creator-runtime workspace-library/creators/luna-fit
 ```
 
-When the conductor is installed as a global Codex skill, refresh that adapter
-from the same repository source after changing `skills/influencer-os/SKILL.md`:
+Refresh all repository-owned global Codex skills after changing files under
+`skills/`, then verify that the runtime copies have not drifted:
 
 ```bash
-rsync -a skills/influencer-os/SKILL.md "$HOME/.codex/skills/influencer-os/SKILL.md"
+python3 -m influencer_os sync-codex-skills
+python3 -m influencer_os check-codex-skills
 ```
 
-The repository file remains authoritative; the global file is only a runtime
-copy.
+The repository remains authoritative. The sync backs up replaced skill folders
+under `~/.codex/skills-backup/` and preserves `SKILL.local.md` overrides.
+
+Legacy workspaces created before slot-first research provenance became required
+must be migrated explicitly:
+
+```bash
+python3 -m influencer_os migrate-slot-research workspace-library/creators/luna-fit
+```
+
+Filled slots migrate only when one active promotion, its queue entry, and a
+shared scheduled research run provide an unambiguous chain. Ambiguous legacy
+state fails before any record is written and must be resolved manually.
 
 Refresh every Creator Workspace at once (each replaced skill folder is backed up to `.claude/skills-backup/`, and `SKILL.local.md` files, creator-only skills, and creator state are preserved):
 

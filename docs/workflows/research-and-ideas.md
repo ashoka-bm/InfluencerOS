@@ -186,12 +186,18 @@ A research run should generally follow this sequence:
    intelligence, recent idea queue entries, recent projects, and performance
    summaries.
 2. Choose a research mode and scope.
-3. Create `research/runs/<research-run-id>/search-plan.json` before browsing.
-   The plan records the creator/schedule/intelligence basis, adapters
-   considered, query intent, planned queries, planned sources, skipped sources,
-   approval gates, and future connector notes.
-4. Start from known high-signal creators or sources when available, then branch
-   outward into related public sources to understand the current zeitgeist.
+3. Scaffold the search plan before browsing (`scaffold search-plan`,
+   ADR 0042): the constructor allocates the run id and opens the staged
+   in-flight run directory `system/staging/research-runs/<research-run-id>/`;
+   `complete-run` later derives `research-run.json` from the plan and moves
+   the folder into canonical `research/runs/`. The plan records the
+   creator/schedule/intelligence basis, adapters considered, query intent,
+   planned queries, planned sources, skipped sources, approval gates, and
+   future connector notes.
+4. Start the connector fan-out in the background as soon as the plan exists
+   (`research-fetch --plan`), then start from known high-signal creators or
+   sources when available, and branch outward into related public sources to
+   understand the current zeitgeist.
 5. Browse browser-visible public posts and sources using only adapters marked
    active in `docs/research-adapter-registry.md`.
 6. Capture compact evidence records and metric snapshots for sources that
@@ -251,6 +257,28 @@ can check whether the correct posts have been created, whether the creator is on
 track, and whether the idea queue is drifting away from the intended content mix.
 
 The schedule should include both standing strategy and calendar state.
+
+The monthly calendar is a demand scaffold, not a commitment to a month of
+preselected ideas. An open slot should normally establish its date or window,
+platform, format, editorial goal or pillar, funnel role, and any dependency on
+an anchor post. Keep its premise, hook, and final title unresolved until
+focused research and human selection support them.
+
+Broad research may validate cadence, platform strategy, compliance, or
+derivative mechanics. It must not be treated as post-level research for every
+slot in the calendar. Run `scheduled_needs` research against each upcoming
+anchor on a rolling horizon, produce distinct evidence-backed candidates, and
+lock the slot topic only after one candidate is selected. Derivatives may reuse
+relevant anchor evidence, but high-stakes factual claims still require current
+primary-source verification for the exact content unit.
+
+Each slot stores a `research_state` lifecycle: `unresearched`,
+`candidates_ready`, `selected`, or `inherits_anchor`. Focused search plans and
+completed runs both name the exact anchor in `schedule_slot_ids`; broad runs
+use an empty array. Human selection records the queue entry and focused run on
+the slot but leaves it open. Promotion may fill a slot only when its selected
+entry and carried evidence resolve to that focused run. A derivative can point
+to the selected anchor instead of duplicating its research provenance.
 
 Expected schedule metadata:
 

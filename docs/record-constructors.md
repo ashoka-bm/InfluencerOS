@@ -42,11 +42,15 @@ pipeline. A stale stage fails closed and is re-staged, never patched.
 
 ## 1. Project Manifest (`scaffold project`)
 
-Upstream input: the locked IdeaPromotion (`--promotion <id>` or via the
-promotion bundle).
+Upstream input: the locked IdeaPromotion, named by the seed's
+`idea_promotion_id` (or owned by the bundle in section 2). Standalone
+scaffolding takes the promotion's single unclaimed pre-listed project id
+(pin `project_id` in the seed when several are unclaimed); a project the
+promotion never listed needs a new promotion package, not a scaffold.
 
 | Field | Class | Rule |
 | --- | --- | --- |
+| `idea_promotion_id` | authored | Names the upstream promotion (the one seed field that is also copied into `source_refs`) |
 | `project_slug` | authored | |
 | `content_unit_type` | authored | Must map to a production-supported format |
 | `platform_targets` | authored | Surface-level targets (e.g. `youtube_shorts`); advisory platform-fit warning unchanged |
@@ -60,8 +64,8 @@ promotion bundle).
 | `status` | derived | `created` |
 | `target_formats` | derived | Default `[format_<content_unit_type>]`; seed may override with a subset of the promotion's `approved_formats` |
 | `project_paths` | derived | Constant block, identical for every project |
-| `source_refs.idea_promotion_id` | copied | The single upstream ref |
-| `source_refs.{idea_queue_entry_id, research_finding_ids, research_evidence_ids, metric_snapshot_ids, video_understanding_pack_ids}` | copied | Optional cached refs, lifted from the locked promotion (always subsets by construction) |
+| `source_refs.idea_promotion_id` | copied | The single upstream ref, from the seed's named promotion |
+| `source_refs.{idea_queue_entry_id, research_finding_ids, research_evidence_ids, metric_snapshot_ids, video_understanding_pack_ids}` | copied | Cached refs, lifted from the locked promotion (subsets by construction; empty ones omitted) |
 | `source_refs.evidence_brief_path` | derived | `evidence-brief.md` |
 
 The constructor subsumes today's `init-project` (directory scaffold,
@@ -72,6 +76,7 @@ Canonical seed:
 
 ```json
 {
+  "idea_promotion_id": "idea_promotion_luna_fit_001",
   "project_slug": "tiny-reset-after-laptop-day",
   "content_unit_type": "short_form_video",
   "platform_targets": ["youtube_shorts", "instagram_reels", "tiktok"],
@@ -159,6 +164,16 @@ run record is written at completion (its `run_status` enum has only
 terminal values) and derives every shared field from the plan — the drift
 class `migrate_slot_research` exists to reconcile can no longer occur.
 
+In-flight runs are themselves staged state: `scaffold search-plan` creates
+`system/staging/research-runs/<research_run_id>/` holding the plan, the
+connector budget, and the accumulating `fetch-results/`, `evidence.jsonl`,
+`metric-snapshots.jsonl`, and `source-yield.jsonl` ledgers. `complete-run`
+derives and validates the run record, then moves the whole folder into
+canonical `research/runs/` — at-rest validation's invariant (every
+canonical run folder is complete and valid) never sees a half-finished
+run. A completed (non-failed) run must carry its `source-yield.jsonl`
+before it can complete.
+
 ### `scaffold search-plan`
 
 | Field | Class | Rule |
@@ -181,11 +196,14 @@ typically as a background task started as soon as the plan exists.
 
 | Field | Class | Rule |
 | --- | --- | --- |
-| `material_update` | authored | Judgment about the run's yield |
-| `error` | authored | Failed runs only |
+| `material_update` | authored | `--material-update` / `--no-material-update` |
+| `error` | authored | `--error`; marks the run failed |
+| `outputs.finding_ids` | authored-with-scan-default | Explicit `--finding` ids, else stable findings citing the run (the rolling `findings.md` cites runs too coarsely to attribute) |
+| `outputs.research_intelligence_updates` | authored | `--intelligence` notes |
 | `research_run_id`, `creator_profile_id`, `mode`, `scope`, `schedule_slot_ids`, `platforms` | copied | Verbatim from the search plan |
 | `started_on`, `completed_on` | derived | Plan creation time / now |
-| `outputs` | derived | Scanned from the run directory and records citing the run id; seed may override with an explicit subset |
+| `outputs.{evidence_ids, metric_snapshot_ids}` | derived | Scanned from the run's ledgers, so the outputs↔JSONL closure holds by construction |
+| `outputs.idea_queue_entry_ids` | derived | Queue entries whose `evidence_refs` cite the run |
 | `run_status` | derived | From `material_update` and error state |
 
 Canonical seed (plan):
@@ -216,8 +234,8 @@ fully populated variant.)
 
 | Trigger | Deterministic work started |
 | --- | --- |
-| Creator session opens | Workspace validate + index/lookup/board rebuilds (background) |
-| Search plan written | `research-fetch --plan` concurrent fan-out (background) |
+| Creator session opens | `refresh-workspace <ws>` (background): validate all + index/lookup/board rebuilds |
+| Search plan written | `research-fetch --plan <plan> --run-dir <staged-run-dir>` (background): every connector-routable planned fetch runs concurrently; jobs derive only from adapters the plan marked `use_now` |
 | Promotion package about to be presented | `stage promotion` — draft bundle built while the human reads |
 | Any constructor write | Post-write validate + projection rebuilds, same invocation |
 

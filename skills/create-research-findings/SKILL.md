@@ -31,11 +31,15 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    `reference_creator_watchlist`, `topic_overlap_scan`, `urgent_trend_check`,
    `queue_refresh`, or `hashtag_search_term_check`. Keep modes independently
    runnable; do not load context the mode does not need.
-2. Create `research/runs/<research-run-id>/` — the folder name must equal
-   `research_run_id`. Write `research-run.json`
-   (`schemas/research-run.schema.json`) and a short `run-summary.md`.
-3. Before browsing or capturing evidence, write `search-plan.json`
-   (`schemas/research-search-plan.schema.json`). It must state the
+2. Author a search-plan **seed** (authored fields only, ADR 0042 /
+   `docs/record-constructors.md` §3: mode, scope, platforms,
+   `schedule_slot_ids`, decision basis, adapters considered, planned
+   queries/sources, skips, gates, notes) and run
+   `python3 -m influencer_os scaffold search-plan --seed <seed.json> --creator-workspace <ws>`.
+   The constructor allocates the shared run id, writes the validated
+   `search-plan.json`, and creates the staged in-flight run directory
+   `system/staging/research-runs/<research-run-id>/` where the run's
+   ledgers accumulate. The plan must state the
    creator/schedule/intelligence basis, adapters considered, query intent,
    planned queries, planned sources, skipped sources, approval gates, and
    future connector notes. Search plans may name planned/deferred adapters, but
@@ -45,12 +49,27 @@ idea queue belongs to `manage-idea-queue`; promotion belongs to
    seed queries with tool/brand/trend names from your own training knowledge
    that are absent from creator context — that knowledge may be stale and
    research is time-sensitive. A term you are testing rather than deriving from
-   creator context must use the `hypothesis` term_basis.
-4. Start from known high-signal sources (intelligence files), then branch
-   outward. Allowed acquisition (ADR 0022): browser-visible public data plus
-   the key-gated research-acquisition connectors below. Still forbidden:
-   logged-in sessions, private URLs, scheduled jobs, and external
-   notifications.
+   creator context must use the `hypothesis` term_basis. Use an empty
+   `schedule_slot_ids` for broad strategy or discovery research; focused
+   `scheduled_needs` research names the exact open anchor slot — a run that
+   names no slot cannot later support promotion into one.
+3. As soon as the plan exists, start the connector fan-out in the
+   background —
+   `python3 -m influencer_os research-fetch --plan <staged-run-dir>/search-plan.json --run-dir <staged-run-dir>`
+   — and continue with browser-visible evidence work while results land in
+   `<staged-run-dir>/fetch-results/`. Start from known high-signal sources
+   (intelligence files), then branch outward. Allowed acquisition
+   (ADR 0022): browser-visible public data plus the key-gated
+   research-acquisition connectors below. Still forbidden: logged-in
+   sessions, private URLs, scheduled jobs, and external notifications.
+4. When the run's curation is done, write a short `run-summary.md` in the
+   staged run directory, then
+   `python3 -m influencer_os complete-run <research-run-id> --creator-workspace <ws> --material-update|--no-material-update [--finding <ids>] [--intelligence <notes>] [--error <msg>]`.
+   The constructor derives `research-run.json` verbatim from the plan
+   (identical `schedule_slot_ids` by construction), scans the ledgers into
+   `outputs`, validates everything, and moves the folder into canonical
+   `research/runs/`. A completed run must carry `source-yield.jsonl`
+   before it can complete; never hand-author `research-run.json`.
 
 ## Key-Gated Connectors (ADR 0022)
 
@@ -76,12 +95,15 @@ Usage inside a run:
   `adapter_status: "active"`, and `decision: "use_now"` only when
   `list-connectors` shows it available; otherwise mark it
   `skip_this_run`/`future_connector` and fall back to public web.
-- Fetch with
-  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin|youtube-search|youtube-channel> "<topic-url-or-channel>" --out .tmp/<run-id>-<connector>.json`,
-  e.g. `python3 -m influencer_os research-fetch youtube-search "<topic>" --days 30 --max-results 10 --out .tmp/<run-id>-youtube.json`
-  or `python3 -m influencer_os research-fetch youtube-channel "@<handle-or-UC-id>" --days 30 --out .tmp/<run-id>-youtube-channel.json`.
-  The result validates against `schemas/research-fetch-result.schema.json` and
-  is a transient candidate list, never canonical state.
+- Fetch with the plan fan-out by default —
+  `python3 -m influencer_os research-fetch --plan <staged-run-dir>/search-plan.json --run-dir <staged-run-dir>`
+  runs every connector-routable planned query/source concurrently (only
+  adapters the plan marked `use_now`) and writes validated results under
+  `<staged-run-dir>/fetch-results/`. For a targeted follow-up fetch, run one
+  connector directly:
+  `python3 -m influencer_os research-fetch <reddit|x|firecrawl|linkedin|youtube-search|youtube-channel> "<topic-url-or-channel>" --run-dir <staged-run-dir> --out .tmp/<run-id>-<connector>.json`.
+  Every result validates against `schemas/research-fetch-result.schema.json`
+  and is a transient candidate list, never canonical state.
 - Curate: promote only creator-fit candidates into `evidence.jsonl`; map real
   engagement (`score`/`num_comments`, `likes`/`reposts`/`replies`,
   `views`/`likes`/`comments`) into `metric-snapshots.jsonl` records; judge
@@ -201,6 +223,11 @@ evidence a queue entry, promotion, or project references.
   workspace invalid.
 - 2026-07-07: Tightened public-web provenance, metric-snapshot honesty, and
   background-only evidence rules — the rule text lives in §Evidence Quality.
+- 2026-07-10: Runs are constructor-built (ADR 0042): `scaffold search-plan`
+  opens a staged in-flight run, `research-fetch --plan` fans out connector
+  fetches in the background, `complete-run` derives the run record and
+  moves the folder canonical — see §Research Run Lifecycle. Hand-authoring
+  `research-run.json` is retired.
 
 ## Self-Update
 

@@ -110,10 +110,12 @@ Produce or update:
 - `progress/setup-checklist.md`
 
 The creator foundation step is complete when the Creator Workspace is
-`foundation_ready` for the accepted selected channels and foundation mode. The
-full onboarding setup is complete when the workspace is `production_ready`: the
-profile, foundation, strategy, conversion assets, and first calendar plan are
-all accepted or explicitly waived.
+`foundation_ready` for the accepted selected channels and foundation mode.
+Creator onboarding is complete at `strategy_ready`: the profile, foundation,
+strategy, conversion assets, and pre-research strategy scaffold are accepted or
+explicitly waived. The workspace reaches `production_ready` only after research
+has revised or confirmed that scaffold and the resulting research-informed
+calendar is accepted.
 
 ## Setup State Reconciliation
 
@@ -152,9 +154,9 @@ draft/review, or calendar update, run a state sync pass in the same turn:
 
 If validation says the workspace is not `production_ready`, do not create post
 production work. For the common real-creator path where foundation and strategy
-are approved but the lead magnet is still drafted and no three-month schedule
-exists, the next step is lead magnet review followed by calendar creation, not
-individual post production.
+are approved, the next step is lead magnet review and a pre-research strategy
+scaffold, followed by research and calendar revision, not individual post
+production.
 
 ## Decision Interview
 

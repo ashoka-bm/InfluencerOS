@@ -28,6 +28,7 @@ from influencer_os.boards import rebuild_board, validate_board
 from influencer_os.brand_boards import rebuild_brand_board, validate_brand_board
 from influencer_os.calendars import rebuild_calendar, validate_calendar
 from influencer_os.connectors.fetch import FETCH_MODES
+from influencer_os.constructors import SCAFFOLD_TYPES
 from influencer_os.full_validation import validate_all
 from influencer_os.analytics import import_analytics_csv
 from influencer_os.projects import init_project, validate_project
@@ -99,6 +100,35 @@ def main(argv=None):
     project_parser = subparsers.add_parser("init-project", help="Initialize a project folder inside a Creator Workspace.")
     project_parser.add_argument("project", help="Path to a Project JSON manifest.")
     project_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    scaffold_parser = subparsers.add_parser("scaffold", help="Build a canonical record from a seed of authored fields (ADR 0042); the constructor derives, copies, validates, and writes the rest in one invocation.")
+    scaffold_parser.add_argument("record_type", nargs="?", choices=sorted(SCAFFOLD_TYPES), help="Record type to scaffold.")
+    scaffold_parser.add_argument("--seed", help="Path to the seed JSON (authored fields only; see docs/record-constructors.md).")
+    scaffold_parser.add_argument("--creator-workspace", help="Path to the Creator Workspace.")
+    scaffold_parser.add_argument("--list", action="store_true", dest="list_types", help="List the record types that have constructors.")
+
+    stage_parser = subparsers.add_parser("stage", help="Stage a pre-approval draft bundle under system/staging/ (ADR 0042). Writes nothing canonical; present the approval package from the staged records.")
+    stage_parser.add_argument("bundle", choices=["promotion"], help="Bundle kind to stage.")
+    stage_parser.add_argument("--entry", required=True, help="Idea queue entry id being promoted.")
+    stage_parser.add_argument("--seed", required=True, help="Path to the promotion bundle seed JSON.")
+    stage_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    commit_stage_parser = subparsers.add_parser("commit-stage", help="Commit a staged bundle at the human approval gate: verify freshness, stamp approval, write in construction order, flip the entry/queue/slots, validate, and rebuild projections.")
+    commit_stage_parser.add_argument("stage", help="Stage id or stage directory path.")
+    commit_stage_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+
+    complete_run_parser = subparsers.add_parser("complete-run", help="Derive the research-run record from its staged search plan and accumulated ledgers, then move the run folder into canonical research/runs/ (ADR 0042).")
+    complete_run_parser.add_argument("run", help="Staged run directory or research run id.")
+    complete_run_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
+    material_group = complete_run_parser.add_mutually_exclusive_group(required=True)
+    material_group.add_argument("--material-update", dest="material_update", action="store_true", help="The run produced a material research update.")
+    material_group.add_argument("--no-material-update", dest="material_update", action="store_false", help="The run completed without a material update.")
+    complete_run_parser.add_argument("--error", help="Mark the run failed with this error message.")
+    complete_run_parser.add_argument("--finding", dest="finding_ids", nargs="+", metavar="FINDING_ID", help="Explicit finding ids the run produced (default: scan stable findings citing the run).")
+    complete_run_parser.add_argument("--intelligence", dest="intelligence_updates", nargs="+", metavar="NOTE", help="Research intelligence update notes.")
+
+    refresh_parser = subparsers.add_parser("refresh-workspace", help="Session-open refresh (ADR 0042): validate all, then rebuild the recall index, semantic lookup, and content board in one invocation. Suitable as a background task when a creator session opens.")
+    refresh_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
     package_parser = subparsers.add_parser("register-output-package", help="Register an Output Package inside a project and mark it packaged.")
     package_parser.add_argument("output_package", help="Path to an Output Package JSON record.")
@@ -178,8 +208,9 @@ def main(argv=None):
     import_asset_parser.add_argument("--approval-record", help="Reference route only: the gen_approval_ record that authorized the generation, when one exists.")
 
     fetch_parser = subparsers.add_parser("research-fetch", help="Run one research-acquisition connector fetch (ADR 0022; standing-approved by key presence) and emit a validated fetch-result JSON.")
-    fetch_parser.add_argument("connector", choices=FETCH_MODES, help="Connector mode to run.")
-    fetch_parser.add_argument("target", help="Topic (reddit/x/youtube-search), page URL (firecrawl), profile URL (linkedin), or channel id/@handle (youtube-channel).")
+    fetch_parser.add_argument("connector", nargs="?", choices=FETCH_MODES, help="Connector mode to run (omit with --plan).")
+    fetch_parser.add_argument("target", nargs="?", help="Topic (reddit/x/youtube-search), page URL (firecrawl), profile URL (linkedin), or channel id/@handle (youtube-channel).")
+    fetch_parser.add_argument("--plan", help="Path to a search-plan.json: fan out every connector-routable planned fetch concurrently (ADR 0042) instead of one connector/target.")
     fetch_parser.add_argument("--depth", choices=["quick", "default", "deep"], default="default", help="Discovery depth for reddit/x.")
     fetch_parser.add_argument("--days", type=int, default=30, help="Recency window in days (default 30).")
     fetch_parser.add_argument("--from-date", dest="from_date", help="Window start YYYY-MM-DD; overrides --days with --to-date.")
@@ -396,6 +427,119 @@ def main(argv=None):
             print(f"Initialized project: {project_dir}")
             print("Next phase: add selected idea and production plan")
             return 0
+
+        if args.command == "scaffold":
+            from influencer_os.constructors import (
+                scaffold_project,
+                scaffold_search_plan,
+            )
+
+            if args.list_types:
+                for name, description in sorted(SCAFFOLD_TYPES.items()):
+                    print(f"- {name}: {description}")
+                return 0
+            if not args.record_type or not args.seed or not args.creator_workspace:
+                raise ValueError(
+                    "scaffold requires a record type, --seed, and "
+                    "--creator-workspace (or --list)"
+                )
+            if args.record_type == "project":
+                result = scaffold_project(args.seed, args.creator_workspace)
+                print(
+                    f"Scaffolded project {result['project_id']}: "
+                    f"{result['project_dir']}"
+                )
+            else:
+                result = scaffold_search_plan(args.seed, args.creator_workspace)
+                print(
+                    f"Scaffolded search plan for {result['research_run_id']}: "
+                    f"{result['search_plan_path']}"
+                )
+                print(f"Staged in-flight run directory: {result['run_dir']}")
+                print(
+                    "Next: research-fetch --plan "
+                    f"{result['search_plan_path']} --run-dir "
+                    f"{result['run_dir']}; complete-run when the run finishes."
+                )
+            return 0
+
+        if args.command == "stage":
+            from influencer_os.staging import stage_promotion
+
+            result = stage_promotion(
+                args.seed, args.creator_workspace, args.entry
+            )
+            print(f"Staged promotion bundle {result['stage_id']}: {result['stage_dir']}")
+            print(f"- promotion: {result['promotion']['idea_promotion_id']}")
+            for project in result["projects"]:
+                print(f"- project: {project['project_id']} ({project['project_slug']})")
+            for warning in result["warnings"]:
+                print(warning, file=sys.stderr)
+            print("Present the approval package from the staged records; on approval run commit-stage.")
+            return 0
+
+        if args.command == "commit-stage":
+            from influencer_os.staging import commit_stage
+
+            result = commit_stage(args.stage, args.creator_workspace)
+            print(f"Committed promotion {result['promotion_id']}: {result['promotion_path']}")
+            for project_dir in result["project_dirs"]:
+                print(f"- project: {project_dir}")
+            for warning in result["warnings"]:
+                print(warning, file=sys.stderr)
+            return 0
+
+        if args.command == "complete-run":
+            from influencer_os.constructors import complete_run
+
+            result = complete_run(
+                args.run,
+                args.creator_workspace,
+                material_update=args.material_update,
+                error=args.error,
+                finding_ids=args.finding_ids,
+                intelligence_updates=args.intelligence_updates,
+            )
+            outputs = result["outputs"]
+            print(
+                f"Completed research run {result['research_run_id']} "
+                f"({result['run_status']}): {result['run_dir']}"
+            )
+            print(
+                f"- outputs: {len(outputs['evidence_ids'])} evidence, "
+                f"{len(outputs['metric_snapshot_ids'])} metric snapshots, "
+                f"{len(outputs['finding_ids'])} findings, "
+                f"{len(outputs['idea_queue_entry_ids'])} queue entries"
+            )
+            return 0
+
+        if args.command == "refresh-workspace":
+            failures = 0
+            try:
+                result = validate_all(args.creator_workspace)
+                print(f"[ok] validate all ({result['project_count']} projects)")
+                for warning in result.get("warnings", []):
+                    print(warning, file=sys.stderr)
+            except (ValidationError, FileNotFoundError, ValueError) as exc:
+                failures += 1
+                print(f"[failed] validate all: {exc}", file=sys.stderr)
+            rebuilds = (
+                ("rebuild-index", lambda: rebuild_index(args.creator_workspace)),
+                ("rebuild-lookup", lambda: rebuild_lookup(args.creator_workspace)),
+                ("rebuild-board", lambda: rebuild_board(args.creator_workspace)),
+            )
+            for name, rebuild in rebuilds:
+                try:
+                    rebuild()
+                    print(f"[ok] {name}")
+                except FileNotFoundError as exc:
+                    # A projection whose source records do not exist yet is a
+                    # lifecycle skip, not a failure (full_validation.py rules).
+                    print(f"[skipped] {name}: {exc}")
+                except (ValidationError, ValueError) as exc:
+                    failures += 1
+                    print(f"[failed] {name}: {exc}", file=sys.stderr)
+            return 1 if failures else 0
 
         if args.command == "register-output-package":
             result = register_output_package(
@@ -617,6 +761,59 @@ def main(argv=None):
                 env_path=Path(args.env_file) if args.env_file else None
             )
             run_dir = Path(args.run_dir)
+
+            if args.plan:
+                from influencer_os.connectors import plan_fetch
+                from influencer_os.validation import load_json as load_json_fn
+
+                plan = load_json_fn(args.plan)
+                budget = plan_fetch.locked_budget_from(
+                    _load_connector_budget(run_dir, config["MAX_CALLS"])
+                )
+                try:
+                    summary = plan_fetch.fetch_for_plan(
+                        plan,
+                        run_dir,
+                        config,
+                        budget,
+                        depth=args.depth,
+                        from_date=args.from_date,
+                        to_date=args.to_date,
+                        days=args.days,
+                        max_posts=args.max_posts,
+                        max_results=args.max_results,
+                        order=args.order,
+                    )
+                finally:
+                    _save_connector_budget(run_dir, budget)
+                for outcome in summary["jobs"]:
+                    job = outcome["job"]
+                    if outcome["status"] == "fetched":
+                        print(
+                            f"[fetched] {job['id']} via {job['mode']}: "
+                            f"{len(outcome['result']['candidates'])} candidate(s) "
+                            f"-> {outcome['result_path']}",
+                            file=sys.stderr,
+                        )
+                    else:
+                        print(
+                            f"[{outcome['status']}] {job['id']} via "
+                            f"{job['mode']}: {outcome['error']}",
+                            file=sys.stderr,
+                        )
+                for skip in summary["skipped"]:
+                    print(f"[skipped] {skip['id']}: {skip['reason']}", file=sys.stderr)
+                print(
+                    f"Plan fan-out: {summary['fetched']}/{len(summary['jobs'])} "
+                    f"fetches completed, {budget.used}/{budget.max_calls} paid "
+                    "call(s) used."
+                )
+                return 1 if summary["jobs"] and not summary["fetched"] else 0
+
+            if not args.connector or not args.target:
+                raise ValueError(
+                    "research-fetch needs a connector and target, or --plan"
+                )
             budget = _load_connector_budget(run_dir, config["MAX_CALLS"])
             try:
                 result = connector_fetch.fetch_for_mode(

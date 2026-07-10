@@ -1207,7 +1207,9 @@ class SkillProseDriftTests(unittest.TestCase):
                         RealCreatorRunbookDriftTests.VALIDATE_TARGETS,
                         f"skills/{skill} names an unknown validate target: {first_arg}",
                     )
-                if command == "research-fetch":
+                if command == "research-fetch" and first_arg != "--plan":
+                    # `research-fetch --plan <search-plan>` is the ADR 0042
+                    # fan-out form; anything else must name a connector.
                     self.assertIn(
                         first_arg,
                         RealCreatorRunbookDriftTests.FETCH_CONNECTORS,

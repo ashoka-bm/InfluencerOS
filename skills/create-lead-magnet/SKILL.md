@@ -1,6 +1,6 @@
 ---
 name: create-lead-magnet
-description: Use to create a creator's lead magnet — a conversion asset (asset_type lead_magnet) rendered as an on-brand PDF from the bundled template — during the strategy-to-production bridge, after strategy is defined and before the content calendar is built.
+description: Use to create a creator's lead magnet — a conversion asset (asset_type lead_magnet) rendered as an on-brand PDF from the bundled template — after strategy is defined and before the pre-research strategy scaffold is built.
 dependencies:
   - create-reference-library
   - request-generation-approval
@@ -33,7 +33,7 @@ The lead magnet is the **strategy → production bridge**, in two parts with dis
 - **Part A — record + draft (during strategy).** Only for a strategy reference whose intended `asset_type` is `lead_magnet`, create `conversion-assets/<slug>-lead-magnet.json` (`status: drafted`) and a drafted body `.md`. Part A `file_refs` = `["conversion-assets/<slug>-lead-magnet.md"]`; do not list a PDF that does not exist. `strategy_ready` validation blocks if `content-strategy.json` references a conversion asset whose record is missing.
 - **Part B — render + human approval (before the calendar).** After strategy is accepted, resolve the theme and render the PDF. Then present the body and rendered PDF to the user for conversion-asset review. Only explicit user approval advances `drafted → approved`; rendering or validation never implies approval. Part B adds the rendered PDF to `file_refs` only after the file exists. Only an approved asset may be promoted by calendar slots.
 
-Sequence: `foundation_ready` → strategy defined (record + draft) → **lead magnet rendered & approved** → `content-schedule.json` slots reference the approved asset with `conversion_use` + `platform` → `rebuild-calendar` → `production_ready`. Planning/theming/text/render work is allowed in `prompt_ready` foundation mode; only creator-likeness image generation is gated (see Imagery Hard Rules).
+Sequence: `foundation_ready` → strategy defined (record + draft) → **lead magnet rendered & approved** → `content-schedule.json` strategy-scaffold slots reference the approved asset with `conversion_use` + `platform` → `rebuild-calendar` → `strategy_ready` → research → revise or confirm the schedule as `research_informed` → calendar review → `production_ready`. Planning/theming/text/render work is allowed in `prompt_ready` foundation mode; only creator-likeness image generation is gated (see Imagery Hard Rules).
 
 ## Inputs
 

@@ -25,15 +25,37 @@ dependencies:
 
 You are the InfluencerOS workflow conductor. Your job is sequencing and provenance.
 
+## Record Constructors And Anticipation (ADR 0042)
+
+- Never hand-author a record type that has a constructor;
+  `python3 -m influencer_os scaffold --list` enumerates them. Author the
+  seed (authored fields only, per `docs/record-constructors.md`) and let
+  the constructor derive, copy, validate, and write.
+- When a creator session opens, start
+  `python3 -m influencer_os refresh-workspace <ws>` as a background task
+  so validation and the board/index/lookup projections are fresh before
+  they are needed.
+- When a search plan is written, start
+  `python3 -m influencer_os research-fetch --plan <search-plan> --run-dir <staged-run-dir>`
+  as a background task: every connector-routable planned fetch runs
+  concurrently while the session continues (ADR 0022 caps and kill switch
+  apply). In-flight runs live under `system/staging/research-runs/`;
+  `complete-run` moves them canonical.
+- Before presenting a promotion package, `stage promotion` builds the
+  full draft bundle while the human reads; present from the draft and
+  `commit-stage` on approval (`promote-idea` owns the flow).
+- Never anticipate provider-backed generation, publishing, or scheduling;
+  never write canonical records ahead of their human gate.
+
 ## V1 Scope
 
 InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substack, Medium, Reddit, Facebook, LinkedIn, and YouTube (the ADR 0020 set, extended by ADR 0027). Production workflows may mature platform by platform. It does not create post-production treatments, publish posts, schedule posts, or call provider-backed generation without explicit approval.
 
 ## Phase Order
 
-1. **Creator Profile, Content Strategy, and Schedule**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. After drafting or changing calendar slots, run `python3 -m influencer_os rebuild-calendar <creator-workspace>`, present `boards/content-calendar.html` for human review, and run `python3 -m influencer_os validate calendar <creator-workspace>`. The HTML is a rebuildable projection, never a second schedule record. Do not advance the production readiness milestone until accepted changes are written back to `content-schedule.json`, the calendar is rebuilt, and workspace validation passes. Use accepted content strategy and schedule state to scope research and medium-specific blockers.
+1. **Creator Profile, Content Strategy, and Strategy Scaffold**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. Calendar slots establish publishing demand: date or window, platform, format, editorial goal or pillar, funnel role, and derivative relationships. Do not preselect specific premises, hooks, or titles merely to make a month look complete. Before research, slots are a `strategy_scaffold`; rebuild and present `boards/content-calendar.html` for human review, then stop at `strategy_ready`.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
-3. **Research Intelligence and Findings**: create a run-local search plan before browsing, capture dated public evidence, record source-yield outcomes after browsing, then synthesize current platform-scoped patterns relevant to the creator. Date and cite the research, but update the rolling findings only when there is a material finding or source-intelligence learning.
+3. **Research Intelligence, Findings, and Rolling Slot Revision**: broad research may validate platform strategy, cadence, compliance, and derivative mechanics, but it does not research every post in a monthly schedule. For each upcoming anchor slot, run focused `scheduled_needs` research before shortlisting or promotion, and produce multiple evidence-backed candidates when credible alternatives exist. Replace the slot's generic purpose with a specific topic only after human selection. Derivatives may inherit the selected anchor's subject evidence, but still need native format adaptation; high-stakes factual claims require current primary-source verification for the exact unit. Keep later slots open and repeat on a rolling horizon.
 4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
 5. **Idea Promotion Gate**: ask the user to approve the full promotion package before creating production work. Recommend options if useful, but do not silently promote an idea.
 6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported, record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
@@ -53,14 +75,34 @@ conversation or under `progress/`. Each checklist update must name:
 - whether the next step is a human gate, dry-run drafting step, or provider
   boundary.
 
-For Phase 1 calendar review, the required sequence is:
+For the pre-research Phase 1 scaffold review, the required sequence is:
 
 1. validate `content-schedule.json` against `creator-content-schedule`;
 2. rebuild `boards/content-calendar.html` from canonical records;
 3. present that projection at the human schedule-review checkpoint;
-4. write accepted changes to `content-schedule.json` and rebuild;
+4. write accepted changes to `content-schedule.json`, keep
+   `research_basis.status: strategy_scaffold`, and rebuild;
 5. run `validate calendar` and `validate workspace` before claiming
-   `production_ready`.
+   `strategy_ready`.
+
+After broad Phase 3 research, attach completed baseline runs in
+`research_basis.research_run_ids` when they materially inform the cadence. This
+global basis does not imply that every slot has post-level research. For each
+anchor, require a resolvable focused research run on the queue candidates before
+promotion; only the selected candidate may lock the slot's topic and title.
+
+Every calendar slot carries `research_state`:
+
+- `unresearched`: generic editorial purpose; no run, selection, or anchor refs.
+- `candidates_ready`: focused run ids exist, but no idea is selected.
+- `selected`: focused run ids plus the human-selected queue entry id.
+- `inherits_anchor`: derivative slot points to one anchor slot and carries no
+  duplicate direct research refs.
+
+A focused search plan and its completed run must both name the exact slot in
+`schedule_slot_ids`. On human selection, update the slot to `selected`, write
+the queue entry id, and lock the topic/title while leaving calendar status open.
+Only promotion sets the claimed slot to `filled`.
 
 After production planning, offer or run the advisory creative review phase
 before presenting prompts as ready for generation approval. The advisory
@@ -185,9 +227,20 @@ newest last.*
 - 2026-07-07: Tightened source-evidence provenance (public-web stays
   `public_web`) — rule owned by `create-research-findings`, Evidence
   Quality; pointer in §Record Requirements.
+- 2026-07-09: A pre-research schedule is a `strategy_scaffold`, not a
+  production calendar. `production_ready` requires a human-reviewed,
+  `research_informed` schedule linked to at least one completed research run.
+- 2026-07-10: A monthly calendar establishes publishing demand, not a month of
+  presumed ideas. Broad strategy research cannot stand in for focused research
+  on each anchor slot; research, selection, and topic locking happen on a
+  rolling horizon, with derivatives inheriting only relevant anchor evidence.
 - 2026-07-09: Object reference prompts are atomic — one distinct prop per
   Reference Asset, prompt, provider request, and reference image; rule owned by
   `create-reference-library`, Atomic Object Reference Rule.
+- 2026-07-10: Constructor-built records and anticipation points (ADR 0042)
+  — see §Record Constructors And Anticipation. Seeds replace hand-authored
+  records wherever `scaffold --list` names the type; deterministic local
+  work starts at its earliest knowledge point.
 
 ## Self-Update
 

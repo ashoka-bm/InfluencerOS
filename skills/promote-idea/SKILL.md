@@ -11,6 +11,12 @@ Follow `docs/workflows/research-and-ideas.md`; promotions validate against
 `schemas/project.schema.json`. Promotion is the only handoff from research
 into production, and it is the constructor for `projects/<project-slug>/`.
 
+Records here are constructor-built (ADR 0042,
+`docs/record-constructors.md`): you author a **seed** of judgment fields
+only; `stage promotion` assembles, copies, and prevalidates the full draft
+bundle, and `commit-stage` writes it at the approval gate. Never hand-author
+the promotion or project JSON.
+
 ## Inputs
 
 Read (context matrix — Idea promotion row):
@@ -46,55 +52,60 @@ Present the full package before writing anything:
 - the exact Projects to be created: slug, content unit type, target
   formats, platform targets.
 
-Approval covers the whole package; if anything changes afterward, present
-it again. Approval never requires a rationale — record `approval_note`
-only when the user volunteers one.
+Approval covers the whole package; if anything changes afterward, discard
+the stage, re-stage, and present again. Approval never requires a
+rationale — record `approval_note` only when the user volunteers one.
 
-## Writing The Promotion
+## Stage, Present, Commit
 
-- One JSON file at `research/idea-promotions/<idea_promotion_id>.json`;
-  the filename must equal `idea_promotion_id`.
-- The promotion is a permanent locked snapshot: copy the entry's current
-  scores verbatim into `score_snapshot`, its `evidence_refs` structured
-  shape, and its `source_finding_ids` into `research_finding_ids`
-  (empty is allowed when the idea came from evidence without a material
-  findings update). Later research must never rewrite these.
-- Copy the entry's `intended_emotion` and `core_message` onto the
-  promotion verbatim (ADR 0024) — never drop, invent, or reword them at
-  promotion time; validation fails a promotion whose intent contradicts
-  its source entry. If the entry predates intent capture and has neither,
-  add them to the entry first (with the user), then promote.
-- `approved_by: user`, `approved_on` today, `promotion_status: active`,
-  and `project_ids_created` listing the planned project ids up front —
-  the projects are constructed immediately after, and a project's
-  `init-project` gate requires its promotion to already list it.
-
-Construction order: promotion → `init-project` each project →
-evidence brief → entry and manifest flip → schedule slots → validate and
-rebuild. Validation link checks assume the finished state, so complete
-the sequence before validating.
+1. **Author the bundle seed** (authored fields only —
+   `docs/record-constructors.md` §2): `approved_platforms`,
+   `approved_formats`, `schedule_slot_ids` (omit for wildcards),
+   `creative_elements_to_carry_forward`, optional `approval_note`, and one
+   embedded project seed per content unit (`project_slug`,
+   `content_unit_type`, `platform_targets`, `learning_goal`,
+   `acceptance_criteria`, optional `reference_asset_ids`, `constraints`,
+   `notes`, and the authored `evidence_brief` markdown — the hook, why the
+   evidence says it works, reusable elements, avoid notes, source
+   evidence ids). Derive `learning_goal` and `acceptance_criteria` from
+   the intended payoff and measurement expectation.
+2. **Stage while the human reads**:
+   `python3 -m influencer_os stage promotion --entry <idea_queue_entry_id> --seed <seed.json> --creator-workspace <ws>`.
+   The constructor copies the locked snapshot verbatim from the entry
+   (scores → `score_snapshot`, `evidence_refs`, `source_finding_ids` →
+   `research_finding_ids`, and the ADR 0024 intent pair — an entry missing
+   `intended_emotion`/`core_message` blocks staging; add them with the
+   user first), allocates the promotion and project ids, prevalidates the
+   whole bundle through the real gate, and writes drafts under
+   `system/staging/` only. Nothing canonical is touched.
+3. **Present from the draft**: the package you present is the staged
+   records — the human approves exactly the bytes that commit will write.
+4. **Commit on approval**:
+   `python3 -m influencer_os commit-stage <stage-id> --creator-workspace <ws>`.
+   This stamps `approved_by: user` / `approved_on`, writes promotion and
+   projects in construction order, installs the evidence briefs, flips
+   the entry, queue manifest, and claimed slots, validates, and rebuilds
+   the board and index — one command, no re-authoring.
+5. **On rejection or changes**: delete the stage directory (or leave it —
+   it is disposable draft state), adjust the seed, and re-stage. A stage
+   whose upstream entry/slots changed since staging fails the commit
+   closed; re-stage from current state.
 
 ## Creating Projects
 
-- One Project per content unit; one promotion may create several.
+- One Project per content unit; one promotion may create several — one
+  embedded project seed each.
 - Create Projects only for production-supported approved formats
   (`PRODUCTION_SUPPORTED_FORMATS`; the `content_unit_type` is the format
-  minus its `format_` prefix).
-- Author the project manifest: status `created`, `target_formats` a
-  subset of `approved_formats`, `platform_targets` mapping only to
-  approved research platforms, `learning_goal` and `acceptance_criteria`
-  derived from the intended payoff and measurement expectation, and
-  `source_refs.idea_promotion_id` as the single upstream ref (cached
-  deeper refs are optional and must stay subsets of the locked
-  promotion).
-- Run `python3 -m influencer_os init-project <manifest> --creator-workspace <creator-workspace>`,
-  then replace the scaffolded `evidence-brief.md` with a compact
-  production-facing brief: the hook, why the evidence says it works, the
-  reusable elements to copy, avoid notes, and the source evidence ids.
+  minus its `format_` prefix). The constructor derives `target_formats`,
+  ids, dates, paths, and the cached promotion refs; `platform_targets`
+  must map only to approved research platforms.
+- A later standalone project against an already-locked promotion that
+  pre-lists it uses `python3 -m influencer_os scaffold project --seed <seed.json> --creator-workspace <ws>`.
 - Platform fit is advisory (ADR 0024): if the project's format is not
-  native to the creator's primary surfaces, `init-project` appends a
-  `platform_fit` ProjectWarning. Mention it to the user; it never blocks
-  promotion or project creation.
+  native to the creator's primary surfaces, project construction appends
+  a `platform_fit` ProjectWarning. Mention it to the user; it never
+  blocks promotion or project creation.
 
 ## Unsupported Formats
 
@@ -106,31 +117,37 @@ the sequence before validating.
   of them, Projects are created for the supported ones, and you say
   plainly which formats wait on the production build-out.
 
-## Flipping The Entry
+## Flipping The Entry And Slots
 
-- Set the entry status to `promoted`; append the promotion id to
-  `linked_idea_promotion_ids` and the created project ids to
-  `linked_project_ids`; update `updated_on`.
-- A completed promotion must leave the entry linking at least one
-  Project — the validators enforce this closure, so a promotion that
-  creates no production work is invalid state, not a deferral.
-- Keep `research/idea-queue/queue.json` exact: the entry's ref status and
-  `status_counts` must match. Never delete the entry.
+`commit-stage` owns every flip; you never hand-edit them. Know the
+invariants it enforces:
 
-## Schedule Slots
-
-- For scheduled ideas, record the claimed `schedule_slot_ids` on the
-  promotion and set each claimed slot's status to `filled` in
-  `content-schedule.json`. The schedule stores no promotion ids; the link
-  resolves promotion → slot.
-- Wildcard ideas omit `schedule_slot_ids`.
+- Entry: status `promoted`, the promotion id appended to
+  `linked_idea_promotion_ids`, created project ids appended to
+  `linked_project_ids`, `updated_on` stamped. A completed promotion must
+  leave the entry linking at least one Project — a promotion that creates
+  no production work is invalid state, not a deferral. Never delete the
+  entry.
+- Queue manifest: the entry's ref status and `status_counts` stay exact.
+- Slots: each claimed slot flips to `filled`; the schedule stores no
+  promotion ids (the link resolves promotion → slot).
+- Slot gate (checked at stage time, so a bad claim fails before
+  presentation): each direct slot must be `research_state.status:
+  selected` with `selected_idea_queue_entry_id` equal to the promoted
+  entry, backed by a completed `scheduled_needs` run that names that
+  exact slot and appears in the promotion's evidence refs. A derivative
+  may use `inherits_anchor` to such a slot. Broad strategy research never
+  satisfies this gate. Wildcard ideas omit `schedule_slot_ids`.
 
 ## Lifecycle
 
 - Scope expansion (new formats or platforms) happens by a new promotion
-  that supersedes the old one: present and write the new package, then
-  set the old promotion's `promotion_status` to `superseded`. The entry
-  links both; exactly one linked promotion may be `active`.
+  that supersedes the old one. Staging refuses an entry with an active
+  promotion, so the order is: present the new package for approval, set
+  the old promotion's `promotion_status` to `superseded` (a lifecycle
+  status edit, not record authoring), then stage and commit the new
+  bundle in the same approved step. The entry links both; exactly one
+  linked promotion may be `active`.
 - Cancellation sets `promotion_status: cancelled`; revert the entry to
   `shortlisted` when no active promotion remains, keeping the links for
   audit. Projects from a cancelled promotion are archived manually
@@ -139,14 +156,14 @@ the sequence before validating.
 
 ## Validation And Projections
 
-After the sequence completes:
+`commit-stage` runs the research/queue/project validators and rebuilds the
+board and index itself; a clean commit needs no follow-up commands. If it
+reports a projection warning (rebuild fault), or you need to re-check the
+workspace later:
 
 ```bash
-python3 -m influencer_os validate research <creator-workspace>
-python3 -m influencer_os validate queue <creator-workspace>
-python3 -m influencer_os validate project <creator-workspace>/projects/<project-slug>
-python3 -m influencer_os rebuild-board <creator-workspace>
-python3 -m influencer_os rebuild-index <creator-workspace>
+python3 -m influencer_os validate all <creator-workspace>
+python3 -m influencer_os refresh-workspace <creator-workspace>
 ```
 
 ## Hard Boundaries
@@ -158,6 +175,15 @@ python3 -m influencer_os rebuild-index <creator-workspace>
   automated promotion path.
 - Provider-backed generation stays behind its own exact-approval gate
   downstream; promotion approves production work, not provider calls.
+
+## Rules
+
+*Dated corrections (ADR 0016); newest last.*
+
+- 2026-07-10: Promotion bundles are constructor-built (ADR 0042). Author
+  seeds, stage while the human reads, present from the draft, commit on
+  approval — see §Stage, Present, Commit. Hand-authoring promotion or
+  project JSON is retired.
 
 ## Self-Update
 

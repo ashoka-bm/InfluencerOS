@@ -159,28 +159,36 @@ def check_promotion_created_projects(promotion, projects_by_id):
             )
 
 
-def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None):
+def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None,
+                                schedule=None):
     """An active promotion's claimed schedule slots must resolve and be
     filled. Superseded/cancelled promotions impose nothing: the schedule is
     mutable planning state, so freed slots legitimately reopen or disappear
-    while the locked promotion keeps its historical claim."""
+    while the locked promotion keeps its historical claim.
+
+    ``schedule`` lets a staged-commit preflight run this gate against the
+    simulated post-commit schedule (ADR 0042); omitted, the at-rest
+    schedule is loaded from disk."""
     if promotion["promotion_status"] != "active":
         return
     claimed = promotion.get("schedule_slot_ids", [])
     if not claimed:
         return
     promotion_id = promotion["idea_promotion_id"]
-    schedule_path = Path(workspace_dir) / "content-schedule.json"
-    if not schedule_path.exists():
-        raise ValidationError(
-            f"Idea promotion {promotion_id} claims schedule slots but the "
-            "workspace has no content-schedule.json"
-        )
-    # Schema-validate before reading: this check is reachable from validate
-    # project, which does not otherwise validate the schedule, and a
-    # malformed slot must fail cleanly, not crash on a missing key.
-    validate_file("creator-content-schedule", schedule_path)
-    schedule = load_json(schedule_path)
+    if schedule is None:
+        schedule_path = Path(workspace_dir) / "content-schedule.json"
+        if not schedule_path.exists():
+            raise ValidationError(
+                f"Idea promotion {promotion_id} claims schedule slots but the "
+                "workspace has no content-schedule.json"
+            )
+        # Schema-validate before reading: this check is reachable from validate
+        # project, which does not otherwise validate the schedule, and a
+        # malformed slot must fail cleanly, not crash on a missing key.
+        validate_file("creator-content-schedule", schedule_path)
+        schedule = load_json(schedule_path)
+    else:
+        validate_record("creator-content-schedule", schedule)
     state_errors = schedule_research_state_errors(schedule)
     if state_errors:
         raise ValidationError("; ".join(state_errors))
@@ -1056,6 +1064,8 @@ def validate_promotion_gate(
     research_ids=None,
     video_pack_ids=None,
     known_finding_ids=None,
+    entry=None,
+    schedule=None,
 ):
     """Enforce the promotion gate (Phase 0C workstream 12 residue).
 
@@ -1065,18 +1075,21 @@ def validate_promotion_gate(
 
     The optional research_ids / video_pack_ids / known_finding_ids caches let
     validate_promotions collect the research corpus once instead of per
-    promotion (slice 2 review finding).
+    promotion (slice 2 review finding). ``entry`` and ``schedule`` let a
+    staged-commit preflight (ADR 0042) run the gate against the simulated
+    post-commit state; omitted, both load from disk as at rest.
     """
     workspace_dir = Path(workspace_dir)
     promotion_id = promotion["idea_promotion_id"]
     entry_id = promotion["idea_queue_entry_id"]
     entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{entry_id}.json"
-    if not entry_path.exists():
-        raise ValidationError(
-            f"Idea promotion {promotion_id} does not point to a real idea queue entry: "
-            f"research/idea-queue/entries/{entry_id}.json is missing"
-        )
-    entry = load_json(entry_path)
+    if entry is None:
+        if not entry_path.exists():
+            raise ValidationError(
+                f"Idea promotion {promotion_id} does not point to a real idea queue entry: "
+                f"research/idea-queue/entries/{entry_id}.json is missing"
+            )
+        entry = load_json(entry_path)
     try:
         validate_record("idea-queue-entry", entry)
     except ValidationError as exc:
@@ -1139,6 +1152,7 @@ def validate_promotion_gate(
             workspace_dir,
             promotion,
             resolved_run_ids=resolved_run_ids.intersection(entry_run_ids),
+            schedule=schedule,
         )
     except ValidationError as exc:
         if unresolved_message is not None:
