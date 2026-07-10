@@ -27,11 +27,11 @@ from influencer_os.constructors import (
 from influencer_os.creator_workspaces import init_creator
 from influencer_os.full_validation import validate_all
 from influencer_os.projects import validate_project
-from influencer_os.staging import commit_stage, stage_promotion
+from influencer_os.staging import commit_stage, stage_concept_approval
 from influencer_os.validation import ValidationError, load_json
 from tests.support import (
     ROOT,
-    populate_promotion_records,
+    populate_approval_records,
     populate_video_understanding_packs,
     populate_workspace_records,
     scaffold_project_workspace,
@@ -58,7 +58,7 @@ def _promotion_ready_workspace(temp_dir):
     )
     populate_workspace_records(workspace_dir)
     populate_video_understanding_packs(workspace_dir)
-    populate_promotion_records(workspace_dir)
+    populate_approval_records(workspace_dir)
     return workspace_dir
 
 
@@ -73,7 +73,8 @@ def _project_seed_from_example():
         "constraints": example["constraints"],
         "notes": example["notes"],
         "reference_asset_ids": example["source_refs"]["reference_asset_ids"],
-        "idea_promotion_id": example["source_refs"]["idea_promotion_id"],
+        "commercial_expression": example["commercial_expression"],
+        "concept_approval_id": example["source_refs"]["concept_approval_id"],
     }
 
 
@@ -202,12 +203,12 @@ class CompleteRunTests(unittest.TestCase):
             (ROOT / "examples" / "creator-content-schedule.example.json").read_text()
         )
         entry_path = (
-            self.workspace / "research" / "idea-queue" / "entries"
-            / "idea_queue_entry_luna_fit_001.json"
+            self.workspace / "research" / "content-opportunity-queue" / "entries"
+            / "content_opportunity_luna_fit_001.json"
         )
         entry_path.parent.mkdir(parents=True, exist_ok=True)
         entry_path.write_text(
-            (ROOT / "examples" / "idea-queue-entry.example.json").read_text()
+            (ROOT / "examples" / "content-opportunity.example.json").read_text()
         )
         result = scaffold_search_plan(
             _search_plan_seed_from_example(),
@@ -260,8 +261,8 @@ class CompleteRunTests(unittest.TestCase):
             ["metric_snapshot_luna_fit_001"],
         )
         self.assertEqual(
-            run_record["outputs"]["idea_queue_entry_ids"],
-            ["idea_queue_entry_luna_fit_001"],
+            run_record["outputs"]["content_opportunity_ids"],
+            ["content_opportunity_luna_fit_001"],
         )
         self.assertEqual(
             run_record["outputs"]["finding_ids"],
@@ -288,44 +289,29 @@ class CompleteRunTests(unittest.TestCase):
         )
 
 
-class StagePromotionTests(unittest.TestCase):
+class StageConceptApprovalTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.workspace = _promotion_ready_workspace(self.temp.name)
-        # De-promote the fixture: the entry is pre-gate, no promotion exists,
-        # the claimed slot is open (research already selected).
+        # De-approve the fixture: the concept is pre-gate, no approval
+        # exists, the claimed slot is open (research already selected).
         (
-            self.workspace / "research" / "idea-promotions"
-            / "idea_promotion_luna_fit_001.json"
+            self.workspace / "campaigns" / "campaign_luna_fit_001" / "approvals"
+            / "concept_approval_luna_fit_001.json"
         ).unlink()
-        self.entry_path = (
-            self.workspace / "research" / "idea-queue" / "entries"
-            / "idea_queue_entry_luna_fit_001.json"
+        self.concept_path = (
+            self.workspace / "campaigns" / "campaign_luna_fit_001" / "concepts"
+            / "campaign_concept_luna_fit_001.json"
         )
         _rewrite_json(
-            self.entry_path,
-            lambda entry: entry.update(
-                status="shortlisted",
-                linked_idea_promotion_ids=[],
-                linked_project_ids=[],
-            ),
+            self.concept_path,
+            lambda concept: concept.update(status="ready_for_approval"),
         )
-        queue_path = (
-            self.workspace / "research" / "idea-queue" / "queue.json"
+        self.entry_path = (
+            self.workspace / "research" / "content-opportunity-queue" / "entries"
+            / "content_opportunity_luna_fit_001.json"
         )
-        queue_path.write_text(json.dumps({
-            "idea_queue_id": "idea_queue_luna_fit",
-            "creator_profile_id": "creator_luna_fit",
-            "updated_on": "2026-07-03",
-            "entry_refs": [
-                {
-                    "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
-                    "status": "shortlisted",
-                }
-            ],
-            "status_counts": {"shortlisted": 1},
-        }, indent=2) + "\n")
         _rewrite_json(
             self.workspace / "content-schedule.json",
             lambda schedule: schedule["calendar_slots"][0].update(
@@ -335,10 +321,8 @@ class StagePromotionTests(unittest.TestCase):
         self.seed = {
             "approved_platforms": ["instagram", "tiktok", "youtube"],
             "approved_formats": ["format_short_form_video"],
-            "schedule_slot_ids": ["slot_luna_2026_07_09_midweek"],
-            "creative_elements_to_carry_forward": [
-                "Hook: open on the slumped-at-desk exhale before any speech."
-            ],
+            "max_offer_integration": "embedded",
+            "max_cta_intensity": "soft",
             "projects": [
                 {
                     "project_slug": "tiny-reset-after-laptop-day",
@@ -354,6 +338,12 @@ class StagePromotionTests(unittest.TestCase):
                         "A validated micro-journey production plan exists for "
                         "the short-form video format."
                     ],
+                    "commercial_expression": {
+                        "commercial_function": "lead_capture",
+                        "offer_integration": "embedded",
+                        "cta_intensity": "soft",
+                    },
+                    "schedule_slot_ids": ["slot_luna_2026_07_09_midweek"],
                     "evidence_brief": (
                         "# Evidence Brief\n\nHook: the slumped exhale. "
                         "Evidence: evidence_luna_fit_001.\n"
@@ -363,103 +353,122 @@ class StagePromotionTests(unittest.TestCase):
         }
 
     def test_stage_builds_prevalidated_bundle_without_canonical_writes(self):
-        result = stage_promotion(
-            self.seed, self.workspace, "idea_queue_entry_luna_fit_001"
+        result = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
         )
-        promotion = result["promotion"]
-        entry = load_json(self.entry_path)
+        approval = result["approval"]
+        concept = load_json(self.concept_path)
         self.assertEqual(
-            promotion["idea_promotion_id"], "idea_promotion_luna_fit_001"
+            approval["concept_approval_id"], "concept_approval_luna_fit_001"
         )
-        self.assertEqual(promotion["score_snapshot"], entry["scores"])
-        self.assertEqual(promotion["evidence_refs"], entry["evidence_refs"])
+        self.assertEqual(approval["evidence_refs"], concept["evidence_refs"])
         self.assertEqual(
-            promotion["intended_payoff"], entry["intended_payoff"]
+            approval["intended_payoff"], concept["intended_payoff"]
         )
         self.assertEqual(
-            promotion["project_ids_created"],
+            approval["schedule_slot_ids"], ["slot_luna_2026_07_09_midweek"]
+        )
+        self.assertEqual(
+            approval["project_ids_created"],
             ["project_luna_fit_tiny_reset_after_laptop_day_001"],
         )
         self.assertTrue(
-            (result["stage_dir"] / "records" / "idea-promotion.json").exists()
+            (result["stage_dir"] / "records" / "concept-approval.json").exists()
         )
         # Nothing canonical was written.
         self.assertFalse(
             (
-                self.workspace / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                self.workspace / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             ).exists()
         )
         self.assertFalse(
             (self.workspace / "projects" / "tiny-reset-after-laptop-day").exists()
         )
-        self.assertEqual(load_json(self.entry_path)["status"], "shortlisted")
+        self.assertEqual(
+            load_json(self.concept_path)["status"], "ready_for_approval"
+        )
 
     def test_commit_stage_writes_bundle_and_flips_state(self):
-        staged = stage_promotion(
-            self.seed, self.workspace, "idea_queue_entry_luna_fit_001"
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
         )
         result = commit_stage(staged["stage_id"], self.workspace)
-        self.assertTrue(result["promotion_path"].exists())
+        self.assertTrue(result["approval_path"].exists())
         project_dir = (
             self.workspace / "projects" / "tiny-reset-after-laptop-day"
         )
         self.assertIn(
             "slumped exhale", (project_dir / "evidence-brief.md").read_text()
         )
-        entry = load_json(self.entry_path)
-        self.assertEqual(entry["status"], "promoted")
-        self.assertEqual(
-            entry["linked_idea_promotion_ids"], ["idea_promotion_luna_fit_001"]
-        )
-        self.assertEqual(
-            entry["linked_project_ids"],
-            ["project_luna_fit_tiny_reset_after_laptop_day_001"],
-        )
-        queue = load_json(
-            self.workspace / "research" / "idea-queue" / "queue.json"
-        )
-        self.assertEqual(queue["status_counts"], {"promoted": 1})
+        concept = load_json(self.concept_path)
+        self.assertEqual(concept["status"], "active")
         schedule = load_json(self.workspace / "content-schedule.json")
-        self.assertEqual(schedule["calendar_slots"][0]["status"], "filled")
+        slot = schedule["calendar_slots"][0]
+        self.assertEqual(slot["status"], "filled")
+        self.assertEqual(slot["campaign_id"], "campaign_luna_fit_001")
+        self.assertEqual(
+            slot["campaign_concept_id"], "campaign_concept_luna_fit_001"
+        )
+        self.assertEqual(
+            slot["project_id"],
+            "project_luna_fit_tiny_reset_after_laptop_day_001",
+        )
         self.assertFalse(staged["stage_dir"].exists())
         validate_all(self.workspace)
 
     def test_stale_stage_fails_closed(self):
-        staged = stage_promotion(
-            self.seed, self.workspace, "idea_queue_entry_luna_fit_001"
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
         )
         _rewrite_json(
-            self.entry_path,
-            lambda entry: entry.update(title="A different idea now"),
+            self.concept_path,
+            lambda concept: concept.update(promise="A different promise now."),
         )
         with self.assertRaises(ValidationError) as caught:
             commit_stage(staged["stage_id"], self.workspace)
         self.assertIn("stale", str(caught.exception))
         self.assertFalse(
             (
-                self.workspace / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                self.workspace / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             ).exists()
         )
         self.assertTrue(staged["stage_dir"].exists())
 
-    def test_stage_rejects_entry_with_active_promotion(self):
+    def test_active_concept_accepts_a_later_additional_approval(self):
+        # One unchanged concept may receive later approvals for additional
+        # projects (campaign-concept-pressure plan).
         workspace = _promotion_ready_workspace(
             tempfile.mkdtemp(dir=self.temp.name)
         )
+        seed = json.loads(json.dumps(self.seed))
+        seed["projects"][0]["schedule_slot_ids"] = []
+        result = stage_concept_approval(
+            seed, workspace, "campaign_concept_luna_fit_001"
+        )
+        self.assertEqual(
+            result["approval"]["concept_approval_id"],
+            "concept_approval_luna_fit_002",
+        )
+
+    def test_stage_rejects_draft_concept(self):
+        _rewrite_json(
+            self.concept_path,
+            lambda concept: concept.update(status="draft"),
+        )
         with self.assertRaises(ValidationError) as caught:
-            stage_promotion(
-                self.seed, workspace, "idea_queue_entry_luna_fit_001"
+            stage_concept_approval(
+                self.seed, self.workspace, "campaign_concept_luna_fit_001"
             )
-        self.assertIn("active promotion", str(caught.exception))
+        self.assertIn("ready_for_approval", str(caught.exception))
 
     def test_stage_rejects_duplicate_bundle_slugs(self):
         seed = dict(self.seed)
         seed["projects"] = [self.seed["projects"][0], self.seed["projects"][0]]
         with self.assertRaises(ValidationError) as caught:
-            stage_promotion(
-                seed, self.workspace, "idea_queue_entry_luna_fit_001"
+            stage_concept_approval(
+                seed, self.workspace, "campaign_concept_luna_fit_001"
             )
         self.assertIn("twice", str(caught.exception))
 
@@ -468,19 +477,19 @@ class StagePromotionTests(unittest.TestCase):
             parents=True
         )
         with self.assertRaises(ValidationError) as caught:
-            stage_promotion(
-                self.seed, self.workspace, "idea_queue_entry_luna_fit_001"
+            stage_concept_approval(
+                self.seed, self.workspace, "campaign_concept_luna_fit_001"
             )
         self.assertIn("already exists", str(caught.exception))
 
-    def test_stage_requires_intent_pair_on_entry(self):
+    def test_stage_requires_intent_pair_on_concept(self):
         _rewrite_json(
-            self.entry_path,
-            lambda entry: entry.pop("intended_emotion"),
+            self.concept_path,
+            lambda concept: concept.pop("intended_emotion"),
         )
         with self.assertRaises(ValidationError) as caught:
-            stage_promotion(
-                self.seed, self.workspace, "idea_queue_entry_luna_fit_001"
+            stage_concept_approval(
+                self.seed, self.workspace, "campaign_concept_luna_fit_001"
             )
         self.assertIn("intent pair", str(caught.exception))
 
@@ -554,23 +563,6 @@ class ConstructorCliTests(unittest.TestCase):
             workspace_dir, _project_dir = scaffold_project_workspace(
                 Path(temp_dir) / "creators"
             )
-            # The support fixture stops short of the queue manifest, which
-            # `validate all` requires once entries exist.
-            queue_path = (
-                workspace_dir / "research" / "idea-queue" / "queue.json"
-            )
-            queue_path.write_text(json.dumps({
-                "idea_queue_id": "idea_queue_luna_fit",
-                "creator_profile_id": "creator_luna_fit",
-                "updated_on": "2026-07-03",
-                "entry_refs": [
-                    {
-                        "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
-                        "status": "promoted",
-                    }
-                ],
-                "status_counts": {"promoted": 1},
-            }, indent=2) + "\n")
             self.assertEqual(
                 cli.main(["refresh-workspace", str(workspace_dir)]), 0
             )

@@ -15,7 +15,7 @@ Read (context matrix — Output packaging row):
 
 - Project manifest, evidence brief, Applied Social Template, production
   plan, and Base Video Generation Plan when the Project is short-form video.
-- Locked Idea Promotion and the project source refs needed to preserve
+- Locked Concept Approval and the project source refs needed to preserve
   provenance.
 - Creator Profile, Reference Library, and any approved/imported final assets
   or text files that will become upload-ready material.
@@ -29,7 +29,7 @@ Author against `schemas/output-package.schema.json` (complete example:
 `examples/output-package.example.json`); the rules below are the
 cross-record invariants the schema cannot express.
 
-- `project_id`, `creator_profile_id`, and `source_refs.idea_promotion_id`
+- `project_id`, `creator_profile_id`, and `source_refs.concept_approval_id`
   must match the Project.
 - `universal_core.format_id` must match the Project's single target format.
 - `source_refs.applied_social_template_id` must equal

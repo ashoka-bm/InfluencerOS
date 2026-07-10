@@ -3,8 +3,8 @@ name: influencer-os
 description: Use for InfluencerOS content-creation work — the conductor sequencing research-to-queue, idea promotion into projects, production planning, provider-neutral generation plans, and output packaging, with the human gates between them.
 dependencies:
   - create-research-findings
-  - manage-idea-queue
-  - promote-idea
+  - manage-opportunity-queue
+  - approve-concept
   - apply-social-template
   - create-production-plan
   - review-hook-payoff
@@ -43,7 +43,7 @@ You are the InfluencerOS workflow conductor. Your job is sequencing and provenan
   `complete-run` moves them canonical.
 - Before presenting a promotion package, `stage promotion` builds the
   full draft bundle while the human reads; present from the draft and
-  `commit-stage` on approval (`promote-idea` owns the flow).
+  `commit-stage` on approval (`approve-concept` owns the flow).
 - Never anticipate provider-backed generation, publishing, or scheduling;
   never write canonical records ahead of their human gate.
 
@@ -56,8 +56,8 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 1. **Creator Profile, Content Strategy, and Strategy Scaffold**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. Calendar slots establish publishing demand: date or window, platform, format, editorial goal or pillar, funnel role, and derivative relationships. Do not preselect specific premises, hooks, or titles merely to make a month look complete. Before research, slots are a `strategy_scaffold`; rebuild and present `boards/content-calendar.html` for human review, then stop at `strategy_ready`.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
 3. **Research Intelligence, Findings, and Rolling Slot Revision**: broad research may validate platform strategy, cadence, compliance, and derivative mechanics, but it does not research every post in a monthly schedule. For each upcoming anchor slot, run focused `scheduled_needs` research before shortlisting or promotion, and produce multiple evidence-backed candidates when credible alternatives exist. Replace the slot's generic purpose with a specific topic only after human selection. Derivatives may inherit the selected anchor's subject evidence, but still need native format adaptation; high-stakes factual claims require current primary-source verification for the exact unit. Keep later slots open and repeat on a rolling horizon.
-4. **Idea Queue**: add or update scored idea queue entries grounded in findings, evidence, schedule state, and creator fit.
-5. **Idea Promotion Gate**: ask the user to approve the full promotion package before creating production work. Recommend options if useful, but do not silently promote an idea.
+4. **Opportunity Queue**: add or update scored Content Opportunities grounded in findings, evidence, schedule state, and creator fit; assign an opportunity to a Campaign Concept when the campaign direction is known.
+5. **Concept Approval Gate**: ask the user to approve the full approval package — including commercial-expression ceilings and the exact Project set — before creating production work. Recommend options if useful, but do not silently approve a concept.
 6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported, record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
 7. **Applied Social Template or Production Structure**: choose the format-compatible structure that best pulls the viewer through the promoted idea.
 8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.
@@ -125,9 +125,9 @@ Phase Owners table below maps every phase to its owner and invocation.
 | 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — |
 | 2. Video Understanding Pack | `influencer-os` (inline, v1) | — |
 | 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` |
-| 4. Idea Queue | `manage-idea-queue` | `Skill(skill: "manage-idea-queue")` |
-| 5. Idea Promotion Gate | `promote-idea` + user approval | `Skill(skill: "promote-idea")` |
-| 6. Project Creation | `promote-idea` (a promotion creates Projects) | `Skill(skill: "promote-idea")` |
+| 4. Opportunity Queue | `manage-opportunity-queue` | `Skill(skill: "manage-opportunity-queue")` |
+| 5. Concept Approval Gate | `approve-concept` + user approval | `Skill(skill: "approve-concept")` |
+| 6. Project Creation | `approve-concept` (an approval creates its exact Project set) | `Skill(skill: "approve-concept")` |
 | 7. Applied Social Template or Production Structure | `apply-social-template` | `Skill(skill: "apply-social-template")` |
 | 8. Format-Specific Production Plan | `create-production-plan` | `Skill(skill: "create-production-plan")` |
 | 9. Base Generation Plan | `create-production-plan` (provider-neutral) | `Skill(skill: "create-production-plan")` |
@@ -186,8 +186,8 @@ Tool boundary:
 Producer skills own their record shapes; consult them instead of restating
 field lists here:
 
-- Idea Queue entry rules (fields, intent pair, evidence refs, the eight
-  scores): `manage-idea-queue`.
+- Content Opportunity entry rules (fields, intent pair, evidence refs,
+  the eight scores): `manage-opportunity-queue`.
 - Format-specific plan shapes — the micro-journey spine and every non-video
   and text format: `create-production-plan`.
 - Source-evidence provenance discipline (public-web and institutional

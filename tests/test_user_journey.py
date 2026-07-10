@@ -16,7 +16,7 @@ from tests.test_readiness_validation import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_ID = "research_run_luna_fit_2026_07_03_001"
-ENTRY_ID = "idea_queue_entry_luna_fit_001"
+ENTRY_ID = "content_opportunity_luna_fit_001"
 PROJECT_SLUG = "tiny-reset-after-laptop-day"
 
 
@@ -163,29 +163,46 @@ def seed_research_outputs(workspace_dir):
         research_state={
             "status": "selected",
             "research_run_ids": [RUN_ID],
-            "selected_idea_queue_entry_id": ENTRY_ID,
+            "selected_content_opportunity_id": ENTRY_ID,
         },
     )
     schedule_path.write_text(json.dumps(schedule, indent=2) + "\n")
     copy_example(
-        "idea-queue.example.json",
-        workspace_dir / "research" / "idea-queue" / "queue.json",
+        "content-opportunity-queue.example.json",
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json",
     )
     copy_example(
-        "idea-queue-entry.example.json",
+        "content-opportunity.example.json",
         workspace_dir
         / "research"
-        / "idea-queue"
+        / "content-opportunity-queue"
         / "entries"
-        / "idea_queue_entry_luna_fit_001.json",
+        / "content_opportunity_luna_fit_001.json",
     )
+    campaign_root = workspace_dir / "campaigns" / "campaign_luna_fit_001"
+    copy_example("campaign.example.json", campaign_root / "campaign.json")
+    concept_path = (
+        campaign_root / "concepts" / "campaign_concept_luna_fit_001.json"
+    )
+    copy_example("campaign-concept.example.json", concept_path)
+    concept = json.loads(concept_path.read_text())
+    concept["status"] = "active"
+    concept_path.write_text(json.dumps(concept, indent=2) + "\n")
     copy_example(
-        "idea-promotion.example.json",
-        workspace_dir
-        / "research"
-        / "idea-promotions"
-        / "idea_promotion_luna_fit_001.json",
+        "concept-approval.example.json",
+        campaign_root / "approvals" / "concept_approval_luna_fit_001.json",
     )
+    asset_path = (
+        workspace_dir / "conversion-assets"
+        / "conversion_asset_luna_reset_checklist.json"
+    )
+    copy_example("conversion-asset.example.json", asset_path)
+    asset = json.loads(asset_path.read_text())
+    for file_ref in asset.get("file_refs", []):
+        ref_path = workspace_dir / file_ref
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        if not ref_path.exists():
+            ref_path.write_text("Journey conversion asset body.\n")
     write_jsonl_from_example(
         "project-warning.example.json", workspace_dir / "system" / "project-warnings.jsonl"
     )

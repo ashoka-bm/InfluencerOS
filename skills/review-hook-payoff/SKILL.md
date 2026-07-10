@@ -19,7 +19,7 @@ sequences this as a distinct step and feeds you an explicit packet:
 - the artifact(s) under review (the production plan; the applied template
   when useful),
 - the promoted idea's `hook`, `intended_payoff`, `intended_emotion`, and
-  `core_message` from the locked Idea Promotion,
+  `core_message` from the locked Concept Approval,
 - nothing else — not the authoring conversation.
 
 Record how you ran in `reviewer_execution`: `source_skill:
@@ -52,7 +52,7 @@ waive (`human_waiver`), never an auto-stop.
 
 - One record per review run: `review_record_id` equals the filename.
 - `review_role: hook_payoff`; `artifact_refs` are project-relative paths
-  that resolve; `idea_promotion_id` matches the project's locked promotion.
+  that resolve; `concept_approval_id` matches the project's locked approval.
 - `approval_status` is a recommendation: `approve`, `revise`, or `block`.
   It halts nothing (`validate project` proves this); say the recommendation
   out loud to the user instead.

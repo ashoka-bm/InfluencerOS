@@ -2,7 +2,7 @@
   "review_record_id": "review_luna_hook_payoff_001",
   "project_id": "project_luna_tiny_reset_001",
   "creator_profile_id": "creator_luna_fit",
-  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "concept_approval_id": "concept_approval_luna_fit_001",
   "review_role": "hook_payoff",
   "artifact_refs": [
     "plan/production-plan.json",

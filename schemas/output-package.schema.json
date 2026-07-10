@@ -91,7 +91,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "idea_promotion_id",
+        "concept_approval_id",
         "applied_social_template_id",
         "production_plan_ids",
         "video_understanding_pack_ids",
@@ -124,9 +124,9 @@
             "pattern": "^asset_[a-zA-Z0-9_-]+$"
           }
         },
-        "idea_promotion_id": {
+        "concept_approval_id": {
           "type": "string",
-          "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+          "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
         }
       }
     },

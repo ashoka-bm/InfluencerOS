@@ -9,11 +9,10 @@ from pathlib import Path
 from influencer_os.research import (
     parse_frontmatter,
     validate_findings_file,
-    validate_promotion_gate,
+    validate_approval_gate,
     validate_queue,
     validate_research,
 )
-from influencer_os.migrations import migrate_slot_research
 from influencer_os.validation import ValidationError, validate_jsonl_file
 
 
@@ -21,7 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 RUN_ID = "research_run_luna_fit_2026_07_03_001"
 RUN_ID_2 = "research_run_luna_fit_2026_07_03_002"
-ENTRY_ID = "idea_queue_entry_luna_fit_001"
+ENTRY_ID = "content_opportunity_luna_fit_001"
+CAMPAIGN_ID = "campaign_luna_fit_001"
+CONCEPT_ID = "campaign_concept_luna_fit_001"
+APPROVAL_ID = "concept_approval_luna_fit_001"
 
 
 def load_example(name):
@@ -63,7 +65,7 @@ def background_yield(idx):
     record["evidence_ids"] = []
     record["metric_snapshot_ids"] = []
     record["finding_ids"] = []
-    record["idea_queue_entry_ids"] = []
+    record["content_opportunity_ids"] = []
     record["engagement_basis"] = {
         "visible_metric_signal": "weak",
         "cross_platform_validation": False,
@@ -89,7 +91,7 @@ def scaffold_research_workspace(temp_dir):
         research_state={
             "status": "selected",
             "research_run_ids": [RUN_ID],
-            "selected_idea_queue_entry_id": ENTRY_ID,
+            "selected_content_opportunity_id": ENTRY_ID,
         },
     )
     write_json(workspace_dir / "content-schedule.json", schedule)
@@ -128,14 +130,24 @@ def scaffold_research_workspace(temp_dir):
     write_json(intelligence / "reference-creators.json", load_example("reference-creators"))
     write_json(intelligence / "watchlist.json", load_example("research-watchlist"))
 
-    write_json(research / "idea-queue" / "queue.json", load_example("idea-queue"))
+    write_json(research / "content-opportunity-queue" / "queue.json", load_example("content-opportunity-queue"))
     write_json(
-        research / "idea-queue" / "entries" / f"{ENTRY_ID}.json",
-        load_example("idea-queue-entry"),
+        research / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json",
+        load_example("content-opportunity"),
     )
+
+    # The campaign hierarchy (ADR 0031): an active campaign, an active concept
+    # assigned from the opportunity, and the active concept approval that the
+    # opportunity's assignment resolves through. Approvals and concepts live
+    # under campaigns/<campaign_id>/, never in research/.
+    campaign_dir = workspace_dir / "campaigns" / CAMPAIGN_ID
+    write_json(campaign_dir / "campaign.json", load_example("campaign"))
+    concept = load_example("campaign-concept")
+    concept["status"] = "active"
+    write_json(campaign_dir / "concepts" / f"{CONCEPT_ID}.json", concept)
     write_json(
-        research / "idea-promotions" / "idea_promotion_luna_fit_001.json",
-        load_example("idea-promotion"),
+        campaign_dir / "approvals" / f"{APPROVAL_ID}.json",
+        load_example("concept-approval"),
     )
 
     write_json(workspace_dir / "boards" / "content-board.json", load_example("content-board"))
@@ -153,25 +165,27 @@ def scaffold_research_workspace(temp_dir):
 
 
 def make_research_phase_only(workspace_dir):
-    """Keep the run, findings, and queue candidate without production state."""
-    shutil.rmtree(workspace_dir / "research" / "idea-promotions")
+    """Strip the workspace back to a pre-approval research phase: the run,
+    findings, and a shortlisted opportunity candidate, with no campaign
+    hierarchy, projects, boards, or warnings. Research and queue validation
+    must pass with no approval state at all (ADR 0031)."""
+    shutil.rmtree(workspace_dir / "campaigns")
     shutil.rmtree(workspace_dir / "projects")
     shutil.rmtree(workspace_dir / "boards")
     write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
 
     entry_path = (
-        workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+        workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
     )
     entry = json.loads(entry_path.read_text())
     entry["status"] = "shortlisted"
-    entry.pop("linked_idea_promotion_ids", None)
-    entry.pop("linked_project_ids", None)
+    entry.pop("linked_campaign_concept_ids", None)
     write_json(entry_path, entry)
 
-    queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
     queue = json.loads(queue_path.read_text())
     queue["entry_refs"] = [
-        {"idea_queue_entry_id": ENTRY_ID, "status": "shortlisted"}
+        {"content_opportunity_id": ENTRY_ID, "status": "shortlisted"}
     ]
     queue["status_counts"] = {"shortlisted": 1}
     write_json(queue_path, queue)
@@ -201,12 +215,12 @@ class SlotResearchProvenanceTests(unittest.TestCase):
             edit_json(
                 workspace_dir / "content-schedule.json",
                 lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
-                    selected_idea_queue_entry_id="idea_queue_entry_luna_fit_missing"
+                    selected_content_opportunity_id="content_opportunity_luna_fit_missing"
                 ),
             )
 
             with self.assertRaisesRegex(
-                ValidationError, "selected queue entry.*does not exist"
+                ValidationError, "selected content opportunity.*does not exist"
             ):
                 validate_research(workspace_dir)
 
@@ -224,7 +238,7 @@ class SlotResearchProvenanceTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(
-                ValidationError, "does not cite evidence from its selected research runs"
+                ValidationError, "does not cite evidence from the slot's selected research runs"
             ):
                 validate_research(workspace_dir)
 
@@ -271,151 +285,10 @@ class SlotResearchProvenanceTests(unittest.TestCase):
 
 
 class ResearchStateValidationTests(unittest.TestCase):
-    def test_migration_backfills_unambiguous_promoted_slot_provenance(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = scaffold_research_workspace(temp_dir)
-            schedule_path = workspace_dir / "content-schedule.json"
-            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
-            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
-            edit_json(
-                schedule_path,
-                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
-            )
-            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
-            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
 
-            result = migrate_slot_research(workspace_dir)
 
-            schedule = json.loads(schedule_path.read_text())
-            run = json.loads(run_path.read_text())
-            plan = json.loads(plan_path.read_text())
-            self.assertEqual(
-                schedule["calendar_slots"][0]["research_state"],
-                {
-                    "status": "selected",
-                    "research_run_ids": [RUN_ID],
-                    "selected_idea_queue_entry_id": ENTRY_ID,
-                },
-            )
-            self.assertEqual(
-                run["schedule_slot_ids"], ["slot_luna_2026_07_09_midweek"]
-            )
-            self.assertEqual(plan["schedule_slot_ids"], run["schedule_slot_ids"])
-            self.assertEqual(len(result["changed_paths"]), 3)
-            validate_research(workspace_dir)
 
-    def test_migration_refuses_ambiguous_filled_slot_without_partial_writes(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = make_research_phase_only(
-                scaffold_research_workspace(temp_dir)
-            )
-            schedule_path = workspace_dir / "content-schedule.json"
-            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
-            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
-            edit_json(
-                schedule_path,
-                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
-            )
-            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
-            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
-            before = {
-                path: path.read_bytes() for path in (schedule_path, run_path, plan_path)
-            }
 
-            with self.assertRaisesRegex(
-                ValidationError, "needs exactly one active promotion"
-            ):
-                migrate_slot_research(workspace_dir)
-
-            self.assertEqual(
-                before,
-                {path: path.read_bytes() for path in before},
-            )
-
-    def test_cli_migrates_slot_research_records(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = scaffold_research_workspace(temp_dir)
-            schedule_path = workspace_dir / "content-schedule.json"
-            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
-            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
-            edit_json(
-                schedule_path,
-                lambda schedule: schedule["calendar_slots"][0].pop("research_state"),
-            )
-            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
-            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
-
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "influencer_os",
-                    "migrate-slot-research",
-                    str(workspace_dir),
-                ],
-                cwd=ROOT,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("Migrated slot research provenance", result.stdout)
-
-    def test_migration_accumulates_multiple_slots_on_one_legacy_run(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = scaffold_research_workspace(temp_dir)
-            schedule_path = workspace_dir / "content-schedule.json"
-            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
-            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
-            promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
-            )
-            second_slot_id = "slot_luna_2026_07_11_followup"
-
-            def make_legacy_two_slot_schedule(schedule):
-                first = schedule["calendar_slots"][0]
-                first.pop("research_state")
-                second = dict(first)
-                second["slot_id"] = second_slot_id
-                second["target_date"] = "2026-07-11"
-                schedule["calendar_slots"].append(second)
-
-            edit_json(schedule_path, make_legacy_two_slot_schedule)
-            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
-            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
-            edit_json(
-                promotion_path,
-                lambda promotion: promotion["schedule_slot_ids"].append(
-                    second_slot_id
-                ),
-            )
-
-            migrate_slot_research(workspace_dir)
-
-            run = json.loads(run_path.read_text())
-            self.assertEqual(
-                run["schedule_slot_ids"],
-                ["slot_luna_2026_07_09_midweek", second_slot_id],
-            )
-            validate_research(workspace_dir)
-
-    def test_migration_repairs_run_fields_when_slot_state_already_exists(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = scaffold_research_workspace(temp_dir)
-            run_path = workspace_dir / "research" / "runs" / RUN_ID / "research-run.json"
-            plan_path = workspace_dir / "research" / "runs" / RUN_ID / "search-plan.json"
-            edit_json(run_path, lambda run: run.pop("schedule_slot_ids"))
-            edit_json(plan_path, lambda plan: plan.pop("schedule_slot_ids"))
-
-            migrate_slot_research(workspace_dir)
-
-            run = json.loads(run_path.read_text())
-            self.assertEqual(
-                run["schedule_slot_ids"], ["slot_luna_2026_07_09_midweek"]
-            )
-            validate_research(workspace_dir)
 
     def test_completed_run_without_search_plan_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -674,7 +547,7 @@ class ResearchStateValidationTests(unittest.TestCase):
             manifest_path = run_dir / "research-run.json"
             manifest = json.loads(manifest_path.read_text())
             manifest["material_update"] = False
-            # outputs.finding_ids and idea_queue_entry_ids stay populated.
+            # outputs.finding_ids and content_opportunity_ids stay populated.
             write_json(manifest_path, manifest)
             promoted = load_example("research-source-yield")
             write_jsonl(
@@ -804,8 +677,8 @@ class ResearchStateValidationTests(unittest.TestCase):
             workspace_dir = scaffold_research_workspace(temp_dir)
             warning = load_example("project-warning")
             warning.pop("project_id")
-            warning.pop("idea_promotion_id")
-            warning["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_ghost"
+            warning.pop("concept_approval_id")
+            warning["content_opportunity_id"] = "content_opportunity_luna_fit_ghost"
             write_jsonl(
                 workspace_dir / "system" / "project-warnings.jsonl", [warning]
             )
@@ -813,7 +686,7 @@ class ResearchStateValidationTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("idea_queue_entry_luna_fit_ghost", message)
+            self.assertIn("content_opportunity_luna_fit_ghost", message)
             self.assertIn("no entry file", message)
 
     def test_warning_targeting_missing_project_fails(self):
@@ -831,74 +704,76 @@ class ResearchStateValidationTests(unittest.TestCase):
             self.assertIn("project_luna_ghost", message)
             self.assertIn("no project record", message)
 
-    def test_warning_entry_mismatching_promotion_chain_fails(self):
+    def test_warning_opportunity_mismatching_approval_chain_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            # A second real entry: the warning tuple names it while the
-            # promotion was locked from the first entry.
-            entry = load_example("idea-queue-entry")
-            entry["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            # A second real opportunity: the warning tuple names it while its
+            # paired approval's concept resolves to the first opportunity.
+            entry = load_example("content-opportunity")
+            entry["content_opportunity_id"] = "content_opportunity_luna_fit_002"
+            entry["status"] = "reviewed"
+            entry.pop("linked_campaign_concept_ids", None)
             write_json(
-                workspace_dir / "research" / "idea-queue" / "entries"
-                / "idea_queue_entry_luna_fit_002.json",
+                workspace_dir / "research" / "content-opportunity-queue" / "entries"
+                / "content_opportunity_luna_fit_002.json",
                 entry,
             )
             warning = load_example("project-warning")
-            warning["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            warning["content_opportunity_id"] = "content_opportunity_luna_fit_002"
             write_jsonl(
                 workspace_dir / "system" / "project-warnings.jsonl", [warning]
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
-            self.assertIn("was promoted from", str(ctx.exception))
+            self.assertIn("resolves to source opportunity", str(ctx.exception))
 
-    def test_warning_promotion_mismatching_project_fails(self):
+    def test_warning_approval_mismatching_project_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            # A second real promotion of the same entry: the warning pairs it
-            # with a project locked to the first promotion.
-            promotion = load_example("idea-promotion")
-            promotion["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            # A second real approval: the warning pairs it with a project
+            # locked to the first approval.
+            approval = load_example("concept-approval")
+            approval["concept_approval_id"] = "concept_approval_luna_fit_002"
             write_json(
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_002.json",
-                promotion,
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_002.json",
+                approval,
             )
             warning = load_example("project-warning")
-            warning["idea_promotion_id"] = "idea_promotion_luna_fit_002"
+            warning["concept_approval_id"] = "concept_approval_luna_fit_002"
             write_jsonl(
                 workspace_dir / "system" / "project-warnings.jsonl", [warning]
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
-            self.assertIn("locked promotion", str(ctx.exception))
+            self.assertIn("locked approval", str(ctx.exception))
 
     def test_duplicate_manifest_entry_ref_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+            queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
             manifest = json.loads(queue_path.read_text())
             manifest["entry_refs"].append(dict(manifest["entry_refs"][0]))
             write_json(queue_path, manifest)
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("more than once", str(ctx.exception))
+            self.assertIn("twice", str(ctx.exception))
 
     def test_project_warning_with_unpaired_promotion_ids_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             warning = load_example("project-warning")
-            del warning["idea_promotion_id"]
+            del warning["concept_approval_id"]
             write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [warning])
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             message = str(ctx.exception)
             self.assertIn("project-warnings.jsonl:1:", message)
-            self.assertIn("both project_id and idea_promotion_id", message)
+            self.assertIn("both project_id and concept_approval_id", message)
 
     def test_nested_frontmatter_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -937,7 +812,7 @@ class ResearchPhaseContractTests(unittest.TestCase):
 
             self.assertEqual(result["warnings"], [])
             self.assertNotIn(
-                "research/idea-promotions/idea_promotion_luna_fit_001.json",
+                "campaigns/campaign_luna_fit_001/approvals/concept_approval_luna_fit_001.json",
                 checked,
             )
             self.assertFalse((workspace_dir / "projects").exists())
@@ -1012,7 +887,7 @@ class IdeaQueueValidationTests(unittest.TestCase):
     def test_manifest_naming_a_missing_entry_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            (workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json").unlink()
+            (workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json").unlink()
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
@@ -1021,19 +896,19 @@ class IdeaQueueValidationTests(unittest.TestCase):
     def test_manifest_status_mismatch_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+            queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
             manifest = json.loads(queue_path.read_text())
             manifest["entry_refs"][0]["status"] = "new"
             write_json(queue_path, manifest)
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("does not match entry file status", str(ctx.exception))
+            self.assertIn("does not match entry", str(ctx.exception))
 
     def test_dangling_evidence_ref_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry_path = workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             entry = json.loads(entry_path.read_text())
             entry["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
             write_json(entry_path, entry)
@@ -1045,7 +920,7 @@ class IdeaQueueValidationTests(unittest.TestCase):
     def test_entry_filename_must_match_entry_id(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            entries_dir = workspace_dir / "research" / "idea-queue" / "entries"
+            entries_dir = workspace_dir / "research" / "content-opportunity-queue" / "entries"
             (entries_dir / f"{ENTRY_ID}.json").rename(entries_dir / "wrong-name.json")
 
             with self.assertRaises(ValidationError) as ctx:
@@ -1055,7 +930,7 @@ class IdeaQueueValidationTests(unittest.TestCase):
     def test_status_counts_mismatch_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+            queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
             manifest = json.loads(queue_path.read_text())
             manifest["status_counts"] = {"new": 99}
             write_json(queue_path, manifest)
@@ -1067,14 +942,14 @@ class IdeaQueueValidationTests(unittest.TestCase):
     def test_status_counts_omitting_a_present_status_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+            queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
             manifest = json.loads(queue_path.read_text())
             manifest["status_counts"] = {}
             write_json(queue_path, manifest)
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("omit statuses present in the queue", str(ctx.exception))
+            self.assertIn("status_counts omits", str(ctx.exception))
 
     def test_dangling_video_pack_ref_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1111,7 +986,7 @@ def add_second_run(workspace_dir, evidence_id="evidence_luna_fit_002", metric_id
     run["research_run_id"] = RUN_ID_2
     run["outputs"] = {
         "finding_ids": [],
-        "idea_queue_entry_ids": [],
+        "content_opportunity_ids": [],
         "evidence_ids": [evidence_id],
         "metric_snapshot_ids": [metric_id] if metric_id else [],
         "research_intelligence_updates": [],
@@ -1153,7 +1028,7 @@ def add_public_web_background_run(workspace_dir):
     run["material_update"] = False
     run["outputs"] = {
         "finding_ids": [],
-        "idea_queue_entry_ids": [],
+        "content_opportunity_ids": [],
         "evidence_ids": [evidence_id],
         "metric_snapshot_ids": [],
         "research_intelligence_updates": [],
@@ -1214,7 +1089,7 @@ def add_public_web_background_run(workspace_dir):
         evidence_ids=[evidence_id],
         metric_snapshot_ids=[],
         finding_ids=[],
-        idea_queue_entry_ids=[],
+        content_opportunity_ids=[],
         engagement_basis={
             "visible_metric_signal": "none",
             "cross_platform_validation": False,
@@ -1326,7 +1201,7 @@ class RunScopeConsistencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             add_second_run(workspace_dir)
-            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry_path = workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             entry = json.loads(entry_path.read_text())
             # The evidence lives in RUN_ID; the ref claims RUN_ID_2.
             entry["evidence_refs"][0]["research_run_id"] = RUN_ID_2
@@ -1342,7 +1217,7 @@ class RunScopeConsistencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             add_second_run(workspace_dir, metric_id="metric_snapshot_luna_fit_002")
-            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry_path = workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             entry = json.loads(entry_path.read_text())
             # The ref names RUN_ID, but this metric snapshot lives in RUN_ID_2.
             entry["evidence_refs"][0]["metric_snapshot_ids"].append(
@@ -1359,7 +1234,7 @@ class RunScopeConsistencyTests(unittest.TestCase):
     def test_dangling_source_finding_ref_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            entry_path = workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             entry = json.loads(entry_path.read_text())
             entry["source_finding_ids"] = ["finding_luna_fit_ghost"]
             write_json(entry_path, entry)
@@ -1386,13 +1261,18 @@ class RunScopeConsistencyTests(unittest.TestCase):
     def test_promotion_with_dangling_finding_ref_warns_for_human_approved(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+            # The finding refs the gate resolves now live on the concept the
+            # approval points to (ADR 0031).
+            concept_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "concepts"
+                / f"{CONCEPT_ID}.json"
             )
-            promotion = json.loads(promotion_path.read_text())
-            promotion["research_finding_ids"] = ["finding_luna_fit_ghost"]
-            write_json(promotion_path, promotion)
+            edit_json(
+                concept_path,
+                lambda concept: concept.__setitem__(
+                    "source_finding_ids", ["finding_luna_fit_ghost"]
+                ),
+            )
 
             result = validate_research(workspace_dir)
             self.assertEqual(len(result["warnings"]), 1)
@@ -1402,12 +1282,16 @@ class RunScopeConsistencyTests(unittest.TestCase):
     def test_promotion_with_dangling_finding_ref_fails_for_automated(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
+            # Future automated approval paths never get the human benefit of
+            # the doubt; simulate one past the schema's v1 approved_by enum.
             promotion["approved_by"] = "automation"
-            promotion["research_finding_ids"] = ["finding_luna_fit_ghost"]
+            concept = load_example("campaign-concept")
+            concept["status"] = "active"
+            concept["source_finding_ids"] = ["finding_luna_fit_ghost"]
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion, concept=concept)
             self.assertIn("finding_luna_fit_ghost", str(ctx.exception))
 
     def test_duplicate_evidence_id_across_runs_fails(self):
@@ -1423,15 +1307,23 @@ class RunScopeConsistencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             add_second_run(workspace_dir)
-            promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+            # The approval copies the concept's evidence package verbatim, so
+            # the mismatched extra ref must be appended to both records.
+            def append_mismatched_ref(record):
+                mismatched_ref = dict(record["evidence_refs"][0])
+                mismatched_ref["research_run_id"] = RUN_ID_2
+                record["evidence_refs"].append(mismatched_ref)
+
+            edit_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "concepts"
+                / f"{CONCEPT_ID}.json",
+                append_mismatched_ref,
             )
-            promotion = json.loads(promotion_path.read_text())
-            mismatched_ref = dict(promotion["evidence_refs"][0])
-            mismatched_ref["research_run_id"] = RUN_ID_2
-            promotion["evidence_refs"].append(mismatched_ref)
-            write_json(promotion_path, promotion)
+            edit_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / f"{APPROVAL_ID}.json",
+                append_mismatched_ref,
+            )
 
             result = validate_research(workspace_dir)
             self.assertEqual(len(result["warnings"]), 1)
@@ -1441,12 +1333,15 @@ class RunScopeConsistencyTests(unittest.TestCase):
     def test_promotion_ref_run_mismatch_fails_for_automated(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             promotion["approved_by"] = "automation"
             promotion["evidence_refs"][0]["research_run_id"] = RUN_ID_2
+            concept = load_example("campaign-concept")
+            concept["status"] = "active"
+            concept["evidence_refs"][0]["research_run_id"] = RUN_ID_2
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion, concept=concept)
             self.assertIn("unresolved evidence refs", str(ctx.exception))
 
 
@@ -1458,21 +1353,26 @@ class PromotionGateTests(unittest.TestCase):
             result = validate_research(workspace_dir)
             self.assertEqual(result["warnings"], [])
             self.assertIn(
-                "research/idea-promotions/idea_promotion_luna_fit_001.json",
+                "campaigns/campaign_luna_fit_001/approvals/concept_approval_luna_fit_001.json",
                 result["checked_paths"],
             )
 
-    def test_promotion_without_real_queue_entry_fails(self):
+    def test_approval_without_real_concept_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            # Clear the warning that also targets the entry, so the promotion
-            # gate failure is what fires.
-            (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
-            (workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json").unlink()
+            # The example warning resolves through the concept and would
+            # fail first; clear the stream so the gate failure fires.
+            write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
+            (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json"
+            ).unlink()
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
-            self.assertIn("does not point to a real idea queue entry", str(ctx.exception))
+            self.assertIn(
+                "does not point to a real campaign concept", str(ctx.exception)
+            )
 
     def test_unresolved_only_evidence_fails_scheduled_human_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1482,12 +1382,17 @@ class PromotionGateTests(unittest.TestCase):
             # path is for refs that do not resolve in an otherwise valid
             # workspace.
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             )
-            promotion = json.loads(promotion_path.read_text())
-            promotion["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
-            write_json(promotion_path, promotion)
+            concept_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json"
+            )
+            for path in (promotion_path, concept_path):
+                record = json.loads(path.read_text())
+                record["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
+                write_json(path, record)
 
             with self.assertRaisesRegex(
                 ValidationError, "focused scheduled_needs run"
@@ -1498,14 +1403,19 @@ class PromotionGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             )
-            promotion = json.loads(promotion_path.read_text())
-            unresolved_ref = dict(promotion["evidence_refs"][0])
-            unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
-            promotion["evidence_refs"].append(unresolved_ref)
-            write_json(promotion_path, promotion)
+            concept_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json"
+            )
+            for path in (promotion_path, concept_path):
+                record = json.loads(path.read_text())
+                unresolved_ref = dict(record["evidence_refs"][0])
+                unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
+                record["evidence_refs"].append(unresolved_ref)
+                write_json(path, record)
 
             result = validate_research(workspace_dir)
 
@@ -1521,27 +1431,27 @@ class PromotionGateTests(unittest.TestCase):
             edit_json(run_path, lambda run: run.__setitem__("schedule_slot_ids", []))
             edit_json(plan_path, lambda plan: plan.__setitem__("schedule_slot_ids", []))
 
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             unresolved_ref = dict(promotion["evidence_refs"][0])
             unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
             promotion["evidence_refs"].append(unresolved_ref)
+            concept = load_example("campaign-concept")
+            concept["status"] = "active"
+            concept["evidence_refs"] = [dict(ref) for ref in promotion["evidence_refs"]]
 
             with self.assertRaisesRegex(
                 ValidationError, "focused scheduled_needs run"
             ):
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion, concept=concept)
 
-    def test_promotion_cannot_inject_slot_research_absent_from_queue_entry(self):
+    def test_approval_cannot_inject_research_absent_from_concept(self):
+        # The old injected-run rule generalizes: an approval carries its
+        # concept's research package verbatim, so research the concept never
+        # cited cannot enter at the approval.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             add_second_run(workspace_dir)
-            edit_json(
-                workspace_dir / "content-schedule.json",
-                lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
-                    research_run_ids=[RUN_ID_2]
-                ),
-            )
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             promotion["evidence_refs"] = [{
                 "research_run_id": RUN_ID_2,
                 "evidence_id": "evidence_luna_fit_002",
@@ -1550,9 +1460,9 @@ class PromotionGateTests(unittest.TestCase):
             }]
 
             with self.assertRaisesRegex(
-                ValidationError, "queue entry does not cite that run"
+                ValidationError, "does not match concept"
             ):
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
 
     def test_unresolved_video_pack_warns_for_human_approved_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1564,21 +1474,26 @@ class PromotionGateTests(unittest.TestCase):
             # Keep the queue entry resolvable so only the promotion gate trips:
             # the entry's own pack ref would fail validate_queue, not this path.
             entry_path = (
-                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+                workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             )
             entry = json.loads(entry_path.read_text())
             entry["evidence_refs"][0].pop("video_understanding_pack_ids", None)
             write_json(entry_path, entry)
 
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             )
-            promotion = json.loads(promotion_path.read_text())
-            valid_ref = dict(promotion["evidence_refs"][0])
-            valid_ref.pop("video_understanding_pack_ids", None)
-            promotion["evidence_refs"].append(valid_ref)
-            write_json(promotion_path, promotion)
+            concept_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json"
+            )
+            for path in (promotion_path, concept_path):
+                record = json.loads(path.read_text())
+                valid_ref = dict(record["evidence_refs"][0])
+                valid_ref.pop("video_understanding_pack_ids", None)
+                record["evidence_refs"].append(valid_ref)
+                write_json(path, record)
 
             result = validate_research(workspace_dir)
             self.assertEqual(len(result["warnings"]), 1)
@@ -1588,12 +1503,12 @@ class PromotionGateTests(unittest.TestCase):
     def test_promotion_approving_no_supported_format_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             # Simulate a future format past the schema, like the automation case.
             promotion["approved_formats"] = ["format_podcast"]
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
             self.assertIn("no production-supported format", str(ctx.exception))
 
     def test_text_formats_are_production_supported(self):
@@ -1604,11 +1519,11 @@ class PromotionGateTests(unittest.TestCase):
             with self.subTest(format_id=format_id):
                 with tempfile.TemporaryDirectory() as temp_dir:
                     workspace_dir = scaffold_research_workspace(temp_dir)
-                    promotion = load_example("idea-promotion")
+                    promotion = load_example("concept-approval")
                     promotion["approved_formats"] = [format_id]
                     promotion["approved_platforms"] = [platform]
 
-                    result = validate_promotion_gate(workspace_dir, promotion)
+                    result = validate_approval_gate(workspace_dir, promotion)
 
                     self.assertEqual(result, [])
 
@@ -1616,13 +1531,13 @@ class PromotionGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             (workspace_dir / "research" / "runs" / RUN_ID / "evidence.jsonl").unlink()
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             # Future automated promotion paths never get the human benefit of
             # the doubt; simulate one past the schema's v1 enum.
             promotion["approved_by"] = "automation"
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
             self.assertIn("unresolved evidence refs", str(ctx.exception))
 
 
@@ -1667,10 +1582,10 @@ class CreatorScopeTests(unittest.TestCase):
     def test_foreign_creator_promotion_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             promotion["creator_profile_id"] = "creator_other"
             write_json(
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json",
                 promotion,
             )
 
@@ -1681,10 +1596,10 @@ class CreatorScopeTests(unittest.TestCase):
     def test_foreign_creator_queue_entry_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            entry = load_example("idea-queue-entry")
+            entry = load_example("content-opportunity")
             entry["creator_profile_id"] = "creator_other"
             write_json(
-                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json",
+                workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json",
                 entry,
             )
 
@@ -1695,32 +1610,32 @@ class CreatorScopeTests(unittest.TestCase):
     def test_promotion_pointing_to_foreign_creator_entry_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promotion = load_example("idea-promotion")
+            promotion = load_example("concept-approval")
             # The gate compares entry ownership to the promotion directly, so
             # the check also protects validate_project's call path.
             promotion["creator_profile_id"] = "creator_other"
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
             self.assertIn("owned by a different creator", str(ctx.exception))
 
 
-PROMOTION_ID = "idea_promotion_luna_fit_001"
+PROMOTION_ID = "concept_approval_luna_fit_001"
 PROJECT_ID = "project_luna_tiny_reset_001"
 
 
 def set_entry_status(workspace_dir, status):
     """Flip the scaffold entry's status with the manifest kept consistent."""
     entry_path = (
-        workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+        workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
     )
     entry = json.loads(entry_path.read_text())
     entry["status"] = status
     write_json(entry_path, entry)
-    queue_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    queue_path = workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
     queue = json.loads(queue_path.read_text())
     for ref in queue["entry_refs"]:
-        if ref["idea_queue_entry_id"] == ENTRY_ID:
+        if ref["content_opportunity_id"] == ENTRY_ID:
             ref["status"] = status
     queue["status_counts"] = {status: 1}
     write_json(queue_path, queue)
@@ -1739,15 +1654,15 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
 
     def promotion_path(self, workspace_dir, promotion_id=PROMOTION_ID):
         return (
-            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+            workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / f"{promotion_id}.json"
         )
 
     def entry_path(self, workspace_dir):
         return (
-            workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
         )
 
-    def test_active_promotion_requires_promoted_entry_status(self):
+    def test_non_assigned_entry_rejects_linked_concepts_on_research_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             set_entry_status(workspace_dir, "shortlisted")
@@ -1755,7 +1670,7 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("active", message)
+            self.assertIn("links concept", message)
             self.assertIn("'shortlisted'", message)
 
     def test_active_promotion_requires_entry_backlink(self):
@@ -1763,12 +1678,12 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             workspace_dir = scaffold_research_workspace(temp_dir)
             edit_json(
                 self.entry_path(workspace_dir),
-                lambda entry: entry.__setitem__("linked_idea_promotion_ids", []),
+                lambda entry: entry.__setitem__("linked_campaign_concept_ids", []),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
-            self.assertIn("linked_idea_promotion_ids", str(ctx.exception))
+            self.assertIn("linked_campaign_concept_ids", str(ctx.exception))
 
     def test_promotion_created_projects_must_resolve(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1794,7 +1709,7 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             edit_json(
                 workspace_dir / "projects" / PROJECT_ID / "project.json",
                 lambda project: project["source_refs"].__setitem__(
-                    "idea_promotion_id", "idea_promotion_luna_fit_other"
+                    "concept_approval_id", "idea_promotion_luna_fit_other"
                 ),
             )
 
@@ -1807,84 +1722,103 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             workspace_dir = scaffold_research_workspace(temp_dir)
             edit_json(
                 self.entry_path(workspace_dir),
-                lambda entry: entry.__setitem__("linked_idea_promotion_ids", []),
+                lambda entry: entry.__setitem__("linked_campaign_concept_ids", []),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("linked_idea_promotion_ids is empty", str(ctx.exception))
+            self.assertIn("linked_campaign_concept_ids is empty", str(ctx.exception))
 
-    def test_promoted_entry_requires_an_active_promotion(self):
+    def test_active_approval_requires_active_concept(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             edit_json(
-                self.promotion_path(workspace_dir),
-                lambda promo: promo.__setitem__("promotion_status", "cancelled"),
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                lambda concept: concept.__setitem__("status", "ready_for_approval"),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("no linked promotion is active", str(ctx.exception))
+            self.assertIn("requires the concept to be 'active'", str(ctx.exception))
 
-    def test_promoted_entry_rejects_second_active_promotion(self):
+    def test_concept_accepts_a_later_additional_active_approval(self):
+        # One unchanged concept may receive later approvals for additional
+        # projects (campaign-concept-pressure plan); both stay active.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            second = load_example("idea-promotion")
-            second["idea_promotion_id"] = "idea_promotion_luna_fit_002"
-            second["project_ids_created"] = []
+            second_project = load_example("project")
+            second_project["project_id"] = "project_luna_tiny_reset_002"
+            second_project["project_slug"] = "tiny-reset-second"
+            second_project["project_paths"] = dict(
+                second_project["project_paths"], root="projects/tiny-reset-second/"
+            )
+            second_project["source_refs"] = dict(
+                second_project["source_refs"],
+                concept_approval_id="concept_approval_luna_fit_002",
+            )
             write_json(
-                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                workspace_dir / "projects" / "tiny-reset-second" / "project.json",
+                second_project,
+            )
+            second = load_example("concept-approval")
+            second["concept_approval_id"] = "concept_approval_luna_fit_002"
+            second["project_ids_created"] = ["project_luna_tiny_reset_002"]
+            second.pop("schedule_slot_ids", None)
+            write_json(
+                self.promotion_path(workspace_dir, "concept_approval_luna_fit_002"),
+                second,
+            )
+
+            validate_queue(workspace_dir)
+            validate_research(workspace_dir)
+
+    def test_entry_linked_concept_must_source_this_entry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            second = load_example("campaign-concept")
+            second["campaign_concept_id"] = "campaign_concept_luna_fit_002"
+            second["source_content_opportunity_id"] = (
+                "content_opportunity_luna_fit_other"
+            )
+            write_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_002.json",
                 second,
             )
             edit_json(
                 self.entry_path(workspace_dir),
-                lambda entry: entry["linked_idea_promotion_ids"].append(
-                    "idea_promotion_luna_fit_002"
+                lambda entry: entry["linked_campaign_concept_ids"].append(
+                    "campaign_concept_luna_fit_002"
                 ),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("supersede", str(ctx.exception))
+            self.assertIn("was assigned from", str(ctx.exception))
 
-    def test_entry_linked_promotion_must_name_entry(self):
+    def test_unlisted_project_referencing_approval_fails_queue_path(self):
+        # The approval authorizes an exact project set: a project locking
+        # the approval without being listed is a partial set (ADR 0029).
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            second = load_example("idea-promotion")
-            second["idea_promotion_id"] = "idea_promotion_luna_fit_002"
-            second["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
-            second["promotion_status"] = "cancelled"
-            second["project_ids_created"] = []
+            stray = load_example("project")
+            stray["project_id"] = "project_luna_stray"
+            stray["project_slug"] = "stray-slug"
+            stray["project_paths"] = dict(
+                stray["project_paths"], root="projects/stray-slug/"
+            )
             write_json(
-                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
-                second,
-            )
-            edit_json(
-                self.entry_path(workspace_dir),
-                lambda entry: entry["linked_idea_promotion_ids"].append(
-                    "idea_promotion_luna_fit_002"
-                ),
-            )
-
-            with self.assertRaises(ValidationError) as ctx:
-                validate_queue(workspace_dir)
-            self.assertIn("was promoted from", str(ctx.exception))
-
-    def test_entry_linked_projects_must_resolve(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir = scaffold_research_workspace(temp_dir)
-            edit_json(
-                self.entry_path(workspace_dir),
-                lambda entry: entry["linked_project_ids"].append("project_luna_ghost"),
+                workspace_dir / "projects" / "stray-slug" / "project.json", stray
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("project_luna_ghost", message)
-            self.assertIn("no project record", message)
+            self.assertIn("project_luna_stray", message)
+            self.assertIn("exact project set does not list it", message)
 
-    def test_non_promoted_entry_rejects_active_linked_promotion(self):
+    def test_non_assigned_entry_rejects_linked_concepts_on_queue_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             set_entry_status(workspace_dir, "shortlisted")
@@ -1893,16 +1827,25 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
                 validate_queue(workspace_dir)
             message = str(ctx.exception)
             self.assertIn("'shortlisted'", message)
-            self.assertIn("active", message)
+            self.assertIn("links concept", message)
 
-    def test_cancelled_promotion_allows_reverted_entry(self):
+    def test_cancelled_approval_allows_reverted_opportunity(self):
+        # Reverting an assignment retires the concept and reopens the
+        # opportunity; the cancelled approval imposes nothing at rest.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             edit_json(
                 self.promotion_path(workspace_dir),
-                lambda promo: promo.__setitem__("promotion_status", "cancelled"),
+                lambda promo: promo.__setitem__("approval_status", "cancelled"),
             )
-            set_entry_status(workspace_dir, "shortlisted")
+            edit_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                lambda concept: concept.__setitem__("status", "retired"),
+            )
+            entry = set_entry_status(workspace_dir, "shortlisted")
+            entry["linked_campaign_concept_ids"] = []
+            write_json(self.entry_path(workspace_dir), entry)
 
             validate_research(workspace_dir)
             validate_queue(workspace_dir)
@@ -1932,28 +1875,23 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
                 validate_research(workspace_dir)
             self.assertIn("more than once", str(ctx.exception))
 
-    def test_promoted_entry_requires_a_linked_project(self):
-        # Slice 5 review P1: an active supported-format promotion with
-        # project_ids_created [] and no entry project links validated,
-        # leaving the promotion-to-project path unenforced.
+    def test_approval_requires_a_nonempty_project_set(self):
+        # An approval that creates no production work is invalid state: the
+        # exact project set never authorizes zero projects (ADR 0029).
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             edit_json(
                 self.promotion_path(workspace_dir),
                 lambda promo: promo.__setitem__("project_ids_created", []),
             )
-            edit_json(
-                self.entry_path(workspace_dir),
-                lambda entry: entry.pop("linked_project_ids"),
-            )
             shutil.rmtree(workspace_dir / "projects")
             write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("no linked project", str(ctx.exception))
+            self.assertIn("project_ids_created", str(ctx.exception))
 
-    def test_linked_project_promotion_must_be_linked_to_entry(self):
+    def test_unlisted_project_referencing_approval_fails_research_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             stray = load_example("project")
@@ -1962,24 +1900,17 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             stray["project_paths"] = dict(
                 stray["project_paths"], root="projects/other-slug/"
             )
-            stray["source_refs"] = dict(
-                stray["source_refs"], idea_promotion_id="idea_promotion_luna_fit_other"
-            )
             write_json(
                 workspace_dir / "projects" / "other-slug" / "project.json", stray
             )
-            edit_json(
-                self.entry_path(workspace_dir),
-                lambda entry: entry["linked_project_ids"].append("project_luna_other"),
-            )
 
             with self.assertRaises(ValidationError) as ctx:
-                validate_queue(workspace_dir)
+                validate_research(workspace_dir)
             message = str(ctx.exception)
             self.assertIn("project_luna_other", message)
-            self.assertIn("not among the entry's linked promotions", message)
+            self.assertIn("exact project set does not list it", message)
 
-    def test_promotion_created_projects_must_be_linked_on_entry(self):
+    def test_listed_project_requires_commercial_expression(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             second = load_example("project")
@@ -1988,6 +1919,7 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             second["project_paths"] = dict(
                 second["project_paths"], root="projects/tiny-reset-second/"
             )
+            second.pop("commercial_expression")
             write_json(
                 workspace_dir / "projects" / "tiny-reset-second" / "project.json",
                 second,
@@ -2003,7 +1935,7 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
                 validate_queue(workspace_dir)
             message = str(ctx.exception)
             self.assertIn("project_luna_tiny_reset_002", message)
-            self.assertIn("linked_project_ids", message)
+            self.assertIn("commercial_expression", message)
 
     def test_active_promotion_slot_claim_must_resolve(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2055,43 +1987,44 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             edit_json(
                 workspace_dir / "content-schedule.json",
                 lambda schedule: schedule["calendar_slots"][0]["research_state"].update(
-                    selected_idea_queue_entry_id="idea_queue_entry_luna_fit_other"
+                    selected_content_opportunity_id="content_opportunity_luna_fit_other"
                 ),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("selected idea_queue_entry_luna_fit_other", message)
-            self.assertIn(ENTRY_ID, message)
+            self.assertIn("selected a different opportunity or concept", message)
 
-    def test_slot_claimed_by_two_active_promotions_fails(self):
+    def test_slot_claimed_by_two_active_approvals_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            second_entry = load_example("idea-queue-entry")
-            second_entry["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
-            second_entry["linked_idea_promotion_ids"] = [
-                "idea_promotion_luna_fit_002"
-            ]
-            second_entry["linked_project_ids"] = []
-            write_json(
-                workspace_dir / "research" / "idea-queue" / "entries"
-                / "idea_queue_entry_luna_fit_002.json",
-                second_entry,
+            second_project = load_example("project")
+            second_project["project_id"] = "project_luna_tiny_reset_002"
+            second_project["project_slug"] = "tiny-reset-second"
+            second_project["project_paths"] = dict(
+                second_project["project_paths"], root="projects/tiny-reset-second/"
             )
-            second_promo = load_example("idea-promotion")
-            second_promo["idea_promotion_id"] = "idea_promotion_luna_fit_002"
-            second_promo["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
-            second_promo["project_ids_created"] = []
+            second_project["source_refs"] = dict(
+                second_project["source_refs"],
+                concept_approval_id="concept_approval_luna_fit_002",
+            )
             write_json(
-                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                workspace_dir / "projects" / "tiny-reset-second" / "project.json",
+                second_project,
+            )
+            second_promo = load_example("concept-approval")
+            second_promo["concept_approval_id"] = "concept_approval_luna_fit_002"
+            second_promo["project_ids_created"] = ["project_luna_tiny_reset_002"]
+            write_json(
+                self.promotion_path(workspace_dir, "concept_approval_luna_fit_002"),
                 second_promo,
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
             message = str(ctx.exception)
-            self.assertIn("claimed by more than one active promotion", message)
+            self.assertIn("claimed by more than one active approval", message)
 
     def test_cancelled_promotion_keeps_historical_slot_claim(self):
         # The schedule is mutable planning state: a freed slot may reopen or
@@ -2101,11 +2034,18 @@ class PromotionLinkConsistencyTests(unittest.TestCase):
             edit_json(
                 self.promotion_path(workspace_dir),
                 lambda promo: promo.update(
-                    promotion_status="cancelled",
+                    approval_status="cancelled",
                     schedule_slot_ids=["slot_luna_ghost"],
                 ),
             )
-            set_entry_status(workspace_dir, "shortlisted")
+            edit_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                lambda concept: concept.__setitem__("status", "retired"),
+            )
+            entry = set_entry_status(workspace_dir, "shortlisted")
+            entry["linked_campaign_concept_ids"] = []
+            write_json(self.entry_path(workspace_dir), entry)
 
             validate_research(workspace_dir)
 
@@ -2117,7 +2057,7 @@ class ValidatorPathParityTests(unittest.TestCase):
 
     def promotion_path(self, workspace_dir, promotion_id=PROMOTION_ID):
         return (
-            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+            workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / f"{promotion_id}.json"
         )
 
     def test_queue_rejects_superseded_promotion_with_dangling_entry(self):
@@ -2126,21 +2066,20 @@ class ValidatorPathParityTests(unittest.TestCase):
         # queue while validate research rejected it.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            promo2 = load_example("idea-promotion")
-            promo2["idea_promotion_id"] = "idea_promotion_luna_fit_002"
-            promo2["promotion_status"] = "superseded"
-            promo2["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_ghost"
-            promo2["project_ids_created"] = []
+            promo2 = load_example("concept-approval")
+            promo2["concept_approval_id"] = "concept_approval_luna_fit_002"
+            promo2["approval_status"] = "superseded"
+            promo2["campaign_concept_id"] = "campaign_concept_luna_fit_ghost"
             promo2["schedule_slot_ids"] = []
             write_json(
-                self.promotion_path(workspace_dir, "idea_promotion_luna_fit_002"),
+                self.promotion_path(workspace_dir, "concept_approval_luna_fit_002"),
                 promo2,
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
             self.assertIn(
-                "does not point to a real idea queue entry", str(ctx.exception)
+                "does not point to a real campaign concept", str(ctx.exception)
             )
 
     def test_queue_rejects_foreign_creator_promotion(self):
@@ -2167,7 +2106,7 @@ class ValidatorPathParityTests(unittest.TestCase):
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_queue(workspace_dir)
-            self.assertIn("filename does not match idea_promotion_id", str(ctx.exception))
+            self.assertIn("filename does not match concept_approval_id", str(ctx.exception))
 
     def test_queue_rejects_dangling_slot_claim(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2189,40 +2128,36 @@ class ValidatorPathParityTests(unittest.TestCase):
         # channel at all.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            def append_unresolved_ref(promo):
-                unresolved_ref = dict(promo["evidence_refs"][0])
+            def append_unresolved_ref(record):
+                unresolved_ref = dict(record["evidence_refs"][0])
                 unresolved_ref["evidence_id"] = "evidence_luna_fit_never_existed"
-                promo["evidence_refs"].append(unresolved_ref)
+                record["evidence_refs"].append(unresolved_ref)
 
             edit_json(self.promotion_path(workspace_dir), append_unresolved_ref)
+            edit_json(
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                append_unresolved_ref,
+            )
 
             result = validate_queue(workspace_dir)
             self.assertTrue(result["warnings"])
             self.assertIn("unresolved evidence refs", result["warnings"][0])
 
-    def test_research_path_enforces_entry_closure(self):
-        # The slice 5 P1 closure (a promoted entry must leave production
-        # work behind) previously lived only in validate_queue; an active
-        # promotion with zero projects passed validate research.
+    def test_research_path_enforces_active_concept(self):
+        # Approval checks run identically on both paths: an active approval
+        # over a non-active concept fails the research path too.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
-            write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [])
-            shutil.rmtree(workspace_dir / "projects" / PROJECT_ID)
             edit_json(
-                self.promotion_path(workspace_dir),
-                lambda promo: promo.__setitem__("project_ids_created", []),
-            )
-            entry_path = (
-                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
-            )
-            edit_json(
-                entry_path,
-                lambda entry: entry.__setitem__("linked_project_ids", []),
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                lambda concept: concept.__setitem__("status", "ready_for_approval"),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_research(workspace_dir)
-            self.assertIn("no linked project", str(ctx.exception))
+            self.assertIn("requires the concept to be 'active'", str(ctx.exception))
 
 
 class ResearchRecordLinkageTests(unittest.TestCase):
@@ -2291,7 +2226,7 @@ class ResearchRecordLinkageTests(unittest.TestCase):
                 ),
             )
             entry_path = (
-                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+                workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             )
             edit_json(
                 entry_path,

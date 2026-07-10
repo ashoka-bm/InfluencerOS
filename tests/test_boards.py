@@ -41,7 +41,7 @@ class RebuildBoardTests(unittest.TestCase):
             (workspace_dir / "boards" / "content-board.json").unlink()
 
             result = rebuild_board(workspace_dir)
-            self.assertEqual(result["idea_cards"], 1)
+            self.assertEqual(result["opportunity_cards"], 1)
             self.assertEqual(result["project_cards"], 1)
 
             board = load_board(workspace_dir)
@@ -51,8 +51,8 @@ class RebuildBoardTests(unittest.TestCase):
 
             cards = {card["content_card_id"]: card for card in board["cards"]}
             idea = cards[IDEA_CARD]
-            self.assertEqual(idea["card_type"], "idea")
-            self.assertEqual(idea["status"], "promoted")
+            self.assertEqual(idea["card_type"], "opportunity")
+            self.assertEqual(idea["status"], "assigned")
             self.assertEqual(idea["child_card_ids"], [PROJECT_CARD])
             # The example warning targets promoted work, so the badge belongs
             # to the project card, not the parent idea card.
@@ -93,14 +93,14 @@ class RebuildBoardTests(unittest.TestCase):
             workspace_dir = scaffold_indexable_workspace(temp_dir)
             rebuild_board(workspace_dir)
 
-            entry = load_example("idea-queue-entry")
-            entry["idea_queue_entry_id"] = "idea_queue_entry_luna_fit_002"
+            entry = load_example("content-opportunity")
+            entry["content_opportunity_id"] = "content_opportunity_luna_fit_002"
             entry["status"] = "new"
-            entry.pop("linked_idea_promotion_ids", None)
+            entry.pop("linked_campaign_concept_ids", None)
             entry.pop("linked_project_ids", None)
             write_json(
-                workspace_dir / "research" / "idea-queue" / "entries"
-                / "idea_queue_entry_luna_fit_002.json",
+                workspace_dir / "research" / "content-opportunity-queue" / "entries"
+                / "content_opportunity_luna_fit_002.json",
                 entry,
             )
 
@@ -108,7 +108,7 @@ class RebuildBoardTests(unittest.TestCase):
             board = load_board(workspace_dir)
             self.assertEqual(
                 board["manual_order"],
-                [IDEA_CARD, PROJECT_CARD, "card_idea_queue_entry_luna_fit_002"],
+                [IDEA_CARD, PROJECT_CARD, "card_content_opportunity_luna_fit_002"],
             )
 
     def test_rebuild_drops_stale_cards(self):
@@ -146,7 +146,7 @@ class RebuildBoardTests(unittest.TestCase):
             workspace_dir = scaffold_indexable_workspace(temp_dir)
             warning = load_example("project-warning")
             warning.pop("project_id")
-            warning.pop("idea_promotion_id")
+            warning.pop("concept_approval_id")
             warning["severity"] = "urgent"
             write_jsonl(
                 workspace_dir / "system" / "project-warnings.jsonl", [warning]
@@ -185,13 +185,13 @@ class RebuildBoardTests(unittest.TestCase):
             # parent-resolution failure is what fires.
             (workspace_dir / "system" / "project-warnings.jsonl").write_text("")
             (
-                workspace_dir / "research" / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json"
             ).unlink()
 
             with self.assertRaises(ValidationError) as ctx:
                 rebuild_board(workspace_dir)
-            self.assertIn("cannot resolve its parent idea card", str(ctx.exception))
+            self.assertIn("cannot resolve its parent card", str(ctx.exception))
 
 
 class ValidateBoardTests(unittest.TestCase):
@@ -200,7 +200,7 @@ class ValidateBoardTests(unittest.TestCase):
             workspace_dir = scaffold_indexable_workspace(temp_dir)
             rebuild_board(workspace_dir)
             entry_path = (
-                workspace_dir / "research" / "idea-queue" / "entries"
+                workspace_dir / "research" / "content-opportunity-queue" / "entries"
                 / f"{ENTRY_ID}.json"
             )
             entry = json.loads(entry_path.read_text())

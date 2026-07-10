@@ -98,8 +98,8 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | `create-reference-library` | setup | User-reviewed `references/visual-continuity-plan.json`, selected `references/reference-library.json` assets + prompts. | [BUILT] |
 | `elevenlabs-voice-design` | setup | Human-in-the-loop ElevenLabs Voice Design prompt files under `references/voice/`; no provider call. | [BUILT] |
 | `create-research-findings` | planning | Concise Research Findings backed by dated evidence. | [BUILT — Phase 1 slice 4] |
-| `manage-idea-queue` | planning | Scored Idea Queue entries. | [BUILT — Phase 1 slice 4] |
-| `promote-idea` | planning | Human-approved Idea Promotion and project creation. | [BUILT — Phase 1 slice 5] |
+| `manage-opportunity-queue` | planning | Scored Content Opportunity entries. | [BUILT — Phase 1 slice 4; ADR 0031 cutover] |
+| `approve-concept` | planning | Human-approved Concept Approval, commercial ceilings, and exact project-set creation. | [BUILT — Phase 1 slice 5; ADR 0031 cutover] |
 | `apply-social-template` | planning | Applied Social Template or production structure for the promoted idea. | [BUILT — Phase 1 slice 6] |
 | `create-production-plan` | planning | Routes promoted idea to a format-specific plan. | [BUILT — Phase 1 slice 6] |
 | `create-output-package` | planning | Output Package + provenance. | [BUILT — Phase 1 slice 7] |
@@ -173,9 +173,9 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
   Phase 1  Creator Profile, Strategy, Schedule             owner: influencer-os (inline)         [BUILT]
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
   Phase 3  Research Findings           -> Skill(create-research-findings)                         [BUILT]
-  Phase 4  Idea Queue                   -> Skill(manage-idea-queue)                                [BUILT]
-  Phase 5  Idea Promotion Gate          -> Skill(promote-idea) + user approval                    [BUILT]
-  Phase 6  Project Creation             -> Skill(promote-idea) (a promotion creates Projects)     [BUILT]
+  Phase 4  Opportunity Queue            -> Skill(manage-opportunity-queue)                         [BUILT]
+  Phase 5  Concept Approval Gate        -> Skill(approve-concept) + user approval                 [BUILT]
+  Phase 6  Project Creation             -> Skill(approve-concept) (exact approved project set)    [BUILT]
   Phase 7  Applied Template/Structure   -> Skill(apply-social-template)                            [BUILT]
   Phase 8  Format-Specific Prod Plan    -> Skill(create-production-plan) --routes by target_format_id-->
              format_short_form_video -> MicroJourneyVideoPlan (+ BaseVideoGenerationPlan)

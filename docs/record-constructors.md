@@ -42,30 +42,32 @@ pipeline. A stale stage fails closed and is re-staged, never patched.
 
 ## 1. Project Manifest (`scaffold project`)
 
-Upstream input: the locked IdeaPromotion, named by the seed's
-`idea_promotion_id` (or owned by the bundle in section 2). Standalone
-scaffolding takes the promotion's single unclaimed pre-listed project id
+Upstream input: the locked ConceptApproval, named by the seed's
+`concept_approval_id` (or owned by the bundle in section 2). Standalone
+scaffolding takes the approval's single unclaimed pre-listed project id
 (pin `project_id` in the seed when several are unclaimed); a project the
-promotion never listed needs a new promotion package, not a scaffold.
+approval never listed needs a new approval package, not a scaffold.
 
 | Field | Class | Rule |
 | --- | --- | --- |
-| `idea_promotion_id` | authored | Names the upstream promotion (the one seed field that is also copied into `source_refs`) |
+| `concept_approval_id` | authored | Names the upstream approval (the one seed field that is also copied into `source_refs`) |
 | `project_slug` | authored | |
 | `content_unit_type` | authored | Must map to a production-supported format |
 | `platform_targets` | authored | Surface-level targets (e.g. `youtube_shorts`); advisory platform-fit warning unchanged |
 | `learning_goal` | authored | Derived from intended payoff and measurement expectation |
 | `acceptance_criteria` | authored | |
+| `commercial_expression` | authored | One Concept-approved commercial function plus exact offer integration and CTA intensity at or below the approval ceilings (ADR 0030) |
 | `constraints`, `dependencies`, `notes` | authored | Optional |
 | `source_refs.reference_asset_ids` | authored | Asset selection is a judgment call |
 | `project_id` | derived | `project_<creator>_<slug-ish>_<seq>`; seed may pin |
 | `creator_profile_id` | derived | From the workspace profile |
 | `created_on` | derived | Today |
 | `status` | derived | `created` |
-| `target_formats` | derived | Default `[format_<content_unit_type>]`; seed may override with a subset of the promotion's `approved_formats` |
+| `target_formats` | derived | Default `[format_<content_unit_type>]`; seed may override with a subset of the approval's `approved_formats` |
 | `project_paths` | derived | Constant block, identical for every project |
-| `source_refs.idea_promotion_id` | copied | The single upstream ref, from the seed's named promotion |
-| `source_refs.{idea_queue_entry_id, research_finding_ids, research_evidence_ids, metric_snapshot_ids, video_understanding_pack_ids}` | copied | Cached refs, lifted from the locked promotion (subsets by construction; empty ones omitted) |
+| `source_refs.concept_approval_id` | copied | The single upstream ref, from the seed's named approval |
+| `source_refs.{campaign_concept_id, campaign_id}` | copied | Cached chain ids; must match the transitive approval chain |
+| `source_refs.{research_finding_ids, research_evidence_ids, metric_snapshot_ids, video_understanding_pack_ids}` | copied | Cached refs, lifted from the locked approval and its concept (subsets by construction; empty ones omitted) |
 | `source_refs.evidence_brief_path` | derived | `evidence-brief.md` |
 
 The constructor subsumes today's `init-project` (directory scaffold,
@@ -76,7 +78,7 @@ Canonical seed:
 
 ```json
 {
-  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "concept_approval_id": "concept_approval_luna_fit_001",
   "project_slug": "tiny-reset-after-laptop-day",
   "content_unit_type": "short_form_video",
   "platform_targets": ["youtube_shorts", "instagram_reels", "tiktok"],
@@ -86,52 +88,56 @@ Canonical seed:
     "A validated micro-journey production plan exists for the short-form video format."
   ],
   "constraints": ["No provider-backed generation calls without explicit user approval."],
-  "notes": "Created from the locked lunch-break reset promotion."
+  "commercial_expression": {
+    "commercial_function": "lead_capture",
+    "offer_integration": "embedded",
+    "cta_intensity": "soft"
+  },
+  "notes": "Created from the locked lunch-break reset approval."
 }
 ```
 
-## 2. IdeaPromotion Bundle (`stage promotion` / `commit-stage`)
+## 2. ConceptApproval Bundle (`stage approval` / `commit-stage`)
 
-Upstream input: the promoted IdeaQueueEntry (`--entry <id>`), the content
-schedule, and the queue manifest. The bundle stages the promotion, one
-project per embedded project seed, evidence-brief skeletons, and the
-planned entry/slot/queue flips.
+Upstream input: the Campaign Concept being approved (`--concept <id>`,
+status `ready_for_approval` or `active`) and the content schedule. The
+bundle stages the approval, one project per embedded project seed,
+evidence-brief skeletons, and the planned concept/slot flips. One
+unchanged concept may receive later approvals for additional projects;
+earlier approvals stay active as the provenance lock for their projects.
 
 | Field | Class | Rule |
 | --- | --- | --- |
 | `approved_platforms` | authored | Subset choice presented at the gate |
 | `approved_formats` | authored | Subset choice; at least one production-supported |
-| `schedule_slot_ids` | authored | Slot claims (omitted for wildcards); slot-gate rules unchanged |
-| `creative_elements_to_carry_forward` | authored | Curated from the entry's creative notes |
+| `max_offer_integration`, `max_cta_intensity` | authored | Commercial-expression ceilings (ADR 0030) |
 | `approval_note` | authored | Only when the user volunteers one |
-| `projects` | authored | Embedded project seeds (section 1) |
-| `idea_promotion_id` | derived | Pattern + sequence |
+| `projects` | authored | Embedded project seeds (section 1, plus per-project `commercial_expression`, optional `schedule_slot_ids` — each slot hosts one project — and `evidence_brief`) |
+| `concept_approval_id` | derived | Pattern + sequence |
 | `creator_profile_id` | derived | From the workspace |
-| `promotion_status` | derived | `active` |
-| `project_ids_created` | derived | From the embedded project seeds (ids allocated at stage time, so the promotion lists them up front as `init-project` requires) |
-| `idea_queue_entry_id` | copied | The `--entry` argument |
-| `intended_payoff`, `intended_emotion`, `core_message` | copied | Verbatim from the entry (ADR 0024); an entry missing the intent pair blocks staging — fix the entry first |
-| `research_finding_ids` | copied | From the entry's `source_finding_ids` |
-| `evidence_refs` | copied | Entry's structured refs, verbatim shape |
-| `score_snapshot` | copied | Entry's eight scores + rationales, verbatim |
+| `approval_status` | derived | `active` |
+| `schedule_slot_ids` | derived | Union of the per-project slot claims |
+| `project_ids_created` | derived | From the embedded project seeds (ids allocated at stage time, so the approval lists its exact project set up front) |
+| `campaign_concept_id` | copied | The `--concept` argument |
+| `intended_payoff`, `intended_emotion`, `core_message` | copied | Verbatim from the concept (ADR 0024); a concept missing the intent pair blocks staging — fix the concept first |
+| `evidence_refs` | copied | Concept's structured refs, verbatim shape (the gate re-verifies the copy stayed verbatim) |
 | `approved_by` | stamped | `user`, at commit |
 | `approved_on` | stamped | Commit date (stage uses the staging date provisionally so drafts validate) |
 
-Commit-side flips (previously hand-sequenced by the skill, now owned by
-`commit-stage`, in construction order): write promotion → write projects →
-evidence briefs → entry flip (`status: promoted`, append
-`linked_idea_promotion_ids` / `linked_project_ids`, `updated_on`) → queue
-manifest `status_counts` → claimed slots to `filled` → validate → rebuild
-board and index.
+Commit-side flips (owned by `commit-stage`, in construction order): write
+approval → write projects → evidence briefs → concept flip
+(`status: active`, `updated_on`) → claimed slots to `filled` with their
+ownership refs (`campaign_id`, `campaign_concept_id`, `project_id`) →
+validate → rebuild board and index.
 
-Stage hashes cover: the entry file, the claimed slots' `research_state`,
-and the queue manifest row. Any change between stage and commit fails the
-commit closed.
+Stage hashes cover: the concept file and the claimed slots'
+`research_state`. Any change between stage and commit fails the commit
+closed.
 
 Present-from-draft: the skill presents the approval package from the staged
 records, so the human approves exactly the bytes that commit will write.
-Supersession and cancellation lifecycles are unchanged (new stage → new
-promotion; the old one flips to `superseded`).
+Supersession and cancellation lifecycles follow `approve-concept` (new
+stage → new approval; a replaced one flips to `superseded`).
 
 Canonical seed:
 
@@ -139,10 +145,8 @@ Canonical seed:
 {
   "approved_platforms": ["instagram", "tiktok", "youtube"],
   "approved_formats": ["format_short_form_video"],
-  "schedule_slot_ids": ["slot_2026_07_14_reel"],
-  "creative_elements_to_carry_forward": [
-    "Hook: open on the slumped-at-desk exhale before any speech."
-  ],
+  "max_offer_integration": "embedded",
+  "max_cta_intensity": "soft",
   "projects": [
     {
       "project_slug": "tiny-reset-after-laptop-day",
@@ -151,7 +155,13 @@ Canonical seed:
       "learning_goal": "Test whether a visible workday constraint plus a tiny relief routine improves early retention.",
       "acceptance_criteria": [
         "A validated micro-journey production plan exists for the short-form video format."
-      ]
+      ],
+      "commercial_expression": {
+        "commercial_function": "lead_capture",
+        "offer_integration": "embedded",
+        "cta_intensity": "soft"
+      },
+      "schedule_slot_ids": ["slot_luna_2026_07_09_midweek"]
     }
   ]
 }
@@ -203,7 +213,7 @@ typically as a background task started as soon as the plan exists.
 | `research_run_id`, `creator_profile_id`, `mode`, `scope`, `schedule_slot_ids`, `platforms` | copied | Verbatim from the search plan |
 | `started_on`, `completed_on` | derived | Plan creation time / now |
 | `outputs.{evidence_ids, metric_snapshot_ids}` | derived | Scanned from the run's ledgers, so the outputs↔JSONL closure holds by construction |
-| `outputs.idea_queue_entry_ids` | derived | Queue entries whose `evidence_refs` cite the run |
+| `outputs.content_opportunity_ids` | derived | Content opportunities whose `evidence_refs` cite the run |
 | `run_status` | derived | From `material_update` and error state |
 
 Canonical seed (plan):
@@ -340,7 +350,7 @@ replaces `stage promotion`/`commit-stage` at the workflow cutover.
 | --- | --- |
 | Creator session opens | `refresh-workspace <ws>` (background): validate all + index/lookup/board rebuilds |
 | Search plan written | `research-fetch --plan <plan> --run-dir <staged-run-dir>` (background): every connector-routable planned fetch runs concurrently; jobs derive only from adapters the plan marked `use_now` |
-| Promotion package about to be presented | `stage promotion` — draft bundle built while the human reads |
+| Approval package about to be presented | `stage approval` — draft bundle built while the human reads |
 | Any constructor write | Post-write validate + projection rebuilds, same invocation |
 
 Never anticipated: provider-backed generation, publishing, scheduling,

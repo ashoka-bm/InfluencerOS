@@ -113,9 +113,9 @@ between them and halts at every human gate.
 
 - Research runs and findings: `create-research-findings` (research runs are
   dated, sourced, platform-scoped; connectors feed evidence when keyed).
-- Idea queue: `manage-idea-queue` (scored, evidence-linked entries; never
+- Opportunity queue: `manage-opportunity-queue` (scored, evidence-linked entries; never
   promotes).
-- Promotion: `promote-idea` — **the human approval gate**. Nothing enters
+- Approval: `approve-concept` — **the human approval gate**. Nothing enters
   production without an explicit user-approved promotion package.
 - Production planning: `apply-social-template` and `create-production-plan`.
 - Packaging: `create-output-package` (its CLI seam is
@@ -151,6 +151,6 @@ fail by design, and a warning you cannot explain is a finding.
 - No publishing, scheduling, or platform posting — output packages are
   registered, publication is recorded manually after the fact
   (`register-published-post`).
-- No automated idea promotion and no provider call without an exact approval.
+- No automated concept approval and no provider call without an exact approval.
 - No scheduled/unattended research (deferred; ADR 0025).
 - No creator media, generated works, or `.env` contents committed to git.

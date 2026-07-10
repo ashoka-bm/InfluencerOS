@@ -63,7 +63,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "idea_promotion_id",
+        "concept_approval_id",
         "reference_asset_ids"
       ],
       "properties": {
@@ -73,14 +73,6 @@
             "type": "string",
             "pattern": "^asset_[a-zA-Z0-9_-]+$"
           }
-        },
-        "idea_promotion_id": {
-          "type": "string",
-          "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
-        },
-        "idea_queue_entry_id": {
-          "type": "string",
-          "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
         },
         "research_finding_ids": {
           "type": "array",
@@ -165,6 +157,14 @@
         "concept_approval_id": {
           "type": "string",
           "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
+        },
+        "campaign_concept_id": {
+          "type": "string",
+          "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$"
+        },
+        "campaign_id": {
+          "type": "string",
+          "pattern": "^campaign_[a-zA-Z0-9_-]+$"
         }
       }
     },

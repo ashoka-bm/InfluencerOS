@@ -19,7 +19,7 @@ Durable implementation work lives in the public repo: docs, schemas, tests, CLI 
 - Keep richer creator detail lazy-loaded: `brand_context/` holds identity, psychology, brand strategy, and voice samples.
 - Keep the Creator Profile typed but not bloated: `creator-profile.json` is the operational summary, while `brand_context/` holds richer detail.
 - Preserve provenance: source intakes and raw reference files stay available, but downstream records should point to them by stable IDs or paths instead of duplicating their contents.
-- Keep project work navigable: idea promotions, evidence briefs, plans, output packages, published records, and analytics live together under `projects/<project-id>/`.
+- Keep project work navigable: concept approvals, evidence briefs, plans, output packages, published records, and analytics live together under `projects/<project-id>/`.
 - Separate evidence from lessons: raw analytics stay with the project they measure; durable creator lessons live in `memory/`.
 
 ## Repository Root
@@ -94,12 +94,12 @@ workspace-library/creators/<creator-slug>/
       watchlist.json
     stable-findings/
       <stable-finding-id>.md
-    idea-queue/
+    content-opportunity-queue/
       queue.json
       entries/
-        <idea-queue-entry-id>.json
-    idea-promotions/
-      <idea-promotion-id>.json
+        <content-opportunity-id>.json
+    approvals/
+      <concept-approval-id>.json
   boards/
     content-board.json
     content-calendar.html
@@ -162,12 +162,12 @@ research/
   stable-findings/
     <stable-finding-id>.md               # validated YAML-subset frontmatter
   findings.md                            # rolling summary, validated frontmatter + char limit
-  idea-queue/
+  content-opportunity-queue/
     queue.json
     entries/
-      <idea-queue-entry-id>.json
-  idea-promotions/
-    <idea-promotion-id>.json             # permanent locked approval snapshots
+      <content-opportunity-id>.json
+  approvals/
+    <concept-approval-id>.json             # permanent locked approval snapshots
 boards/
   content-board.json                     # rebuildable projection, not source of truth
   content-calendar.html                  # interactive schedule-review projection
@@ -184,8 +184,8 @@ The HTML brand board is not authored per creator. Run `rebuild-brand-board` to
 populate `influencer_os/templates/personal-brand-board.html` from the canonical
 JSON spec. A generated mood image may support that spec but cannot replace it.
 
-A project's `source_refs.idea_promotion_id` must resolve to
-`research/idea-promotions/<id>.json` in the owning Creator Workspace; deeper
+A project's `source_refs.concept_approval_id` must resolve to
+`campaigns/<campaign-id>/approvals/<id>.json` in the owning Creator Workspace; deeper
 provenance (queue entry, findings, evidence, metric snapshots, video packs)
 resolves transitively through that locked promotion, and any cached copies on
 the project must match it. A video pack id in project or output-package
@@ -280,7 +280,7 @@ blockers.
 
 `content-schedule.json` is the Creator Content Schedule: accepted-strategy reference, research basis, cadence expectations, content goals, calendar slots, and drift checks. It is one canonical record that matures in place. Before research it is a `strategy_scaffold`: cadence, platform mix, and campaign structure are reviewable, while topics and titles remain provisional. Broad research may make the schedule globally `research_informed`, but each slot separately records `research_state` as `unresearched`, `candidates_ready`, `selected`, or `inherits_anchor`. Focused plans and runs name exact slots; selection records the queue entry and run before promotion can fill the slot. Slots may reference strategy campaigns/variants; any slot promoting a conversion asset names the approved use and platform. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 
-`research/` stores Research Findings, dated Research Runs, Research Evidence, Metric Snapshots, research intelligence, Idea Queue entries, and Idea Promotions. Other modules read only the module's public records (`findings.md`, `idea-queue/`, `idea-promotions/`); run evidence and intelligence files are research-internal and resolve by ID through the local recall index.
+`research/` stores Research Findings, dated Research Runs, Research Evidence, Metric Snapshots, research intelligence, Content Opportunity entries, and Concept Approvals. Other modules read only the module's public records (`findings.md`, `content-opportunity-queue/`, `approvals/`); run evidence and intelligence files are research-internal and resolve by ID through the local recall index.
 
 `boards/content-board.json` is the rebuildable Content Board projection for Kanban views. It is derived from canonical queue, promotion, and project records and is never the source of truth. Card IDs are derived deterministically from source record IDs so rebuilds preserve manual order.
 
@@ -292,11 +292,11 @@ The HTML is never canonical schedule state.
 
 `system/` holds creator-scoped operational projections: `project-warnings.jsonl` and `creator-events.jsonl`. Like the board, they are Kanban-readable projections and event streams, not canonical planning records.
 
-`projects/` stores content work that has moved past Idea Promotion. A project is one approved content unit moving through planning, packaging, publication, analytics, and learning. It may be a video, carousel, single image post, story sequence, article, thread, or multi-platform package.
+`projects/` stores content work that has moved past Concept Approval. A project is one approved content unit moving through planning, packaging, publication, analytics, and learning. It may be a video, carousel, single image post, story sequence, article, thread, or multi-platform package.
 
-`projects/<project-id>/project.json` is the project manifest. It should record project ID, creator ID, Idea Promotion refs, Idea Queue refs, research evidence refs, target format, status, key dates, and pointers to project records.
+`projects/<project-id>/project.json` is the project manifest. It should record project ID, creator ID, Concept Approval refs, Content Opportunity Queue refs, research evidence refs, target format, status, key dates, and pointers to project records.
 
-`projects/<project-id>/evidence-brief.md` stores the compact evidence brief carried forward from Idea Promotion. The full source material remains resolvable through research evidence refs and the local recall index.
+`projects/<project-id>/evidence-brief.md` stores the compact evidence brief carried forward from Concept Approval. The full source material remains resolvable through research evidence refs and the local recall index.
 
 `projects/<project-id>/plan/` stores Applied Social Templates, format-specific production plans, and provider-neutral generation plans.
 

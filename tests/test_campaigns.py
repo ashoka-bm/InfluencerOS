@@ -129,9 +129,15 @@ def _campaign_workspace(temp_dir):
 
 
 def _write_opportunity_fixture(workspace_dir):
-    """Materialize the example opportunity + queue as canonical records."""
+    """Materialize the example opportunity + queue in the pre-assignment
+    state (the examples show the post-assignment end state; assignment is
+    the concept constructor's flip)."""
     entry = _example("content-opportunity.example.json")
+    entry["status"] = "new"
+    entry.pop("linked_campaign_concept_ids", None)
     queue = _example("content-opportunity-queue.example.json")
+    queue["entry_refs"][0]["status"] = "new"
+    queue["status_counts"] = {"new": 1}
     queue_dir = workspace_dir / "research" / "content-opportunity-queue"
     entries_dir = queue_dir / "entries"
     entries_dir.mkdir(parents=True, exist_ok=True)
@@ -230,7 +236,7 @@ class ScaffoldCampaignConceptTests(unittest.TestCase):
         )
         _write_opportunity_fixture(self.workspace_dir)
 
-    def test_canonical_seed_reproduces_example(self):
+    def test_canonical_seed_reproduces_examples_including_assignment(self):
         result = scaffold_campaign_concept(
             _concept_seed_from_example(),
             self.workspace_dir,
@@ -241,14 +247,40 @@ class ScaffoldCampaignConceptTests(unittest.TestCase):
         )
         written = load_json(result["concept_path"])
         self.assertEqual(written, _example("campaign-concept.example.json"))
+        # Assignment is one transactional operation: the opportunity and
+        # queue flip to the example's assigned end state in the same call.
+        entry = load_json(
+            self.workspace_dir / "research" / "content-opportunity-queue"
+            / "entries" / "content_opportunity_luna_fit_001.json"
+        )
+        self.assertEqual(entry, _example("content-opportunity.example.json"))
+        queue = load_json(
+            self.workspace_dir / "research" / "content-opportunity-queue"
+            / "queue.json"
+        )
+        self.assertEqual(
+            queue, _example("content-opportunity-queue.example.json")
+        )
 
-    def test_evidence_is_copied_from_assigned_opportunity(self):
+    def test_evidence_and_intent_are_copied_from_assigned_opportunity(self):
         result = scaffold_campaign_concept(
             _concept_seed_from_example(), self.workspace_dir
         )
         written = load_json(result["concept_path"])
         opportunity = _example("content-opportunity.example.json")
         self.assertEqual(written["evidence_refs"], opportunity["evidence_refs"])
+        self.assertEqual(written["intended_payoff"], opportunity["intended_payoff"])
+        self.assertEqual(written["intended_emotion"], opportunity["intended_emotion"])
+        self.assertEqual(written["core_message"], opportunity["core_message"])
+
+    def test_assigned_opportunity_cannot_be_assigned_again(self):
+        scaffold_campaign_concept(
+            _concept_seed_from_example(), self.workspace_dir
+        )
+        seed = _concept_seed_from_example()
+        seed["title"] = "A second angle on the same opportunity"
+        with self.assertRaisesRegex(ValidationError, "only an open opportunity"):
+            scaffold_campaign_concept(seed, self.workspace_dir)
 
     def test_seed_with_evidence_and_source_opportunity_fails_closed(self):
         seed = _concept_seed_from_example()
@@ -291,11 +323,14 @@ class ScaffoldCampaignConceptTests(unittest.TestCase):
     def test_campaign_scoped_concept_authors_its_own_evidence(self):
         seed = _concept_seed_from_example()
         del seed["source_content_opportunity_id"]
-        evidence = _example("content-opportunity.example.json")["evidence_refs"]
-        seed["evidence_refs"] = evidence
+        opportunity = _example("content-opportunity.example.json")
+        seed["evidence_refs"] = opportunity["evidence_refs"]
+        seed["intended_payoff"] = opportunity["intended_payoff"]
+        seed["intended_emotion"] = opportunity["intended_emotion"]
+        seed["core_message"] = opportunity["core_message"]
         result = scaffold_campaign_concept(seed, self.workspace_dir)
         written = load_json(result["concept_path"])
-        self.assertEqual(written["evidence_refs"], evidence)
+        self.assertEqual(written["evidence_refs"], opportunity["evidence_refs"])
         self.assertNotIn("source_content_opportunity_id", written)
 
 
@@ -305,7 +340,7 @@ class ScaffoldContentOpportunityTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.workspace_dir = _campaign_workspace(self.temp.name)
 
-    def test_canonical_seed_reproduces_example_and_queue(self):
+    def test_canonical_seed_reproduces_example_pre_assignment(self):
         result = scaffold_content_opportunity(
             _opportunity_seed_from_example(),
             self.workspace_dir,
@@ -314,12 +349,18 @@ class ScaffoldContentOpportunityTests(unittest.TestCase):
         self.assertEqual(
             result["content_opportunity_id"], "content_opportunity_luna_fit_001"
         )
+        # The example shows the post-assignment end state; a fresh scaffold
+        # is the same record before the concept constructor's flip.
+        expected = _example("content-opportunity.example.json")
+        expected["status"] = "new"
+        expected.pop("linked_campaign_concept_ids")
         written = load_json(result["entry_path"])
-        self.assertEqual(written, _example("content-opportunity.example.json"))
+        self.assertEqual(written, expected)
+        expected_queue = _example("content-opportunity-queue.example.json")
+        expected_queue["entry_refs"][0]["status"] = "new"
+        expected_queue["status_counts"] = {"new": 1}
         queue = load_json(result["queue_path"])
-        self.assertEqual(
-            queue, _example("content-opportunity-queue.example.json")
-        )
+        self.assertEqual(queue, expected_queue)
 
     def test_seed_rejects_constructor_owned_fields(self):
         seed = _opportunity_seed_from_example()
@@ -429,6 +470,7 @@ class ProjectExpressionAgainstApprovalTests(unittest.TestCase):
         )
 
     def test_missing_expression_fails(self):
+        self.project.pop("commercial_expression", None)
         with self.assertRaisesRegex(ValidationError, "commercial_expression"):
             check_project_expression_against_approval(
                 self.project, self.approval, self.concept
@@ -677,6 +719,96 @@ class ScheduleOwnershipTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValidationError, "ownership disagrees"):
             validate_campaign_records(self.workspace_dir)
+
+
+class MigrateCampaignModelTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace_dir = _campaign_workspace(self.temp.name)
+
+    def _write_legacy_queue(self, status="shortlisted"):
+        entry = _example("content-opportunity.example.json")
+        legacy = {
+            "idea_queue_entry_id": "idea_queue_entry_"
+            + entry.pop("content_opportunity_id").removeprefix(
+                "content_opportunity_"
+            )
+        }
+        entry.pop("linked_campaign_concept_ids", None)
+        entry["status"] = status
+        legacy.update(entry)
+        queue_dir = self.workspace_dir / "research" / "idea-queue"
+        entries_dir = queue_dir / "entries"
+        entries_dir.mkdir(parents=True, exist_ok=True)
+        (entries_dir / f"{legacy['idea_queue_entry_id']}.json").write_text(
+            json.dumps(legacy, indent=2) + "\n"
+        )
+        (queue_dir / "queue.json").write_text(json.dumps({
+            "idea_queue_id": "idea_queue_luna_fit",
+            "creator_profile_id": "creator_luna_fit",
+            "updated_on": "2026-07-03",
+            "entry_refs": [{
+                "idea_queue_entry_id": legacy["idea_queue_entry_id"],
+                "status": status,
+            }],
+            "status_counts": {status: 1},
+        }, indent=2) + "\n")
+        return legacy
+
+    def test_unassigned_legacy_queue_migrates_mechanically(self):
+        from influencer_os.migrations import migrate_campaign_model
+
+        self._write_legacy_queue()
+        result = migrate_campaign_model(self.workspace_dir)
+        queue_dir = (
+            self.workspace_dir / "research" / "content-opportunity-queue"
+        )
+        entry = load_json(
+            queue_dir / "entries" / "content_opportunity_luna_fit_001.json"
+        )
+        self.assertEqual(entry["status"], "shortlisted")
+        self.assertNotIn("linked_campaign_concept_ids", entry)
+        queue = load_json(queue_dir / "queue.json")
+        self.assertEqual(queue["status_counts"], {"shortlisted": 1})
+        self.assertFalse(
+            (self.workspace_dir / "research" / "idea-queue").exists()
+        )
+        self.assertTrue(result["changed_paths"])
+        validate_campaign_records(self.workspace_dir)
+
+    def test_promoted_entry_fails_preflight_without_writes(self):
+        from influencer_os.migrations import migrate_campaign_model
+
+        legacy = self._write_legacy_queue(status="promoted")
+        with self.assertRaisesRegex(ValidationError, "explicit Campaign"):
+            migrate_campaign_model(self.workspace_dir)
+        self.assertTrue(
+            (
+                self.workspace_dir / "research" / "idea-queue" / "entries"
+                / f"{legacy['idea_queue_entry_id']}.json"
+            ).exists()
+        )
+        migrated_entries = list(
+            (
+                self.workspace_dir / "research" / "content-opportunity-queue"
+            ).rglob("*.json")
+        )
+        self.assertEqual(migrated_entries, [])
+
+    def test_legacy_promotions_fail_preflight(self):
+        from influencer_os.migrations import migrate_campaign_model
+
+        self._write_legacy_queue()
+        promotions_dir = (
+            self.workspace_dir / "research" / "idea-promotions"
+        )
+        promotions_dir.mkdir(parents=True)
+        (promotions_dir / "idea_promotion_luna_fit_001.json").write_text(
+            "{}\n"
+        )
+        with self.assertRaisesRegex(ValidationError, "idea promotions exist"):
+            migrate_campaign_model(self.workspace_dir)
 
 
 class MigrateContentSeriesTests(unittest.TestCase):

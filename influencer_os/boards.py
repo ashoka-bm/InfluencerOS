@@ -1,9 +1,9 @@
 """Content Board projection: rebuild and agreement validation (ADR 0020,
 slice 4 batch C).
 
-The board is a rebuildable projection over canonical records: idea queue
+The board is a rebuildable projection over canonical records: opportunity queue
 entries are parent cards, projects are child cards (linked through their
-locked Idea Promotion), and card ids derive deterministically from source
+locked Concept Approval), and card ids derive deterministically from source
 record ids (``card_<source_record_id>``). ``columns`` and ``manual_order``
 are preserved projection metadata — a rebuild refreshes every card from
 canonical records but never clobbers the user's board arrangement.
@@ -40,7 +40,7 @@ DEFAULT_BOARD_COLUMNS = tuple(
         ("reviewed", "Reviewed"),
         ("shortlisted", "Shortlisted"),
         ("needs_more_research", "Needs More Research"),
-        ("promoted", "Promoted"),
+        ("assigned", "Assigned"),
         ("created", "Created"),
         ("planning", "Planning"),
         ("ready_for_generation", "Ready For Generation"),
@@ -86,24 +86,32 @@ def _load_validated(path, schema_name):
 
 
 def derive_board_cards(workspace_dir):
-    """Derive the full card list from canonical records: entries, projects,
-    promotions (parent resolution), and active warnings (badges)."""
+    """Derive the full card list from canonical records: content
+    opportunities, projects (parent resolution through the approval ->
+    concept -> source opportunity chain), and active warnings (badges)."""
     workspace_dir = Path(workspace_dir)
     research_dir = workspace_dir / "research"
 
     entries = {}
-    entries_dir = research_dir / "idea-queue" / "entries"
+    entries_dir = research_dir / "content-opportunity-queue" / "entries"
     if entries_dir.exists():
         for entry_path in sorted(entries_dir.glob("*.json")):
-            record = _load_validated(entry_path, "idea-queue-entry")
-            entries[record["idea_queue_entry_id"]] = record
+            record = _load_validated(entry_path, "content-opportunity")
+            entries[record["content_opportunity_id"]] = record
 
-    promotions = {}
-    promotions_dir = research_dir / "idea-promotions"
-    if promotions_dir.exists():
-        for promotion_path in sorted(promotions_dir.glob("*.json")):
-            record = _load_validated(promotion_path, "idea-promotion")
-            promotions[record["idea_promotion_id"]] = record
+    approvals = {}
+    for approval_path in sorted(
+        workspace_dir.glob("campaigns/*/approvals/*.json")
+    ):
+        record = _load_validated(approval_path, "concept-approval")
+        approvals[record["concept_approval_id"]] = record
+
+    concepts = {}
+    for concept_path in sorted(
+        workspace_dir.glob("campaigns/*/concepts/*.json")
+    ):
+        record = _load_validated(concept_path, "campaign-concept")
+        concepts[record["campaign_concept_id"]] = record
 
     projects = {}
     projects_dir = workspace_dir / "projects"
@@ -112,10 +120,10 @@ def derive_board_cards(workspace_dir):
             record = _load_validated(manifest_path, "project")
             projects[record["project_id"]] = record
 
-    # A warning badges exactly the card it targets: promoted-work warnings
+    # A warning badges exactly the card it targets: approved-work warnings
     # (project_id present) badge the project card; queue-level warnings badge
-    # the idea card. Resolved warnings do not badge.
-    idea_badges = {}
+    # the opportunity card. Resolved warnings do not badge.
+    opportunity_badges = {}
     project_badges = {}
     warnings_path = workspace_dir / "system" / "project-warnings.jsonl"
     if warnings_path.exists():
@@ -131,53 +139,79 @@ def derive_board_cards(workspace_dir):
                 continue
             if "project_id" in warning:
                 target = project_badges.setdefault(warning["project_id"], set())
+            elif "content_opportunity_id" in warning:
+                target = opportunity_badges.setdefault(
+                    warning["content_opportunity_id"], set()
+                )
             else:
-                target = idea_badges.setdefault(warning["idea_queue_entry_id"], set())
+                continue
             target.add(warning["severity"])
 
     def badge_list(severities):
         return sorted(severities or (), key=SEVERITY_RANK.__getitem__)
 
     children = {}
+    orphan_projects = []
     for project_id, project in sorted(projects.items()):
-        promotion_id = project["source_refs"]["idea_promotion_id"]
-        promotion = promotions.get(promotion_id)
-        if promotion is None:
+        approval_id = project["source_refs"]["concept_approval_id"]
+        approval = approvals.get(approval_id)
+        if approval is None:
             raise ValidationError(
-                f"project {project_id} names idea promotion {promotion_id!r} "
-                "with no promotion record; cannot resolve its parent idea card"
+                f"project {project_id} names concept approval {approval_id!r} "
+                "with no approval record; cannot resolve its parent card"
             )
-        entry_id = promotion["idea_queue_entry_id"]
-        if entry_id not in entries:
+        concept = concepts.get(approval["campaign_concept_id"])
+        if concept is None:
             raise ValidationError(
-                f"project {project_id} resolves to queue entry {entry_id!r} "
-                "with no entry file; cannot build its parent idea card"
+                f"project {project_id} resolves to concept "
+                f"{approval['campaign_concept_id']!r} with no concept record; "
+                "cannot build its parent card"
             )
-        children.setdefault(entry_id, []).append(project_id)
+        entry_id = concept.get("source_content_opportunity_id")
+        if entry_id is not None:
+            if entry_id not in entries:
+                raise ValidationError(
+                    f"project {project_id} resolves to opportunity "
+                    f"{entry_id!r} with no entry file; cannot build its "
+                    "parent card"
+                )
+            children.setdefault(entry_id, []).append(project_id)
+        else:
+            # Campaign-scoped concept: no opportunity card to hang from.
+            # The Pillar -> Campaign -> Concept hierarchy joins the board
+            # in the projection slice.
+            orphan_projects.append(project_id)
+
+    def project_card(project_id, parent_card_id=None):
+        card = {
+            "content_card_id": f"card_{project_id}",
+            "card_type": "project",
+            "status": projects[project_id]["status"],
+            "source_record_type": "project",
+            "source_record_id": project_id,
+            "warning_badges": badge_list(project_badges.get(project_id)),
+            "child_card_ids": [],
+        }
+        if parent_card_id is not None:
+            card["parent_card_id"] = parent_card_id
+        return card
 
     cards = []
     for entry_id, entry in sorted(entries.items()):
         child_ids = sorted(children.get(entry_id, ()))
         cards.append({
             "content_card_id": f"card_{entry_id}",
-            "card_type": "idea",
+            "card_type": "opportunity",
             "status": entry["status"],
-            "source_record_type": "idea_queue_entry",
+            "source_record_type": "content_opportunity",
             "source_record_id": entry_id,
-            "warning_badges": badge_list(idea_badges.get(entry_id)),
+            "warning_badges": badge_list(opportunity_badges.get(entry_id)),
             "child_card_ids": [f"card_{project_id}" for project_id in child_ids],
         })
         for project_id in child_ids:
-            cards.append({
-                "content_card_id": f"card_{project_id}",
-                "card_type": "project",
-                "status": projects[project_id]["status"],
-                "source_record_type": "project",
-                "source_record_id": project_id,
-                "warning_badges": badge_list(project_badges.get(project_id)),
-                "child_card_ids": [],
-                "parent_card_id": f"card_{entry_id}",
-            })
+            cards.append(project_card(project_id, f"card_{entry_id}"))
+    for project_id in sorted(orphan_projects):
+        cards.append(project_card(project_id))
     return cards
 
 
@@ -222,7 +256,7 @@ def rebuild_board(workspace_path):
     return {
         "board_path": board_path,
         "card_count": len(cards),
-        "idea_cards": sum(1 for card in cards if card["card_type"] == "idea"),
+        "opportunity_cards": sum(1 for card in cards if card["card_type"] == "opportunity"),
         "project_cards": sum(1 for card in cards if card["card_type"] == "project"),
     }
 

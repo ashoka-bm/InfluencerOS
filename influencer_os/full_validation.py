@@ -3,7 +3,7 @@
 ``validate all <creator-workspace>`` runs every validator over one Creator
 Workspace so the Product Invariant is enforced by a single command instead of
 a hand-chained sequence: the workspace manifest and readiness milestones, research
-state, the idea queue, rebuildable board/calendar projections when present, and every project under
+state, the opportunity queue, campaign records, rebuildable board/calendar projections when present, and every project under
 ``projects/``. Layer errors carry the failing layer's name.
 
 The queue and board layers are lifecycle-aware: a workspace that has not
@@ -52,7 +52,7 @@ def validate_all(workspace_path):
     warnings.extend(result.get("warnings", []))
     layers.append(("research", f"{len(result['checked_paths'])} research records"))
 
-    queue_dir = workspace_dir / "research" / "idea-queue"
+    queue_dir = workspace_dir / "research" / "content-opportunity-queue"
     manifest_path = queue_dir / "queue.json"
     entries_dir = queue_dir / "entries"
     entry_paths = sorted(entries_dir.glob("*.json")) if entries_dir.exists() else []
@@ -62,11 +62,23 @@ def validate_all(workspace_path):
         layers.append(("queue", f"{result['entry_count']} queue entries"))
     elif entry_paths:
         raise ValidationError(
-            f"[queue] {len(entry_paths)} queue entries exist without a queue "
-            f"manifest: {manifest_path} is missing"
+            f"[queue] {len(entry_paths)} opportunity entries exist without a "
+            f"queue manifest: {manifest_path} is missing"
         )
     else:
         skipped.append(("queue", "no queue manifest yet"))
+
+    from influencer_os.campaigns import validate_campaign_records
+
+    if (workspace_dir / "campaigns").exists() or manifest_path.exists():
+        result = _run_layer(
+            "campaigns", validate_campaign_records, workspace_dir
+        )
+        layers.append(
+            ("campaigns", f"{len(result['checked_paths'])} campaign records")
+        )
+    else:
+        skipped.append(("campaigns", "no campaigns yet"))
 
     board_path = board_path_for(workspace_dir)
     if board_path.exists():

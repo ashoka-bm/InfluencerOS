@@ -1,7 +1,7 @@
 {
  "content_opportunity_id": "content_opportunity_luna_fit_001",
  "creator_profile_id": "creator_luna_fit",
- "status": "new",
+ "status": "assigned",
  "title": "The lunch-break reset that fits in 90 seconds",
  "hook": "Your lunch break is long enough for this.",
  "premise_summary": "Three desk-side moves in ninety seconds that undo the morning's sitting, filmed in Luna's apartment kitchen.",
@@ -72,5 +72,8 @@
   "pillar_tiny_resets"
  ],
  "urgency_window": "Post within two weeks while the lunch-reset pattern is rising.",
- "creator_fit_notes": "Calm, no-shame framing; names the feeling in the payoff line."
+ "creator_fit_notes": "Calm, no-shame framing; names the feeling in the payoff line.",
+ "linked_campaign_concept_ids": [
+  "campaign_concept_luna_fit_001"
+ ]
 }

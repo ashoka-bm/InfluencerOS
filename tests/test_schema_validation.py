@@ -71,8 +71,8 @@ class SchemaValidationTests(unittest.TestCase):
         # The format vocabulary is a closed enum (approval-surface decisions);
         # a typo like format_shortform_video must fail, not silently never match.
         cases = (
-            ("idea-promotion", lambda r: r["approved_formats"].append("format_interpretive_dance")),
-            ("idea-queue-entry", lambda r: r["format_recommendations"].append("format_interpretive_dance")),
+            ("concept-approval", lambda r: r["approved_formats"].append("format_interpretive_dance")),
+            ("content-opportunity", lambda r: r["format_recommendations"].append("format_interpretive_dance")),
             ("project", lambda r: r["target_formats"].append("format_interpretive_dance")),
             (
                 "creator-content-schedule",
@@ -89,8 +89,8 @@ class SchemaValidationTests(unittest.TestCase):
 
     def test_text_formats_are_supported_vocabulary(self):
         cases = (
-            ("idea-promotion", lambda r: r["approved_formats"].extend(["format_article", "format_thread"])),
-            ("idea-queue-entry", lambda r: r["format_recommendations"].extend(["format_article", "format_thread"])),
+            ("concept-approval", lambda r: r["approved_formats"].extend(["format_article", "format_thread"])),
+            ("content-opportunity", lambda r: r["format_recommendations"].extend(["format_article", "format_thread"])),
             ("project", lambda r: r.update(target_formats=["format_article"])),
             (
                 "creator-content-schedule",
@@ -328,16 +328,16 @@ class SchemaValidationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_record("applied-social-template", invalid)
 
-    def test_idea_promotion_requires_evidence_refs(self):
+    def test_concept_approval_requires_evidence_refs(self):
         # Projects resolve evidence provenance transitively through the
-        # locked promotion, so a promotion with no evidence refs would sever
+        # locked approval, so an approval with no evidence refs would sever
         # the Product Invariant's research-evidence trace silently.
-        example = load_json("examples/idea-promotion.example.json")
+        example = load_json("examples/concept-approval.example.json")
         invalid = deepcopy(example)
         invalid["evidence_refs"] = []
 
         with self.assertRaises(ValidationError):
-            validate_record("idea-promotion", invalid)
+            validate_record("concept-approval", invalid)
 
     def test_video_style_primary_is_optional_for_text_first_creators(self):
         example = load_json("examples/creator-profile.example.json")

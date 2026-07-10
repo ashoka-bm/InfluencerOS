@@ -1,8 +1,9 @@
-"""Staged pre-approval promotion bundles (ADR 0042 stage/commit).
+"""Staged pre-approval concept bundles (ADR 0042 stage/commit, retargeted
+to the campaign model by ADR 0029/0031).
 
-``stage_promotion`` builds the entire draft set behind the idea-promotion
-gate — the locked promotion, one project manifest per embedded project
-seed, optional authored evidence briefs, and the planned entry / queue /
+``stage_concept_approval`` builds the entire draft set behind the concept
+approval gate — the locked approval, one project manifest per embedded
+project seed, optional authored evidence briefs, and the planned concept /
 schedule flips — into ``system/staging/<stage_id>/``, prevalidated against
 the same gate that guards the canonical write. Staging touches no
 canonical path, so it can run speculatively while the human reads the
@@ -17,6 +18,10 @@ rebuilds the board and recall-index projections. Every record is built and
 gate-checked before the first canonical write, so a mid-sequence failure
 is a filesystem fault, not a planning fault; ``validate all`` pinpoints
 any residue.
+
+The approval and its exact project set are one transactional operation
+(ADR 0029): project ids are allocated into the approval snapshot at stage
+time, and a partial approval/project set never reaches canonical state.
 """
 
 import datetime
@@ -28,6 +33,7 @@ from pathlib import Path
 
 from influencer_os.boards import rebuild_board
 from influencer_os.calendars import schedule_research_state_errors
+from influencer_os.campaigns import campaign_dir
 from influencer_os.constructors import (
     STAGING_DIR,
     build_project_manifest,
@@ -40,43 +46,44 @@ from influencer_os.constructors import (
     next_sequenced_id,
 )
 from influencer_os.json_io import write_json_atomic
-from influencer_os.projects import _validate_approval_surface, validate_project
+from influencer_os.projects import validate_project
 from influencer_os.recall_index import rebuild_index
 from influencer_os.research import (
     collect_project_manifests,
-    validate_promotion_gate,
+    find_campaign_concept,
+    validate_approval_gate,
     validate_queue,
     validate_research,
 )
 from influencer_os.validation import (
     ValidationError,
     load_json,
-    validate_intent_carry_forward,
     validate_record,
 )
 
 STAGE_MANIFEST_NAME = "stage.json"
 
-PROMOTION_SEED_REQUIRED = (
+APPROVAL_SEED_REQUIRED = (
     "approved_platforms",
     "approved_formats",
+    "max_offer_integration",
+    "max_cta_intensity",
     "projects",
 )
-PROMOTION_SEED_OPTIONAL = (
-    "schedule_slot_ids",
-    "creative_elements_to_carry_forward",
+APPROVAL_SEED_OPTIONAL = (
     "approval_note",
-    "idea_promotion_id",
+    "concept_approval_id",
 )
 
-# The embedded project seeds omit idea_promotion_id (the bundle owns it)
-# and may add an authored evidence-brief body.
+# The embedded project seeds omit concept_approval_id (the bundle owns it)
+# and may add an authored evidence-brief body plus per-project slot claims.
 BUNDLE_PROJECT_SEED_REQUIRED = (
     "project_slug",
     "content_unit_type",
     "platform_targets",
     "learning_goal",
     "acceptance_criteria",
+    "commercial_expression",
 )
 BUNDLE_PROJECT_SEED_OPTIONAL = (
     "constraints",
@@ -85,6 +92,7 @@ BUNDLE_PROJECT_SEED_OPTIONAL = (
     "reference_asset_ids",
     "target_formats",
     "project_id",
+    "schedule_slot_ids",
     "evidence_brief",
 )
 
@@ -99,60 +107,42 @@ def _sha256_record(record):
     )
 
 
-def _entry_path(workspace_dir, entry_id):
+def _concept_path(workspace_dir, concept):
     return (
-        Path(workspace_dir) / "research" / "idea-queue" / "entries"
-        / f"{entry_id}.json"
+        campaign_dir(workspace_dir, concept["campaign_id"]) / "concepts"
+        / f"{concept['campaign_concept_id']}.json"
     )
-
-
-def _queue_manifest_path(workspace_dir):
-    return Path(workspace_dir) / "research" / "idea-queue" / "queue.json"
 
 
 def _schedule_path(workspace_dir):
     return Path(workspace_dir) / "content-schedule.json"
 
 
-def _queue_entry_ref(queue_manifest, entry_id):
-    for ref in queue_manifest.get("entry_refs", []):
-        if ref["idea_queue_entry_id"] == entry_id:
-            return ref
-    raise ValidationError(
-        f"queue manifest lists no entry_ref for {entry_id}; the entry must "
-        "be tracked before promotion"
-    )
-
-
-def _claimed_slots(schedule, slot_ids, promotion_id):
+def _claimed_slots(schedule, slot_ids, approval_id):
     slots = {slot["slot_id"]: slot for slot in schedule.get("calendar_slots", [])}
     claimed = {}
     for slot_id in slot_ids:
         if slot_id not in slots:
             raise ValidationError(
-                f"promotion {promotion_id} claims {slot_id!r}, which resolves "
+                f"approval {approval_id} claims {slot_id!r}, which resolves "
                 "to no schedule slot"
             )
         claimed[slot_id] = slots[slot_id]
     return claimed
 
 
-def _input_hashes(workspace_dir, entry_id, slot_ids, promotion_id):
+def _input_hashes(workspace_dir, concept, slot_ids, approval_id):
     """Content hashes of exactly the upstream state the stage was derived
-    from: the entry file, the entry's queue-manifest row, and each claimed
-    slot. Unrelated queue or schedule changes do not invalidate a stage."""
+    from: the concept file and each claimed slot. Unrelated campaign or
+    schedule changes do not invalidate a stage."""
     hashes = {
-        "entry": _sha256_bytes(
-            _entry_path(workspace_dir, entry_id).read_bytes()
+        "concept": _sha256_bytes(
+            _concept_path(workspace_dir, concept).read_bytes()
         )
     }
-    queue_manifest = load_json(_queue_manifest_path(workspace_dir))
-    hashes["queue_entry_ref"] = _sha256_record(
-        _queue_entry_ref(queue_manifest, entry_id)
-    )
     if slot_ids:
         schedule = load_json(_schedule_path(workspace_dir))
-        claimed = _claimed_slots(schedule, slot_ids, promotion_id)
+        claimed = _claimed_slots(schedule, slot_ids, approval_id)
         hashes["slots"] = {
             slot_id: _sha256_record(slot) for slot_id, slot in claimed.items()
         }
@@ -161,53 +151,37 @@ def _input_hashes(workspace_dir, entry_id, slot_ids, promotion_id):
     return hashes
 
 
-def _active_linked_promotion(workspace_dir, entry):
-    promotions_dir = Path(workspace_dir) / "research" / "idea-promotions"
-    for promotion_id in entry.get("linked_idea_promotion_ids", []):
-        promotion_path = promotions_dir / f"{promotion_id}.json"
-        if promotion_path.exists():
-            promotion = load_json(promotion_path)
-            if promotion.get("promotion_status") == "active":
-                return promotion_id
-    return None
-
-
-def _existing_promotion_ids(workspace_dir):
+def _existing_approval_ids(workspace_dir):
     ids = set()
-    promotions_dir = Path(workspace_dir) / "research" / "idea-promotions"
-    if promotions_dir.exists():
-        ids.update(path.stem for path in promotions_dir.glob("*.json"))
+    for approval_path in Path(workspace_dir).glob("campaigns/*/approvals/*.json"):
+        ids.add(approval_path.stem)
     staging_root = Path(workspace_dir) / STAGING_DIR
     if staging_root.exists():
         for stage_manifest in staging_root.glob(f"*/{STAGE_MANIFEST_NAME}"):
             staged = load_json(stage_manifest)
-            if "idea_promotion_id" in staged:
-                ids.add(staged["idea_promotion_id"])
+            if "concept_approval_id" in staged:
+                ids.add(staged["concept_approval_id"])
     return ids
 
 
-def _flipped_entry(entry, promotion, today):
-    flipped = deepcopy(entry)
-    flipped["status"] = "promoted"
-    promotion_links = list(flipped.get("linked_idea_promotion_ids", []))
-    if promotion["idea_promotion_id"] not in promotion_links:
-        promotion_links.append(promotion["idea_promotion_id"])
-    flipped["linked_idea_promotion_ids"] = promotion_links
-    project_links = list(flipped.get("linked_project_ids", []))
-    for project_id in promotion["project_ids_created"]:
-        if project_id not in project_links:
-            project_links.append(project_id)
-    flipped["linked_project_ids"] = project_links
+def _flipped_concept(concept, today):
+    flipped = deepcopy(concept)
+    flipped["status"] = "active"
     flipped["updated_on"] = today
-    validate_record("idea-queue-entry", flipped)
+    validate_record("campaign-concept", flipped)
     return flipped
 
 
-def _flipped_schedule(schedule, slot_ids):
+def _flipped_schedule(schedule, slot_projects, concept):
+    """Claimed slots flip to filled and gain their ownership refs: the
+    owning campaign, concept, and (per the slot mapping) project."""
     flipped = deepcopy(schedule)
     for slot in flipped.get("calendar_slots", []):
-        if slot["slot_id"] in slot_ids:
+        if slot["slot_id"] in slot_projects:
             slot["status"] = "filled"
+            slot["campaign_id"] = concept["campaign_id"]
+            slot["campaign_concept_id"] = concept["campaign_concept_id"]
+            slot["project_id"] = slot_projects[slot["slot_id"]]
     validate_record("creator-content-schedule", flipped)
     state_errors = schedule_research_state_errors(flipped)
     if state_errors:
@@ -215,59 +189,62 @@ def _flipped_schedule(schedule, slot_ids):
     return flipped
 
 
-def _flipped_queue_manifest(queue_manifest, entry_id, today):
-    flipped = deepcopy(queue_manifest)
-    _queue_entry_ref(flipped, entry_id)["status"] = "promoted"
-    counts = {}
-    for ref in flipped["entry_refs"]:
-        counts[ref["status"]] = counts.get(ref["status"], 0) + 1
-    flipped["status_counts"] = counts
-    flipped["updated_on"] = today
-    validate_record("idea-queue", flipped)
-    return flipped
-
-
-def _gate_preflight(workspace_dir, promotion, staged_projects, entry, today):
-    """Run the real promotion gate against the simulated post-commit state:
-    flipped entry, flipped schedule, and the staged projects merged over
+def _gate_preflight(workspace_dir, approval, staged_projects, concept, today):
+    """Run the real approval gate against the simulated post-commit state:
+    flipped concept, flipped schedule, and the staged projects merged over
     the existing manifests."""
-    flipped_entry = _flipped_entry(entry, promotion, today)
-    slot_ids = promotion.get("schedule_slot_ids", [])
+    flipped_concept = _flipped_concept(concept, today)
+    slot_ids = approval.get("schedule_slot_ids", [])
     flipped_schedule = None
     if slot_ids:
         schedule_path = _schedule_path(workspace_dir)
         if not schedule_path.exists():
             raise ValidationError(
-                f"promotion {promotion['idea_promotion_id']} claims schedule "
+                f"approval {approval['concept_approval_id']} claims schedule "
                 "slots but the workspace has no content-schedule.json"
             )
-        flipped_schedule = _flipped_schedule(load_json(schedule_path), slot_ids)
+        slot_projects = {
+            slot_id: project_id
+            for project_id, claimed in _project_slot_claims(
+                approval, staged_projects
+            ).items()
+            for slot_id in claimed
+        }
+        flipped_schedule = _flipped_schedule(
+            load_json(schedule_path), slot_projects, concept
+        )
     projects_by_id = dict(collect_project_manifests(workspace_dir))
     for project in staged_projects:
         projects_by_id[project["project_id"]] = (None, project)
-    warnings = validate_promotion_gate(
+    return validate_approval_gate(
         workspace_dir,
-        promotion,
+        approval,
         projects_by_id=projects_by_id,
-        entry=flipped_entry,
+        concept=flipped_concept,
         schedule=flipped_schedule,
     )
-    for project in staged_projects:
-        _validate_approval_surface(project, promotion)
-    return warnings
 
 
-def stage_promotion(seed, creator_workspace, entry_id, now=None):
-    """Build the full promotion draft bundle into system/staging/,
+def _project_slot_claims(approval, staged_projects):
+    """Map project_id -> claimed slot ids from the stage manifest's
+    project_slots block (rebuilt at commit from the manifest)."""
+    return {
+        project["project_id"]: project.get("_slot_claims", [])
+        for project in staged_projects
+    }
+
+
+def stage_concept_approval(seed, creator_workspace, concept_id, now=None):
+    """Build the full concept-approval draft bundle into system/staging/,
     prevalidated through the real gate. Writes nothing canonical."""
     workspace_dir = Path(creator_workspace)
     seed = load_seed(seed)
     check_seed_fields(
-        seed, PROMOTION_SEED_REQUIRED, PROMOTION_SEED_OPTIONAL, "promotion"
+        seed, APPROVAL_SEED_REQUIRED, APPROVAL_SEED_OPTIONAL, "approval"
     )
     if not seed["projects"]:
         raise ValidationError(
-            "a promotion that creates no production work is invalid state; "
+            "an approval that creates no production work is invalid state; "
             "the bundle needs at least one project seed"
         )
     moment = now if now is not None else datetime.datetime.now()
@@ -277,35 +254,40 @@ def stage_promotion(seed, creator_workspace, entry_id, now=None):
     creator_profile_id = workspace_manifest["creator_profile_id"]
     suffix = creator_id_suffix(creator_profile_id)
 
-    entry_path = _entry_path(workspace_dir, entry_id)
-    if not entry_path.exists():
-        raise ValidationError(f"idea queue entry not found: {entry_path}")
-    entry = load_json(entry_path)
-    validate_record("idea-queue-entry", entry)
-    if entry["creator_profile_id"] != creator_profile_id:
+    concept = find_campaign_concept(workspace_dir, concept_id)
+    if concept is None:
         raise ValidationError(
-            f"entry {entry_id} belongs to {entry['creator_profile_id']!r}, "
-            f"not this workspace's {creator_profile_id!r}"
+            f"campaign concept not found: {concept_id!r} resolves to no "
+            "concept under campaigns/*/concepts/"
         )
-    active = _active_linked_promotion(workspace_dir, entry)
-    if active is not None:
+    validate_record("campaign-concept", concept)
+    if concept["creator_profile_id"] != creator_profile_id:
         raise ValidationError(
-            f"entry {entry_id} already has active promotion {active}; "
-            "supersede it explicitly before staging a new package"
+            f"concept {concept_id} belongs to "
+            f"{concept['creator_profile_id']!r}, not this workspace's "
+            f"{creator_profile_id!r}"
         )
-    if not entry.get("intended_emotion") or not entry.get("core_message"):
+    # One unchanged concept may receive later approvals for additional
+    # projects (campaign-concept-pressure plan); no active-approval guard.
+    if concept["status"] not in {"ready_for_approval", "active"}:
         raise ValidationError(
-            f"entry {entry_id} lacks the intent pair (intended_emotion, "
-            "core_message); add it to the entry with the user before "
-            "promotion (ADR 0024)"
+            f"concept {concept_id} has status {concept['status']!r}; only a "
+            "ready_for_approval or active concept can receive an approval"
+        )
+    if not concept.get("intended_emotion") or not concept.get("core_message"):
+        raise ValidationError(
+            f"concept {concept_id} lacks the intent pair (intended_emotion, "
+            "core_message); add it to the concept with the user before "
+            "approval (ADR 0024)"
         )
 
-    promotion_id = seed.get("idea_promotion_id") or next_sequenced_id(
-        f"idea_promotion_{suffix}", _existing_promotion_ids(workspace_dir)
+    approval_id = seed.get("concept_approval_id") or next_sequenced_id(
+        f"concept_approval_{suffix}", _existing_approval_ids(workspace_dir)
     )
 
     existing_project_ids = set(collect_project_manifests(workspace_dir))
     seen_slugs = set()
+    slot_owners = {}
     project_builds = []
     for project_seed in seed["projects"]:
         project_seed = dict(project_seed)
@@ -316,6 +298,7 @@ def stage_promotion(seed, creator_workspace, entry_id, now=None):
             f"bundle project {project_seed.get('project_slug', '?')}",
         )
         evidence_brief = project_seed.pop("evidence_brief", None)
+        slot_claims = list(project_seed.pop("schedule_slot_ids", []))
         slug = project_seed["project_slug"]
         if slug in seen_slugs:
             raise ValidationError(
@@ -335,63 +318,73 @@ def stage_promotion(seed, creator_workspace, entry_id, now=None):
         if project_id in existing_project_ids:
             raise ValidationError(f"project id already exists: {project_id}")
         existing_project_ids.add(project_id)
-        project_builds.append((project_seed, project_id, evidence_brief))
+        for slot_id in slot_claims:
+            earlier = slot_owners.setdefault(slot_id, project_id)
+            if earlier != project_id:
+                raise ValidationError(
+                    f"bundle claims slot {slot_id} for two projects "
+                    f"({earlier} and {project_id}); a slot hosts one "
+                    "publishable unit"
+                )
+        project_builds.append(
+            (project_seed, project_id, slot_claims, evidence_brief)
+        )
 
-    promotion = {
-        "idea_promotion_id": promotion_id,
-        "idea_queue_entry_id": entry_id,
+    approval = {
+        "concept_approval_id": approval_id,
+        "campaign_concept_id": concept_id,
         "creator_profile_id": creator_profile_id,
         "approved_by": "user",
         # Provisional so the draft validates; commit re-stamps (ADR 0042).
         "approved_on": today,
-        "intended_payoff": entry["intended_payoff"],
-        "intended_emotion": entry["intended_emotion"],
-        "core_message": entry["core_message"],
+        "approval_status": "active",
+        "intended_payoff": concept["intended_payoff"],
+        "intended_emotion": concept["intended_emotion"],
+        "core_message": concept["core_message"],
         "approved_platforms": list(seed["approved_platforms"]),
         "approved_formats": list(seed["approved_formats"]),
-        "research_finding_ids": list(entry.get("source_finding_ids", [])),
-        "evidence_refs": deepcopy(entry["evidence_refs"]),
-        "score_snapshot": deepcopy(entry["scores"]),
-        "creative_elements_to_carry_forward": list(
-            seed.get("creative_elements_to_carry_forward", [])
-        ),
+        "max_offer_integration": seed["max_offer_integration"],
+        "max_cta_intensity": seed["max_cta_intensity"],
+        "evidence_refs": deepcopy(concept["evidence_refs"]),
         "project_ids_created": [
-            project_id for _seed, project_id, _brief in project_builds
+            project_id for _seed, project_id, _slots, _brief in project_builds
         ],
-        "promotion_status": "active",
     }
     if seed.get("approval_note"):
-        promotion["approval_note"] = seed["approval_note"]
-    if seed.get("schedule_slot_ids"):
-        promotion["schedule_slot_ids"] = list(seed["schedule_slot_ids"])
-    validate_record("idea-promotion", promotion)
-    validate_intent_carry_forward(promotion, entry)
+        approval["approval_note"] = seed["approval_note"]
+    claimed_slot_ids = sorted(slot_owners)
+    if claimed_slot_ids:
+        approval["schedule_slot_ids"] = claimed_slot_ids
+    validate_record("concept-approval", approval)
 
     staged_projects = []
-    for project_seed, project_id, _brief in project_builds:
-        project_seed = {**project_seed, "idea_promotion_id": promotion_id}
-        staged_projects.append(
-            build_project_manifest(
-                project_seed,
-                creator_profile_id=creator_profile_id,
-                promotion=promotion,
-                project_id=project_id,
-                today=today,
-            )
+    for project_seed, project_id, slot_claims, _brief in project_builds:
+        project_seed = {**project_seed, "concept_approval_id": approval_id}
+        project = build_project_manifest(
+            project_seed,
+            creator_profile_id=creator_profile_id,
+            approval=approval,
+            concept=concept,
+            project_id=project_id,
+            today=today,
         )
+        project["_slot_claims"] = slot_claims
+        staged_projects.append(project)
 
     warnings = _gate_preflight(
-        workspace_dir, promotion, staged_projects, entry, today
+        workspace_dir, approval, staged_projects, concept, today
     )
+    for project in staged_projects:
+        project.pop("_slot_claims", None)
 
-    stage_id = f"stage_{promotion_id}"
+    stage_id = f"stage_{approval_id}"
     stage_dir = workspace_dir / STAGING_DIR / stage_id
     if stage_dir.exists():
         raise FileExistsError(f"Stage already exists: {stage_dir}")
     records_dir = stage_dir / "records"
     records_dir.mkdir(parents=True)
-    write_json_atomic(records_dir / "idea-promotion.json", promotion)
-    for project, (_seed, _project_id, evidence_brief) in zip(
+    write_json_atomic(records_dir / "concept-approval.json", approval)
+    for project, (_seed, _project_id, _slots, evidence_brief) in zip(
         staged_projects, project_builds
     ):
         project_dir = records_dir / "projects" / project["project_slug"]
@@ -402,20 +395,25 @@ def stage_promotion(seed, creator_workspace, entry_id, now=None):
 
     stage_manifest = {
         "stage_id": stage_id,
-        "kind": "promotion",
+        "kind": "concept-approval",
         "created_at": moment.strftime("%Y-%m-%dT%H:%M:%S"),
         "creator_profile_id": creator_profile_id,
-        "idea_queue_entry_id": entry_id,
-        "idea_promotion_id": promotion_id,
-        "project_ids": promotion["project_ids_created"],
+        "campaign_id": concept["campaign_id"],
+        "campaign_concept_id": concept_id,
+        "concept_approval_id": approval_id,
+        "project_ids": approval["project_ids_created"],
         "project_slugs": [
             project["project_slug"] for project in staged_projects
         ],
+        "project_slots": {
+            project_id: slots
+            for _seed, project_id, slots, _brief in project_builds
+        },
         "input_hashes": _input_hashes(
             workspace_dir,
-            entry_id,
-            promotion.get("schedule_slot_ids", []),
-            promotion_id,
+            concept,
+            claimed_slot_ids,
+            approval_id,
         ),
         "gate_warnings": warnings,
     }
@@ -423,7 +421,7 @@ def stage_promotion(seed, creator_workspace, entry_id, now=None):
     return {
         "stage_dir": stage_dir,
         "stage_id": stage_id,
-        "promotion": promotion,
+        "approval": approval,
         "projects": staged_projects,
         "warnings": warnings,
     }
@@ -442,41 +440,49 @@ def _resolve_stage_dir(stage, creator_workspace):
 
 
 def commit_stage(stage, creator_workspace, now=None):
-    """Commit a staged promotion bundle at the human approval gate: verify
-    the stage is not stale, stamp approval, write canonically in
+    """Commit a staged concept-approval bundle at the human approval gate:
+    verify the stage is not stale, stamp approval, write canonically in
     construction order, apply the flips, validate, and rebuild
     projections."""
     workspace_dir = Path(creator_workspace)
     stage_dir, stage_manifest = _resolve_stage_dir(stage, workspace_dir)
-    if stage_manifest.get("kind") != "promotion":
+    if stage_manifest.get("kind") != "concept-approval":
         raise ValidationError(
             f"stage {stage_manifest.get('stage_id')} has kind "
-            f"{stage_manifest.get('kind')!r}; only promotion bundles commit here"
+            f"{stage_manifest.get('kind')!r}; only concept-approval bundles "
+            "commit here"
         )
     moment = now if now is not None else datetime.datetime.now()
     today = moment.strftime("%Y-%m-%d")
 
-    entry_id = stage_manifest["idea_queue_entry_id"]
-    promotion_id = stage_manifest["idea_promotion_id"]
+    concept_id = stage_manifest["campaign_concept_id"]
+    approval_id = stage_manifest["concept_approval_id"]
+
+    concept = find_campaign_concept(workspace_dir, concept_id)
+    if concept is None:
+        raise ValidationError(
+            f"stage {stage_manifest['stage_id']} approves concept "
+            f"{concept_id!r}, which no longer resolves"
+        )
 
     # Stale-stage check: fail closed on any upstream drift since staging.
     current_hashes = _input_hashes(
         workspace_dir,
-        entry_id,
+        concept,
         sorted(stage_manifest["input_hashes"]["slots"]),
-        promotion_id,
+        approval_id,
     )
     if current_hashes != stage_manifest["input_hashes"]:
         raise ValidationError(
             f"stage {stage_manifest['stage_id']} is stale: its upstream "
             "inputs changed since staging; discard and re-stage from the "
-            "current entry/schedule (stages are never patched)"
+            "current concept/schedule (stages are never patched)"
         )
 
     records_dir = stage_dir / "records"
-    promotion = load_json(records_dir / "idea-promotion.json")
-    promotion["approved_on"] = today
-    validate_record("idea-promotion", promotion)
+    approval = load_json(records_dir / "concept-approval.json")
+    approval["approved_on"] = today
+    validate_record("concept-approval", approval)
 
     staged_projects = []
     briefs = {}
@@ -496,36 +502,42 @@ def commit_stage(stage, creator_workspace, now=None):
                 "colliding project landed since staging — re-stage"
             )
 
-    entry = load_json(_entry_path(workspace_dir, entry_id))
-    validate_record("idea-queue-entry", entry)
+    for project in staged_projects:
+        project["_slot_claims"] = stage_manifest["project_slots"].get(
+            project["project_id"], []
+        )
     warnings = _gate_preflight(
-        workspace_dir, promotion, staged_projects, entry, today
+        workspace_dir, approval, staged_projects, concept, today
     )
+    for project in staged_projects:
+        project.pop("_slot_claims", None)
 
     # Prepare every flip before the first canonical write.
-    flipped_entry = _flipped_entry(entry, promotion, today)
-    queue_manifest_path = _queue_manifest_path(workspace_dir)
-    flipped_queue = _flipped_queue_manifest(
-        load_json(queue_manifest_path), entry_id, today
-    )
-    slot_ids = promotion.get("schedule_slot_ids", [])
+    flipped_concept = _flipped_concept(concept, today)
+    slot_ids = approval.get("schedule_slot_ids", [])
     flipped_schedule = None
     if slot_ids:
+        slot_projects = {
+            slot_id: project_id
+            for project_id, slots in stage_manifest["project_slots"].items()
+            for slot_id in slots
+        }
         flipped_schedule = _flipped_schedule(
-            load_json(_schedule_path(workspace_dir)), slot_ids
+            load_json(_schedule_path(workspace_dir)), slot_projects, concept
         )
 
-    promotion_path = (
-        workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
+    approval_path = (
+        campaign_dir(workspace_dir, concept["campaign_id"]) / "approvals"
+        / f"{approval_id}.json"
     )
-    if promotion_path.exists():
-        raise FileExistsError(f"Promotion already exists: {promotion_path}")
+    if approval_path.exists():
+        raise FileExistsError(f"Approval already exists: {approval_path}")
 
-    # Construction order (promote-idea contract): promotion -> projects ->
-    # evidence briefs -> entry and manifest flip -> schedule slots ->
-    # validate -> rebuild.
-    promotion_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(promotion_path, promotion)
+    # Construction order (approve-concept contract): approval -> projects ->
+    # evidence briefs -> concept flip -> schedule slots -> validate ->
+    # rebuild.
+    approval_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(approval_path, approval)
     project_dirs = []
     for project in staged_projects:
         project_dir = create_project_from_manifest(project, workspace_dir)
@@ -533,18 +545,24 @@ def commit_stage(stage, creator_workspace, now=None):
         if brief is not None:
             (project_dir / "evidence-brief.md").write_text(brief)
         project_dirs.append(project_dir)
-    write_json_atomic(_entry_path(workspace_dir, entry_id), flipped_entry)
-    write_json_atomic(queue_manifest_path, flipped_queue)
+    write_json_atomic(_concept_path(workspace_dir, concept), flipped_concept)
     if flipped_schedule is not None:
         write_json_atomic(_schedule_path(workspace_dir), flipped_schedule)
 
-    validate_queue(workspace_dir)
+    queue_manifest_path = (
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
+    )
+    if queue_manifest_path.exists():
+        validate_queue(workspace_dir)
     validate_research(workspace_dir)
+    from influencer_os.campaigns import validate_campaign_records
+
+    validate_campaign_records(workspace_dir)
     for project_dir in project_dirs:
         validate_project(project_dir)
     # Projections are rebuildable derivations of the now-validated canonical
     # records; a rebuild fault (e.g. a non-standard index root) must not fail
-    # the committed promotion.
+    # the committed approval.
     for rebuild in (rebuild_board, rebuild_index):
         try:
             rebuild(workspace_dir)
@@ -553,8 +571,8 @@ def commit_stage(stage, creator_workspace, now=None):
 
     shutil.rmtree(stage_dir)
     return {
-        "promotion_path": promotion_path,
-        "promotion_id": promotion_id,
+        "approval_path": approval_path,
+        "concept_approval_id": approval_id,
         "project_dirs": project_dirs,
         "warnings": warnings,
     }

@@ -1,6 +1,6 @@
 {
   "project_warning_id": "project_warning_luna_fit_001",
-  "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+  "content_opportunity_id": "content_opportunity_luna_fit_001",
   "warning_type": "urgency_window_expired",
   "severity": "important",
   "message": "The two-week lunch-reset window closes on 2026-07-17 and the project is still in planning.",
@@ -9,7 +9,7 @@
     "Pull the project forward, or re-score urgency before the window closes."
   ],
   "project_id": "project_luna_tiny_reset_001",
-  "idea_promotion_id": "idea_promotion_luna_fit_001",
+  "concept_approval_id": "concept_approval_luna_fit_001",
   "source_evidence_ids": [
     "evidence_luna_fit_001"
   ],

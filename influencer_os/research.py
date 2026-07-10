@@ -46,8 +46,8 @@ SYSTEM_JSONL_FILES = (
 )
 
 # Formats with a production plan schema (projects.PRODUCTION_PLAN_SCHEMAS).
-# A promotion must approve at least one of these; approving only unsupported
-# formats records approval intent on the queue entry instead (ADR 0020).
+# An approval must approve at least one of these; approving only unsupported
+# formats records approval intent on the concept instead (ADR 0020/0031).
 PRODUCTION_SUPPORTED_FORMATS = frozenset({
     "format_short_form_video",
     "format_carousel",
@@ -61,19 +61,20 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
 # entry) that grounded its output in few promoted-to-evidence sources is a
 # thin-evidence run. This is an advisory WARN, never a failure: thin research is
 # allowed (local-first posture), it just must not read as well-corroborated.
-# Runs that checked fewer than the minimum are too small for the promotion rate
-# to mean anything, so they are not evaluated.
+# Runs that checked fewer than the minimum are too small for the promoted-to-
+# evidence rate to mean anything, so they are not evaluated.
 THIN_EVIDENCE_MIN_CHECKED = 3
 THIN_EVIDENCE_PROMOTION_RATE = 0.34
 
 
 def check_project_warning_pairing(record):
-    """A warning targeting promoted work carries both project_id and
-    idea_promotion_id; a queue-level warning carries neither (ADR 0020)."""
-    if ("project_id" in record) != ("idea_promotion_id" in record):
+    """A warning targeting approved work carries both project_id and
+    concept_approval_id; a queue-level warning carries neither (ADR 0020
+    pairing, retargeted by ADR 0031)."""
+    if ("project_id" in record) != ("concept_approval_id" in record):
         raise ValidationError(
-            "project warning must carry both project_id and idea_promotion_id "
-            "when it targets promoted work, and neither for queue-level warnings"
+            "project warning must carry both project_id and concept_approval_id "
+            "when it targets approved work, and neither for queue-level warnings"
         )
 
 
@@ -112,74 +113,95 @@ def collect_project_manifests(workspace_dir):
     return manifests
 
 
-def check_promotion_entry_links(promotion, entry):
-    """An active promotion pins its queue entry: the entry must be promoted
-    and must back-link the promotion. Superseded and cancelled promotions
-    impose no entry requirement — the entry may have reverted or been
-    re-promoted (slice 5 lifecycle rules)."""
-    if promotion["promotion_status"] != "active":
+def check_approval_concept_links(approval, concept):
+    """An active approval pins its concept: the concept must be active, and
+    the approval's intent snapshot must carry the concept's intent verbatim
+    (ADR 0024). Superseded and cancelled approvals impose no concept
+    requirement — the concept may have retired or been re-approved."""
+    if approval["approval_status"] != "active":
         return
-    promotion_id = promotion["idea_promotion_id"]
-    entry_id = entry["idea_queue_entry_id"]
-    if entry["status"] != "promoted":
+    approval_id = approval["concept_approval_id"]
+    concept_id = concept["campaign_concept_id"]
+    if concept["status"] != "active":
         raise ValidationError(
-            f"Idea promotion {promotion_id} is active but its queue entry "
-            f"{entry_id} has status {entry['status']!r}; an active promotion "
-            "requires the entry to be 'promoted'"
+            f"Concept approval {approval_id} is active but its concept "
+            f"{concept_id} has status {concept['status']!r}; an active "
+            "approval requires the concept to be 'active'"
         )
-    if promotion_id not in entry.get("linked_idea_promotion_ids", []):
-        raise ValidationError(
-            f"Idea promotion {promotion_id} is active but queue entry "
-            f"{entry_id} does not list it in linked_idea_promotion_ids"
-        )
-    # Intent survives promotion verbatim (ADR 0024). Superseded/cancelled
-    # promotions keep their historical snapshot while the entry evolves, so
-    # the carry-forward check binds only the active promotion.
-    validate_intent_carry_forward(promotion, entry)
+    validate_intent_carry_forward(
+        approval, concept,
+        f"concept approval {approval_id}", f"concept {concept_id}",
+    )
 
 
-def check_promotion_created_projects(promotion, projects_by_id):
-    """Every project a promotion claims to have created must exist and must
-    lock this promotion as its upstream ref (source_refs.idea_promotion_id).
-    Projects are never deleted in v1, so a dangling id is invalid state."""
-    promotion_id = promotion["idea_promotion_id"]
-    for project_id in promotion["project_ids_created"]:
+def check_approval_created_projects(approval, projects_by_id):
+    """The approval authorizes an exact project set (ADR 0029): every listed
+    project must exist and lock this approval as its upstream ref, and no
+    unlisted project may reference the approval. Projects are never deleted
+    in v1, so a dangling id is invalid state."""
+    approval_id = approval["concept_approval_id"]
+    listed = set(approval["project_ids_created"])
+    for project_id in approval["project_ids_created"]:
         if project_id not in projects_by_id:
             raise ValidationError(
-                f"Idea promotion {promotion_id} lists created project "
+                f"Concept approval {approval_id} lists created project "
                 f"{project_id!r} with no project record"
             )
         _, project = projects_by_id[project_id]
-        locked = project.get("source_refs", {}).get("idea_promotion_id")
-        if locked != promotion_id:
+        locked = project.get("source_refs", {}).get("concept_approval_id")
+        if locked != approval_id:
             raise ValidationError(
-                f"Idea promotion {promotion_id} lists created project "
-                f"{project_id!r}, but that project's locked promotion is "
-                f"{locked!r}; source_refs.idea_promotion_id does not point back"
+                f"Concept approval {approval_id} lists created project "
+                f"{project_id!r}, but that project's locked approval is "
+                f"{locked!r}; source_refs.concept_approval_id does not point back"
+            )
+    for project_id, (_path, project) in projects_by_id.items():
+        locked = project.get("source_refs", {}).get("concept_approval_id")
+        if locked == approval_id and project_id not in listed:
+            raise ValidationError(
+                f"project {project_id} locks concept approval {approval_id}, "
+                "but the approval's exact project set does not list it; a "
+                "partial approval/project set is invalid (ADR 0029)"
             )
 
 
-def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None,
-                                schedule=None):
-    """An active promotion's claimed schedule slots must resolve and be
-    filled. Superseded/cancelled promotions impose nothing: the schedule is
-    mutable planning state, so freed slots legitimately reopen or disappear
-    while the locked promotion keeps its historical claim.
+def _slot_selection_matches_concept(research_state, concept):
+    """Whether a selected slot's research resolution names this concept —
+    directly, or through the content opportunity the concept was assigned
+    from (exit criterion 2: slot research resolves to an opportunity or a
+    campaign-owned concept)."""
+    selected_concept = research_state.get("selected_campaign_concept_id")
+    if selected_concept is not None:
+        return selected_concept == concept["campaign_concept_id"]
+    selected_opportunity = research_state.get("selected_content_opportunity_id")
+    return (
+        selected_opportunity is not None
+        and selected_opportunity == concept.get("source_content_opportunity_id")
+    )
+
+
+def check_approval_slot_claims(workspace_dir, approval, concept,
+                               resolved_run_ids=None, schedule=None):
+    """An active approval's claimed schedule slots must resolve, be filled,
+    and carry selected slot research that names the approval's concept (or
+    its source opportunity). Superseded/cancelled approvals impose nothing:
+    the schedule is mutable planning state, so freed slots legitimately
+    reopen or disappear while the locked approval keeps its historical claim.
 
     ``schedule`` lets a staged-commit preflight run this gate against the
     simulated post-commit schedule (ADR 0042); omitted, the at-rest
     schedule is loaded from disk."""
-    if promotion["promotion_status"] != "active":
+    if approval["approval_status"] != "active":
         return
-    claimed = promotion.get("schedule_slot_ids", [])
+    claimed = approval.get("schedule_slot_ids", [])
     if not claimed:
         return
-    promotion_id = promotion["idea_promotion_id"]
+    approval_id = approval["concept_approval_id"]
     if schedule is None:
         schedule_path = Path(workspace_dir) / "content-schedule.json"
         if not schedule_path.exists():
             raise ValidationError(
-                f"Idea promotion {promotion_id} claims schedule slots but the "
+                f"Concept approval {approval_id} claims schedule slots but the "
                 "workspace has no content-schedule.json"
             )
         # Schema-validate before reading: this check is reachable from validate
@@ -196,22 +218,21 @@ def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None,
         slot["slot_id"]: slot
         for slot in schedule.get("calendar_slots", [])
     }
-    promotion_entry_id = promotion["idea_queue_entry_id"]
-    promotion_run_ids = (
+    approval_run_ids = (
         set(resolved_run_ids)
         if resolved_run_ids is not None
-        else {ref["research_run_id"] for ref in promotion["evidence_refs"]}
+        else {ref["research_run_id"] for ref in approval["evidence_refs"]}
     )
     for slot_id in claimed:
         if slot_id not in slots:
             raise ValidationError(
-                f"Idea promotion {promotion_id} claims {slot_id!r}, which "
+                f"Concept approval {approval_id} claims {slot_id!r}, which "
                 "resolves to no schedule slot in content-schedule.json"
             )
         status = slots[slot_id]["status"]
         if status != "filled":
             raise ValidationError(
-                f"Idea promotion {promotion_id} is active but claimed slot "
+                f"Concept approval {approval_id} is active but claimed slot "
                 f"{slot_id} has status {status!r}; a claimed slot must be "
                 "'filled'"
             )
@@ -224,14 +245,14 @@ def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None,
             research_state = source_slot["research_state"]
         if research_state["status"] != "selected":
             raise ValidationError(
-                f"Idea promotion {promotion_id} claims slot {slot_id}, but its "
+                f"Concept approval {approval_id} claims slot {slot_id}, but its "
                 f"research source slot {source_slot_id} is not selected"
             )
-        selected_entry_id = research_state["selected_idea_queue_entry_id"]
-        if selected_entry_id != promotion_entry_id:
+        if not _slot_selection_matches_concept(research_state, concept):
             raise ValidationError(
-                f"Idea promotion {promotion_id} promotes {promotion_entry_id}, but "
-                f"slot {slot_id} selected {selected_entry_id}"
+                f"Concept approval {approval_id} approves concept "
+                f"{approval['campaign_concept_id']}, but slot {slot_id} "
+                "research selected a different opportunity or concept"
             )
 
         qualifying_runs = []
@@ -260,19 +281,22 @@ def check_promotion_slot_claims(workspace_dir, promotion, resolved_run_ids=None,
                 run["mode"] == "scheduled_needs"
                 and run["run_status"] != "failed"
                 and source_slot_id in run["schedule_slot_ids"]
-                and run_id in promotion_run_ids
+                and run_id in approval_run_ids
             ):
                 qualifying_runs.append(run_id)
         if not qualifying_runs:
             raise ValidationError(
-                f"Idea promotion {promotion_id} claims slot {slot_id} without "
+                f"Concept approval {approval_id} claims slot {slot_id} without "
                 "carrying evidence from a completed focused scheduled_needs run "
                 f"that names source slot {source_slot_id}"
             )
 
 
-def check_schedule_research_provenance(workspace_dir, entries):
-    """Resolve selected schedule state against the canonical idea queue."""
+def check_schedule_research_provenance(workspace_dir, opportunities, concepts):
+    """Resolve selected schedule state against the canonical opportunity
+    queue and campaign concepts: a selected slot names either a shortlisted/
+    assigned Content Opportunity or a live Campaign Concept, and the
+    selection cites evidence from the slot's focused research runs."""
     schedule_path = Path(workspace_dir) / "content-schedule.json"
     if not schedule_path.exists():
         return
@@ -316,45 +340,100 @@ def check_schedule_research_provenance(workspace_dir, entries):
                 )
         if state["status"] != "selected":
             continue
-        entry_id = state["selected_idea_queue_entry_id"]
-        if entry_id not in entries:
-            raise ValidationError(
-                f"calendar slot {slot['slot_id']} selected queue entry "
-                f"{entry_id!r}, but that entry does not exist"
-            )
-        entry = entries[entry_id]
-        if entry["status"] not in {"shortlisted", "promoted"}:
-            raise ValidationError(
-                f"calendar slot {slot['slot_id']} selected queue entry {entry_id}, "
-                f"but its status is {entry['status']!r}; expected 'shortlisted' "
-                "or 'promoted'"
-            )
-        entry_run_ids = {
-            ref["research_run_id"] for ref in entry["evidence_refs"]
+        opportunity_id = state.get("selected_content_opportunity_id")
+        if opportunity_id is not None:
+            if opportunity_id not in opportunities:
+                raise ValidationError(
+                    f"calendar slot {slot_id} selected content opportunity "
+                    f"{opportunity_id!r}, but that opportunity does not exist"
+                )
+            selection = opportunities[opportunity_id]
+            if selection["status"] not in {"shortlisted", "assigned"}:
+                raise ValidationError(
+                    f"calendar slot {slot_id} selected content opportunity "
+                    f"{opportunity_id}, but its status is "
+                    f"{selection['status']!r}; expected 'shortlisted' or "
+                    "'assigned'"
+                )
+            selection_label = f"opportunity {opportunity_id}"
+        else:
+            concept_id = state["selected_campaign_concept_id"]
+            if concept_id not in concepts:
+                raise ValidationError(
+                    f"calendar slot {slot_id} selected campaign concept "
+                    f"{concept_id!r}, but that concept does not exist"
+                )
+            selection = concepts[concept_id]
+            if selection["status"] == "retired":
+                raise ValidationError(
+                    f"calendar slot {slot_id} selected campaign concept "
+                    f"{concept_id}, but it is retired"
+                )
+            selection_label = f"concept {concept_id}"
+        selection_run_ids = {
+            ref["research_run_id"] for ref in selection["evidence_refs"]
         }
-        if not entry_run_ids.intersection(state["research_run_ids"]):
+        if not selection_run_ids.intersection(state["research_run_ids"]):
             raise ValidationError(
-                f"calendar slot {slot['slot_id']} selected {entry_id}, but the "
-                "entry does not cite evidence from its selected research runs"
+                f"calendar slot {slot_id} selected {selection_label}, but it "
+                "does not cite evidence from the slot's selected research runs"
             )
+
+
+def find_concept_approval(workspace_dir, approval_id):
+    """Locate one concept approval across campaigns/*/approvals/."""
+    matches = sorted(
+        Path(workspace_dir).glob(f"campaigns/*/approvals/{approval_id}.json")
+    )
+    if not matches:
+        return None
+    return load_json(matches[0])
+
+
+def find_campaign_concept(workspace_dir, concept_id):
+    """Locate one campaign concept across campaigns/*/concepts/."""
+    matches = sorted(
+        Path(workspace_dir).glob(f"campaigns/*/concepts/{concept_id}.json")
+    )
+    if not matches:
+        return None
+    return load_json(matches[0])
+
+
+def collect_campaign_concepts(workspace_dir):
+    """Map campaign_concept_id -> concept across every campaign."""
+    concepts = {}
+    for concept_path in sorted(
+        Path(workspace_dir).glob("campaigns/*/concepts/*.json")
+    ):
+        concept = load_json(concept_path)
+        concepts[concept["campaign_concept_id"]] = concept
+    return concepts
 
 
 def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None):
     """A warning must target records that exist and form one consistent
-    promotion chain — queue entries, projects, and promotions are never
+    approval chain — opportunities, projects, and approvals are never
     deleted in v1, so a dangling target is invalid state, not history, and
     a mismatched tuple would badge the wrong card on the board."""
     workspace_dir = Path(workspace_dir)
     warning_id = record.get("project_warning_id", "<unknown>")
-    entry_id = record["idea_queue_entry_id"]
-    entry_path = (
-        workspace_dir / "research" / "idea-queue" / "entries" / f"{entry_id}.json"
-    )
-    if not entry_path.exists():
+    entry_id = record.get("content_opportunity_id")
+    if entry_id is None and "project_id" not in record:
         raise ValidationError(
-            f"project warning {warning_id} targets queue entry {entry_id!r} "
-            "with no entry file"
+            f"project warning {warning_id} targets nothing; a queue-level "
+            "warning names its content opportunity"
         )
+    if entry_id is not None:
+        entry_path = (
+            workspace_dir / "research" / "content-opportunity-queue" / "entries"
+            / f"{entry_id}.json"
+        )
+        if not entry_path.exists():
+            raise ValidationError(
+                f"project warning {warning_id} targets content opportunity "
+                f"{entry_id!r} with no entry file"
+            )
     if "project_id" in record:
         project_id = record["project_id"]
         if projects_by_id is None:
@@ -364,31 +443,36 @@ def check_project_warning_target_refs(record, workspace_dir, projects_by_id=None
                 f"project warning {warning_id} targets project {project_id!r} "
                 "with no project record"
             )
-        promotion_id = record["idea_promotion_id"]
-        promotion_path = (
-            workspace_dir / "research" / "idea-promotions" / f"{promotion_id}.json"
-        )
-        if not promotion_path.exists():
+        approval_id = record["concept_approval_id"]
+        approval = find_concept_approval(workspace_dir, approval_id)
+        if approval is None:
             raise ValidationError(
-                f"project warning {warning_id} targets idea promotion "
-                f"{promotion_id!r} with no promotion record"
+                f"project warning {warning_id} targets concept approval "
+                f"{approval_id!r} with no approval record"
             )
         _, project = projects_by_id[project_id]
-        locked_promotion = project.get("source_refs", {}).get("idea_promotion_id")
-        if locked_promotion != promotion_id:
+        locked_approval = project.get("source_refs", {}).get("concept_approval_id")
+        if locked_approval != approval_id:
             raise ValidationError(
                 f"project warning {warning_id} pairs project {project_id!r} "
-                f"with idea promotion {promotion_id!r}, but the project's "
-                f"locked promotion is {locked_promotion!r}"
+                f"with concept approval {approval_id!r}, but the project's "
+                f"locked approval is {locked_approval!r}"
             )
-        promotion = load_json(promotion_path)
-        promoted_entry = promotion.get("idea_queue_entry_id")
-        if promoted_entry != entry_id:
-            raise ValidationError(
-                f"project warning {warning_id} targets queue entry "
-                f"{entry_id!r}, but idea promotion {promotion_id!r} was "
-                f"promoted from {promoted_entry!r}"
+        if entry_id is not None:
+            concept = find_campaign_concept(
+                workspace_dir, approval["campaign_concept_id"]
             )
+            source_opportunity = (
+                concept.get("source_content_opportunity_id")
+                if concept is not None
+                else None
+            )
+            if source_opportunity != entry_id:
+                raise ValidationError(
+                    f"project warning {warning_id} targets content opportunity "
+                    f"{entry_id!r}, but concept approval {approval_id!r} "
+                    f"resolves to source opportunity {source_opportunity!r}"
+                )
 
 
 def parse_frontmatter(path):
@@ -505,7 +589,7 @@ def validate_research(workspace_path):
     if stable_dir.exists():
         for stable_path in sorted(stable_dir.glob("*.md")):
             stable_data = validate_stable_finding_file(stable_path)
-            # The entries/promotions filename==id pattern: it also makes a
+            # The entries/approvals filename==id pattern: it also makes a
             # duplicated stable_finding_id impossible at rest.
             if stable_data["stable_finding_id"] != stable_path.stem:
                 raise ValidationError(
@@ -745,7 +829,7 @@ def validate_research(workspace_path):
                 run_is_material = (
                     run_record["material_update"]
                     or bool(run_outputs["finding_ids"])
-                    or bool(run_outputs["idea_queue_entry_ids"])
+                    or bool(run_outputs["content_opportunity_ids"])
                 )
                 if (
                     run_is_material
@@ -822,40 +906,50 @@ def validate_research(workspace_path):
 
     checked.extend(validate_events_ledger(workspace_dir, scope))
 
-    warnings, promotion_paths, _promotions_by_id = validate_promotions(
+    warnings, approval_paths, _approvals_by_id = validate_approvals(
         workspace_dir, scope=scope
     )
-    checked.extend(promotion_paths)
+    checked.extend(approval_paths)
     warnings = run_warnings + warnings
 
-    # Promotion checks run identically on the research and queue paths: when
-    # the queue exists, the research path also verifies the entry-side
-    # consistency (manifest agreement, ref resolution, and the
-    # entry <-> promotion <-> project closure).
-    queue_manifest_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    # Approval checks run identically on the research and queue paths: when
+    # the opportunity queue exists, the research path also verifies the
+    # entry-side consistency (manifest agreement, ref resolution, and the
+    # opportunity <-> concept assignment closure).
+    queue_manifest_path = (
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
+    )
     if queue_manifest_path.exists():
-        entries = _check_queue_consistency(workspace_dir, scope)
-        check_schedule_research_provenance(workspace_dir, entries)
-        checked.append("research/idea-queue/queue.json")
+        entries = _check_opportunity_consistency(workspace_dir, scope)
+        check_schedule_research_provenance(
+            workspace_dir, entries, collect_campaign_concepts(workspace_dir)
+        )
+        checked.append("research/content-opportunity-queue/queue.json")
 
     return {"workspace_path": workspace_dir, "checked_paths": checked, "warnings": warnings}
 
 
 def validate_queue(workspace_path):
     workspace_dir = Path(workspace_path)
-    manifest_path = workspace_dir / "research" / "idea-queue" / "queue.json"
+    manifest_path = (
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
+    )
     if not manifest_path.exists():
-        raise FileNotFoundError(f"Missing idea queue manifest: {manifest_path}")
+        raise FileNotFoundError(
+            f"Missing content opportunity queue manifest: {manifest_path}"
+        )
 
     scope = load_workspace_scope(workspace_dir)
 
     # Entry-side consistency first (queue-focused errors surface first),
-    # then the same promotion check set as validate research (gate, creator
-    # scope, filename==id, slot claims, gate warnings) so no promotion state
+    # then the same approval check set as validate research (gate, creator
+    # scope, filename==id, slot claims, gate warnings) so no approval state
     # can validate on one command and fail the other.
-    entries = _check_queue_consistency(workspace_dir, scope)
-    check_schedule_research_provenance(workspace_dir, entries)
-    warnings, _promotion_paths, _promotions_by_id = validate_promotions(
+    entries = _check_opportunity_consistency(workspace_dir, scope)
+    check_schedule_research_provenance(
+        workspace_dir, entries, collect_campaign_concepts(workspace_dir)
+    )
+    warnings, _approval_paths, _approvals_by_id = validate_approvals(
         workspace_dir, scope=scope
     )
 
@@ -867,75 +961,26 @@ def validate_queue(workspace_path):
     }
 
 
-def _check_queue_consistency(workspace_dir, scope):
-    """Entry-side queue consistency, shared by validate_queue and
-    validate_research: manifest/entry agreement, evidence and finding ref
-    resolution, and the entry <-> promotion <-> project closure."""
+def _check_opportunity_consistency(workspace_dir, scope):
+    """Entry-side opportunity queue consistency, shared by validate_queue
+    and validate_research: manifest/entry agreement (delegated to the
+    campaign walker's queue check), evidence and finding ref resolution,
+    and the opportunity <-> concept assignment closure."""
+    from influencer_os.campaigns import _check_opportunity_queue
+
     workspace_dir = Path(workspace_dir)
-    queue_dir = workspace_dir / "research" / "idea-queue"
-    manifest_path = queue_dir / "queue.json"
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"Missing idea queue manifest: {manifest_path}")
-
-    manifest = load_json(manifest_path)
-    validate_record("idea-queue", manifest)
-    check_creator_scope(manifest, scope, manifest_path)
-
-    entries_dir = queue_dir / "entries"
-    entries = {}
-    if entries_dir.exists():
-        for entry_path in sorted(entries_dir.glob("*.json")):
-            record = load_json(entry_path)
-            try:
-                validate_record("idea-queue-entry", record)
-            except ValidationError as exc:
-                raise ValidationError(f"{entry_path}: {exc}") from None
-            if record["idea_queue_entry_id"] != entry_path.stem:
-                raise ValidationError(
-                    f"{entry_path}: filename does not match idea_queue_entry_id "
-                    f"{record['idea_queue_entry_id']!r}"
-                )
-            check_creator_scope(record, scope, entry_path)
-            entries[record["idea_queue_entry_id"]] = record
-
-    ref_ids = [ref["idea_queue_entry_id"] for ref in manifest["entry_refs"]]
-    duplicate_refs = sorted(
-        ref_id for ref_id in set(ref_ids) if ref_ids.count(ref_id) > 1
+    manifest_path = (
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json"
     )
-    if duplicate_refs:
-        raise ValidationError(
-            f"Queue manifest lists entries more than once: {duplicate_refs}"
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            f"Missing content opportunity queue manifest: {manifest_path}"
         )
-    manifest_refs = {ref["idea_queue_entry_id"]: ref["status"] for ref in manifest["entry_refs"]}
-    missing = sorted(set(manifest_refs) - set(entries))
-    if missing:
-        raise ValidationError(f"Queue manifest names entries with no entry file: {missing}")
-    unlisted = sorted(set(entries) - set(manifest_refs))
-    if unlisted:
-        raise ValidationError(f"Queue entry files missing from the manifest: {unlisted}")
-    for entry_id, status in manifest_refs.items():
-        if entries[entry_id]["status"] != status:
-            raise ValidationError(
-                f"Queue manifest status {status!r} does not match entry file status "
-                f"{entries[entry_id]['status']!r} for {entry_id}"
-            )
 
-    status_counts = manifest.get("status_counts")
-    if status_counts is not None:
-        actual_counts = {}
-        for status in manifest_refs.values():
-            actual_counts[status] = actual_counts.get(status, 0) + 1
-        for status, count in status_counts.items():
-            if actual_counts.get(status, 0) != count:
-                raise ValidationError(
-                    f"Queue manifest status_counts[{status!r}] is {count}, but "
-                    f"{actual_counts.get(status, 0)} entries have that status"
-                )
-        uncounted = sorted(set(actual_counts) - set(status_counts))
-        if uncounted:
-            raise ValidationError(
-                f"Queue manifest status_counts omit statuses present in the queue: {uncounted}"
-            )
+    concepts = collect_campaign_concepts(workspace_dir)
+    entries = _check_opportunity_queue(
+        workspace_dir, scope, [], set(concepts)
+    )
 
     evidence_runs, metric_runs, metric_evidence = collect_research_record_ids(workspace_dir)
     video_pack_ids = collect_video_pack_ids(workspace_dir)
@@ -947,169 +992,132 @@ def _check_queue_consistency(workspace_dir, scope):
             )
             if problems:
                 raise ValidationError(
-                    f"{entry['idea_queue_entry_id']}: {problems[0]}"
+                    f"{entry['content_opportunity_id']}: {problems[0]}"
                 )
         for finding_id in entry.get("source_finding_ids", []):
             if finding_id not in known_finding_ids:
                 raise ValidationError(
-                    f"{entry['idea_queue_entry_id']}: source finding ref "
+                    f"{entry['content_opportunity_id']}: source finding ref "
                     f"{finding_id!r} does not resolve to any findings "
                     "frontmatter, stable finding, or run output"
                 )
 
-    # Slice 5 link consistency: entry <-> promotion <-> project links hold at
-    # rest. The promotion act writes both sides in one workflow, so a
-    # one-sided link is always invalid state, never an in-progress step.
-    # Promotions load schema-valid here for the entry-side closure; the
-    # per-promotion gate, creator scope, filename==id, and slot-claim checks
-    # run in validate_promotions on both validator paths.
-    promotions_by_id = {}
-    promotions_dir = workspace_dir / "research" / "idea-promotions"
-    if promotions_dir.exists():
-        for promotion_path in sorted(promotions_dir.glob("*.json")):
-            promotion = load_json(promotion_path)
-            try:
-                validate_record("idea-promotion", promotion)
-            except ValidationError as exc:
-                raise ValidationError(f"{promotion_path}: {exc}") from None
-            promotions_by_id[promotion["idea_promotion_id"]] = promotion
-    projects_by_id = collect_project_manifests(workspace_dir)
-
+    # Assignment closure: assigning an opportunity creates a concept with
+    # provenance back to the opportunity (ADR 0031). Both sides are written
+    # by one workflow, so a one-sided link is always invalid state.
+    concepts_by_source = {}
+    for concept in concepts.values():
+        # A retired concept keeps its historical source ref while the
+        # opportunity legitimately reverts to the open pool.
+        if concept["status"] == "retired":
+            continue
+        source_id = concept.get("source_content_opportunity_id")
+        if source_id is not None:
+            concepts_by_source.setdefault(source_id, []).append(
+                concept["campaign_concept_id"]
+            )
     for entry_id, entry in entries.items():
-        linked_promotions = entry.get("linked_idea_promotion_ids", [])
-        for promotion_id in linked_promotions:
-            promotion = promotions_by_id.get(promotion_id)
-            if promotion is None:
+        linked_concepts = entry.get("linked_campaign_concept_ids", [])
+        for concept_id in linked_concepts:
+            concept = concepts.get(concept_id)
+            if concept is None:
                 raise ValidationError(
-                    f"{entry_id}: linked idea promotion {promotion_id!r} has "
-                    "no promotion record"
+                    f"{entry_id}: linked campaign concept {concept_id!r} has "
+                    "no concept record"
                 )
-            if promotion["idea_queue_entry_id"] != entry_id:
+            if concept.get("source_content_opportunity_id") != entry_id:
                 raise ValidationError(
-                    f"{entry_id}: linked idea promotion {promotion_id!r} was "
-                    f"promoted from {promotion['idea_queue_entry_id']!r}"
+                    f"{entry_id}: linked campaign concept {concept_id!r} was "
+                    f"assigned from "
+                    f"{concept.get('source_content_opportunity_id')!r}"
                 )
-        active = [
-            promotion_id
-            for promotion_id in linked_promotions
-            if promotions_by_id[promotion_id]["promotion_status"] == "active"
-        ]
-        if entry["status"] == "promoted":
-            if not linked_promotions:
+        if entry["status"] == "assigned":
+            if not linked_concepts:
                 raise ValidationError(
-                    f"{entry_id}: status is 'promoted' but "
-                    "linked_idea_promotion_ids is empty"
+                    f"{entry_id}: status is 'assigned' but "
+                    "linked_campaign_concept_ids is empty"
                 )
-            if not active:
-                raise ValidationError(
-                    f"{entry_id}: status is 'promoted' but no linked promotion "
-                    "is active; the entry should have reverted with the last "
-                    "active promotion"
-                )
-            if len(active) > 1:
-                raise ValidationError(
-                    f"{entry_id}: more than one linked promotion is active "
-                    f"({sorted(active)}); scope expansion must supersede the "
-                    "earlier promotion, not add a second active one"
-                )
-        elif active:
+        elif linked_concepts:
             raise ValidationError(
-                f"{entry_id}: status is {entry['status']!r} but the entry "
-                f"links active promotion(s) {sorted(active)}"
+                f"{entry_id}: status is {entry['status']!r} but the "
+                f"opportunity links concept(s) {sorted(linked_concepts)}"
             )
-        linked_projects = entry.get("linked_project_ids", [])
-        for project_id in linked_projects:
-            if project_id not in projects_by_id:
-                raise ValidationError(
-                    f"{entry_id}: linked project {project_id!r} has no "
-                    "project record"
-                )
-        # Slice 5 review P1: promotion must leave production work behind.
-        # The rule is entry-level, not a promotion-level minimum, because an
-        # active supersede-expansion promotion legitimately creates no new
-        # project — the entry still links the superseded promotion's work.
-        if entry["status"] == "promoted" and not linked_projects:
+        unlinked = sorted(
+            set(concepts_by_source.get(entry_id, [])) - set(linked_concepts)
+        )
+        if unlinked:
             raise ValidationError(
-                f"{entry_id}: status is 'promoted' but the entry has no "
-                "linked project; a promotion must leave production work "
-                "behind in linked_project_ids"
+                f"{entry_id}: concept(s) {unlinked} name this opportunity as "
+                "their source, but the opportunity does not link them back"
             )
-        for project_id in linked_projects:
-            _, project = projects_by_id[project_id]
-            locked = project.get("source_refs", {}).get("idea_promotion_id")
-            if locked not in linked_promotions:
-                raise ValidationError(
-                    f"{entry_id}: linked project {project_id!r} locks "
-                    f"promotion {locked!r}, which is not among the entry's "
-                    "linked promotions"
-                )
-        for promotion_id in linked_promotions:
-            missing = sorted(
-                set(promotions_by_id[promotion_id]["project_ids_created"])
-                - set(linked_projects)
-            )
-            if missing:
-                raise ValidationError(
-                    f"{entry_id}: linked promotion {promotion_id} created "
-                    f"projects missing from linked_project_ids: {missing}"
-                )
 
     return entries
 
 
-def validate_promotion_gate(
+def validate_approval_gate(
     workspace_dir,
-    promotion,
+    approval,
     projects_by_id=None,
     research_ids=None,
     video_pack_ids=None,
     known_finding_ids=None,
-    entry=None,
+    concept=None,
     schedule=None,
 ):
-    """Enforce the promotion gate (Phase 0C workstream 12 residue).
+    """Enforce the concept approval gate (ADR 0029/0031).
 
-    A promotion must point to a real idea queue entry. Unresolved evidence
-    refs warn for human-approved promotions (the human saw the evidence) and
-    fail for any future automated promotion path. Returns warning strings.
+    An approval must point to a real campaign concept and carry the
+    concept's evidence and intent verbatim. Unresolved evidence refs warn
+    for human-approved records (the human saw the evidence) and fail for
+    any future automated path. Returns warning strings.
 
-    The optional research_ids / video_pack_ids / known_finding_ids caches let
-    validate_promotions collect the research corpus once instead of per
-    promotion (slice 2 review finding). ``entry`` and ``schedule`` let a
-    staged-commit preflight (ADR 0042) run the gate against the simulated
-    post-commit state; omitted, both load from disk as at rest.
+    The optional research_ids / video_pack_ids / known_finding_ids caches
+    let validate_approvals collect the research corpus once instead of per
+    approval. ``concept`` and ``schedule`` let a staged-commit preflight
+    (ADR 0042) run the gate against the simulated post-commit state;
+    omitted, both load from disk as at rest.
     """
     workspace_dir = Path(workspace_dir)
-    promotion_id = promotion["idea_promotion_id"]
-    entry_id = promotion["idea_queue_entry_id"]
-    entry_path = workspace_dir / "research" / "idea-queue" / "entries" / f"{entry_id}.json"
-    if entry is None:
-        if not entry_path.exists():
+    approval_id = approval["concept_approval_id"]
+    concept_id = approval["campaign_concept_id"]
+    if concept is None:
+        concept = find_campaign_concept(workspace_dir, concept_id)
+        if concept is None:
             raise ValidationError(
-                f"Idea promotion {promotion_id} does not point to a real idea queue entry: "
-                f"research/idea-queue/entries/{entry_id}.json is missing"
+                f"Concept approval {approval_id} does not point to a real "
+                f"campaign concept: {concept_id} resolves to no concept file"
             )
-        entry = load_json(entry_path)
     try:
-        validate_record("idea-queue-entry", entry)
+        validate_record("campaign-concept", concept)
     except ValidationError as exc:
-        raise ValidationError(f"{entry_path}: {exc}") from None
-    if entry["creator_profile_id"] != promotion["creator_profile_id"]:
+        raise ValidationError(f"concept {concept_id}: {exc}") from None
+    if concept["creator_profile_id"] != approval["creator_profile_id"]:
         raise ValidationError(
-            f"Idea promotion {promotion_id} points to a queue entry owned by a "
-            f"different creator: {entry['creator_profile_id']!r} != "
-            f"{promotion['creator_profile_id']!r}"
+            f"Concept approval {approval_id} points to a concept owned by a "
+            f"different creator: {concept['creator_profile_id']!r} != "
+            f"{approval['creator_profile_id']!r}"
         )
-    if not set(promotion["approved_formats"]) & PRODUCTION_SUPPORTED_FORMATS:
+    if not set(approval["approved_formats"]) & PRODUCTION_SUPPORTED_FORMATS:
         raise ValidationError(
-            f"Idea promotion {promotion_id} approves no production-supported "
-            f"format ({sorted(promotion['approved_formats'])}); record the "
-            "approval intent on the queue entry instead until the format lands"
+            f"Concept approval {approval_id} approves no production-supported "
+            f"format ({sorted(approval['approved_formats'])}); record the "
+            "approval intent on the concept instead until the format lands"
         )
-    check_promotion_entry_links(promotion, entry)
+    if approval["evidence_refs"] != concept["evidence_refs"]:
+        raise ValidationError(
+            f"Concept approval {approval_id} evidence does not match concept "
+            f"{concept_id} evidence verbatim; approvals copy the concept's "
+            "research package, never a rewritten one"
+        )
+    check_approval_concept_links(approval, concept)
     if projects_by_id is None:
         projects_by_id = collect_project_manifests(workspace_dir)
-    check_promotion_created_projects(promotion, projects_by_id)
+    check_approval_created_projects(approval, projects_by_id)
+    from influencer_os.campaigns import check_project_expression_against_approval
+
+    for project_id in approval["project_ids_created"]:
+        _path, project = projects_by_id[project_id]
+        check_project_expression_against_approval(project, approval, concept)
 
     if research_ids is None:
         research_ids = collect_research_record_ids(workspace_dir)
@@ -1120,7 +1128,7 @@ def validate_promotion_gate(
 
     unresolved = []
     resolved_run_ids = set()
-    for ref in promotion["evidence_refs"]:
+    for ref in approval["evidence_refs"]:
         problems = resolve_evidence_ref(
             ref, evidence_runs, metric_runs, video_pack_ids, metric_evidence
         )
@@ -1130,28 +1138,20 @@ def validate_promotion_gate(
     unresolved_message = None
     if unresolved:
         unresolved_message = (
-            f"idea promotion {promotion_id} has unresolved evidence refs: "
+            f"concept approval {approval_id} has unresolved evidence refs: "
             + "; ".join(sorted(set(unresolved)))
         )
-        if promotion["approved_by"] != "user":
+        if approval["approved_by"] != "user":
             raise ValidationError(unresolved_message)
         warnings.append(
-            f"warning: {unresolved_message} (human-approved promotion: warning only)"
-        )
-    entry_run_ids = {
-        ref["research_run_id"] for ref in entry["evidence_refs"]
-    }
-    injected_run_ids = resolved_run_ids - entry_run_ids
-    if promotion.get("schedule_slot_ids") and injected_run_ids:
-        raise ValidationError(
-            f"idea promotion {promotion_id} uses resolved slot research runs "
-            f"{sorted(injected_run_ids)}, but its queue entry does not cite that run"
+            f"warning: {unresolved_message} (human-approved: warning only)"
         )
     try:
-        check_promotion_slot_claims(
+        check_approval_slot_claims(
             workspace_dir,
-            promotion,
-            resolved_run_ids=resolved_run_ids.intersection(entry_run_ids),
+            approval,
+            concept,
+            resolved_run_ids=resolved_run_ids,
             schedule=schedule,
         )
     except ValidationError as exc:
@@ -1163,77 +1163,80 @@ def validate_promotion_gate(
         known_finding_ids = collect_finding_ids(workspace_dir)
     unresolved_findings = sorted(
         finding_id
-        for finding_id in set(promotion.get("research_finding_ids", []))
+        for finding_id in set(concept.get("source_finding_ids", []))
         if finding_id not in known_finding_ids
     )
     if unresolved_findings:
         message = (
-            f"idea promotion {promotion_id} has research finding refs that "
-            "resolve to no findings frontmatter, stable finding, or run "
-            f"output: {unresolved_findings}"
+            f"concept approval {approval_id} approves concept {concept_id} "
+            "with finding refs that resolve to no findings frontmatter, "
+            f"stable finding, or run output: {unresolved_findings}"
         )
-        if promotion["approved_by"] != "user":
+        if approval["approved_by"] != "user":
             raise ValidationError(message)
         warnings.append(
-            f"warning: {message} (human-approved promotion: warning only)"
+            f"warning: {message} (human-approved: warning only)"
         )
     return warnings
 
 
-def validate_promotions(workspace_path, scope=None):
-    """Validate every promotion record and its gate. Returns warning strings,
-    checked paths, and the promotion map keyed by idea_promotion_id."""
+def validate_approvals(workspace_path, scope=None):
+    """Validate every concept approval and its gate. Returns warning
+    strings, checked paths, and the approval map keyed by
+    concept_approval_id."""
     workspace_dir = Path(workspace_path)
     if scope is None:
         scope = load_workspace_scope(workspace_dir)
-    promotions_dir = workspace_dir / "research" / "idea-promotions"
+    approval_paths = sorted(workspace_dir.glob("campaigns/*/approvals/*.json"))
     warnings = []
     checked = []
-    promotions_by_id = {}
-    if promotions_dir.exists():
+    approvals_by_id = {}
+    if approval_paths:
         projects_by_id = collect_project_manifests(workspace_dir)
         # Collect the research corpus once for the whole sweep; the gate
-        # would otherwise rescan it per promotion.
+        # would otherwise rescan it per approval.
         research_ids = collect_research_record_ids(workspace_dir)
         video_pack_ids = collect_video_pack_ids(workspace_dir)
         known_finding_ids = collect_finding_ids(workspace_dir)
+        concepts = collect_campaign_concepts(workspace_dir)
         claimed_slots = {}
-        for promotion_path in sorted(promotions_dir.glob("*.json")):
-            promotion = load_json(promotion_path)
+        for approval_path in approval_paths:
+            approval = load_json(approval_path)
             try:
-                validate_record("idea-promotion", promotion)
+                validate_record("concept-approval", approval)
             except ValidationError as exc:
-                raise ValidationError(f"{promotion_path}: {exc}") from None
-            if promotion["idea_promotion_id"] != promotion_path.stem:
+                raise ValidationError(f"{approval_path}: {exc}") from None
+            if approval["concept_approval_id"] != approval_path.stem:
                 raise ValidationError(
-                    f"{promotion_path}: filename does not match idea_promotion_id "
-                    f"{promotion['idea_promotion_id']!r}"
+                    f"{approval_path}: filename does not match "
+                    f"concept_approval_id {approval['concept_approval_id']!r}"
                 )
-            check_creator_scope(promotion, scope, promotion_path)
-            if promotion["promotion_status"] == "active":
-                for slot_id in promotion.get("schedule_slot_ids", []):
+            check_creator_scope(approval, scope, approval_path)
+            if approval["approval_status"] == "active":
+                for slot_id in approval.get("schedule_slot_ids", []):
                     earlier = claimed_slots.setdefault(
-                        slot_id, promotion["idea_promotion_id"]
+                        slot_id, approval["concept_approval_id"]
                     )
-                    if earlier != promotion["idea_promotion_id"]:
+                    if earlier != approval["concept_approval_id"]:
                         raise ValidationError(
                             f"Schedule slot {slot_id} is claimed by more than "
-                            f"one active promotion: {earlier} and "
-                            f"{promotion['idea_promotion_id']}"
+                            f"one active approval: {earlier} and "
+                            f"{approval['concept_approval_id']}"
                         )
             warnings.extend(
-                validate_promotion_gate(
+                validate_approval_gate(
                     workspace_dir,
-                    promotion,
+                    approval,
                     projects_by_id=projects_by_id,
                     research_ids=research_ids,
                     video_pack_ids=video_pack_ids,
                     known_finding_ids=known_finding_ids,
+                    concept=concepts.get(approval["campaign_concept_id"]),
                 )
             )
-            promotions_by_id[promotion["idea_promotion_id"]] = promotion
-            checked.append(str(promotion_path.relative_to(workspace_dir)))
-    return warnings, checked, promotions_by_id
+            approvals_by_id[approval["concept_approval_id"]] = approval
+            checked.append(str(approval_path.relative_to(workspace_dir)))
+    return warnings, checked, approvals_by_id
 
 
 def collect_research_record_ids(workspace_dir):

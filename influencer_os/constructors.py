@@ -38,12 +38,24 @@ STAGED_RUNS_DIR = STAGING_DIR / "research-runs"
 
 SCAFFOLD_TYPES = {
     "project": (
-        "Project manifest + folder from a seed and its locked idea "
-        "promotion (subsumes init-project)"
+        "Project manifest + folder from a seed and its locked concept "
+        "approval (subsumes init-project)"
     ),
     "search-plan": (
         "ResearchSearchPlan + staged in-flight run directory under "
         "system/staging/research-runs/ (complete-run moves it canonical)"
+    ),
+    "campaign": (
+        "Draft Campaign under campaigns/<campaign_id>/ (activate with the "
+        "human activation decision)"
+    ),
+    "campaign-concept": (
+        "Draft Campaign Concept; assigning a content opportunity copies its "
+        "evidence and intent and flips it to assigned in one invocation"
+    ),
+    "content-opportunity": (
+        "Content Opportunity entry + queue manifest upsert under "
+        "research/content-opportunity-queue/"
     ),
 }
 
@@ -53,7 +65,8 @@ PROJECT_SEED_REQUIRED = (
     "platform_targets",
     "learning_goal",
     "acceptance_criteria",
-    "idea_promotion_id",
+    "commercial_expression",
+    "concept_approval_id",
 )
 PROJECT_SEED_OPTIONAL = (
     "constraints",
@@ -164,16 +177,21 @@ def project_paths_block(project_slug):
     }
 
 
-def _copied_promotion_refs(promotion):
-    """source_refs cached from the locked promotion — machine-copied so the
-    PROMOTION_CACHED_SUBSETS consistency checks hold by construction."""
-    refs = {"idea_queue_entry_id": promotion["idea_queue_entry_id"]}
-    if promotion.get("research_finding_ids"):
-        refs["research_finding_ids"] = list(promotion["research_finding_ids"])
+def _copied_approval_refs(approval, concept):
+    """source_refs cached from the locked approval and its concept —
+    machine-copied so the APPROVAL_CACHED_SUBSETS consistency checks hold
+    by construction. Cached concept/campaign ids must match the transitive
+    chain (campaign-concept-pressure plan)."""
+    refs = {
+        "campaign_concept_id": approval["campaign_concept_id"],
+        "campaign_id": concept["campaign_id"],
+    }
+    if concept.get("source_finding_ids"):
+        refs["research_finding_ids"] = list(concept["source_finding_ids"])
     evidence_ids = []
     metric_ids = []
     pack_ids = []
-    for evidence_ref in promotion["evidence_refs"]:
+    for evidence_ref in approval["evidence_refs"]:
         if evidence_ref["evidence_id"] not in evidence_ids:
             evidence_ids.append(evidence_ref["evidence_id"])
         for metric_id in evidence_ref.get("metric_snapshot_ids", []):
@@ -191,24 +209,24 @@ def _copied_promotion_refs(promotion):
     return refs
 
 
-def build_project_manifest(seed, *, creator_profile_id, promotion,
+def build_project_manifest(seed, *, creator_profile_id, approval, concept,
                            project_id, today):
     """Assemble a full project manifest from authored seed fields, derived
-    defaults, and fields copied from the locked promotion."""
+    defaults, and fields copied from the locked concept approval."""
     check_seed_fields(
         seed, PROJECT_SEED_REQUIRED, PROJECT_SEED_OPTIONAL, "project"
     )
-    if seed["idea_promotion_id"] != promotion["idea_promotion_id"]:
+    if seed["concept_approval_id"] != approval["concept_approval_id"]:
         raise ValidationError(
-            f"project seed names promotion {seed['idea_promotion_id']!r} but "
-            f"was built against {promotion['idea_promotion_id']!r}"
+            f"project seed names approval {seed['concept_approval_id']!r} but "
+            f"was built against {approval['concept_approval_id']!r}"
         )
     source_refs = {
-        "idea_promotion_id": promotion["idea_promotion_id"],
+        "concept_approval_id": approval["concept_approval_id"],
         "reference_asset_ids": list(seed.get("reference_asset_ids", [])),
         "evidence_brief_path": "evidence-brief.md",
     }
-    source_refs.update(_copied_promotion_refs(promotion))
+    source_refs.update(_copied_approval_refs(approval, concept))
     project = {
         "project_id": project_id,
         "creator_profile_id": creator_profile_id,
@@ -224,11 +242,15 @@ def build_project_manifest(seed, *, creator_profile_id, promotion,
         "platform_targets": list(seed["platform_targets"]),
         "learning_goal": seed["learning_goal"],
         "acceptance_criteria": list(seed["acceptance_criteria"]),
+        "commercial_expression": dict(seed["commercial_expression"]),
     }
     for optional_field in ("constraints", "dependencies", "notes"):
         if optional_field in seed:
             project[optional_field] = seed[optional_field]
     validate_record("project", project)
+    from influencer_os.campaigns import check_project_expression_against_approval
+
+    check_project_expression_against_approval(project, approval, concept)
     return project
 
 
@@ -241,63 +263,76 @@ def create_project_from_manifest(project, creator_workspace):
         return init_project(manifest_path, creator_workspace)
 
 
-def _load_promotion(workspace_dir, promotion_id):
-    promotion_path = (
-        Path(workspace_dir) / "research" / "idea-promotions"
-        / f"{promotion_id}.json"
-    )
-    if not promotion_path.exists():
+def _load_approval(workspace_dir, approval_id):
+    from influencer_os.research import find_concept_approval
+
+    approval = find_concept_approval(workspace_dir, approval_id)
+    if approval is None:
         raise ValidationError(
-            f"idea_promotion_id {promotion_id!r} resolves to no promotion: "
-            f"{promotion_path}"
+            f"concept_approval_id {approval_id!r} resolves to no approval "
+            "under campaigns/*/approvals/"
         )
-    promotion = load_json(promotion_path)
-    validate_record("idea-promotion", promotion)
-    return promotion
+    validate_record("concept-approval", approval)
+    return approval
 
 
-def _unclaimed_promotion_project_id(workspace_dir, promotion):
+def _load_concept(workspace_dir, concept_id):
+    from influencer_os.research import find_campaign_concept
+
+    concept = find_campaign_concept(workspace_dir, concept_id)
+    if concept is None:
+        raise ValidationError(
+            f"campaign_concept_id {concept_id!r} resolves to no concept "
+            "under campaigns/*/concepts/"
+        )
+    validate_record("campaign-concept", concept)
+    return concept
+
+
+def _unclaimed_approval_project_id(workspace_dir, approval):
     from influencer_os.research import collect_project_manifests
 
     existing = collect_project_manifests(workspace_dir)
     unclaimed = [
         project_id
-        for project_id in promotion["project_ids_created"]
+        for project_id in approval["project_ids_created"]
         if project_id not in existing
     ]
     if len(unclaimed) == 1:
         return unclaimed[0]
-    promotion_id = promotion["idea_promotion_id"]
+    approval_id = approval["concept_approval_id"]
     if not unclaimed:
         raise ValidationError(
-            f"promotion {promotion_id} lists no unclaimed project id; a new "
-            "project needs a new promotion package (stage promotion), since "
-            "the locked promotion pre-lists every project it creates"
+            f"approval {approval_id} lists no unclaimed project id; a new "
+            "project needs a new approval package (stage approval), since "
+            "the locked approval pre-lists its exact project set"
         )
     raise ValidationError(
-        f"promotion {promotion_id} has several unclaimed project ids "
+        f"approval {approval_id} has several unclaimed project ids "
         f"{unclaimed}; pin one via the seed's project_id"
     )
 
 
 def scaffold_project(seed, creator_workspace, now=None):
-    """Build and create one project from a seed against its locked
-    promotion. The project id comes from a seed pin or the promotion's
-    single unclaimed pre-listed id."""
+    """Build and create one project from a seed against its locked concept
+    approval. The project id comes from a seed pin or the approval's single
+    unclaimed pre-listed id."""
     workspace_dir = Path(creator_workspace)
     seed = load_seed(seed)
     check_seed_fields(
         seed, PROJECT_SEED_REQUIRED, PROJECT_SEED_OPTIONAL, "project"
     )
     workspace_manifest = load_workspace_manifest(workspace_dir)
-    promotion = _load_promotion(workspace_dir, seed["idea_promotion_id"])
-    project_id = seed.get("project_id") or _unclaimed_promotion_project_id(
-        workspace_dir, promotion
+    approval = _load_approval(workspace_dir, seed["concept_approval_id"])
+    concept = _load_concept(workspace_dir, approval["campaign_concept_id"])
+    project_id = seed.get("project_id") or _unclaimed_approval_project_id(
+        workspace_dir, approval
     )
     project = build_project_manifest(
         seed,
         creator_profile_id=workspace_manifest["creator_profile_id"],
-        promotion=promotion,
+        approval=approval,
+        concept=concept,
         project_id=project_id,
         today=_now(now).strftime("%Y-%m-%d"),
     )
@@ -415,7 +450,8 @@ def _scan_jsonl_ids(run_dir, filename, schema_name, id_field):
 
 def _entries_citing_run(workspace_dir, run_id):
     entries_dir = (
-        Path(workspace_dir) / "research" / "idea-queue" / "entries"
+        Path(workspace_dir) / "research" / "content-opportunity-queue"
+        / "entries"
     )
     entry_ids = []
     if entries_dir.exists():
@@ -426,7 +462,7 @@ def _entries_citing_run(workspace_dir, run_id):
                 for ref in entry.get("evidence_refs", [])
             }
             if run_id in cited:
-                entry_ids.append(entry["idea_queue_entry_id"])
+                entry_ids.append(entry["content_opportunity_id"])
     return entry_ids
 
 
@@ -476,7 +512,7 @@ def complete_run(run_dir, creator_workspace, *, material_update,
             if finding_ids is not None
             else _stable_findings_citing_run(workspace_dir, run_id)
         ),
-        "idea_queue_entry_ids": _entries_citing_run(workspace_dir, run_id),
+        "content_opportunity_ids": _entries_citing_run(workspace_dir, run_id),
         "evidence_ids": _scan_jsonl_ids(
             run_dir, "evidence.jsonl", "research-evidence", "evidence_id"
         ),

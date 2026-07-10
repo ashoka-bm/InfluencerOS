@@ -32,7 +32,8 @@ RESEARCH_MODULE_SCHEMAS = (
     "creator-content-schedule", "research-run", "research-evidence", "metric-snapshot",
     "research-findings", "stable-finding", "research-sources", "research-hashtags",
     "research-search-terms", "reference-creators", "research-watchlist",
-    "idea-queue-entry", "idea-queue", "idea-promotion", "project-warning",
+    "content-opportunity", "content-opportunity-queue", "concept-approval",
+    "project-warning",
     "content-board", "automation-run", "system-event",
 )
 # The closed v1 format vocabulary (approval-surface decisions, 2026-07-03).
@@ -49,7 +50,6 @@ RESEARCH_FORMATS = [
 # copies must stay pinned too.
 ENUM_PINNED_SCHEMAS = RESEARCH_MODULE_SCHEMAS + (
     "project", "output-package", "applied-social-template", "creator-profile",
-    "content-opportunity", "concept-approval",
 )
 PLATFORM_PROPERTY_NAMES = {
     "platform", "platforms", "active_platforms", "approved_platforms",
@@ -260,8 +260,8 @@ class RealCreatorRunbookDriftTests(unittest.TestCase):
     RUNBOOK_PRODUCER_SKILLS = {
         "create-influencer",
         "create-research-findings",
-        "manage-idea-queue",
-        "promote-idea",
+        "manage-opportunity-queue",
+        "approve-concept",
         "apply-social-template",
         "create-production-plan",
         "create-output-package",
@@ -493,21 +493,22 @@ class ResearchProvenanceSkillDriftTests(unittest.TestCase):
 
 
 class SkillCliInvocationDriftTests(unittest.TestCase):
-    def test_promote_idea_names_real_init_project_invocation(self):
-        # Slice 5 review: the skill taught a positional creator-workspace
-        # argument, but the CLI requires the --creator-workspace flag; an
-        # agent following the skill failed mid-construction.
-        skill = read_repo_text("skills/promote-idea/SKILL.md")
+    def test_approve_concept_names_real_scaffold_invocation(self):
+        # Slice 5 review lineage: the skill once taught a positional
+        # creator-workspace argument and an agent following it failed
+        # mid-construction; standalone project creation now goes through
+        # `scaffold project`, which requires the --creator-workspace flag.
+        skill = read_repo_text("skills/approve-concept/SKILL.md")
         invocations = [
-            line for line in skill.splitlines() if "init-project" in line
+            line for line in skill.splitlines() if "scaffold project" in line
         ]
-        self.assertTrue(invocations, "promote-idea no longer documents init-project")
+        self.assertTrue(invocations, "approve-concept no longer documents scaffold project")
         for line in invocations:
-            if "influencer_os init-project" in line:
+            if "influencer_os scaffold project" in line:
                 self.assertIn(
                     "--creator-workspace",
                     line,
-                    f"init-project invocation missing --creator-workspace: {line!r}",
+                    f"scaffold project invocation missing --creator-workspace: {line!r}",
                 )
 
 

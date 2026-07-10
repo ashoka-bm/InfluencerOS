@@ -7,7 +7,7 @@
   "required": [
     "article_plan_id",
     "creator_profile_id",
-    "idea_promotion_id",
+    "concept_approval_id",
     "applied_social_template_id",
     "target_format_id",
     "working_title",
@@ -27,9 +27,9 @@
       "type": "string",
       "pattern": "^creator_[a-zA-Z0-9_-]+$"
     },
-    "idea_promotion_id": {
+    "concept_approval_id": {
       "type": "string",
-      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+      "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
     },
     "applied_social_template_id": {
       "type": "string",

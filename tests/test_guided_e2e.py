@@ -17,8 +17,8 @@ from tests.test_user_journey import (
 RUN_ID = "research_run_luna_fit_2026_07_03_001"
 PROJECT_SLUG = "tiny-reset-after-laptop-day"
 PROJECT_ID = "project_luna_tiny_reset_001"
-PROMOTION_ID = "idea_promotion_luna_fit_001"
-ENTRY_ID = "idea_queue_entry_luna_fit_001"
+PROMOTION_ID = "concept_approval_luna_fit_001"
+ENTRY_ID = "content_opportunity_luna_fit_001"
 
 
 def load_example(example_name):
@@ -92,7 +92,7 @@ def seed_guided_public_web_research(workspace_dir):
         research_state={
             "status": "selected",
             "research_run_ids": [RUN_ID],
-            "selected_idea_queue_entry_id": ENTRY_ID,
+            "selected_content_opportunity_id": ENTRY_ID,
         },
     )
     write_json(workspace_dir / "content-schedule.json", schedule)
@@ -251,7 +251,7 @@ def seed_guided_public_web_research(workspace_dir):
     terms["items"][0]["rationale"] = "Public-web discovery term for guided E2E source evidence."
     write_json(intelligence / "search-terms.json", terms)
 
-    entry = load_example("idea-queue-entry")
+    entry = load_example("content-opportunity")
     entry["scores"]["evidence_strength"]["rationale"] = (
         "Public-web source evidence grounds the safety premise; no native social metrics were captured."
     )
@@ -259,18 +259,36 @@ def seed_guided_public_web_research(workspace_dir):
         "The hook is saveable, but the guided fixture does not claim trend velocity."
     )
     entry["evidence_refs"][0]["video_understanding_pack_ids"] = []
-    write_json(research / "idea-queue" / "entries" / f"{ENTRY_ID}.json", entry)
-    write_json(research / "idea-queue" / "queue.json", load_example("idea-queue"))
+    write_json(research / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json", entry)
+    write_json(research / "content-opportunity-queue" / "queue.json", load_example("content-opportunity-queue"))
 
-    promotion = load_example("idea-promotion")
-    promotion["evidence_refs"][0]["video_understanding_pack_ids"] = []
-    promotion["score_snapshot"]["evidence_strength"]["rationale"] = (
-        "Public-web source evidence grounds the safety premise; no native social metrics were captured."
+    asset = load_example("conversion-asset")
+    write_json(
+        workspace_dir / "conversion-assets"
+        / "conversion_asset_luna_reset_checklist.json",
+        asset,
     )
-    promotion["approval_note"] = (
-        "Explicit guided E2E operator approval after reviewing the promotion package."
+    for file_ref in asset.get("file_refs", []):
+        ref_path = workspace_dir / file_ref
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        if not ref_path.exists():
+            ref_path.write_text("Guided E2E conversion asset body.\n")
+
+    campaign_root = workspace_dir / "campaigns" / "campaign_luna_fit_001"
+    write_json(campaign_root / "campaign.json", load_example("campaign"))
+    concept = load_example("campaign-concept")
+    concept["status"] = "active"
+    concept["evidence_refs"][0]["video_understanding_pack_ids"] = []
+    write_json(
+        campaign_root / "concepts" / "campaign_concept_luna_fit_001.json",
+        concept,
     )
-    write_json(research / "idea-promotions" / f"{PROMOTION_ID}.json", promotion)
+    approval = load_example("concept-approval")
+    approval["evidence_refs"][0]["video_understanding_pack_ids"] = []
+    approval["approval_note"] = (
+        "Explicit guided E2E operator approval after reviewing the approval package."
+    )
+    write_json(campaign_root / "approvals" / f"{PROMOTION_ID}.json", approval)
 
     write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [load_example("project-warning")])
     write_jsonl(workspace_dir / "system" / "creator-events.jsonl", [load_example("system-event")])
@@ -282,7 +300,7 @@ def write_advisory_review(project_dir):
         review_record_id="review_guided_e2e_hook_payoff_001",
         project_id=PROJECT_ID,
         creator_profile_id="creator_luna_fit",
-        idea_promotion_id=PROMOTION_ID,
+        concept_approval_id=PROMOTION_ID,
         created_at="2026-07-07T18:20:00",
     )
     review["artifact_refs"] = [
@@ -388,7 +406,7 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
             interview = (workspace_dir / "progress" / "setup-interview.md").read_text()
             checklist = (workspace_dir / "progress" / "phase-checklist.md").read_text()
             promotion = json.loads(
-                (workspace_dir / "research" / "idea-promotions" / f"{PROMOTION_ID}.json").read_text()
+                (workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / f"{PROMOTION_ID}.json").read_text()
             )
             project = json.loads((project_dir / "project.json").read_text())
             board = json.loads((workspace_dir / "boards" / "content-board.json").read_text())
@@ -407,7 +425,7 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
             self.assertIn("Provider boundary", checklist)
             self.assertIn("validate all", checklist)
 
-            self.assertEqual(promotion["approval_note"], "Explicit guided E2E operator approval after reviewing the promotion package.")
+            self.assertEqual(promotion["approval_note"], "Explicit guided E2E operator approval after reviewing the approval package.")
             self.assertNotIn("pre-authorized", json.dumps(promotion).lower())
             self.assertIn('"platform": "public_web"', evidence_lines)
             self.assertNotIn("youtube_video", evidence_lines)
@@ -416,6 +434,6 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
             self.assertTrue(review_files)
             self.assertFalse(any((project_dir / "generation" / "approval-records").glob("*.json")))
             self.assertFalse((project_dir / "output-package" / "output-package.json").exists())
-            self.assertIn("Layers passed: 5; skipped: 0; warnings: 1.", result.stdout)
+            self.assertIn("Layers passed: 6; skipped: 0; warnings: 1.", result.stdout)
             project_cards = [card for card in board["cards"] if card["card_type"] == "project"]
             self.assertEqual(project_cards[0]["status"], "ready_for_generation")

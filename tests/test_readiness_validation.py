@@ -452,7 +452,7 @@ def write_content_schedule(workspace_dir, *, research_informed=True):
             "material_update": False,
             "outputs": {
                 "finding_ids": [],
-                "idea_queue_entry_ids": [],
+                "content_opportunity_ids": [],
                 "evidence_ids": [],
                 "metric_snapshot_ids": [],
                 "research_intelligence_updates": [],

@@ -14,11 +14,11 @@
   ],
   "cards": [
     {
-      "content_card_id": "card_idea_queue_entry_luna_fit_001",
-      "card_type": "idea",
-      "status": "promoted",
-      "source_record_type": "idea_queue_entry",
-      "source_record_id": "idea_queue_entry_luna_fit_001",
+      "content_card_id": "card_content_opportunity_luna_fit_001",
+      "card_type": "opportunity",
+      "status": "assigned",
+      "source_record_type": "content_opportunity",
+      "source_record_id": "content_opportunity_luna_fit_001",
       "warning_badges": [],
       "child_card_ids": [
         "card_project_luna_tiny_reset_001"
@@ -34,11 +34,11 @@
         "important"
       ],
       "child_card_ids": [],
-      "parent_card_id": "card_idea_queue_entry_luna_fit_001"
+      "parent_card_id": "card_content_opportunity_luna_fit_001"
     }
   ],
   "manual_order": [
-    "card_idea_queue_entry_luna_fit_001",
+    "card_content_opportunity_luna_fit_001",
     "card_project_luna_tiny_reset_001"
   ]
 }

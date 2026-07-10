@@ -68,7 +68,7 @@ Project or supersede the promotion. Do not route around the mismatch.
 
 ## Provenance Rules
 
-- `idea_promotion_id` must equal the Project's locked upstream promotion.
+- `concept_approval_id` must equal the Project's locked upstream approval.
 - `applied_social_template_id` must equal the applied template in the same
   Project.
 - Carry forward the creative elements, evidence IDs, and avoid notes from the

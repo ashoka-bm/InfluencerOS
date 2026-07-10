@@ -3,7 +3,7 @@ batch D).
 
 Prune removes unpromoted, unreferenced evidence past the retention window
 (default 30 days) and the metric snapshots that belong to it. Anything a
-queue entry, idea promotion, or project references is preserved — the
+opportunity, concept, approval, or project references is preserved — the
 Product Invariant's provenance chain always survives. Stale queue entries
 are never touched (staleness stays auditable). Removals are recorded on the
 run manifest as ``pruned_evidence_ids``/``pruned_metric_snapshot_ids`` so
@@ -45,21 +45,33 @@ def _record_date(value, context):
 
 
 def collect_protected_ids(workspace_dir):
-    """Evidence and metric-snapshot ids referenced by any queue entry, idea
-    promotion, or project. Referenced records are never prunable."""
+    """Evidence and metric-snapshot ids referenced by any content
+    opportunity, campaign concept, concept approval, or project.
+    Referenced records are never prunable."""
     workspace_dir = Path(workspace_dir)
     research_dir = workspace_dir / "research"
     protected_evidence = set()
     protected_metrics = set()
 
     ref_scans = (
-        (research_dir / "idea-queue" / "entries", "idea-queue-entry"),
-        (research_dir / "idea-promotions", "idea-promotion"),
+        (research_dir / "content-opportunity-queue" / "entries",
+         "content-opportunity"),
     )
     for directory, schema_name in ref_scans:
         if not directory.exists():
             continue
         for record_path in sorted(directory.glob("*.json")):
+            record = _load_validated(record_path, schema_name)
+            for ref in record["evidence_refs"]:
+                protected_evidence.add(ref["evidence_id"])
+                protected_metrics.update(ref.get("metric_snapshot_ids", []))
+
+    campaign_scans = (
+        ("campaigns/*/concepts/*.json", "campaign-concept"),
+        ("campaigns/*/approvals/*.json", "concept-approval"),
+    )
+    for pattern, schema_name in campaign_scans:
+        for record_path in sorted(workspace_dir.glob(pattern)):
             record = _load_validated(record_path, schema_name)
             for ref in record["evidence_refs"]:
                 protected_evidence.add(ref["evidence_id"])

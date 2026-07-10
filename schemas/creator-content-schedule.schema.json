@@ -176,9 +176,13 @@
                   "pattern": "^research_run_[a-zA-Z0-9_-]+$"
                 }
               },
-              "selected_idea_queue_entry_id": {
+              "selected_content_opportunity_id": {
                 "type": "string",
-                "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+                "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
+              },
+              "selected_campaign_concept_id": {
+                "type": "string",
+                "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$"
               },
               "anchor_slot_id": {
                 "type": "string",

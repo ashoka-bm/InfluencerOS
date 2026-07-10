@@ -24,7 +24,7 @@
       "reference_creator_luna_fit_001"
     ],
     "prior_queue_refs": [
-      "idea_queue_entry_luna_fit_001"
+      "content_opportunity_luna_fit_001"
     ]
   },
   "adapters_considered": [
@@ -97,7 +97,7 @@
       "source_type": "watchlist_topic",
       "purpose": "Check discussion language and practical objections from office workers.",
       "expected_signal": "Pain points, objections, and language that can shape the payoff.",
-      "routing_basis": "Terms from Luna's office-worker audience and prior queue entry idea_queue_entry_luna_fit_001; Reddit chosen for practical objections and community phrasing in the creator's niche.",
+      "routing_basis": "Terms from Luna's office-worker audience and prior queue entry content_opportunity_luna_fit_001; Reddit chosen for practical objections and community phrasing in the creator's niche.",
       "term_basis": [
         "creator_profile",
         "prior_queue"
@@ -111,7 +111,7 @@
       "source_type": "watchlist_topic",
       "purpose": "Check recent YouTube video packaging and visible engagement around desk setup patterns.",
       "expected_signal": "Recent public videos with high visible metrics and reusable title/thumbnail/hook framing.",
-      "routing_basis": "Term from Luna's office-worker audience and prior queue entry idea_queue_entry_luna_fit_001; YouTube chosen for public video packaging signals.",
+      "routing_basis": "Term from Luna's office-worker audience and prior queue entry content_opportunity_luna_fit_001; YouTube chosen for public video packaging signals.",
       "term_basis": [
         "creator_profile",
         "prior_queue"

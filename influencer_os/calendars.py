@@ -70,32 +70,40 @@ def schedule_research_state_errors(schedule):
         state = slot["research_state"]
         state_status = state["status"]
         run_ids = state["research_run_ids"]
-        selected_entry_id = state.get("selected_idea_queue_entry_id")
+        selected_opportunity_id = state.get("selected_content_opportunity_id")
+        selected_concept_id = state.get("selected_campaign_concept_id")
+        selection = selected_opportunity_id or selected_concept_id
         anchor_id = state.get("anchor_slot_id")
+        if selected_opportunity_id and selected_concept_id:
+            errors.append(
+                f"calendar slot {slot_id} selects both a content opportunity "
+                "and a campaign concept; slot research resolves to exactly one"
+            )
         if len(run_ids) != len(set(run_ids)):
             errors.append(
                 f"calendar slot {slot_id} research_state contains duplicate research_run_ids"
             )
         if state_status == "unresearched":
-            if run_ids or selected_entry_id or anchor_id:
+            if run_ids or selection or anchor_id:
                 errors.append(
                     f"calendar slot {slot_id} is unresearched but carries research, "
                     "selection, or anchor provenance"
                 )
         elif state_status == "candidates_ready":
-            if not run_ids or selected_entry_id or anchor_id:
+            if not run_ids or selection or anchor_id:
                 errors.append(
                     f"calendar slot {slot_id} candidates_ready requires research_run_ids "
-                    "and forbids a selected idea or anchor"
+                    "and forbids a selection or anchor"
                 )
         elif state_status == "selected":
-            if not run_ids or not selected_entry_id or anchor_id:
+            if not run_ids or not selection or anchor_id:
                 errors.append(
                     f"calendar slot {slot_id} selected research requires research_run_ids "
-                    "and selected_idea_queue_entry_id, with no anchor"
+                    "and exactly one of selected_content_opportunity_id or "
+                    "selected_campaign_concept_id, with no anchor"
                 )
         elif state_status == "inherits_anchor":
-            if run_ids or selected_entry_id or not anchor_id:
+            if run_ids or selection or not anchor_id:
                 errors.append(
                     f"calendar slot {slot_id} inherits_anchor requires anchor_slot_id "
                     "and forbids direct research or selection provenance"

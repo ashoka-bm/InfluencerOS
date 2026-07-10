@@ -1,6 +1,6 @@
 ---
 name: apply-social-template
-description: Use to choose and apply a format-compatible social template or production structure to a promoted idea — after Idea Promotion creates a Project, before production planning — writing the AppliedSocialTemplate.
+description: Use to choose and apply a format-compatible social template or production structure to an approved concept — after Concept Approval creates a Project, before production planning — writing the AppliedSocialTemplate.
 ---
 
 # Apply Social Template
@@ -13,8 +13,8 @@ validated by `schemas/applied-social-template.schema.json`.
 
 Read (context matrix — Template application row):
 
-- The Project manifest and its locked `source_refs.idea_promotion_id`.
-- The locked Idea Promotion, queue entry, evidence brief, and current
+- The Project manifest and its locked `source_refs.concept_approval_id`.
+- The locked Concept Approval, its Campaign Concept, evidence brief, and current
   Research Findings needed to understand the payoff.
 - Creator Profile and relevant brand context for audience, boundaries, and
   voice fit.
@@ -40,7 +40,7 @@ Write only `plan/applied-template.json` inside the Project.
 
 ## Record Rules
 
-- `idea_promotion_id` must equal the Project's locked upstream promotion.
+- `concept_approval_id` must equal the Project's locked upstream approval.
 - `target_format_id` must equal the Project target format.
 - `applied_beats` must map every important template beat to the promoted
   idea. Each beat answers a concrete viewer or reader question.
@@ -69,7 +69,7 @@ fix template-specific failures before handing off to `create-production-plan`.
 ## Boundaries
 
 - Do not write the production plan.
-- Do not create or edit an Idea Promotion.
+- Do not create or edit a Concept Approval.
 - Do not call image, video, audio, render, upload, or paid providers.
 
 ## Self-Update

@@ -13,7 +13,7 @@ from influencer_os.full_validation import validate_all
 from influencer_os.projects import validate_project
 from influencer_os.validation import ValidationError
 from tests.support import (
-    populate_promotion_records,
+    populate_approval_records,
     populate_workspace_records,
     scaffold_project_workspace,
 )
@@ -64,7 +64,7 @@ def scaffold_full_workspace(temp_dir):
     write_json(intelligence / "reference-creators.json", load_example("reference-creators"))
     write_json(intelligence / "watchlist.json", load_example("research-watchlist"))
 
-    write_json(research / "idea-queue" / "queue.json", load_example("idea-queue"))
+    write_json(research / "content-opportunity-queue" / "queue.json", load_example("content-opportunity-queue"))
     write_jsonl(workspace_dir / "system" / "project-warnings.jsonl", [load_example("project-warning")])
     write_jsonl(workspace_dir / "system" / "creator-events.jsonl", [load_example("system-event")])
 
@@ -96,7 +96,8 @@ class ValidateAllTests(unittest.TestCase):
             result = validate_all(workspace_dir)
             layer_names = [name for name, _summary in result["layers"]]
             self.assertEqual(
-                layer_names, ["workspace", "research", "queue", "board", "projects"]
+                layer_names,
+        ["workspace", "research", "queue", "campaigns", "board", "projects"]
             )
             self.assertEqual(result["skipped"], [])
             self.assertEqual(result["project_count"], 1)
@@ -108,7 +109,7 @@ class ValidateAllTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_full_workspace(temp_dir)
             entry_path = (
-                workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+                workspace_dir / "research" / "content-opportunity-queue" / "entries" / f"{ENTRY_ID}.json"
             )
 
             def break_evidence(entry):
@@ -130,17 +131,23 @@ class ValidateAllTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
+            )
+            concept_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "concepts" / "campaign_concept_luna_fit_001.json"
             )
 
             def break_promotion_ref(promotion):
                 # Append (never replace) so the project's cached refs stay a
-                # subset of the locked promotion and only the gate warns.
+                # subset of the locked approval and only the gate warns; the
+                # approval copies its concept's evidence verbatim, so both
+                # records carry the ghost ref together.
                 ghost = json.loads(json.dumps(promotion["evidence_refs"][0]))
                 ghost["evidence_id"] = "evidence_luna_fit_ghost"
                 promotion["evidence_refs"].append(ghost)
 
             rewrite_json(promotion_path, break_promotion_ref)
+            rewrite_json(concept_path, break_promotion_ref)
 
             result = validate_all(workspace_dir)
             matching = [
@@ -153,7 +160,7 @@ class ValidateAllTests(unittest.TestCase):
     def test_entries_without_queue_manifest_fail(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
-            (workspace_dir / "research" / "idea-queue" / "queue.json").unlink()
+            (workspace_dir / "research" / "content-opportunity-queue" / "queue.json").unlink()
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_all(workspace_dir)

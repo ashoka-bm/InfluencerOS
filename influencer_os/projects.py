@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from influencer_os.json_io import write_json_atomic
-from influencer_os.research import validate_promotion_gate
+from influencer_os.research import find_campaign_concept, validate_approval_gate
 from influencer_os.validation import (
     RESEARCH_PLATFORMS,
     TEXT_FORMAT_IDS,
@@ -150,9 +150,10 @@ def _load_anchored_learning_record(record_path, record_type, id_field,
         )
     return record
 
-# Optional source_refs cached from the promotion for convenience; each cached
-# value must stay consistent with the locked promotion snapshot.
-PROMOTION_CACHED_SUBSETS = (
+# Optional source_refs cached from the approval chain for convenience; each
+# cached value must stay consistent with the locked approval snapshot (finding
+# ids resolve through the approval's concept).
+APPROVAL_CACHED_SUBSETS = (
     ("research_finding_ids", "research_finding_ids"),
     ("research_evidence_ids", "evidence_ids"),
     ("metric_snapshot_ids", "metric_snapshot_ids"),
@@ -239,7 +240,7 @@ def init_project(project_manifest_path, creator_workspace):
     _validate_content_unit_target_format(project)
 
     _validate_creator_match(project, creator_workspace)
-    promotion = _resolve_promotion(project, creator_workspace)
+    approval, concept = _resolve_concept_approval(project, creator_workspace)
 
     project_dir = creator_workspace / "projects" / project["project_slug"]
     if project_dir.exists():
@@ -259,7 +260,7 @@ def init_project(project_manifest_path, creator_workspace):
     # no failure in the advisory path may block creation (ADR 0024:
     # platform guides, never gates; slice 3 review finding).
     try:
-        _emit_platform_fit_warning(creator_workspace, project, promotion)
+        _emit_platform_fit_warning(creator_workspace, project, approval, concept)
     except Exception as exc:  # noqa: BLE001 — advisory path must not raise
         print(
             f"warning: platform-fit advisory could not be recorded: {exc}",
@@ -286,7 +287,7 @@ def _platform_fit_for_surfaces(format_id, surfaces):
     return max(fits, key=PLATFORM_FIT_RANK.__getitem__)
 
 
-def _emit_platform_fit_warning(creator_workspace, project, promotion):
+def _emit_platform_fit_warning(creator_workspace, project, approval, concept):
     """Append a platform_fit ProjectWarning when the project's format is not
     native to any of the creator's primary surfaces (Creative Direction
     slice 3). Purely advisory: this appends a record and changes nothing
@@ -326,8 +327,7 @@ def _emit_platform_fit_warning(creator_workspace, project, promotion):
 
     warning = {
         "project_warning_id": warning_id,
-        "idea_queue_entry_id": promotion["idea_queue_entry_id"],
-        "idea_promotion_id": promotion["idea_promotion_id"],
+        "concept_approval_id": approval["concept_approval_id"],
         "project_id": project["project_id"],
         "warning_type": "platform_fit",
         "fit_level": fit,
@@ -372,7 +372,7 @@ def register_output_package(project_path, output_package_path, asset_root=None):
     if _status_at_least(project, "packaged"):
         raise FileExistsError(f"Project is already packaged: {project_dir}")
 
-    # Preflight the current project before mutating it; this checks promotion,
+    # Preflight the current project before mutating it; this checks approval,
     # creator, template, plan, and generation-plan requirements for the
     # project's current planning status.
     validate_project(project_dir)
@@ -533,14 +533,14 @@ def validate_project(project_path):
         raise FileNotFoundError(f"Missing project paths: {', '.join(sorted(missing))}")
 
     workspace_dir = _locate_workspace(project_dir)
-    # Pin the project to the owning workspace creator; the promotion and
+    # Pin the project to the owning workspace creator; the approval and
     # queue entry pin to the project below, so the whole chain is scoped.
     _validate_creator_match(project, workspace_dir)
-    promotion = _resolve_promotion(project, workspace_dir)
-    warnings = validate_promotion_gate(workspace_dir, promotion)
-    _validate_cached_promotion_refs(project, promotion)
+    approval, concept = _resolve_concept_approval(project, workspace_dir)
+    warnings = validate_approval_gate(workspace_dir, approval)
+    _validate_cached_approval_refs(project, approval, concept)
     _resolve_source_refs(project["source_refs"], workspace_dir, "Project source_refs")
-    warnings.extend(_validate_project_records(project_dir, project, workspace_dir, promotion))
+    warnings.extend(_validate_project_records(project_dir, project, workspace_dir, approval))
 
     return {
         "project_id": project["project_id"],
@@ -575,11 +575,11 @@ def _validate_output_package_matches_project(output_package, project):
             "Output package universal_core.format_id does not match project content_unit_type: "
             f"{actual_format_id!r} != {expected_format_id!r}"
         )
-    if output_package["source_refs"]["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
+    if output_package["source_refs"]["concept_approval_id"] != project["source_refs"]["concept_approval_id"]:
         raise ValueError(
-            "Output package idea_promotion_id does not match project source_refs: "
-            f"{output_package['source_refs']['idea_promotion_id']!r} != "
-            f"{project['source_refs']['idea_promotion_id']!r}"
+            "Output package concept_approval_id does not match project source_refs: "
+            f"{output_package['source_refs']['concept_approval_id']!r} != "
+            f"{project['source_refs']['concept_approval_id']!r}"
         )
     # Every status at or past packaged (published, analyzed, archived) keeps
     # requiring an upload-ready package; the invariant must not lapse when
@@ -1260,32 +1260,43 @@ def _required_record_paths(project):
     return required
 
 
-def _resolve_promotion(project, workspace_dir):
-    promotion_id = project["source_refs"]["idea_promotion_id"]
-    promotion_path = Path(workspace_dir) / "research" / "idea-promotions" / f"{promotion_id}.json"
-    if not promotion_path.exists():
+def _resolve_concept_approval(project, workspace_dir):
+    from influencer_os.research import find_concept_approval
+
+    approval_id = project["source_refs"]["concept_approval_id"]
+    approval = find_concept_approval(workspace_dir, approval_id)
+    if approval is None:
         raise ValidationError(
-            f"Project idea_promotion_id {promotion_id!r} does not resolve to "
-            f"research/idea-promotions/{promotion_id}.json"
+            f"Project concept_approval_id {approval_id!r} does not resolve "
+            "to any campaigns/*/approvals/ record"
         )
-    promotion = _validate_project_record(promotion_path, "idea-promotion")
-    if promotion["idea_promotion_id"] != promotion_id:
+    validate_record("concept-approval", approval)
+    if approval["concept_approval_id"] != approval_id:
         raise ValidationError(
-            f"Idea promotion file {promotion_path} has idea_promotion_id "
-            f"{promotion['idea_promotion_id']!r}, expected {promotion_id!r}"
+            f"Concept approval file for {approval_id!r} declares "
+            f"{approval['concept_approval_id']!r}"
         )
-    if promotion["creator_profile_id"] != project["creator_profile_id"]:
+    if approval["creator_profile_id"] != project["creator_profile_id"]:
         raise ValueError(
-            "Idea promotion creator_profile_id does not match project: "
-            f"{promotion['creator_profile_id']!r} != {project['creator_profile_id']!r}"
+            "Concept approval creator_profile_id does not match project: "
+            f"{approval['creator_profile_id']!r} != {project['creator_profile_id']!r}"
         )
-    if project["project_id"] not in promotion["project_ids_created"]:
+    if project["project_id"] not in approval["project_ids_created"]:
         raise ValueError(
-            f"Idea promotion {promotion_id} does not list project "
+            f"Concept approval {approval_id} does not list project "
             f"{project['project_id']!r} in project_ids_created"
         )
-    _validate_approval_surface(project, promotion)
-    return promotion
+    concept = find_campaign_concept(
+        workspace_dir, approval["campaign_concept_id"]
+    )
+    if concept is None:
+        raise ValidationError(
+            f"Concept approval {approval_id} names concept "
+            f"{approval['campaign_concept_id']!r}, which does not resolve"
+        )
+    _validate_approval_surface(project, approval)
+    _validate_cached_chain(project, approval, concept)
+    return approval, concept
 
 
 def _research_platform_for_surface(surface):
@@ -1295,8 +1306,8 @@ def _research_platform_for_surface(surface):
     return None
 
 
-def _validate_approval_surface(project, promotion):
-    """A project stays within the locked promotion's approved surface.
+def _validate_approval_surface(project, approval):
+    """A project stays within the locked approval's approved surface.
 
     Formats share one vocabulary and must be a subset. platform_targets are
     distribution surfaces: a surface that maps to a canonical research
@@ -1306,53 +1317,66 @@ def _validate_approval_surface(project, promotion):
     the surface vocabulary is closed in the production build-out.
     """
     unapproved_formats = sorted(
-        set(project["target_formats"]) - set(promotion["approved_formats"])
+        set(project["target_formats"]) - set(approval["approved_formats"])
     )
     if unapproved_formats:
         raise ValueError(
-            "Project target_formats are not in the locked promotion's "
+            "Project target_formats are not in the locked approval's "
             f"approved_formats: {unapproved_formats}"
         )
     unapproved_surfaces = sorted(
         surface
         for surface in project.get("platform_targets", [])
         if (platform := _research_platform_for_surface(surface)) is not None
-        and platform not in promotion["approved_platforms"]
+        and platform not in approval["approved_platforms"]
     )
     if unapproved_surfaces:
         raise ValueError(
             "Project platform_targets map to research platforms the locked "
-            f"promotion does not approve: {unapproved_surfaces}"
+            f"approval does not approve: {unapproved_surfaces}"
         )
 
 
-def _validate_cached_promotion_refs(project, promotion):
+def _validate_cached_chain(project, approval, concept):
+    """Cached concept/campaign ids must match the transitive approval
+    chain (campaign-concept-pressure plan: cached IDs, if retained for
+    indexing, must match that chain)."""
     source_refs = project["source_refs"]
-    cached_entry_id = source_refs.get("idea_queue_entry_id")
-    if cached_entry_id is not None and cached_entry_id != promotion["idea_queue_entry_id"]:
+    cached_concept = source_refs.get("campaign_concept_id")
+    if cached_concept is not None and cached_concept != approval["campaign_concept_id"]:
         raise ValueError(
-            "Cached idea_queue_entry_id does not match the locked promotion: "
-            f"{cached_entry_id!r} != {promotion['idea_queue_entry_id']!r}"
+            "Cached campaign_concept_id does not match the locked approval: "
+            f"{cached_concept!r} != {approval['campaign_concept_id']!r}"
+        )
+    cached_campaign = source_refs.get("campaign_id")
+    if cached_campaign is not None and cached_campaign != concept["campaign_id"]:
+        raise ValueError(
+            "Cached campaign_id does not match the approval's concept: "
+            f"{cached_campaign!r} != {concept['campaign_id']!r}"
         )
 
-    promotion_evidence_ids = {ref["evidence_id"] for ref in promotion["evidence_refs"]}
-    promotion_metric_ids = set()
-    promotion_video_pack_ids = set()
-    for ref in promotion["evidence_refs"]:
-        promotion_metric_ids.update(ref.get("metric_snapshot_ids", []))
-        promotion_video_pack_ids.update(ref.get("video_understanding_pack_ids", []))
-    promotion_sets = {
-        "research_finding_ids": set(promotion["research_finding_ids"]),
-        "evidence_ids": promotion_evidence_ids,
-        "metric_snapshot_ids": promotion_metric_ids,
-        "video_understanding_pack_ids": promotion_video_pack_ids,
+
+def _validate_cached_approval_refs(project, approval, concept):
+    source_refs = project["source_refs"]
+    approval_evidence_ids = {ref["evidence_id"] for ref in approval["evidence_refs"]}
+    approval_metric_ids = set()
+    approval_video_pack_ids = set()
+    for ref in approval["evidence_refs"]:
+        approval_metric_ids.update(ref.get("metric_snapshot_ids", []))
+        approval_video_pack_ids.update(ref.get("video_understanding_pack_ids", []))
+    approval_sets = {
+        "research_finding_ids": set(concept.get("source_finding_ids", [])),
+        "evidence_ids": approval_evidence_ids,
+        "metric_snapshot_ids": approval_metric_ids,
+        "video_understanding_pack_ids": approval_video_pack_ids,
     }
-    for cached_field, promotion_key in PROMOTION_CACHED_SUBSETS:
+    for cached_field, approval_key in APPROVAL_CACHED_SUBSETS:
         cached = set(source_refs.get(cached_field, []))
-        extra = sorted(cached - promotion_sets[promotion_key])
+        extra = sorted(cached - approval_sets[approval_key])
         if extra:
             raise ValueError(
-                f"Cached {cached_field} name records the locked promotion does not carry: {extra}"
+                f"Cached {cached_field} name records the locked approval "
+                f"chain does not carry: {extra}"
             )
 
 
@@ -1429,7 +1453,7 @@ def _resolve_video_understanding_packs(pack_ids, workspace_dir, context):
             )
 
 
-def _validate_project_records(project_dir, project, workspace_dir, promotion=None):
+def _validate_project_records(project_dir, project, workspace_dir, approval=None):
     from influencer_os.generation import (
         validate_project_generation_assets,
         validate_project_generation_records,
@@ -1497,13 +1521,13 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
         )
 
     if applied_template is not None:
-        if applied_template["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
+        if applied_template["concept_approval_id"] != project["source_refs"]["concept_approval_id"]:
             raise ValueError(
-                "Applied template idea_promotion_id does not match project source_refs: "
-                f"{applied_template['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
+                "Applied template concept_approval_id does not match project source_refs: "
+                f"{applied_template['concept_approval_id']!r} != {project['source_refs']['concept_approval_id']!r}"
             )
         # The template targets a format for this project, and the project's
-        # target_formats already stay within the locked promotion's approved
+        # target_formats already stay within the locked approval's approved
         # surface, so this keeps the plan layer inside the approval too.
         if applied_template["target_format_id"] not in project["target_formats"]:
             raise ValueError(
@@ -1513,27 +1537,27 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
             )
 
     if production_plan is not None:
-        if production_plan["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
+        if production_plan["concept_approval_id"] != project["source_refs"]["concept_approval_id"]:
             raise ValueError(
-                "Production plan idea_promotion_id does not match project source_refs: "
-                f"{production_plan['idea_promotion_id']!r} != {project['source_refs']['idea_promotion_id']!r}"
+                "Production plan concept_approval_id does not match project source_refs: "
+                f"{production_plan['concept_approval_id']!r} != {project['source_refs']['concept_approval_id']!r}"
             )
         # Intent is resolved by reference (ADR 0024): the canonical
-        # intended_emotion lives on the locked promotion, and a plan that
+        # intended_emotion lives on the locked approval, and a plan that
         # carries the field must restate it verbatim, never override it.
-        # A plan-only value is the legacy path for promotions that predate
+        # A plan-only value is the legacy path for approvals that predate
         # intent capture.
-        if promotion is not None:
-            promotion_emotion = promotion.get("intended_emotion")
+        if approval is not None:
+            approval_emotion = approval.get("intended_emotion")
             plan_emotion = production_plan.get("intended_emotion")
             if (
-                promotion_emotion is not None
+                approval_emotion is not None
                 and plan_emotion is not None
-                and plan_emotion != promotion_emotion
+                and plan_emotion != approval_emotion
             ):
                 raise ValueError(
                     "Production plan intended_emotion overrides the locked "
-                    f"promotion: {plan_emotion!r} != {promotion_emotion!r}; "
+                    f"approval: {plan_emotion!r} != {approval_emotion!r}; "
                     "intent is resolved by reference, never overridden"
                 )
 
@@ -1571,11 +1595,11 @@ def _validate_project_records(project_dir, project, workspace_dir, promotion=Non
                 "Output package project_id does not match project: "
                 f"{output_package['project_id']!r} != {project['project_id']!r}"
             )
-        if output_package["source_refs"]["idea_promotion_id"] != project["source_refs"]["idea_promotion_id"]:
+        if output_package["source_refs"]["concept_approval_id"] != project["source_refs"]["concept_approval_id"]:
             raise ValueError(
-                "Output package idea_promotion_id does not match project source_refs: "
-                f"{output_package['source_refs']['idea_promotion_id']!r} != "
-                f"{project['source_refs']['idea_promotion_id']!r}"
+                "Output package concept_approval_id does not match project source_refs: "
+                f"{output_package['source_refs']['concept_approval_id']!r} != "
+                f"{project['source_refs']['concept_approval_id']!r}"
             )
         if output_package["source_refs"]["applied_social_template_id"] != applied_template["applied_social_template_id"]:
             raise ValueError(
@@ -1723,13 +1747,13 @@ def _validate_review_records(project_dir, project):
                 f"project: {review['creator_profile_id']!r} != "
                 f"{project['creator_profile_id']!r}"
             )
-        locked_promotion = project["source_refs"]["idea_promotion_id"]
-        cited_promotion = review.get("idea_promotion_id")
-        if cited_promotion is not None and cited_promotion != locked_promotion:
+        locked_approval = project["source_refs"]["concept_approval_id"]
+        cited_approval = review.get("concept_approval_id")
+        if cited_approval is not None and cited_approval != locked_approval:
             raise ValueError(
-                f"Review record {review_id} idea_promotion_id does not match "
-                f"the project's locked promotion: {cited_promotion!r} != "
-                f"{locked_promotion!r}"
+                f"Review record {review_id} concept_approval_id does not match "
+                f"the project's locked approval: {cited_approval!r} != "
+                f"{locked_approval!r}"
             )
         for ref in review["artifact_refs"]:
             relative_path = Path(ref)

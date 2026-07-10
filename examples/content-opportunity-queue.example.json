@@ -5,10 +5,10 @@
  "entry_refs": [
   {
    "content_opportunity_id": "content_opportunity_luna_fit_001",
-   "status": "new"
+   "status": "assigned"
   }
  ],
  "status_counts": {
-  "new": 1
+  "assigned": 1
  }
 }

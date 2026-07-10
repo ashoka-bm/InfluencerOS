@@ -13,7 +13,7 @@ from influencer_os.memory import (
     creator_lessons_workspace,
     write_memory_fact,
 )
-from influencer_os.migrations import migrate_content_series, migrate_slot_research
+from influencer_os.migrations import migrate_campaign_model, migrate_content_series
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     INTAKE_DESTINATIONS,
@@ -60,11 +60,11 @@ def main(argv=None):
     update_creators_parser = subparsers.add_parser("update-creators", help="Refresh copied runtime skills across every Creator Workspace under a root.")
     update_creators_parser.add_argument("--workspace-root", default=str(DEFAULT_CREATOR_WORKSPACE_ROOT), help="Creator workspace root directory.")
 
-    migrate_slot_parser = subparsers.add_parser(
-        "migrate-slot-research",
-        help="Backfill slot-first research provenance in one legacy Creator Workspace.",
+    migrate_campaign_parser = subparsers.add_parser(
+        "migrate-campaign-model",
+        help="Convert a legacy idea-queue Creator Workspace to the campaign model (ADR 0031); fails closed on promoted work, which needs an explicit mapping or a fixture rebuild.",
     )
-    migrate_slot_parser.add_argument(
+    migrate_campaign_parser.add_argument(
         "creator_workspace", help="Path to the Creator Workspace."
     )
 
@@ -116,9 +116,9 @@ def main(argv=None):
     scaffold_parser.add_argument("--list", action="store_true", dest="list_types", help="List the record types that have constructors.")
 
     stage_parser = subparsers.add_parser("stage", help="Stage a pre-approval draft bundle under system/staging/ (ADR 0042). Writes nothing canonical; present the approval package from the staged records.")
-    stage_parser.add_argument("bundle", choices=["promotion"], help="Bundle kind to stage.")
-    stage_parser.add_argument("--entry", required=True, help="Idea queue entry id being promoted.")
-    stage_parser.add_argument("--seed", required=True, help="Path to the promotion bundle seed JSON.")
+    stage_parser.add_argument("bundle", choices=["approval"], help="Bundle kind to stage.")
+    stage_parser.add_argument("--concept", required=True, help="Campaign concept id being approved.")
+    stage_parser.add_argument("--seed", required=True, help="Path to the approval bundle seed JSON.")
     stage_parser.add_argument("--creator-workspace", required=True, help="Path to the Creator Workspace.")
 
     commit_stage_parser = subparsers.add_parser("commit-stage", help="Commit a staged bundle at the human approval gate: verify freshness, stamp approval, write in construction order, flip the entry/queue/slots, validate, and rebuild projections.")
@@ -316,7 +316,7 @@ def main(argv=None):
                 if not args.path:
                     raise ValueError("validate queue requires a creator workspace path")
                 result = validate_queue(args.path)
-                print(f"Validated idea queue: {result['manifest_path']}")
+                print(f"Validated content opportunity queue: {result['manifest_path']}")
                 print(f"Checked {result['entry_count']} queue entries.")
                 for warning in result.get("warnings", []):
                     print(warning, file=sys.stderr)
@@ -376,9 +376,9 @@ def main(argv=None):
             print(f"Preserved {result['preserved_overrides']} local overrides")
             return 0
 
-        if args.command == "migrate-slot-research":
-            result = migrate_slot_research(args.creator_workspace)
-            print(f"Migrated slot research provenance: {result['workspace_path']}")
+        if args.command == "migrate-campaign-model":
+            result = migrate_campaign_model(args.creator_workspace)
+            print(f"Migrated to the campaign model: {result['workspace_path']}")
             print(f"Changed {len(result['changed_paths'])} records.")
             for path in result["changed_paths"]:
                 print(f"- {path}")
@@ -445,6 +445,11 @@ def main(argv=None):
             return 0
 
         if args.command == "scaffold":
+            from influencer_os.campaigns import (
+                scaffold_campaign,
+                scaffold_campaign_concept,
+                scaffold_content_opportunity,
+            )
             from influencer_os.constructors import (
                 scaffold_project,
                 scaffold_search_plan,
@@ -465,6 +470,28 @@ def main(argv=None):
                     f"Scaffolded project {result['project_id']}: "
                     f"{result['project_dir']}"
                 )
+            elif args.record_type == "campaign":
+                result = scaffold_campaign(args.seed, args.creator_workspace)
+                print(
+                    f"Scaffolded draft campaign {result['campaign_id']}: "
+                    f"{result['campaign_path']}"
+                )
+            elif args.record_type == "campaign-concept":
+                result = scaffold_campaign_concept(
+                    args.seed, args.creator_workspace
+                )
+                print(
+                    f"Scaffolded draft concept {result['campaign_concept_id']}: "
+                    f"{result['concept_path']}"
+                )
+            elif args.record_type == "content-opportunity":
+                result = scaffold_content_opportunity(
+                    args.seed, args.creator_workspace
+                )
+                print(
+                    f"Scaffolded content opportunity "
+                    f"{result['content_opportunity_id']}: {result['entry_path']}"
+                )
             else:
                 result = scaffold_search_plan(args.seed, args.creator_workspace)
                 print(
@@ -480,13 +507,13 @@ def main(argv=None):
             return 0
 
         if args.command == "stage":
-            from influencer_os.staging import stage_promotion
+            from influencer_os.staging import stage_concept_approval
 
-            result = stage_promotion(
-                args.seed, args.creator_workspace, args.entry
+            result = stage_concept_approval(
+                args.seed, args.creator_workspace, args.concept
             )
-            print(f"Staged promotion bundle {result['stage_id']}: {result['stage_dir']}")
-            print(f"- promotion: {result['promotion']['idea_promotion_id']}")
+            print(f"Staged approval bundle {result['stage_id']}: {result['stage_dir']}")
+            print(f"- approval: {result['approval']['concept_approval_id']}")
             for project in result["projects"]:
                 print(f"- project: {project['project_id']} ({project['project_slug']})")
             for warning in result["warnings"]:
@@ -498,7 +525,7 @@ def main(argv=None):
             from influencer_os.staging import commit_stage
 
             result = commit_stage(args.stage, args.creator_workspace)
-            print(f"Committed promotion {result['promotion_id']}: {result['promotion_path']}")
+            print(f"Committed concept approval {result['concept_approval_id']}: {result['approval_path']}")
             for project_dir in result["project_dirs"]:
                 print(f"- project: {project_dir}")
             for warning in result["warnings"]:
@@ -525,7 +552,7 @@ def main(argv=None):
                 f"- outputs: {len(outputs['evidence_ids'])} evidence, "
                 f"{len(outputs['metric_snapshot_ids'])} metric snapshots, "
                 f"{len(outputs['finding_ids'])} findings, "
-                f"{len(outputs['idea_queue_entry_ids'])} queue entries"
+                f"{len(outputs['content_opportunity_ids'])} opportunities"
             )
             return 0
 
@@ -644,7 +671,7 @@ def main(argv=None):
             result = rebuild_board(args.creator_workspace)
             print(
                 f"Rebuilt content board: {result['card_count']} cards "
-                f"({result['idea_cards']} ideas, {result['project_cards']} projects)"
+                f"({result['opportunity_cards']} opportunities, {result['project_cards']} projects)"
             )
             print(f"Board: {result['board_path']}")
             return 0

@@ -1,9 +1,11 @@
 """Explicit migrations for durable creator workspace records."""
 
+import datetime
+import json
+import shutil
 from copy import deepcopy
 from pathlib import Path
 
-from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.json_io import write_json_atomic
 from influencer_os.validation import ValidationError, load_json, validate_record
 
@@ -67,203 +69,234 @@ def migrate_content_series(workspace_path):
     }
 
 
-def migrate_slot_research(workspace_path):
-    """Backfill slot-first research provenance without inventing weak links.
+def migrate_campaign_model(workspace_path):
+    """Mechanically convert a legacy idea-queue workspace to the campaign
+    model (ADR 0031): unassigned queue entries become Content Opportunities,
+    the queue manifest is rebuilt, run outputs and slot research selections
+    rename their fields, and legacy directories are removed.
 
-    A filled legacy slot is migrated only when one active promotion identifies
-    its selected queue entry and at least one shared evidence run can be tied
-    to the slot. All records are prepared and validated before any write.
+    Migration never invents Campaign ownership: any idea promotion, promoted
+    entry, or promotion-locked project fails the preflight with no writes —
+    durable promoted records need an explicit human mapping to a Campaign
+    and Concept, and disposable fixture workspaces are rebuilt instead.
     """
     workspace_dir = Path(workspace_path)
-    schedule_path = workspace_dir / "content-schedule.json"
-    if not schedule_path.exists():
-        raise FileNotFoundError(f"Missing content schedule: {schedule_path}")
+    legacy_queue_dir = workspace_dir / "research" / "idea-queue"
+    promotions_dir = workspace_dir / "research" / "idea-promotions"
 
-    schedule = deepcopy(load_json(schedule_path))
-    runs = {}
-    plans = {}
-    inferable_run_ids = set()
-    runs_dir = workspace_dir / "research" / "runs"
-    if runs_dir.exists():
-        for run_path in sorted(runs_dir.glob("*/research-run.json")):
-            run = deepcopy(load_json(run_path))
-            run_id = run["research_run_id"]
-            plan_path = run_path.with_name("search-plan.json")
-            plan = deepcopy(load_json(plan_path)) if plan_path.exists() else None
-            run_has_slots = "schedule_slot_ids" in run
-            plan_has_slots = plan is None or "schedule_slot_ids" in plan
-            if not run_has_slots and not plan_has_slots:
-                inferable_run_ids.add(run_id)
-            elif not run_has_slots:
-                run["schedule_slot_ids"] = list(plan["schedule_slot_ids"])
-            elif plan is not None and not plan_has_slots:
-                plan["schedule_slot_ids"] = list(run["schedule_slot_ids"])
-            elif plan is not None and plan["schedule_slot_ids"] != run["schedule_slot_ids"]:
-                raise ValidationError(
-                    f"research run {run_id} and search plan have different "
-                    "schedule_slot_ids; resolve that conflict before migration"
-                )
-            runs[run_id] = (run_path, run)
-            if plan is not None:
-                plans[run_id] = (plan_path, plan)
-
+    blockers = []
+    if promotions_dir.exists() and any(promotions_dir.glob("*.json")):
+        blockers.append(
+            "idea promotions exist; promoted work needs an explicit "
+            "Campaign/Concept mapping (rebuild fixture workspaces instead)"
+        )
     entries = {}
-    entries_dir = workspace_dir / "research" / "idea-queue" / "entries"
+    entries_dir = legacy_queue_dir / "entries"
     if entries_dir.exists():
         for entry_path in sorted(entries_dir.glob("*.json")):
             entry = load_json(entry_path)
             entries[entry["idea_queue_entry_id"]] = entry
+            if entry.get("status") == "promoted":
+                blockers.append(
+                    f"queue entry {entry['idea_queue_entry_id']} is promoted; "
+                    "promoted work needs an explicit Campaign/Concept mapping"
+                )
+    for manifest_path in sorted(workspace_dir.glob("projects/*/project.json")):
+        project = load_json(manifest_path)
+        if "idea_promotion_id" in project.get("source_refs", {}):
+            blockers.append(
+                f"project {project.get('project_id')} locks a legacy idea "
+                "promotion; promoted work needs an explicit mapping"
+            )
+    warnings_path = workspace_dir / "system" / "project-warnings.jsonl"
+    legacy_warnings = []
+    if warnings_path.exists():
+        for line in warnings_path.read_text().splitlines():
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if "idea_promotion_id" in record or "project_id" in record:
+                blockers.append(
+                    f"project warning {record.get('project_warning_id')} "
+                    "targets promoted work; promoted work needs an explicit "
+                    "mapping"
+                )
+            legacy_warnings.append(record)
+    if blockers:
+        raise ValidationError(
+            "campaign-model migration preflight failed (no records were "
+            "written): " + "; ".join(blockers)
+        )
 
-    active_promotions = []
-    promotions_dir = workspace_dir / "research" / "idea-promotions"
-    if promotions_dir.exists():
-        for promotion_path in sorted(promotions_dir.glob("*.json")):
-            promotion = load_json(promotion_path)
-            if promotion["promotion_status"] == "active":
-                active_promotions.append(promotion)
+    def renamed_entry_id(entry_id):
+        return "content_opportunity_" + entry_id.removeprefix("idea_queue_entry_")
 
-    def focus_run_on_slot(run_id, slot_id):
-        run_pair = runs.get(run_id)
-        if run_pair is None:
-            return None
-        run = run_pair[1]
-        if run.get("mode") != "scheduled_needs" or run.get("run_status") == "failed":
-            return None
-        if run_id in inferable_run_ids:
-            run.setdefault("schedule_slot_ids", [])
-            if slot_id not in run["schedule_slot_ids"]:
-                run["schedule_slot_ids"].append(slot_id)
-            plan_pair = plans.get(run_id)
-            if plan_pair is not None:
-                plan_pair[1].setdefault("schedule_slot_ids", [])
-                if slot_id not in plan_pair[1]["schedule_slot_ids"]:
-                    plan_pair[1]["schedule_slot_ids"].append(slot_id)
-        if slot_id not in run.get("schedule_slot_ids", []):
-            return None
-        return run
+    opportunities = {}
+    for entry_id, entry in entries.items():
+        record = deepcopy(entry)
+        record.pop("idea_queue_entry_id")
+        record.pop("linked_idea_promotion_ids", None)
+        record.pop("linked_project_ids", None)
+        if "approval_intent_note" in record:
+            record["assignment_intent_note"] = record.pop("approval_intent_note")
+        opportunity = {"content_opportunity_id": renamed_entry_id(entry_id)}
+        opportunity.update(record)
+        validate_record("content-opportunity", opportunity)
+        opportunities[opportunity["content_opportunity_id"]] = opportunity
 
-    for slot in schedule.get("calendar_slots", []):
-        if "research_state" in slot:
-            continue
-        slot_id = slot["slot_id"]
-        if slot["status"] != "filled":
-            slot["research_state"] = {
-                "status": "unresearched",
-                "research_run_ids": [],
+    queue = None
+    if entries or (legacy_queue_dir / "queue.json").exists():
+        creator_profile_id = None
+        legacy_manifest = None
+        if (legacy_queue_dir / "queue.json").exists():
+            legacy_manifest = load_json(legacy_queue_dir / "queue.json")
+            creator_profile_id = legacy_manifest["creator_profile_id"]
+        elif opportunities:
+            creator_profile_id = next(iter(opportunities.values()))[
+                "creator_profile_id"
+            ]
+        if creator_profile_id is not None:
+            suffix = creator_profile_id.removeprefix("creator_")
+            entry_refs = [
+                {
+                    "content_opportunity_id": opportunity_id,
+                    "status": opportunity["status"],
+                }
+                for opportunity_id, opportunity in sorted(opportunities.items())
+            ]
+            counts = {}
+            for ref in entry_refs:
+                counts[ref["status"]] = counts.get(ref["status"], 0) + 1
+            queue = {
+                "content_opportunity_queue_id": (
+                    f"content_opportunity_queue_{suffix}"
+                ),
+                "creator_profile_id": creator_profile_id,
+                "updated_on": (
+                    legacy_manifest["updated_on"]
+                    if legacy_manifest is not None
+                    else datetime.date.today().isoformat()
+                ),
+                "entry_refs": entry_refs,
+                "status_counts": counts,
             }
-            continue
+            if legacy_manifest is not None and "grouping_notes" in legacy_manifest:
+                queue["grouping_notes"] = legacy_manifest["grouping_notes"]
+            validate_record("content-opportunity-queue", queue)
 
-        claimants = [
-            promotion
-            for promotion in active_promotions
-            if slot_id in promotion.get("schedule_slot_ids", [])
-        ]
-        if len(claimants) != 1:
-            raise ValidationError(
-                f"filled legacy slot {slot_id} needs exactly one active promotion "
-                f"for safe migration; found {len(claimants)}"
-            )
-        promotion = claimants[0]
-        entry_id = promotion["idea_queue_entry_id"]
-        entry = entries.get(entry_id)
-        if entry is None:
-            raise ValidationError(
-                f"filled legacy slot {slot_id} promotion selects missing entry {entry_id}"
-            )
-        promotion_run_ids = {
-            ref["research_run_id"] for ref in promotion["evidence_refs"]
-        }
-        entry_run_ids = {ref["research_run_id"] for ref in entry["evidence_refs"]}
-        candidate_run_ids = sorted(promotion_run_ids.intersection(entry_run_ids))
-        focused_run_ids = []
-        for run_id in candidate_run_ids:
-            if focus_run_on_slot(run_id, slot_id) is not None:
-                focused_run_ids.append(run_id)
-        if not focused_run_ids:
-            raise ValidationError(
-                f"filled legacy slot {slot_id} has no shared nonfailed "
-                "scheduled_needs evidence run that can be tied to the slot"
-            )
-        slot["research_state"] = {
-            "status": "selected",
-            "research_run_ids": focused_run_ids,
-            "selected_idea_queue_entry_id": entry_id,
-        }
+    # Field renames in research runs, source-yield ledgers, and the schedule.
+    renamed_files = []
+    for run_path in sorted(workspace_dir.glob("research/runs/*/research-run.json")):
+        run = deepcopy(load_json(run_path))
+        outputs = run.get("outputs", {})
+        if "idea_queue_entry_ids" in outputs:
+            outputs["content_opportunity_ids"] = [
+                renamed_entry_id(entry_id)
+                for entry_id in outputs.pop("idea_queue_entry_ids")
+            ]
+            validate_record("research-run", run)
+            renamed_files.append((run_path, run))
+    for yield_path in sorted(
+        workspace_dir.glob("research/runs/*/source-yield.jsonl")
+    ):
+        lines = yield_path.read_text().splitlines()
+        changed = False
+        rewritten = []
+        for line in lines:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if "idea_queue_entry_ids" in record:
+                record["content_opportunity_ids"] = [
+                    renamed_entry_id(entry_id)
+                    for entry_id in record.pop("idea_queue_entry_ids")
+                ]
+                changed = True
+            validate_record("research-source-yield", record)
+            rewritten.append(record)
+        if changed:
+            renamed_files.append((yield_path, rewritten))
 
-    for slot in schedule.get("calendar_slots", []):
-        state = slot["research_state"]
-        if state["status"] not in {"candidates_ready", "selected"}:
-            continue
-        slot_id = slot["slot_id"]
-        for run_id in state["research_run_ids"]:
-            if focus_run_on_slot(run_id, slot_id) is None:
-                raise ValidationError(
-                    f"calendar slot {slot_id} research run {run_id} cannot be "
-                    "migrated as focused scheduled_needs provenance"
+    schedule = None
+    schedule_path = workspace_dir / "content-schedule.json"
+    if schedule_path.exists():
+        schedule = deepcopy(load_json(schedule_path))
+        schedule_changed = False
+        for slot in schedule.get("calendar_slots", []):
+            state = slot.get("research_state", {})
+            if "selected_idea_queue_entry_id" in state:
+                state["selected_content_opportunity_id"] = renamed_entry_id(
+                    state.pop("selected_idea_queue_entry_id")
                 )
-        if state["status"] == "selected":
-            entry_id = state["selected_idea_queue_entry_id"]
-            entry = entries.get(entry_id)
-            if entry is None:
-                raise ValidationError(
-                    f"calendar slot {slot_id} selects missing queue entry {entry_id}"
-                )
-            entry_run_ids = {
-                ref["research_run_id"] for ref in entry["evidence_refs"]
-            }
-            if not entry_run_ids.intersection(state["research_run_ids"]):
-                raise ValidationError(
-                    f"calendar slot {slot_id} selected entry {entry_id} has no "
-                    "evidence from the slot's research runs"
-                )
+                schedule_changed = True
+        if schedule_changed:
+            validate_record("creator-content-schedule", schedule)
+        else:
+            schedule = None
 
-    for run_id, (_run_path, run) in runs.items():
-        run.setdefault("schedule_slot_ids", [])
-        if run_id in plans:
-            plans[run_id][1].setdefault(
-                "schedule_slot_ids", list(run["schedule_slot_ids"])
+    # All records validated; write, then remove the legacy directories.
+    changed_paths = []
+    queue_dir = workspace_dir / "research" / "content-opportunity-queue"
+    if opportunities:
+        (queue_dir / "entries").mkdir(parents=True, exist_ok=True)
+        for opportunity_id, opportunity in sorted(opportunities.items()):
+            path = queue_dir / "entries" / f"{opportunity_id}.json"
+            write_json_atomic(path, opportunity)
+            changed_paths.append(path)
+    if queue is not None:
+        queue_dir.mkdir(parents=True, exist_ok=True)
+        path = queue_dir / "queue.json"
+        write_json_atomic(path, queue)
+        changed_paths.append(path)
+    for path, record in renamed_files:
+        if str(path).endswith(".jsonl"):
+            path.write_text(
+                "".join(json.dumps(row) + "\n" for row in record)
             )
-
-    completed_run_ids = sorted(
-        run_id
-        for run_id, (_path, run) in runs.items()
-        if run.get("run_status") != "failed"
-    )
-    schedule.setdefault(
-        "content_strategy_id",
-        f"content_strategy_{schedule['creator_slug'].replace('-', '_')}",
-    )
-    schedule.setdefault(
-        "research_basis",
-        {
-            "status": (
-                "research_informed" if completed_run_ids else "strategy_scaffold"
-            ),
-            "research_run_ids": completed_run_ids,
-        },
-    )
-
-    validate_record("creator-content-schedule", schedule)
-    state_errors = schedule_research_state_errors(schedule)
-    if state_errors:
-        raise ValidationError("; ".join(state_errors))
-    for _run_id, (_path, run) in runs.items():
-        validate_record("research-run", run)
-    for _run_id, (_path, plan) in plans.items():
-        validate_record("research-search-plan", plan)
-
-    pending = [(schedule_path, schedule)]
-    pending.extend((path, run) for path, run in runs.values())
-    pending.extend((path, plan) for path, plan in plans.values())
-    changed = []
-    for path, record in pending:
-        if load_json(path) != record:
-            changed.append(path)
-    for path, record in pending:
-        if path in changed:
+        else:
             write_json_atomic(path, record)
+        changed_paths.append(path)
+    if schedule is not None:
+        write_json_atomic(schedule_path, schedule)
+        changed_paths.append(schedule_path)
+    warnings_changed = False
+    rewritten_warnings = []
+    for record in legacy_warnings:
+        if "idea_queue_entry_id" in record:
+            record = dict(record)
+            record["content_opportunity_id"] = renamed_entry_id(
+                record.pop("idea_queue_entry_id")
+            )
+            warnings_changed = True
+        validate_record("project-warning", record)
+        rewritten_warnings.append(record)
+    if warnings_changed:
+        warnings_path.write_text(
+            "".join(json.dumps(row) + "\n" for row in rewritten_warnings)
+        )
+        changed_paths.append(warnings_path)
+    if legacy_queue_dir.exists():
+        shutil.rmtree(legacy_queue_dir)
+        changed_paths.append(legacy_queue_dir)
+    if promotions_dir.exists():
+        shutil.rmtree(promotions_dir)
+        changed_paths.append(promotions_dir)
+
+    # Projections are rebuildable derivations; refresh them so validate all
+    # passes immediately after migration (a rebuild fault must not fail the
+    # completed migration).
+    from influencer_os.boards import rebuild_board
+    from influencer_os.recall_index import rebuild_index
+
+    for rebuild in (rebuild_board, rebuild_index):
+        try:
+            rebuild(workspace_dir)
+        except (ValidationError, ValueError, FileNotFoundError):
+            pass
 
     return {
         "workspace_path": workspace_dir,
-        "changed_paths": [path.relative_to(workspace_dir) for path in changed],
+        "changed_paths": [
+            path.relative_to(workspace_dir) for path in changed_paths
+        ],
     }

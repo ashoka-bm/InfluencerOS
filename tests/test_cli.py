@@ -24,7 +24,7 @@ from tests.test_readiness_validation import (
     write_readiness_milestones,
 )
 from tests.support import (
-    populate_promotion_records,
+    populate_approval_records,
     populate_project_records,
     populate_video_understanding_packs,
     populate_workspace_records,
@@ -52,7 +52,7 @@ def text_production_plan(unit_type):
         return {
             "article_plan_id": "article_luna_tiny_reset_001",
             "creator_profile_id": "creator_luna_fit",
-            "idea_promotion_id": "idea_promotion_luna_fit_001",
+            "concept_approval_id": "concept_approval_luna_fit_001",
             "applied_social_template_id": "applied_template_luna_001",
             "target_format_id": "format_article",
             "working_title": "A two-minute reset for the moment your laptop wins",
@@ -98,7 +98,7 @@ def text_production_plan(unit_type):
     return {
         "thread_plan_id": "thread_luna_tiny_reset_001",
         "creator_profile_id": "creator_luna_fit",
-        "idea_promotion_id": "idea_promotion_luna_fit_001",
+        "concept_approval_id": "concept_approval_luna_fit_001",
         "applied_social_template_id": "applied_template_luna_001",
         "target_format_id": "format_thread",
         "platform_style": "x_thread",
@@ -147,7 +147,7 @@ def switch_project_to_text_format(workspace_dir, project_dir, unit_type):
         ),
     )
     rewrite_json(
-        workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+        workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json",
         lambda promotion: promotion.update(
             approved_formats=[format_id],
             approved_platforms=[platform],
@@ -475,7 +475,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
-            populate_promotion_records(workspace_dir)
+            populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,
@@ -530,7 +530,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
-            populate_promotion_records(workspace_dir)
+            populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,
@@ -590,7 +590,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
-            populate_promotion_records(workspace_dir)
+            populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
                     sys.executable,
@@ -927,7 +927,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
             )
             promotion_path.unlink()
 
@@ -939,22 +939,22 @@ class ProvenanceResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
             )
             rewrite_json(
                 promotion_path,
-                lambda promotion: promotion.update(idea_promotion_id="idea_promotion_other_001"),
+                lambda promotion: promotion.update(concept_approval_id="concept_approval_other_001"),
             )
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_project(project_dir)
-            self.assertIn("idea_promotion_other_001", str(ctx.exception))
+            self.assertIn("concept_approval_other_001", str(ctx.exception))
 
     def test_validate_project_rejects_promotion_creator_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
             )
             rewrite_json(
                 promotion_path,
@@ -969,7 +969,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
             promotion_path = (
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json"
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
             )
             rewrite_json(
                 promotion_path,
@@ -1073,7 +1073,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
                 lambda project: project.update(target_formats=["format_thread"]),
             )
             rewrite_json(
-                workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
+                workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json",
                 lambda promotion: promotion.update(approved_formats=["format_thread"]),
             )
             rewrite_json(
@@ -1086,19 +1086,19 @@ class ProvenanceResolutionTests(unittest.TestCase):
             self.assertIn("content_unit_type", str(ctx.exception))
             self.assertIn("target_formats", str(ctx.exception))
 
-    def test_validate_project_rejects_cached_queue_entry_mismatch(self):
+    def test_validate_project_rejects_cached_concept_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             _, project_dir = scaffold_project_workspace(temp_dir)
             rewrite_json(
                 project_dir / "project.json",
                 lambda project: project["source_refs"].update(
-                    idea_queue_entry_id="idea_queue_entry_other_001"
+                    campaign_concept_id="campaign_concept_other_001"
                 ),
             )
 
             with self.assertRaises(ValueError) as ctx:
                 validate_project(project_dir)
-            self.assertIn("Cached idea_queue_entry_id", str(ctx.exception))
+            self.assertIn("Cached campaign_concept_id", str(ctx.exception))
 
     def test_validate_project_rejects_cached_refs_beyond_the_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:

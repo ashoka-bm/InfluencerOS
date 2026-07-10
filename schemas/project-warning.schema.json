@@ -6,7 +6,6 @@
   "additionalProperties": false,
   "required": [
     "project_warning_id",
-    "idea_queue_entry_id",
     "warning_type",
     "severity",
     "message",
@@ -18,9 +17,9 @@
       "type": "string",
       "pattern": "^project_warning_[a-zA-Z0-9_-]+$"
     },
-    "idea_queue_entry_id": {
+    "content_opportunity_id": {
       "type": "string",
-      "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+      "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
     },
     "warning_type": {
       "type": "string",
@@ -38,7 +37,12 @@
     },
     "fit_level": {
       "type": "string",
-      "enum": ["native", "subtype", "analog", "none"]
+      "enum": [
+        "native",
+        "subtype",
+        "analog",
+        "none"
+      ]
     },
     "severity": {
       "type": "string",
@@ -68,9 +72,9 @@
       "type": "string",
       "pattern": "^project_[a-zA-Z0-9_-]+$"
     },
-    "idea_promotion_id": {
+    "concept_approval_id": {
       "type": "string",
-      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+      "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
     },
     "source_evidence_ids": {
       "type": "array",

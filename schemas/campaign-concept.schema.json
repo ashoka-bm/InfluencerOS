@@ -12,6 +12,7 @@
     "hypothesis",
     "audience_tension",
     "promise",
+    "intended_payoff",
     "audience_segment",
     "content_pillar_id",
     "primary_commercial_function",
@@ -47,6 +48,18 @@
       "minLength": 1
     },
     "promise": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intended_payoff": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intended_emotion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "core_message": {
       "type": "string",
       "minLength": 1
     },
@@ -114,6 +127,13 @@
           "research_run_id",
           "evidence_id"
         ]
+      }
+    },
+    "source_finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^finding_[a-zA-Z0-9_-]+$"
       }
     },
     "related_concepts": {

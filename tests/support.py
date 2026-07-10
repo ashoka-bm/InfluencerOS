@@ -55,7 +55,10 @@ def populate_video_understanding_packs(workspace_dir):
     )
 
 
-def populate_promotion_records(workspace_dir):
+def populate_approval_records(workspace_dir):
+    """The full approval-chain fixture: research run, assigned content
+    opportunity + queue, active campaign, active concept, active concept
+    approval, and the claimed schedule slot (selected via the opportunity)."""
     run_dir = (
         workspace_dir
         / "research"
@@ -79,23 +82,53 @@ def populate_promotion_records(workspace_dir):
     _copy_example_jsonl(
         "metric-snapshot.example.json", run_dir / "metric-snapshots.jsonl"
     )
-    promotion_path = (
-        workspace_dir
-        / "research"
-        / "idea-promotions"
-        / "idea_promotion_luna_fit_001.json"
-    )
-    promotion_path.parent.mkdir(parents=True, exist_ok=True)
-    _copy_example_record("idea-promotion.example.json", promotion_path)
+
     entry_path = (
         workspace_dir
         / "research"
-        / "idea-queue"
+        / "content-opportunity-queue"
         / "entries"
-        / "idea_queue_entry_luna_fit_001.json"
+        / "content_opportunity_luna_fit_001.json"
     )
     entry_path.parent.mkdir(parents=True, exist_ok=True)
-    _copy_example_record("idea-queue-entry.example.json", entry_path)
+    _copy_example_record("content-opportunity.example.json", entry_path)
+    _copy_example_record(
+        "content-opportunity-queue.example.json",
+        workspace_dir / "research" / "content-opportunity-queue" / "queue.json",
+    )
+    assets_dir = workspace_dir / "conversion-assets"
+    assets_dir.mkdir(exist_ok=True)
+    _copy_example_record(
+        "conversion-asset.example.json",
+        assets_dir / "conversion_asset_luna_reset_checklist.json",
+    )
+    asset_record = json.loads(
+        (ROOT / "examples" / "conversion-asset.example.json").read_text()
+    )
+    for file_ref in asset_record.get("file_refs", []):
+        ref_path = workspace_dir / file_ref
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        if not ref_path.exists():
+            ref_path.write_text("Fixture conversion asset body.\n")
+    campaign_root = workspace_dir / "campaigns" / "campaign_luna_fit_001"
+    (campaign_root / "concepts").mkdir(parents=True, exist_ok=True)
+    (campaign_root / "approvals").mkdir(parents=True, exist_ok=True)
+    _copy_example_record(
+        "campaign.example.json", campaign_root / "campaign.json"
+    )
+    _copy_example_record(
+        "campaign-concept.example.json",
+        campaign_root / "concepts" / "campaign_concept_luna_fit_001.json",
+    )
+    _rewrite_json(
+        campaign_root / "concepts" / "campaign_concept_luna_fit_001.json",
+        lambda concept: concept.update(status="active"),
+    )
+    _copy_example_record(
+        "concept-approval.example.json",
+        campaign_root / "approvals" / "concept_approval_luna_fit_001.json",
+    )
+
     _copy_example_record(
         "creator-content-schedule.example.json",
         workspace_dir / "content-schedule.json",
@@ -108,7 +141,7 @@ def populate_promotion_records(workspace_dir):
             research_state={
                 "status": "selected",
                 "research_run_ids": ["research_run_luna_fit_2026_07_03_001"],
-                "selected_idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
+                "selected_content_opportunity_id": "content_opportunity_luna_fit_001",
             },
         ),
     )
@@ -136,7 +169,7 @@ def scaffold_project_workspace(temp_dir):
     )
     populate_workspace_records(workspace_dir)
     populate_video_understanding_packs(workspace_dir)
-    populate_promotion_records(workspace_dir)
+    populate_approval_records(workspace_dir)
     project_dir = init_project(
         ROOT / "examples" / "project.example.json",
         creator_workspace=workspace_dir,
@@ -200,8 +233,9 @@ def switch_project_to_text_format(workspace_dir, project_dir, unit_type):
         ),
     )
     _rewrite_json(
-        workspace_dir / "research" / "idea-promotions" / "idea_promotion_luna_fit_001.json",
-        lambda promotion: promotion.update(
+        workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals"
+        / "concept_approval_luna_fit_001.json",
+        lambda approval: approval.update(
             approved_formats=[format_id], approved_platforms=[platform]
         ),
     )

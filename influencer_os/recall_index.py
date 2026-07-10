@@ -35,8 +35,10 @@ INDEX_DB_RELATIVE = Path("index") / "influencer-os.sqlite"
 UNIQUE_RECORD_TYPES = frozenset({
     "research-evidence",
     "metric-snapshot",
-    "idea-queue-entry",
-    "idea-promotion",
+    "content-opportunity",
+    "concept-approval",
+    "campaign",
+    "campaign-concept",
     "project",
     "video-understanding-pack",
     "content-card",
@@ -165,12 +167,16 @@ def collect_index_rows(workspace_dir, scope=None):
                     "research-finding", stable_path, file_hash)
 
     file_scans = (
-        (research_dir / "idea-queue" / "entries", "*.json",
-         "idea_queue_entry_id", "idea-queue-entry"),
-        (research_dir / "idea-promotions", "*.json",
-         "idea_promotion_id", "idea-promotion"),
+        (research_dir / "content-opportunity-queue" / "entries", "*.json",
+         "content_opportunity_id", "content-opportunity"),
         (research_dir / "video-understanding-packs", "*.json",
          "video_understanding_pack_id", "video-understanding-pack"),
+        (workspace_dir / "campaigns", "*/campaign.json",
+         "campaign_id", "campaign"),
+        (workspace_dir / "campaigns", "*/concepts/*.json",
+         "campaign_concept_id", "campaign-concept"),
+        (workspace_dir / "campaigns", "*/approvals/*.json",
+         "concept_approval_id", "concept-approval"),
     )
     for directory, pattern, id_field, record_type in file_scans:
         if directory.exists():

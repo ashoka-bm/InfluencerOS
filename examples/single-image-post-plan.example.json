@@ -11,5 +11,5 @@
   ],
   "text_overlay_policy": "Use one short overlay only: '2-minute reset'. No dense instructional text.",
   "generation_prompt": "Create a vertical single-image social post of Luna Fit, a warm approachable wellness avatar, standing beside an open laptop in a softly lit apartment. She is mid-reset with relaxed shoulders and a calm expression. Include subtle visual context that she is between meetings. Clean composition, warm neutrals, one bright accent color, no platform UI.",
-  "idea_promotion_id": "idea_promotion_luna_fit_001"
+  "concept_approval_id": "concept_approval_luna_fit_001"
 }

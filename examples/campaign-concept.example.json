@@ -6,6 +6,9 @@
  "hypothesis": "Desk workers act on a reset they can finish inside a lunch break, not on plans that ask for a schedule change.",
  "audience_tension": "By midday the body feels wrecked, but every fitness plan seems to demand an hour that does not exist.",
  "promise": "A ninety-second reset you can run beside the desk today, no outfit change, no equipment.",
+ "intended_payoff": "Viewer feels the reset is doable today and saves it for tomorrow's lunch.",
+ "intended_emotion": "relieved and capable",
+ "core_message": "Two minutes beside the desk is enough to reset your body before a meeting.",
  "audience_segment": "Time-constrained women who want low-pressure home movement.",
  "content_pillar_id": "pillar_tiny_home_workouts",
  "primary_commercial_function": "lead_capture",
@@ -25,6 +28,9 @@
     "video_research_luna_fit_001"
    ]
   }
+ ],
+ "source_finding_ids": [
+  "finding_luna_fit_desk_reset_lunch"
  ],
  "related_concepts": [],
  "created_on": "2026-07-03",

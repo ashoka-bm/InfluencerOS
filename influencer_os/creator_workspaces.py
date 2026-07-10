@@ -12,7 +12,7 @@ from influencer_os.generation import validate_reference_approval_records
 from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
-from influencer_os.research import validate_promotions
+from influencer_os.research import validate_approvals
 from influencer_os.rubric import reflection_report, validate_events_ledger
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
@@ -234,8 +234,8 @@ STANDARD_DIRECTORIES = [
     "research/intelligence",
     "research/stable-findings",
     "conversion-assets",
-    "research/idea-queue/entries",
-    "research/idea-promotions",
+    "research/content-opportunity-queue/entries",
+    "campaigns",
     "boards",
     "system",
     "system/reflection-runs",
@@ -845,11 +845,11 @@ def validate_creator_workspace(workspace_path):
     # exit criterion 4): hand-edited lessons fail the same evidence rules.
     validate_creator_lessons(workspace_dir)
     # Promotion records validate on the workspace path too (Creative
-    # Direction slice 1 review finding): the promotion gate — including the
+    # Direction slice 1 review finding): the approval gate — including the
     # ADR 0024 intent carry-forward check — must be reachable from
     # `validate workspace`, not only `validate research`. No-op when the
-    # workspace has no promotions yet.
-    promotion_warnings, _, _ = validate_promotions(workspace_dir)
+    # workspace has no approvals yet.
+    approval_warnings, _, _ = validate_approvals(workspace_dir)
     # Reference-scoped generation approvals (ADR 0023): records under
     # references/approval-records/ validate, and a reference asset whose
     # source_ref claims an approval record must resolve to one. No-op when
@@ -866,7 +866,7 @@ def validate_creator_workspace(workspace_path):
         },
     )
 
-    warnings = list(promotion_warnings)
+    warnings = list(approval_warnings)
     if deprecated_status:
         warnings.append(
             f"warning: deprecated status {deprecated_status!r}; migrate this workspace "

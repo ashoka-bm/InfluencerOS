@@ -7,7 +7,7 @@
   "required": [
     "story_sequence_plan_id",
     "creator_profile_id",
-    "idea_promotion_id",
+    "concept_approval_id",
     "applied_social_template_id",
     "target_format_id",
     "sequence_arc",
@@ -89,9 +89,9 @@
         "minLength": 1
       }
     },
-    "idea_promotion_id": {
+    "concept_approval_id": {
       "type": "string",
-      "pattern": "^idea_promotion_[a-zA-Z0-9_-]+$"
+      "pattern": "^concept_approval_[a-zA-Z0-9_-]+$"
     }
   }
 }

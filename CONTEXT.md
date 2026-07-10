@@ -11,7 +11,7 @@ shipped. Terms explicitly marked Deferred are compatibility targets only and
 must not create obligations in the initial implementation.
 
 **InfluencerOS**:
-The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Idea Queue, and turn one promoted idea into format-specific production plans, starting with the universal short-form base video generation plan.
+The product and repository that helps a user choose an existing creator profile, research current platform-scoped content patterns, maintain concise Research Findings and a scored Content Opportunity Queue, and turn one approved Campaign Concept into format-specific production plans, starting with the universal short-form base video generation plan.
 
 **Creator**:
 The current runtime term for an onboarded influencer identity, not the human operator behind it. ADR 0026 also reserves Creator as the future umbrella term for an influencer, product, or brand/company. The `creator_*` vocabulary, workspace path, and CLI commands remain stable when that target ships.
@@ -229,20 +229,20 @@ What a piece of content is fundamentally made of: text, image, video, or audio. 
 **Format Subtype**:
 An optional refinement of a Social Post Format that names the specific craft being made — for example an op-ed, reported feature, or newsletter dispatch for an article; designed slides or a photo set for a carousel; or a reply chain versus a single throughline post for a thread. It is advisory, chosen at production time, and never forces a piece to be classified.
 
-**Idea Queue (Deprecated; Replace With Content Opportunity Queue)**:
+**Idea Queue (Replaced By Content Opportunity Queue, ADR 0031)**:
 The legacy creator-scoped backlog name for researched content opportunities. The initial Campaign implementation migrates it to Content Opportunity Queue and retains no permanent dual-write compatibility.
 
-**Idea Queue Entry (Deprecated; Replace With Content Opportunity)**:
+**Idea Queue Entry (Replaced By Content Opportunity, ADR 0031)**:
 The legacy record for one researched direction. The initial Campaign implementation migrates unassigned records to Content Opportunities and assigned production directions into Campaign Concepts with source provenance.
 
-**Idea Promotion (Deprecated; Replace With Concept Approval)**:
+**Idea Promotion (Replaced By Concept Approval, ADR 0031)**:
 The legacy human-approval record that authorizes Projects. The initial Campaign implementation migrates it to Concept Approval and updates downstream references without retaining a second approval hierarchy.
 
 **Social Template**:
 A reusable visual post structure such as hook-problem-solution, before-process-payoff, hook-steps-payoff, or identity-signal. Each template is a named arrangement of the Content Beat Spine. It improves retention, clarity, and emotional movement without defining the content idea itself.
 
 **Applied Social Template**:
-The selected template as adapted to one promoted Idea Queue Entry. It states the structural beats, why the template fits, and how each beat maps onto the idea.
+The selected template as adapted to one approved Project. It states the structural beats, why the template fits, and how each beat maps onto the concept's idea.
 
 **Content Beat Spine**:
 The canonical four-stage structure every piece of content follows: Hook, Retain, Payoff, and CTA. Hook stops the scroll and opens a question; Retain sustains attention through setup and an open loop, promise, or turn; Payoff resolves the promise; CTA invites the next action, including soft product placement. Emotion is not a stage but a cross-cutting attribute: each beat names the feeling it drives. The spine is the shared vocabulary that Social Templates arrange, format-specific production plans instantiate, and the Creative Performance Map and Performance Attribution score (Hook, Retain as body retention, Payoff, CTA, plus the pre-hook Packaging stage they also track).
@@ -290,7 +290,7 @@ The v1 output target: vertical, short, hook-first, visually legible without plat
 The line between local planning and external generation. Drafting plans is allowed; image/video/render generation requires explicit user approval.
 
 **Gate**:
-A human approval that can block the pipeline until granted. InfluencerOS has two: Idea Promotion (moving an idea into production) and the Provider Boundary generation approval (authorizing a paid provider call). Gates are always human-owned; nothing auto-approves them.
+A human approval that can block the pipeline until granted. InfluencerOS has two: Concept Approval (moving a Campaign Concept into production) and the Provider Boundary generation approval (authorizing a paid provider call). Gates are always human-owned; nothing auto-approves them.
 
 **Review**:
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.

@@ -62,14 +62,31 @@ CONCEPT_SEED_REQUIRED = (
     "content_pillar_id",
     "primary_commercial_function",
 )
+# The intent trio, finding refs, and evidence are copied from the assigned
+# opportunity when one is named; they are authored (intended_payoff
+# required) only for campaign-scoped concepts with no opportunity.
 CONCEPT_SEED_OPTIONAL = (
     "supporting_commercial_functions",
     "source_content_opportunity_id",
     "evidence_refs",
+    "intended_payoff",
+    "intended_emotion",
+    "core_message",
+    "source_finding_ids",
     "related_concepts",
     "notes",
     "campaign_concept_id",
 )
+
+# Human-driven concept lifecycle moves; 'active' is only ever set by the
+# approval commit, and an active concept only retires.
+CONCEPT_STATUS_TRANSITIONS = {
+    "draft": {"researching", "ready_for_approval", "retired"},
+    "researching": {"draft", "ready_for_approval", "retired"},
+    "ready_for_approval": {"draft", "researching", "retired"},
+    "active": {"retired"},
+    "retired": set(),
+}
 
 OPPORTUNITY_SEED_REQUIRED = (
     "title",
@@ -241,6 +258,7 @@ def scaffold_campaign(seed, creator_workspace, now=None):
     campaign_path = _campaign_path(workspace_dir, campaign_id)
     campaign_path.parent.mkdir(parents=True, exist_ok=False)
     write_json_atomic(campaign_path, campaign)
+    validate_campaign_records(workspace_dir)
     return {"campaign_path": campaign_path, "campaign_id": campaign_id}
 
 
@@ -265,6 +283,7 @@ def activate_campaign(creator_workspace, campaign_id, activation_note=None,
     validate_record("campaign", campaign)
     campaign_path = _campaign_path(workspace_dir, campaign_id)
     write_json_atomic(campaign_path, campaign)
+    validate_campaign_records(workspace_dir)
     return {"campaign_path": campaign_path, "campaign_id": campaign_id}
 
 
@@ -321,8 +340,11 @@ def check_concept_against_campaign(concept, campaign):
 
 def scaffold_campaign_concept(seed, creator_workspace, now=None):
     """Build and write one draft Campaign Concept from its authored seed.
-    When the seed assigns a Content Opportunity, evidence refs are copied
-    from the opportunity (never re-authored)."""
+
+    Assigning a Content Opportunity is one transactional operation: the
+    concept copies the opportunity's evidence, intent trio, and finding
+    refs, and the opportunity flips to 'assigned' with the back-link in the
+    same invocation — entry, queue manifest, and concept never drift."""
     workspace_dir = Path(creator_workspace)
     seed = load_seed(seed)
     check_seed_fields(
@@ -333,17 +355,54 @@ def scaffold_campaign_concept(seed, creator_workspace, now=None):
     campaign = load_campaign(workspace_dir, seed["campaign_id"])
 
     source_opportunity_id = seed.get("source_content_opportunity_id")
+    opportunity = None
     if source_opportunity_id is not None:
-        if "evidence_refs" in seed:
+        copied_fields = [
+            field
+            for field in ("evidence_refs", "intended_payoff",
+                          "intended_emotion", "core_message",
+                          "source_finding_ids")
+            if field in seed
+        ]
+        if copied_fields:
             raise ValidationError(
-                "campaign-concept seed supplies evidence_refs alongside "
-                "source_content_opportunity_id; evidence is copied from the "
-                "assigned opportunity (docs/record-constructors.md)"
+                f"campaign-concept seed supplies {copied_fields} alongside "
+                "source_content_opportunity_id; those fields are copied from "
+                "the assigned opportunity (docs/record-constructors.md)"
             )
         opportunity = _load_opportunity(workspace_dir, source_opportunity_id)
-        evidence_refs = deepcopy(opportunity["evidence_refs"])
+        if opportunity["status"] not in {"new", "reviewed", "shortlisted",
+                                         "needs_more_research"}:
+            raise ValidationError(
+                f"content opportunity {source_opportunity_id} has status "
+                f"{opportunity['status']!r}; only an open opportunity can be "
+                "assigned to a concept"
+            )
+        copied = {
+            "evidence_refs": deepcopy(opportunity["evidence_refs"]),
+            "intended_payoff": opportunity["intended_payoff"],
+        }
+        for field in ("intended_emotion", "core_message"):
+            if field in opportunity:
+                copied[field] = opportunity[field]
+        if opportunity.get("source_finding_ids"):
+            copied["source_finding_ids"] = list(opportunity["source_finding_ids"])
     else:
-        evidence_refs = deepcopy(seed.get("evidence_refs", []))
+        if "intended_payoff" not in seed:
+            raise ValidationError(
+                "campaign-concept seed is missing authored fields "
+                "['intended_payoff']; a campaign-scoped concept authors its "
+                "intent directly"
+            )
+        copied = {
+            "evidence_refs": deepcopy(seed.get("evidence_refs", [])),
+            "intended_payoff": seed["intended_payoff"],
+        }
+        for field in ("intended_emotion", "core_message"):
+            if field in seed:
+                copied[field] = seed[field]
+        if seed.get("source_finding_ids"):
+            copied["source_finding_ids"] = list(seed["source_finding_ids"])
 
     existing = _existing_concept_ids(workspace_dir)
     concept_id = seed.get("campaign_concept_id") or next_sequenced_id(
@@ -367,10 +426,10 @@ def scaffold_campaign_concept(seed, creator_workspace, now=None):
             seed.get("supporting_commercial_functions", [])
         ),
         "status": "draft",
-        "evidence_refs": evidence_refs,
         "created_on": today,
         "updated_on": today,
     }
+    concept.update(copied)
     if source_opportunity_id is not None:
         concept["source_content_opportunity_id"] = source_opportunity_id
     if "related_concepts" in seed:
@@ -385,10 +444,82 @@ def scaffold_campaign_concept(seed, creator_workspace, now=None):
                 f"concept {concept_id} relates to "
                 f"{related['campaign_concept_id']!r}, which does not exist"
             )
+
+    # Prepare the assignment flip before any write (all-or-nothing).
+    flipped_entry = None
+    flipped_queue = None
+    if opportunity is not None:
+        flipped_entry = deepcopy(opportunity)
+        flipped_entry["status"] = "assigned"
+        linked = list(flipped_entry.get("linked_campaign_concept_ids", []))
+        if concept_id not in linked:
+            linked.append(concept_id)
+        flipped_entry["linked_campaign_concept_ids"] = linked
+        flipped_entry["updated_on"] = today
+        validate_record("content-opportunity", flipped_entry)
+        queue_path = _queue_path(workspace_dir)
+        if not queue_path.exists():
+            raise ValidationError(
+                f"content opportunity {source_opportunity_id} has no queue "
+                f"manifest at {queue_path}"
+            )
+        flipped_queue = load_json(queue_path)
+        validate_record("content-opportunity-queue", flipped_queue)
+        for ref in flipped_queue["entry_refs"]:
+            if ref["content_opportunity_id"] == source_opportunity_id:
+                ref["status"] = "assigned"
+                break
+        else:
+            raise ValidationError(
+                f"queue manifest does not track {source_opportunity_id}; the "
+                "entry must be tracked before assignment"
+            )
+        flipped_queue["updated_on"] = today
+        _recounted_queue(flipped_queue)
+        validate_record("content-opportunity-queue", flipped_queue)
+
     concepts_dir = campaign_dir(workspace_dir, seed["campaign_id"]) / "concepts"
     concepts_dir.mkdir(parents=True, exist_ok=True)
     concept_path = concepts_dir / f"{concept_id}.json"
+    # Flip the opportunity before writing the concept: a crash between the
+    # writes leaves the entry linking a not-yet-written concept — detectably
+    # invalid — and an already-assigned opportunity cannot be assigned twice.
+    if flipped_entry is not None:
+        write_json_atomic(
+            _entries_dir(workspace_dir) / f"{source_opportunity_id}.json",
+            flipped_entry,
+        )
+        write_json_atomic(_queue_path(workspace_dir), flipped_queue)
     write_json_atomic(concept_path, concept)
+    validate_campaign_records(workspace_dir)
+    return {"concept_path": concept_path, "campaign_concept_id": concept_id}
+
+
+def set_concept_status(creator_workspace, concept_id, new_status, now=None):
+    """Record a human concept lifecycle move. 'active' is only ever set by
+    the approval commit; an active concept only retires."""
+    workspace_dir = Path(creator_workspace)
+    concept_paths = sorted(
+        workspace_dir.glob(f"campaigns/*/concepts/{concept_id}.json")
+    )
+    if not concept_paths:
+        raise ValidationError(
+            f"campaign_concept_id {concept_id!r} resolves to no concept"
+        )
+    concept_path = concept_paths[0]
+    concept = load_json(concept_path)
+    validate_record("campaign-concept", concept)
+    allowed = CONCEPT_STATUS_TRANSITIONS.get(concept["status"], set())
+    if new_status not in allowed:
+        raise ValidationError(
+            f"concept {concept_id} cannot move from {concept['status']!r} to "
+            f"{new_status!r}; allowed: {sorted(allowed)}"
+        )
+    concept["status"] = new_status
+    concept["updated_on"] = _today(now)
+    validate_record("campaign-concept", concept)
+    write_json_atomic(concept_path, concept)
+    validate_campaign_records(concept_path.parents[3])
     return {"concept_path": concept_path, "campaign_concept_id": concept_id}
 
 
@@ -467,6 +598,7 @@ def scaffold_content_opportunity(seed, creator_workspace, now=None):
     entry_path = entries_dir / f"{opportunity_id}.json"
     write_json_atomic(entry_path, opportunity)
     write_json_atomic(queue_path, queue)
+    validate_campaign_records(workspace_dir)
     return {
         "entry_path": entry_path,
         "queue_path": queue_path,

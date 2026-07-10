@@ -222,12 +222,12 @@ disk-derived and `python3 -m influencer_os validate examples` fails on either a
 missing example or an orphan example. Do not duplicate that inventory here.
 
 The implemented record chain covers creator setup, platform-scoped research,
-idea promotion, project planning, output packaging, publication evidence,
+concept approval, project planning, output packaging, publication evidence,
 analytics, learning, generation provenance, and Improvement OS records.
 
 Content Idea Set and Selected Content Idea were removed after the ADR 0020
-Research Findings, Idea Queue, and Idea Promotion route shipped. Projects
-reference `idea_promotion_id`, and deeper research provenance resolves
+Research Findings, Content Opportunity Queue, and Concept Approval route shipped. Projects
+reference `concept_approval_id`, and deeper research provenance resolves
 transitively through the locked promotion.
 
 ## Format-Specific Production Plans
@@ -243,7 +243,7 @@ After `AppliedSocialTemplate`, route by `target_format_id`:
 
 ## Gate Rules
 
-The user must explicitly approve an idea promotion package before the system
+The user must explicitly approve an concept approval package before the system
 creates production work. The agent may recommend queue ideas and rank them by
 goal, but it must not silently promote an idea into the creation funnel.
 
@@ -251,7 +251,7 @@ The agent may recommend a social template for the chosen idea. If the user does 
 
 Provider-backed generation requires explicit approval for the exact call or batch.
 
-A Project's locked Idea Promotion is a **historical snapshot**: `validate
+A Project's locked Concept Approval is a **historical snapshot**: `validate
 project` checks that the promotion exists, belongs to the same creator, and
 lists the project, but it does not require the promotion to still be
 `active`. A project whose promotion was later superseded or cancelled remains

@@ -60,7 +60,7 @@
           "card_type": {
             "type": "string",
             "enum": [
-              "idea",
+              "opportunity",
               "project"
             ]
           },
@@ -71,7 +71,7 @@
           "source_record_type": {
             "type": "string",
             "enum": [
-              "idea_queue_entry",
+              "content_opportunity",
               "project"
             ]
           },

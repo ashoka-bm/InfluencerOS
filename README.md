@@ -10,8 +10,8 @@ The v1 flow (ADR 0020):
 Choose Creator
   -> optionally understand real videos from frames and transcripts
   -> plan platform-scoped public research, then capture dated evidence and concise Research Findings
-  -> maintain a scored Idea Queue from findings and evidence
-  -> human-approve an Idea Promotion for one queue idea
+  -> maintain a scored Content Opportunity Queue from findings and evidence
+  -> human-approve an Concept Approval for one queue idea
   -> create Projects from the locked promotion
   -> apply a format-compatible social template
   -> create a format-specific production plan
@@ -81,7 +81,7 @@ python3 -m influencer_os validate examples
 ## Validate A Whole Creator Workspace (Release Gate)
 
 Run every validator over one Creator Workspace in a single command — the
-workspace manifest and readiness milestones, research state, idea queue, content
+workspace manifest and readiness milestones, research state, content opportunity queue, content
 board, and every project under `projects/`:
 
 ```bash
@@ -208,7 +208,7 @@ After adding the plan records, validate the project with:
 python3 -m influencer_os validate project workspace-library/creators/luna-fit/projects/tiny-reset-after-laptop-day
 ```
 
-Project validation anchors on the locked Idea Promotion: `source_refs.idea_promotion_id` must resolve to `research/idea-promotions/<id>.json` in the owning workspace, the promotion must list the project and point to a real idea queue entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, the project content unit must map to exactly one matching target format, text projects validate against article/thread plan schemas without a generation plan, and a packaged project's output package must match the project, applied template, and plan records.
+Project validation anchors on the locked Concept Approval: `source_refs.concept_approval_id` must resolve to `campaigns/<campaign-id>/approvals/<id>.json` in the owning workspace, the promotion must list the project and point to a real content opportunity entry, and any cached deeper refs must match the promotion snapshot. Referenced reference assets must exist in the reference library, video pack IDs must resolve to `research/video-understanding-packs/<pack-id>.json` records, the project content unit must map to exactly one matching target format, text projects validate against article/thread plan schemas without a generation plan, and a packaged project's output package must match the project, applied template, and plan records.
 
 ## Register An Output Package
 
@@ -254,14 +254,14 @@ Evidence refs must resolve to the project's registered package, published post r
 
 ## Validate Research State
 
-Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and idea promotions with the promotion gate), then the idea queue's manifest/entry consistency and evidence resolution:
+Validate a creator's research records (runs, JSONL evidence and metric snapshots, findings frontmatter and char limit, intelligence files, board and system projections, and concept approvals with the promotion gate), then the content opportunity queue's manifest/entry consistency and evidence resolution:
 
 ```bash
 python3 -m influencer_os validate research workspace-library/creators/luna-fit
 python3 -m influencer_os validate queue workspace-library/creators/luna-fit
 ```
 
-The promotion gate requires every promotion to point to a real idea queue entry and to approve at least one production-supported format; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path. Projects stay within the locked promotion's approved surface: target formats must be approved, and platform targets that map to a research platform must be approved. Since ADR 0027 added `youtube` to the research platform set, `youtube_shorts` maps to `youtube` and requires it in the promotion's approved platforms; only surfaces that map to no research platform remain exempt.
+The promotion gate requires every promotion to point to a real content opportunity entry and to approve at least one production-supported format; unresolved evidence refs warn for human-approved promotions and fail for any future automated promotion path. Projects stay within the locked promotion's approved surface: target formats must be approved, and platform targets that map to a research platform must be approved. Since ADR 0027 added `youtube` to the research platform set, `youtube_shorts` maps to `youtube` and requires it in the promotion's approved platforms; only surfaces that map to no research platform remain exempt.
 
 ## Video Understanding Tool
 
@@ -360,7 +360,7 @@ python3 -m influencer_os query-lookup workspace-library/creators/luna-fit hook r
 ## Rebuild The Content Board
 
 Rebuild the Kanban-readable Content Board projection from canonical records
-(idea queue entries become parent cards, projects become child cards, active
+(content opportunity entries become parent cards, projects become child cards, active
 warnings become severity badges; `columns` and `manual_order` survive
 rebuilds), then check an existing board against canonical records:
 

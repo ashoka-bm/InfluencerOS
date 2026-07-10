@@ -16,7 +16,7 @@ from pathlib import Path
 
 from influencer_os.creator_workspaces import validate_creator_workspace
 from influencer_os.projects import validate_project
-from influencer_os.research import validate_promotion_gate, validate_research
+from influencer_os.research import validate_approval_gate, validate_research
 from influencer_os.validation import (
     ValidationError,
     validate_record,
@@ -180,14 +180,15 @@ class SeededTemplateLibraryTests(unittest.TestCase):
 
 class IntentCarryForwardTests(unittest.TestCase):
     def load_entry_and_promotion(self, workspace_dir):
+        """Return the concept and approval pair (intent now carries
+        forward concept -> approval)."""
         entry_path = (
-            workspace_dir / "research" / "idea-queue" / "entries" / f"{ENTRY_ID}.json"
+            workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "concepts" / "campaign_concept_luna_fit_001.json"
         )
         promotion_path = (
-            workspace_dir
-            / "research"
-            / "idea-promotions"
-            / "idea_promotion_luna_fit_001.json"
+            workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "approvals" / "concept_approval_luna_fit_001.json"
         )
         return (
             entry_path,
@@ -200,7 +201,7 @@ class IntentCarryForwardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = scaffold_research_workspace(temp_dir)
             _, _, _, promotion = self.load_entry_and_promotion(workspace_dir)
-            validate_promotion_gate(workspace_dir, promotion)
+            validate_approval_gate(workspace_dir, promotion)
 
     def test_promotion_rewriting_intent_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -209,7 +210,7 @@ class IntentCarryForwardTests(unittest.TestCase):
             promotion["intended_emotion"] = "smug and superior"
             write_json(promotion_path, promotion)
             with self.assertRaisesRegex(ValidationError, "rewrites intended_emotion"):
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
 
     def test_promotion_dropping_intent_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -218,7 +219,7 @@ class IntentCarryForwardTests(unittest.TestCase):
             del promotion["core_message"]
             write_json(promotion_path, promotion)
             with self.assertRaisesRegex(ValidationError, "drops core_message"):
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
 
     def test_promotion_inventing_intent_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -227,9 +228,9 @@ class IntentCarryForwardTests(unittest.TestCase):
             del entry["intended_emotion"]
             write_json(entry_path, entry)
             with self.assertRaisesRegex(
-                ValidationError, "never invented at promotion"
+                ValidationError, "never invented downstream"
             ):
-                validate_promotion_gate(workspace_dir, promotion)
+                validate_approval_gate(workspace_dir, promotion)
 
     def test_legacy_records_without_intent_still_pass(self):
         # Schema-optional: pre-ADR-0024 fixtures carry no intent pair and the
@@ -244,7 +245,7 @@ class IntentCarryForwardTests(unittest.TestCase):
                 promotion.pop(field, None)
             write_json(entry_path, entry)
             write_json(promotion_path, promotion)
-            validate_promotion_gate(workspace_dir, promotion)
+            validate_approval_gate(workspace_dir, promotion)
 
 
 class SpineShapedMicroJourneyTests(unittest.TestCase):
@@ -282,7 +283,7 @@ class IntentResolveByReferenceTests(unittest.TestCase):
                 project_dir / "plan" / "production-plan.json",
                 lambda plan: plan.update(intended_emotion="triumphant awe"),
             )
-            with self.assertRaisesRegex(ValueError, "overrides the locked promotion"):
+            with self.assertRaisesRegex(ValueError, "overrides the locked approval"):
                 validate_project(project_dir)
 
     def test_premature_plan_on_created_project_still_checked(self):
@@ -298,7 +299,7 @@ class IntentResolveByReferenceTests(unittest.TestCase):
                 project_dir / "plan" / "production-plan.json",
                 lambda plan: plan.update(intended_emotion="triumphant awe"),
             )
-            with self.assertRaisesRegex(ValueError, "overrides the locked promotion"):
+            with self.assertRaisesRegex(ValueError, "overrides the locked approval"):
                 validate_project(project_dir)
 
     def test_plan_alone_carrying_intent_is_legacy_compatible(self):
@@ -306,10 +307,16 @@ class IntentResolveByReferenceTests(unittest.TestCase):
         # plan's own intended_emotion.
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
-            for record_name in ("idea-promotions/idea_promotion_luna_fit_001",
-                                "idea-queue/entries/idea_queue_entry_luna_fit_001"):
+            for record_path in (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "approvals" / "concept_approval_luna_fit_001.json",
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "concepts" / "campaign_concept_luna_fit_001.json",
+                workspace_dir / "research" / "content-opportunity-queue"
+                / "entries" / "content_opportunity_luna_fit_001.json",
+            ):
                 rewrite_json(
-                    workspace_dir / "research" / f"{record_name}.json",
+                    record_path,
                     lambda record: [
                         record.pop(field, None)
                         for field in ("intended_emotion", "core_message")
@@ -325,9 +332,8 @@ class IntentResolveByReferenceTests(unittest.TestCase):
             validate_creator_workspace(workspace_dir)
             rewrite_json(
                 workspace_dir
-                / "research"
-                / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json",
+                / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json",
                 lambda promotion: promotion.update(intended_emotion="smug"),
             )
             with self.assertRaisesRegex(ValidationError, "rewrites intended_emotion"):
@@ -481,9 +487,8 @@ class PlatformFitWarningTests(unittest.TestCase):
             workspace_dir, _ = scaffold_project_workspace(temp_dir)
             rewrite_json(
                 workspace_dir
-                / "research"
-                / "idea-promotions"
-                / "idea_promotion_luna_fit_001.json",
+                / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                / "concept_approval_luna_fit_001.json",
                 lambda promotion: promotion.update(
                     approved_formats=["format_short_form_video", "format_article"],
                     project_ids_created=promotion["project_ids_created"]
@@ -527,9 +532,15 @@ class PlatformFitWarningTests(unittest.TestCase):
             promotion = json.loads(
                 (
                     workspace_dir
-                    / "research"
-                    / "idea-promotions"
-                    / "idea_promotion_luna_fit_001.json"
+                    / "campaigns" / "campaign_luna_fit_001" / "approvals"
+                    / "concept_approval_luna_fit_001.json"
+                ).read_text()
+            )
+            concept = json.loads(
+                (
+                    workspace_dir
+                    / "campaigns" / "campaign_luna_fit_001" / "concepts"
+                    / "campaign_concept_luna_fit_001.json"
                 ).read_text()
             )
             # Force a non-native fit so the writer has something to append.
@@ -539,8 +550,8 @@ class PlatformFitWarningTests(unittest.TestCase):
                     primary_surfaces=["medium"]
                 ),
             )
-            _emit_platform_fit_warning(workspace_dir, project, promotion)
-            _emit_platform_fit_warning(workspace_dir, project, promotion)
+            _emit_platform_fit_warning(workspace_dir, project, promotion, concept)
+            _emit_platform_fit_warning(workspace_dir, project, promotion, concept)
             fits = [
                 record
                 for record in self.read_warnings(workspace_dir)
@@ -711,10 +722,10 @@ class ReviewRecordTests(unittest.TestCase):
             self.write_review(
                 project_dir,
                 mutate=lambda review: review.update(
-                    idea_promotion_id="idea_promotion_luna_fit_999"
+                    concept_approval_id="concept_approval_luna_fit_999"
                 ),
             )
-            with self.assertRaisesRegex(ValueError, "locked promotion"):
+            with self.assertRaisesRegex(ValueError, "locked approval"):
                 validate_project(project_dir)
 
 

@@ -454,13 +454,13 @@
 
         <article class="step research">
           <span class="step-num">Step 04</span>
-          <h3>Add scored idea queue entry</h3>
+          <h3>Add scored content opportunity queue entry</h3>
           <p>Capture the hook, premise, payoff, intended emotion, core message, evidence refs, creator fit, and production-readiness scoring.</p>
           <div class="file-list" aria-label="Related files">
-            <a class="file" href="../skills/manage-idea-queue/SKILL.md">skills/manage-idea-queue/SKILL.md</a>
-            <a class="file" href="../schemas/idea-queue-entry.schema.json">schemas/idea-queue-entry.schema.json</a>
-            <a class="file" href="../schemas/idea-queue.schema.json">schemas/idea-queue.schema.json</a>
-            <a class="file" href="../examples/idea-queue-entry.example.json">examples/idea-queue-entry.example.json</a>
+            <a class="file" href="../skills/manage-opportunity-queue/SKILL.md">skills/manage-opportunity-queue/SKILL.md</a>
+            <a class="file" href="../schemas/content-opportunity.schema.json">schemas/content-opportunity.schema.json</a>
+            <a class="file" href="../schemas/content-opportunity-queue.schema.json">schemas/content-opportunity-queue.schema.json</a>
+            <a class="file" href="../examples/content-opportunity.example.json">examples/content-opportunity.example.json</a>
           </div>
         </article>
 
@@ -469,8 +469,8 @@
           <h3>Approve promotion package</h3>
           <p>The human approves the exact idea, formats, platforms, evidence, schedule claim, creative carry-forward, and Projects to create.</p>
           <div class="file-list" aria-label="Related files">
-            <a class="file" href="../skills/promote-idea/SKILL.md">skills/promote-idea/SKILL.md</a>
-            <a class="file" href="../schemas/idea-promotion.schema.json">schemas/idea-promotion.schema.json</a>
+            <a class="file" href="../skills/approve-concept/SKILL.md">skills/approve-concept/SKILL.md</a>
+            <a class="file" href="../schemas/concept-approval.schema.json">schemas/concept-approval.schema.json</a>
             <a class="file" href="../schemas/project.schema.json">schemas/project.schema.json</a>
             <a class="file" href="../docs/gates-and-reviews.md">docs/gates-and-reviews.md</a>
           </div>
@@ -479,9 +479,9 @@
         <article class="step research">
           <span class="step-num">Step 06</span>
           <h3>Create Project shell</h3>
-          <p>Promotion writes the locked Idea Promotion, creates <code>projects/&lt;project-slug&gt;/</code>, and replaces the scaffold with a production-facing evidence brief.</p>
+          <p>Promotion writes the locked Concept Approval, creates <code>projects/&lt;project-slug&gt;/</code>, and replaces the scaffold with a production-facing evidence brief.</p>
           <div class="file-list" aria-label="Related files">
-            <span class="file">workspace-library/creators/&lt;slug&gt;/research/idea-promotions/*.json</span>
+            <span class="file">workspace-library/creators/&lt;slug&gt;/campaigns/&lt;campaign-id&gt;/approvals/*.json</span>
             <span class="file">workspace-library/creators/&lt;slug&gt;/projects/&lt;project&gt;/project.json</span>
             <span class="file">workspace-library/creators/&lt;slug&gt;/projects/&lt;project&gt;/evidence-brief.md</span>
             <span class="file">python3 -m influencer_os init-project</span>
@@ -593,14 +593,14 @@
         <div class="mono">validate research, schemas/research-*.schema.json</div>
 
         <div>Idea queue</div>
-        <div class="mono">skills/manage-idea-queue/SKILL.md</div>
-        <div class="mono">research/idea-queue/entries/*.json, research/idea-queue/queue.json</div>
-        <div class="mono">validate queue, schemas/idea-queue*.schema.json</div>
+        <div class="mono">skills/manage-opportunity-queue/SKILL.md</div>
+        <div class="mono">research/content-opportunity-queue/entries/*.json, research/content-opportunity-queue/queue.json</div>
+        <div class="mono">validate queue, schemas/content-opportunity-queue*.schema.json</div>
 
         <div>Promotion and Project</div>
-        <div class="mono">skills/promote-idea/SKILL.md, init-project</div>
-        <div class="mono">research/idea-promotions/*.json, projects/&lt;project&gt;/project.json, evidence-brief.md</div>
-        <div class="mono">schemas/idea-promotion.schema.json, schemas/project.schema.json</div>
+        <div class="mono">skills/approve-concept/SKILL.md, init-project</div>
+        <div class="mono">campaigns/&lt;campaign-id&gt;/approvals/*.json, projects/&lt;project&gt;/project.json, evidence-brief.md</div>
+        <div class="mono">schemas/concept-approval.schema.json, schemas/project.schema.json</div>
 
         <div>Template and plan</div>
         <div class="mono">skills/apply-social-template/SKILL.md, skills/create-production-plan/SKILL.md</div>
@@ -630,7 +630,7 @@
         <article class="callout">
           <span class="kicker">Human gates</span>
           <h3>Two explicit approvals</h3>
-          <p>The idea promotion gate approves production work. The generation gate approves the exact provider call or bounded batch. Neither approval can be inferred from prior intent, keys, or plan text.</p>
+          <p>The concept approval gate approves production work. The generation gate approves the exact provider call or bounded batch. Neither approval can be inferred from prior intent, keys, or plan text.</p>
         </article>
         <article class="callout">
           <span class="kicker">Created video</span>

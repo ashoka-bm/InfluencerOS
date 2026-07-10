@@ -1201,34 +1201,32 @@ def validate_platform_fit_warning_semantics(record):
         )
 
 
-def validate_intent_carry_forward(promotion, entry):
-    """Intent captured at the idea origin survives promotion verbatim
-    (ADR 0024). A promotion may neither drop, invent, nor rewrite
-    intended_emotion / core_message relative to its source entry."""
-    promotion_id = promotion.get("idea_promotion_id")
-    entry_id = entry.get("idea_queue_entry_id")
+def validate_intent_carry_forward(downstream, upstream, downstream_label,
+                                  upstream_label):
+    """Intent captured at the origin survives each hand-off verbatim
+    (ADR 0024): an opportunity's intent pair survives concept assignment,
+    and a concept's survives its approval — never dropped, invented, or
+    rewritten downstream."""
     for field in INTENT_FIELDS:
-        entry_value = entry.get(field)
-        promotion_value = promotion.get(field)
-        if entry_value == promotion_value:
+        upstream_value = upstream.get(field)
+        downstream_value = downstream.get(field)
+        if upstream_value == downstream_value:
             continue
-        if entry_value is None:
+        if upstream_value is None:
             raise ValidationError(
-                f"Idea promotion {promotion_id} carries {field} "
-                f"{promotion_value!r} but its source entry {entry_id} has "
-                "none; intent is captured at the idea origin, never invented "
-                "at promotion"
+                f"{downstream_label} carries {field} {downstream_value!r} "
+                f"but its source {upstream_label} has none; intent is "
+                "captured at the origin, never invented downstream"
             )
-        if promotion_value is None:
+        if downstream_value is None:
             raise ValidationError(
-                f"Idea promotion {promotion_id} drops {field} "
-                f"{entry_value!r} from its source entry {entry_id}; "
-                "promotion must carry the entry's intent verbatim"
+                f"{downstream_label} drops {field} {upstream_value!r} from "
+                f"its source {upstream_label}; intent carries forward verbatim"
             )
         raise ValidationError(
-            f"Idea promotion {promotion_id} rewrites {field} from "
-            f"{entry_value!r} to {promotion_value!r}; promotion must carry "
-            f"the source entry {entry_id} intent verbatim"
+            f"{downstream_label} rewrites {field} from {upstream_value!r} "
+            f"to {downstream_value!r}; intent from {upstream_label} carries "
+            "forward verbatim"
         )
 
 

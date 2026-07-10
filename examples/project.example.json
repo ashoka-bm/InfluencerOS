@@ -6,13 +6,14 @@
   "status": "planning",
   "content_unit_type": "short_form_video",
   "source_refs": {
-    "idea_promotion_id": "idea_promotion_luna_fit_001",
+    "concept_approval_id": "concept_approval_luna_fit_001",
+    "campaign_concept_id": "campaign_concept_luna_fit_001",
+    "campaign_id": "campaign_luna_fit_001",
     "reference_asset_ids": [
       "asset_luna_identity_plate",
       "asset_luna_living_room",
       "asset_luna_default_video_style"
     ],
-    "idea_queue_entry_id": "idea_queue_entry_luna_fit_001",
     "research_finding_ids": [
       "finding_luna_fit_desk_reset_lunch"
     ],
@@ -46,6 +47,11 @@
     "instagram_reels",
     "tiktok"
   ],
+  "commercial_expression": {
+    "commercial_function": "lead_capture",
+    "offer_integration": "embedded",
+    "cta_intensity": "soft"
+  },
   "learning_goal": "Test whether a visible workday constraint plus a tiny relief routine improves early retention for Luna's apartment wellness audience.",
   "acceptance_criteria": [
     "A validated micro-journey production plan exists for the short-form video format.",

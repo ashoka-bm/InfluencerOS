@@ -19,11 +19,11 @@ Read (context matrix — Social research row):
 - `research/findings.md` and `research/stable-findings/`: current state.
 - `research/intelligence/`: sources, hashtags, search terms, reference
   creators, watchlist.
-- Recent idea queue entries and creator memory summaries when relevant.
+- Recent content opportunities and creator memory summaries when relevant.
 
 Write only under `research/` (plus the board/index projections via CLI). The
-idea queue belongs to `manage-idea-queue`; promotion belongs to
-`promote-idea`.
+opportunity queue belongs to `manage-opportunity-queue`; concept
+approval belongs to `approve-concept`.
 
 ## Research Run Lifecycle
 
@@ -132,7 +132,7 @@ Usage inside a run:
 7. Declare the run's `outputs` exactly — all five arrays are present and
    precise. `evidence_ids` and `metric_snapshot_ids` list precisely the ids
    written to this run's JSONL files (validation reconciles both
-   directions); `finding_ids`, `idea_queue_entry_ids`, and
+   directions); `finding_ids`, `content_opportunity_ids`, and
    `research_intelligence_updates` list every finding, queue entry, and
    intelligence file this run created or updated. An empty array is correct
    only when the run truly touched none — leaving one empty after a change

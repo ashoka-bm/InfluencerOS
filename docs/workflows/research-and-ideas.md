@@ -13,7 +13,7 @@ evidence, and platform context into useful research findings and a queue of
 potential content ideas.
 
 This module does not produce final media and does not publish or schedule posts.
-It ends when researched ideas are presented, scored, and stored in an idea queue.
+It ends when researched ideas are presented, scored, and stored in an content opportunity queue.
 Ideas may be promoted into the creation funnel immediately or later.
 
 This workflow should support platform-scoped research in v1. The initial platform
@@ -35,7 +35,7 @@ See `docs/adr/0020-platform-scoped-research-and-idea-queue.md`.
 
 ## Current Boundary Decision
 
-The module boundary is the idea queue, not the production project.
+The module boundary is the content opportunity queue, not the production project.
 
 ```text
 Creator Profile
@@ -44,7 +44,7 @@ Creator Profile
   + current public social research
   + optional real video understanding
   -> Research Findings
-  -> Idea Queue entries
+  -> Content Opportunity entries
   -> later promotion into Projects
 ```
 
@@ -69,8 +69,8 @@ Inputs, read-only:
 Public interface records, what other modules may read:
 
 - `research/findings.md`: the rolling Research Findings,
-- `research/idea-queue/`: the Idea Queue manifest and entries,
-- `research/idea-promotions/`: Idea Promotions, the only handoff into
+- `research/content-opportunity-queue/`: the Content Opportunity Queue manifest and entries,
+- `campaigns/<campaign-id>/approvals/`: Concept Approvals, the only handoff into
   production.
 
 Internal records, private to this module:
@@ -108,7 +108,7 @@ Recommended creator memory inputs:
 - performance summaries,
 - selected postmortems,
 - prior Video Understanding Packs,
-- prior idea queue outcomes.
+- prior content opportunity queue outcomes.
 
 Current research inputs:
 
@@ -183,7 +183,7 @@ agent focus.
 A research run should generally follow this sequence:
 
 1. Load Creator Profile, Creator Content Schedule, rolling findings, research
-   intelligence, recent idea queue entries, recent projects, and performance
+   intelligence, recent content opportunity entries, recent projects, and performance
    summaries.
 2. Choose a research mode and scope.
 3. Scaffold the search plan before browsing (`scaffold search-plan`,
@@ -254,7 +254,7 @@ The content schedule should not live directly in `creator-profile.json`.
 The Creator Profile remains an operational summary for relatively stable creator
 identity. Schedule and planning state should be a separate record so the system
 can check whether the correct posts have been created, whether the creator is on
-track, and whether the idea queue is drifting away from the intended content mix.
+track, and whether the content opportunity queue is drifting away from the intended content mix.
 
 The schedule should include both standing strategy and calendar state.
 
@@ -319,9 +319,9 @@ general non-repetition checks. More specific rules should be added later from
 observed performance, such as evidence that a certain repeated format or topic
 causes performance to drop.
 
-## Idea Queue Decision
+## Content Opportunity Queue Decision
 
-Research output should be stored in an idea queue before it becomes production
+Research output should be stored in an content opportunity queue before it becomes production
 work.
 
 The queue is the first section of one unified content Kanban board. Queue entries
@@ -396,8 +396,8 @@ evidence references, and project IDs created from the promotion.
 
 Expected `IdeaPromotion` fields:
 
-- `idea_promotion_id`,
-- `idea_queue_entry_id`,
+- `concept_approval_id`,
+- `content_opportunity_id`,
 - `creator_profile_id`,
 - `approved_by`,
 - `approved_on`,
@@ -412,7 +412,7 @@ Expected `IdeaPromotion` fields:
 - score snapshot at approval time,
 - creative elements to carry forward,
 - `project_ids_created`,
-- `promotion_status`.
+- `approval_status`.
 
 For v1, `approved_by` may be `user`. Later automation may allow agent approval
 behind a separate policy.
@@ -449,8 +449,8 @@ Recommended warning fields:
 
 - warning ID,
 - project ID,
-- idea promotion ID,
-- idea queue entry ID,
+- concept approval ID,
+- content opportunity entry ID,
 - warning type,
 - severity,
 - message,
@@ -459,7 +459,7 @@ Recommended warning fields:
 - suggested actions,
 - resolved or obsolete status, optional.
 
-The idea queue entry ID is always required. Project ID and idea promotion ID
+The content opportunity entry ID is always required. Project ID and concept approval ID
 are required only when the warning targets promoted work; queue-level warnings,
 such as a stronger variant replacing an unpromoted idea, attach to the queue
 entry alone. This keeps the board free to show warning flags on parent idea
@@ -483,7 +483,7 @@ threshold. V1 should only record and display warnings.
 ## Unified Kanban Decision
 
 The creator should eventually have one unified board rather than separate idea
-and project boards. The idea queue is the first part of that board; promoted
+and project boards. The content opportunity queue is the first part of that board; promoted
 ideas continue into project execution.
 
 Recommended board progression:
@@ -522,13 +522,13 @@ projects, or analytics.
 
 Card model:
 
-- idea queue entries appear as parent idea cards,
+- content opportunity entries appear as parent idea cards,
 - each Project created from an IdeaPromotion appears as its own child project
   card,
 - one parent idea card may have multiple child project cards,
 - child cards keep their own stable IDs,
 - card IDs are derived deterministically from the source record ID (for
-  example `card_<idea_queue_entry_id>` and `card_<project_id>`), so canonical
+  example `card_<content_opportunity_id>` and `card_<project_id>`), so canonical
   records never store card IDs and board rebuilds preserve manual order,
 - the parent card keeps links to the queue entry and promotion,
 - child cards keep links to their Project records,
@@ -541,7 +541,7 @@ research or project records.
 `Project.source_refs` should shift from `selected_content_idea_id` to provenance
 that can include:
 
-- `idea_queue_entry_id`,
+- `content_opportunity_id`,
 - `research_finding_ids`,
 - `research_evidence_ids`,
 - relevant metric snapshot or trajectory IDs,
@@ -553,7 +553,7 @@ once. The canonical schema list, storage shape, and field drafts live in
 `docs/workflows/research-and-ideas-implementation-plan.md`; this document
 records the decisions and rationale, not a second copy of the slice list.
 
-Use one file per idea queue entry so agents and Kanban views can load or update
+Use one file per content opportunity entry so agents and Kanban views can load or update
 specific ideas without pulling the entire queue into context. Use JSONL for
 append-heavy evidence, snapshots, and warnings. Use Markdown for the rolling
 Research Findings body because it is primarily a creator-readable synthesis.
@@ -800,12 +800,12 @@ workspace-library/creators/<creator-slug>/research/
     watchlist.json
   stable-findings/
     <stable-finding-id>.md
-  idea-queue/
+  content-opportunity-queue/
     queue.json
     entries/
-      <idea-queue-entry-id>.json
-  idea-promotions/
-    <idea-promotion-id>.json
+      <content-opportunity-id>.json
+  approvals/
+    <concept-approval-id>.json
 ```
 
 `findings.md` is the rolling live summary. It should be short, edited in place,
@@ -1010,7 +1010,7 @@ promotion package should include or confirm this payoff before project creation.
 
 ## Scorecard Decision
 
-Each idea queue entry should include every score in the scoring model.
+Each content opportunity entry should include every score in the scoring model.
 
 Scores use a 0-100 numeric scale plus a short rationale. The number supports
 sorting, filtering, and dashboards. The rationale explains the judgment and
@@ -1042,13 +1042,13 @@ recommended even when creator fit is only medium, but the promotion package must
 make that tradeoff explicit and explain how the creator should speak about the
 topic without drifting from persona or boundaries.
 
-## Idea Queue Entry Decision
+## Content Opportunity Queue Entry Decision
 
-Each idea queue entry should be stored as one focused JSON file.
+Each content opportunity entry should be stored as one focused JSON file.
 
 Expected queue entry fields:
 
-- `idea_queue_entry_id`,
+- `content_opportunity_id`,
 - `creator_profile_id`,
 - status,
 - title,
@@ -1073,7 +1073,7 @@ Expected queue entry fields:
 - production notes,
 - avoid notes,
 - created, updated, and stale timestamps,
-- linked idea promotion IDs,
+- linked concept approval IDs,
 - linked project IDs.
 
 A queue idea may contain multiple platform variants when the idea and execution
@@ -1180,7 +1180,7 @@ measurement clearly. Candidate factors include:
 - creator-relative outperformance,
 - useful format or hook patterns,
 - signal quality over recent research runs,
-- rate of producing usable idea queue entries.
+- rate of producing usable content opportunity entries.
 
 Watchlist entries do not need individual polling frequencies in v1. Separate
 cron jobs or scheduled workflows should handle different research modes, such as
@@ -1200,7 +1200,7 @@ silently deleting it.
 Scheduled research jobs belong to the broader memory and operations subsystem
 that handles recurring work. In v1, these jobs are research-only and read-only
 with respect to production. They may update research findings, research
-intelligence, metric snapshots, idea queue scores, staleness, warnings, badges,
+intelligence, metric snapshots, content opportunity queue scores, staleness, warnings, badges,
 and notifications. They must not promote ideas into production.
 
 Initial automation jobs:

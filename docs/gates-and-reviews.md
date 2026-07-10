@@ -4,14 +4,14 @@ The canonical control contract for InfluencerOS (ADR 0024, Creative Direction sl
 
 ## Control Vocabulary
 
-- **Gate** — human, blocking. A gate stops the pipeline until a person decides. V1 has exactly two: the Idea Promotion Gate (`promote-idea`) and the Provider Boundary (exact approval for provider-backed generation calls).
+- **Gate** — human, blocking. A gate stops the pipeline until a person decides. V1 has exactly two: the Concept Approval Gate (`approve-concept`) and the Provider Boundary (exact approval for provider-backed generation calls).
 - **Review** — advisory, emits a Review Record. A judged read of an artifact with findings keyed to the Content Beat Spine. Never blocks.
 - **Pass** — advisory editorial rewrite, emits no record. Returns rewritten text plus a change trace; the author decides what to keep. Never blocks, never issues a verdict.
 - **Warning** — non-blocking signal (`ProjectWarning` records and validator warning strings). Surfaces a concern; changes nothing.
 
 ## Control Order Along The Pipeline
 
-1. Idea Promotion Gate — **human gate (blocking)**.
+1. Concept Approval Gate — **human gate (blocking)**.
 2. Platform-fit advisory at project creation — **Warning** (`platform_fit`, never blocks).
 3. Plan drafting (template → production plan).
 4. Hook/Payoff Review after a plan is drafted — **Review (advisory)**, all six plan types.
@@ -53,7 +53,7 @@ Every Review Record captures `reviewer_execution.execution_mode` and `source_ski
 
 `schemas/review-record.schema.json` (lean v1; `matched[]`/`drifted[]` wait for Creator-Fit):
 
-- refs: `project_id`, `creator_profile_id`, optional `idea_promotion_id`, `artifact_refs` (project-relative paths that must resolve),
+- refs: `project_id`, `creator_profile_id`, optional `concept_approval_id`, `artifact_refs` (project-relative paths that must resolve),
 - `review_role`: `hook_payoff` (built) | `creator_fit` | `fact_check` (both later),
 - `findings[]`: `area` in `hook | retain | payoff | cta | general`, `severity` in `none | low | medium | high | blocking`, `note`, optional `recommended_revision`,
 - `approval_status`: `approve | revise | block` (advisory),

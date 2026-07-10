@@ -103,11 +103,11 @@ class RecallIndexResolutionTests(unittest.TestCase):
             entry = only(ENTRY_ID)
             self.assertEqual(
                 entry["source_path"],
-                f"research/idea-queue/entries/{ENTRY_ID}.json",
+                f"research/content-opportunity-queue/entries/{ENTRY_ID}.json",
             )
             self.assertIsNone(entry["line_number"])
 
-            only("idea_promotion_luna_fit_001")
+            only("concept_approval_luna_fit_001")
             only("video_research_luna_fit_001")
             only("stable_finding_luna_fit_001")
 

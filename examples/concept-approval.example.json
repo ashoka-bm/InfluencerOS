@@ -5,6 +5,9 @@
  "approved_by": "user",
  "approved_on": "2026-07-03",
  "approval_status": "active",
+ "intended_payoff": "Viewer feels the reset is doable today and saves it for tomorrow's lunch.",
+ "intended_emotion": "relieved and capable",
+ "core_message": "Two minutes beside the desk is enough to reset your body before a meeting.",
  "approved_platforms": [
   "instagram",
   "tiktok",
@@ -16,10 +19,10 @@
  "max_offer_integration": "embedded",
  "max_cta_intensity": "soft",
  "project_ids_created": [
-  "project_luna_fit_tiny_reset_after_laptop_day_001"
+  "project_luna_tiny_reset_001"
  ],
  "schedule_slot_ids": [
-  "slot_2026_07_08_reel"
+  "slot_luna_2026_07_09_midweek"
  ],
  "evidence_refs": [
   {

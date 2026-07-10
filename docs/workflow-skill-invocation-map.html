@@ -352,12 +352,12 @@
         <article class="phase research">
           <span class="kicker">02</span>
           <h3>Create ideas</h3>
-          <p><code>manage-idea-queue</code> writes scored queue entries.</p>
+          <p><code>manage-opportunity-queue</code> writes scored queue entries.</p>
         </article>
         <article class="phase gate">
           <span class="kicker">03</span>
           <h3>Approve one idea</h3>
-          <p><code>promote-idea</code> creates the human-approved promotion and project.</p>
+          <p><code>approve-concept</code> creates the human-approved promotion and project.</p>
         </article>
         <article class="phase">
           <span class="kicker">04</span>
@@ -440,18 +440,18 @@
           <tr>
             <td>3</td>
             <td>Turn research into candidate ideas</td>
-            <td><code>skills/manage-idea-queue/SKILL.md</code></td>
+            <td><code>skills/manage-opportunity-queue/SKILL.md</code></td>
             <td>Research Findings, evidence refs, Creator Profile, content schedule, creator memory.</td>
-            <td><code>research/idea-queue/</code> entries with hook, premise, payoff, evidence, platform and format recommendations, scores.</td>
+            <td><code>research/content-opportunity-queue/</code> entries with hook, premise, payoff, evidence, platform and format recommendations, scores.</td>
             <td>Queue entries must trace to evidence and creator fit.</td>
           </tr>
           <tr>
             <td>4</td>
             <td>Promote one idea into production</td>
-            <td><code>skills/promote-idea/SKILL.md</code></td>
+            <td><code>skills/approve-concept/SKILL.md</code></td>
             <td>Queue entry, findings, evidence refs, Creator Profile, content schedule.</td>
-            <td><code>research/idea-promotions/</code>, project directory, project manifest, evidence brief, queue status updates.</td>
-            <td>Human Idea Promotion Gate. The user approves platforms, formats, payoff, and carry-forward elements.</td>
+            <td><code>campaigns/&lt;campaign-id&gt;/approvals/</code>, project directory, project manifest, evidence brief, queue status updates.</td>
+            <td>Human Concept Approval Gate. The user approves platforms, formats, payoff, and carry-forward elements.</td>
           </tr>
           <tr>
             <td>5</td>
@@ -607,8 +607,8 @@
         <div class="chain-flow" aria-label="Minimal path">
           <span>create-influencer</span>
           <span>create-research-findings</span>
-          <span>manage-idea-queue</span>
-          <span>promote-idea</span>
+          <span>manage-opportunity-queue</span>
+          <span>approve-concept</span>
           <span>apply-social-template</span>
           <span>create-production-plan</span>
           <span>request-generation-approval or import-generated-asset</span>

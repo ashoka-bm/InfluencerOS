@@ -90,11 +90,11 @@
             "pattern": "^finding_[a-zA-Z0-9_-]+$"
           }
         },
-        "idea_queue_entry_ids": {
+        "content_opportunity_ids": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^idea_queue_entry_[a-zA-Z0-9_-]+$"
+            "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
           }
         },
         "evidence_ids": {
@@ -121,7 +121,7 @@
       },
       "required": [
         "finding_ids",
-        "idea_queue_entry_ids",
+        "content_opportunity_ids",
         "evidence_ids",
         "metric_snapshot_ids",
         "research_intelligence_updates"
