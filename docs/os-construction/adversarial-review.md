@@ -1185,3 +1185,38 @@ by validators; only silent invalid state is release-blocking.
   reject). Migration validates everything before its write phase, is a
   one-time operator tool, and runs only against disposable test-fixture
   workspaces that are wiped before real onboarding.
+
+### Codex Second-Opinion Review (2026-07-11)
+
+With Codex CLI tool execution restored, GPT-5.6 reviewed the adopted-fix
+range `31913e0..048cf48` as an independent second reviewer (diff inlined;
+seven findings). Adjudication:
+
+**Adopted** (fixed in `f838e2d`):
+
+- `approved_on` re-stamp contradicted the approve-exact-bytes docstring —
+  the genuinely new insight of the review. Ruled a documented single-field
+  exception (provisional at stage so the draft validates, re-stamped at
+  commit per ADR 0042), now stated precisely in code and pinned by a
+  cross-day regression test asserting every other field commits byte-exact.
+- Rollback steps ran serially and a failed step stranded the rest → each
+  restore now attempts independently; the original commit failure
+  propagates with cleanup faults as exception notes.
+- Hash-then-reload window → commit parses the exact verified byte snapshot
+  (one read).
+- `rebuild_projections` caught too narrowly; a post-commit IO fault made a
+  committed write look failed → OSError added to the warning boundary.
+- Post-commit stage-cleanup fault raised and left a seemingly retryable
+  stage that could never recommit → warning-only.
+
+**Declined:**
+
+- "The hash manifest is self-authenticating" (Codex's top severity) —
+  misreads the threat model. The byte-pin guards against agents patching
+  stages instead of re-staging, not adversaries: an actor with workspace
+  write access bypasses staging entirely by writing canonical paths
+  directly. A signed external digest adds ceremony without closing that.
+- Workspace-wide transaction locking — a systemic property of every
+  constructor in this local-first single-operator CLI, not a defect of
+  this range. Revisit via ADR if hosted or concurrent execution ever
+  lands (ADR 0025-era deferral logic applies).
