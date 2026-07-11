@@ -276,7 +276,10 @@ def rebuild_projections(creator_workspace):
     for rebuild in (rebuild_board, rebuild_index):
         try:
             rebuild(creator_workspace)
-        except (ValidationError, ValueError, FileNotFoundError) as exc:
+        # OSError included: an IO fault (permissions, missing index root)
+        # after the canonical write must degrade to a warning, not make a
+        # committed write look failed.
+        except (ValidationError, ValueError, OSError) as exc:
             warnings.append(f"warning: {rebuild.__name__} failed: {exc}")
     return warnings
 

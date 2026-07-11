@@ -12,11 +12,14 @@ will write).
 
 ``commit_stage`` re-verifies content hashes of the upstream inputs the
 stage was derived from (a stale stage fails closed and is re-staged, never
-patched) and of the staged records themselves (the human approves exactly
-the staged bytes; a post-presentation edit fails closed), stamps the
-approval fields, writes the records in the required construction order,
-applies the flips, runs at-rest validation, and rebuilds the board and
-recall-index projections.
+patched) and of the staged records themselves, then parses the exact
+verified byte snapshot (the human approves exactly the staged bytes; a
+post-presentation edit fails closed). The single commit-owned delta is the
+approval's ``approved_on``, provisional at stage time and re-stamped to
+the commit day; every other staged field commits byte-exact. Commit then
+writes the records in the required construction order, applies the flips,
+runs at-rest validation, and rebuilds the board and recall-index
+projections.
 
 The approval and its exact project set are one transactional operation
 (ADR 0029): project ids are allocated into the approval snapshot at stage
@@ -103,17 +106,26 @@ def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def _staged_record_bytes(records_dir):
+    """One snapshot of every staged record file's bytes, keyed by posix
+    path relative to the records dir. Commit hashes, parses, and writes
+    from this single read, so the verified bytes are the committed bytes
+    (no window between hashing and loading)."""
+    return {
+        path.relative_to(records_dir).as_posix(): path.read_bytes()
+        for path in sorted(records_dir.rglob("*"))
+        if path.is_file()
+    }
+
+
 def _staged_record_hashes(records_dir):
     """Content hashes of every staged record file, keyed by posix path
     relative to the records dir. The stage manifest pins these so commit
     writes exactly the bytes the human reviewed (ADR 0042); any edit,
     addition, or removal under records/ after staging fails the commit."""
     return {
-        path.relative_to(records_dir).as_posix(): _sha256_bytes(
-            path.read_bytes()
-        )
-        for path in sorted(records_dir.rglob("*"))
-        if path.is_file()
+        rel: _sha256_bytes(data)
+        for rel, data in _staged_record_bytes(records_dir).items()
     }
 
 
@@ -503,27 +515,36 @@ def commit_stage(stage, creator_workspace, now=None):
     # Byte-pin check: the human approved exactly the staged bytes; a stage
     # whose records were touched after presentation fails closed, like a
     # stale stage (a missing record_hashes block also mismatches and fails).
+    # Everything below parses this one snapshot, so the verified bytes are
+    # the committed bytes.
     records_dir = stage_dir / "records"
-    if stage_manifest.get("record_hashes") != _staged_record_hashes(records_dir):
+    staged_bytes = _staged_record_bytes(records_dir)
+    staged_hashes = {
+        rel: _sha256_bytes(data) for rel, data in staged_bytes.items()
+    }
+    if stage_manifest.get("record_hashes") != staged_hashes:
         raise ValidationError(
             f"stage {stage_manifest['stage_id']} records do not match the "
             "hashes pinned at staging; the human approves exactly the staged "
             "bytes (ADR 0042) — discard and re-stage"
         )
-    approval = load_json(records_dir / "concept-approval.json")
+    approval = json.loads(staged_bytes["concept-approval.json"])
+    # The single commit-owned delta from the staged bytes: approved_on is
+    # provisional at stage time (so the draft validates) and re-stamped to
+    # the actual approval day here (ADR 0042). Every other field commits
+    # byte-exact.
     approval["approved_on"] = today
     validate_record("concept-approval", approval)
 
     staged_projects = []
     briefs = {}
     for slug in stage_manifest["project_slugs"]:
-        project_dir = records_dir / "projects" / slug
-        project = load_json(project_dir / "project.json")
+        project = json.loads(staged_bytes[f"projects/{slug}/project.json"])
         validate_record("project", project)
         staged_projects.append(project)
-        brief_path = project_dir / "evidence-brief.md"
-        if brief_path.exists():
-            briefs[slug] = brief_path.read_text()
+        brief_key = f"projects/{slug}/evidence-brief.md"
+        if brief_key in staged_bytes:
+            briefs[slug] = staged_bytes[brief_key].decode()
 
     for slug in stage_manifest["project_slugs"]:
         if (workspace_dir / "projects" / slug).exists():
@@ -604,19 +625,45 @@ def commit_stage(stage, creator_workspace, now=None):
         validate_campaign_records(workspace_dir)
         for project_dir in project_dirs:
             validate_project(project_dir)
-    except BaseException:
-        approval_path.unlink(missing_ok=True)
+    except BaseException as commit_exc:
+        # Each restore step runs independently: one failed step must not
+        # strand the later ones, and the original commit failure — never a
+        # cleanup error — is what propagates (cleanup faults attach as
+        # exception notes; any residue is invalid at rest and `validate
+        # all` pinpoints it).
+        def _attempt(action):
+            try:
+                action()
+            except Exception as cleanup_exc:
+                commit_exc.add_note(
+                    f"rollback step failed: {cleanup_exc}"
+                )
+
+        _attempt(lambda: approval_path.unlink(missing_ok=True))
         for slug in stage_manifest["project_slugs"]:
             # Safe to remove wholesale: the slug-collision check above
             # guarantees none of these folders predate this commit.
-            shutil.rmtree(workspace_dir / "projects" / slug, ignore_errors=True)
-        concept_path.write_bytes(original_concept_bytes)
+            _attempt(lambda slug=slug: shutil.rmtree(
+                workspace_dir / "projects" / slug, ignore_errors=True
+            ))
+        _attempt(lambda: concept_path.write_bytes(original_concept_bytes))
         if original_schedule_bytes is not None:
-            _schedule_path(workspace_dir).write_bytes(original_schedule_bytes)
+            _attempt(lambda: _schedule_path(workspace_dir).write_bytes(
+                original_schedule_bytes
+            ))
         raise
     warnings.extend(rebuild_projections(workspace_dir))
 
-    shutil.rmtree(stage_dir)
+    # The approval is canonical from here: a stage-cleanup fault must read
+    # as a committed approval with a warning, not a failed (and seemingly
+    # retryable) commit.
+    try:
+        shutil.rmtree(stage_dir)
+    except OSError as cleanup_exc:
+        warnings.append(
+            f"warning: approval committed but stage cleanup failed: "
+            f"{cleanup_exc}; remove {stage_dir} manually"
+        )
     return {
         "approval_path": approval_path,
         "concept_approval_id": approval_id,

@@ -549,6 +549,122 @@ class StageConceptApprovalTests(unittest.TestCase):
         commit_stage(staged["stage_id"], self.workspace)
         validate_all(self.workspace)
 
+    def test_commit_restamps_only_approved_on_across_days(self):
+        # approved_on is the single commit-owned delta from the staged
+        # bytes (provisional at stage time, re-stamped at commit); every
+        # other approval field must commit byte-exact.
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001",
+            now=datetime.datetime(2026, 7, 10, 9, 0, 0),
+        )
+        staged_approval = load_json(
+            staged["stage_dir"] / "records" / "concept-approval.json"
+        )
+        result = commit_stage(
+            staged["stage_id"], self.workspace,
+            now=datetime.datetime(2026, 7, 11, 9, 0, 0),
+        )
+        committed = load_json(result["approval_path"])
+        self.assertEqual(staged_approval["approved_on"], "2026-07-10")
+        self.assertEqual(committed["approved_on"], "2026-07-11")
+        strip = lambda record: {
+            key: value
+            for key, value in record.items()
+            if key != "approved_on"
+        }
+        self.assertEqual(strip(committed), strip(staged_approval))
+
+    def test_rollback_continues_past_a_failed_step(self):
+        # One failed restore step must not strand the later ones, and the
+        # original commit failure — not the cleanup error — propagates.
+        seed = json.loads(json.dumps(self.seed))
+        seed["projects"].append(
+            {
+                **seed["projects"][0],
+                "project_slug": "second-reset-variation",
+                "schedule_slot_ids": [],
+                "evidence_brief": "# Evidence Brief\n\nSecond variation.\n",
+            }
+        )
+        staged = stage_concept_approval(
+            seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        from influencer_os import staging
+
+        real_create = staging.create_project_from_manifest
+        created = []
+
+        def fail_on_second(project, creator_workspace):
+            if created:
+                raise OSError("injected: disk full mid-commit")
+            created.append(project["project_id"])
+            return real_create(project, creator_workspace)
+
+        real_rmtree = staging.shutil.rmtree
+        projects_root = str(self.workspace / "projects")
+
+        def rmtree_fails_for_projects(path, *args, **kwargs):
+            if str(path).startswith(projects_root):
+                raise OSError("injected: project folder busy")
+            return real_rmtree(path, *args, **kwargs)
+
+        with mock.patch.object(
+            staging, "create_project_from_manifest", fail_on_second
+        ), mock.patch.object(
+            staging.shutil, "rmtree", rmtree_fails_for_projects
+        ):
+            with self.assertRaises(OSError) as caught:
+                commit_stage(staged["stage_id"], self.workspace)
+
+        self.assertIn("disk full", str(caught.exception))
+        self.assertTrue(
+            any(
+                "rollback step failed" in note
+                for note in getattr(caught.exception, "__notes__", [])
+            )
+        )
+        # The steps after the failed project removal still ran: approval
+        # gone, concept and slot restored.
+        self.assertFalse(
+            (
+                self.workspace / "campaigns" / "campaign_luna_fit_001"
+                / "approvals" / "concept_approval_luna_fit_001.json"
+            ).exists()
+        )
+        self.assertEqual(
+            load_json(self.concept_path)["status"], "ready_for_approval"
+        )
+        slot = load_json(self.workspace / "content-schedule.json")[
+            "calendar_slots"
+        ][0]
+        self.assertEqual(slot["status"], "open")
+
+    def test_stage_cleanup_failure_warns_after_successful_commit(self):
+        # Once the approval is canonical, a stage-cleanup fault must read
+        # as a committed approval with a warning, never a failed commit.
+        staged = stage_concept_approval(
+            self.seed, self.workspace, "campaign_concept_luna_fit_001"
+        )
+        from influencer_os import staging
+
+        real_rmtree = staging.shutil.rmtree
+
+        def rmtree_fails_for_stage(path, *args, **kwargs):
+            if Path(path) == Path(staged["stage_dir"]):
+                raise OSError("injected: stage dir busy")
+            return real_rmtree(path, *args, **kwargs)
+
+        with mock.patch.object(
+            staging.shutil, "rmtree", rmtree_fails_for_stage
+        ):
+            result = commit_stage(staged["stage_id"], self.workspace)
+        self.assertTrue(result["approval_path"].exists())
+        self.assertTrue(
+            any("stage cleanup failed" in w for w in result["warnings"])
+        )
+        self.assertTrue(staged["stage_dir"].exists())
+        validate_all(self.workspace)
+
     def test_active_concept_accepts_a_later_additional_approval(self):
         # One unchanged concept may receive later approvals for additional
         # projects (campaign-concept-pressure plan).
