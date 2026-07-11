@@ -13,7 +13,11 @@ from influencer_os.memory import (
     creator_lessons_workspace,
     write_memory_fact,
 )
-from influencer_os.migrations import migrate_campaign_model, migrate_content_series
+from influencer_os.migrations import (
+    migrate_campaign_model,
+    migrate_content_series,
+    migrate_visual_foundation,
+)
 from influencer_os.creator_workspaces import (
     DEFAULT_CREATOR_WORKSPACE_ROOT,
     INTAKE_DESTINATIONS,
@@ -73,6 +77,14 @@ def main(argv=None):
         help="Rename legacy content_strategy.content_campaigns to content_series (ADR 0031) in one Creator Workspace, including calendar-slot refs.",
     )
     migrate_series_parser.add_argument(
+        "creator_workspace", help="Path to the Creator Workspace."
+    )
+
+    migrate_visual_parser = subparsers.add_parser(
+        "migrate-visual-foundation",
+        help="Upgrade a legacy creator workspace to required avatar and setup-generation authorization records.",
+    )
+    migrate_visual_parser.add_argument(
         "creator_workspace", help="Path to the Creator Workspace."
     )
 
@@ -203,6 +215,22 @@ def main(argv=None):
     gen_approval_parser = subparsers.add_parser("record-generation-approval", help="Record a human generation approval as a GenerationApprovalRecord (ADR 0023). Target is the project directory (project scope) or the creator workspace (reference-library scope).")
     gen_approval_parser.add_argument("target", help="Project directory (project scope) or creator workspace (reference scope).")
     gen_approval_parser.add_argument("record_file", help="Path to the GenerationApprovalRecord JSON to validate and record.")
+
+    setup_approval_parser = subparsers.add_parser(
+        "derive-setup-reference-approvals",
+        help="Derive single-use reference approval records from an approved Visual Continuity Plan.",
+    )
+    setup_approval_parser.add_argument("creator_workspace")
+    setup_approval_parser.add_argument("--provider", required=True)
+    setup_approval_parser.add_argument("--model", required=True)
+    setup_approval_parser.add_argument("--cost-note", required=True)
+
+    reference_dispatch_parser = subparsers.add_parser(
+        "dispatch-reference-generation",
+        help="Consume one approved creator-setup reference generation record.",
+    )
+    reference_dispatch_parser.add_argument("creator_workspace")
+    reference_dispatch_parser.add_argument("approval_record_id")
 
     import_asset_parser = subparsers.add_parser("import-generated-asset", help="Import an externally generated or user-provided media file with full provenance (ADR 0023 slice 3): copies into generation/assets/ and writes the asset-manifest row, or routes into the Reference Library with --reference-asset.")
     import_asset_parser.add_argument("target", help="Project directory, or the creator workspace when using --reference-asset.")
@@ -394,6 +422,14 @@ def main(argv=None):
             result = migrate_content_series(args.creator_workspace)
             print(f"Migrated content series naming: {result['workspace_path']}")
             print(f"Changed {len(result['changed_paths'])} records.")
+            for path in result["changed_paths"]:
+                print(f"- {path}")
+            return 0
+
+        if args.command == "migrate-visual-foundation":
+            result = migrate_visual_foundation(args.creator_workspace)
+            print(f"Migrated visual foundation: {result['workspace_path']}")
+            print(f"Changed {len(result['changed_paths'])} records or projections.")
             for path in result["changed_paths"]:
                 print(f"- {path}")
             return 0
@@ -792,6 +828,29 @@ def main(argv=None):
 
             destination = record_generation_approval(args.target, args.record_file)
             print(f"Recorded generation approval: {destination}")
+            return 0
+
+        if args.command == "derive-setup-reference-approvals":
+            from influencer_os.generation import derive_setup_reference_approvals
+
+            destinations = derive_setup_reference_approvals(
+                args.creator_workspace,
+                provider_id=args.provider,
+                model=args.model,
+                cost_note=args.cost_note,
+            )
+            print(f"Derived {len(destinations)} setup reference approvals.")
+            for destination in destinations:
+                print(f"- {destination}")
+            return 0
+
+        if args.command == "dispatch-reference-generation":
+            from influencer_os.providers.dispatch import dispatch_reference_generation
+
+            calls = dispatch_reference_generation(
+                args.creator_workspace, args.approval_record_id
+            )
+            print(f"Generated {len(calls)} reference asset.")
             return 0
 
         if args.command == "import-generated-asset":

@@ -28,6 +28,8 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: 2026-07-09: A no-voiceover policy prohibits spoken generation; it never waives spoken_voice_generation_allowed or substitutes for approved voice evidence.
 - 2026-07-09: Delegate visual-continuity candidate analysis and approval to create-reference-library before reference prompt staging or foundation readiness.
 - 2026-07-09: Use Representation Model for synthetic/avatar-led/human-backed/text-first/mixed; reserve Creator Type for ADR 0026's planned influencer/product/brand discriminator.
+- 2026-07-10: All creators, including text-only and long-form creators, require a prompt-staged or available social-profile avatar asset and a separately approved tokenized personal brand board; text-only boards may use zero production spaces.
+- 2026-07-10: An approved Visual Continuity Plan authorizes one initial call per listed creator-setup reference image with no duplicate confirmation; scope changes and regeneration remain exact-approved.
 
 ### wrap-up
 

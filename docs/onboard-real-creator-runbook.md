@@ -86,7 +86,7 @@ Run the `create-influencer` conductor skill (`skills/create-influencer/`).
 It offers three intake paths — load existing files, guided interview, or
 generate from basic information — and drives the full foundation: identity,
 soul, personal brand, voice samples, creator profile, runtime context, and
-reference library. For visual creators it also invokes `personal-brand-board`
+reference library. For every creator it also invokes `personal-brand-board`
 after reference planning to create exact palette/typography tokens, bind spaces
 and props to typed Reference Library assets, and populate the shared HTML
 template.
@@ -151,6 +151,8 @@ fail by design, and a warning you cannot explain is a finding.
 - No publishing, scheduling, or platform posting — output packages are
   registered, publication is recorded manually after the fact
   (`register-published-post`).
-- No automated concept approval and no provider call without an exact approval.
+- No automated concept approval. Creator-setup reference images may use the
+  approved Visual Continuity Plan's one-pass authorization (ADR 0043); other
+  provider calls require exact approval.
 - No scheduled/unattended research (deferred; ADR 0025).
 - No creator media, generated works, or `.env` contents committed to git.

@@ -118,7 +118,8 @@ Deterministic local work runs as early as its inputs are known:
   decision points, not for every queue entry.
 
 Hard limits: provider-backed generation calls are never anticipated (the
-ADR 0023 exact-approval gate is untouched); canonical paths are never
+ADR 0023's approval-record dispatch gate is untouched; ADR 0043 later allowed
+setup-reference records to derive from plan approval); canonical paths are never
 written pre-gate; stale staged work is discarded, never reconciled.
 
 ### 4. Skill contract

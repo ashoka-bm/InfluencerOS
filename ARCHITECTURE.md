@@ -41,6 +41,7 @@ See:
 - `docs/adr/0013-creator-setup-readiness-and-reference-lifecycle.md`
 - `docs/adr/0020-platform-scoped-research-and-idea-queue.md`
 - `docs/adr/0021-research-intelligence-planning-and-yield.md`
+- `docs/adr/0043-creator-setup-reference-standing-approval.md`
 
 ## Creator Authoring
 
@@ -53,7 +54,7 @@ Creator identity uses a hybrid authoring flow. A rich master intake, such as an 
 - `brand_context/identity.md`
 - `brand_context/soul.md`
 - `brand_context/personal-brand.md`
-- `references/brand/personal-brand-board.json` plus its shared-template HTML projection for visual creators
+- `references/brand/personal-brand-board.json` plus its shared-template HTML projection for every creator
 - reference library requirements
 
 After review, the split workspace files become the maintained source of truth. The original intake can remain archived as provenance, but operational workflows should read the current workspace files.
@@ -62,11 +63,14 @@ After review, the split workspace files become the maintained source of truth. T
 
 Creator Setup may capture text-first and written-content strategy inputs such as Substack, LinkedIn, X, blog, or newsletter direction. `brand_context/personal-brand.md` is the rich source of truth for content strategy; `creator-profile.json` carries the operational summary used by research and planning.
 
-For visual creators, `references/brand/personal-brand-board.json` is the exact
-visual-system source of truth. `rebuild-brand-board` populates the single
-package-owned `influencer_os/templates/personal-brand-board.html` template;
-the creator-specific HTML is a rebuildable review projection, never a second
-hand-authored design.
+For every creator, `references/brand/personal-brand-board.json` is the exact
+visual-system source of truth. Its `avatar_asset_id` binds to a prompt-staged or
+available `brand` or `character` Reference Asset. Text-only and long-form
+creators may use zero production spaces; visual creators bind any recurring
+spaces and props to typed Reference Assets. `rebuild-brand-board` populates the
+single package-owned `influencer_os/templates/personal-brand-board.html`
+template; the creator-specific HTML is a rebuildable review projection, never a
+second hand-authored design.
 
 ## First-Party OS Persona
 

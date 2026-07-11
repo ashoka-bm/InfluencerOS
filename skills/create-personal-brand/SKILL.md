@@ -52,8 +52,9 @@ Pull from the intake:
 - content pillars with priorities
 - surface strategy by platform or channel
 - medium strategy by text, image, video, audio, carousel, and story sequence
-- reference-needs signals by medium, including person/avatar reference image
-  availability, recurring locations, recurring collaborators or characters,
+- universal profile-avatar policy (person, avatar, symbol, monogram, product,
+  or brand mark) plus reference-needs signals by medium, including person/avatar
+  reference image availability, recurring locations, recurring collaborators or characters,
   signature objects, wardrobe constants, voice/sonic needs, and publication
   style needs
 - voice and editorial rules
@@ -78,6 +79,8 @@ Move these elsewhere:
 Ask only for gaps that block strategy:
 
 - Which surfaces matter first?
+- Should the required social-profile avatar use a person, avatar, symbol,
+  monogram, product, or brand mark?
 - Which content mediums are in scope?
 - Which public platforms imply text, image, audio, video, carousel, or
   story-sequence content?

@@ -288,10 +288,18 @@ The interpretation layer that maps analytics back to creative decisions. It sepa
 The v1 output target: vertical, short, hook-first, visually legible without platform context, and suitable for Instagram Reels, TikTok, and YouTube Shorts without requiring platform-specific planning.
 
 **Provider Boundary**:
-The line between local planning and external generation. Drafting plans is allowed; image/video/render generation requires explicit user approval.
+The line between local planning and external generation. Drafting plans is
+allowed. An approved Visual Continuity Plan authorizes one initial generation
+pass over exactly its listed creator-setup reference images; other image, video,
+render, voice, regeneration, upload, and changed-scope calls require exact
+approval.
 
 **Gate**:
-A human approval that can block the pipeline until granted. InfluencerOS has two: Concept Approval (moving a Campaign Concept into production) and the Provider Boundary generation approval (authorizing a paid provider call). Gates are always human-owned; nothing auto-approves them.
+A human approval that can block the pipeline until granted. InfluencerOS has
+two: Concept Approval (moving a Campaign Concept into production) and the
+Provider Boundary generation approval. Gates are always human-owned. Creator
+Setup may reuse the approved Visual Continuity Plan as the authorization for its
+one bounded initial reference-image pass; this is not automatic approval.
 
 **Review**:
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.

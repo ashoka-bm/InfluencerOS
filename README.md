@@ -70,7 +70,8 @@ that inventory.
 - caption styling and post-production treatments
 - publishing, scheduling, or uploads
 - platform analytics API connectors and scheduled analytics feedback loops
-- provider-backed generation without explicit approval
+- provider-backed generation without explicit human authorization (exact
+  approval normally; one bounded creator-setup reference pass under ADR 0043)
 
 ## Validate Examples
 
@@ -122,11 +123,13 @@ After authoring `creator-profile.json` and `references/reference-library.json`, 
 python3 -m influencer_os validate workspace workspace-library/creators/luna-fit
 ```
 
-Visual creators also use one reusable personal-brand-board template. Author
-creator-specific exact tokens in `references/brand/personal-brand-board.json`
-after Reference Library planning. Production spaces and signature props bind
-to typed Reference Library asset IDs; then build and validate the editable HTML
-projection:
+Every creator uses one reusable personal-brand-board template, including
+text-only and long-form creators. Author creator-specific exact tokens in
+`references/brand/personal-brand-board.json` after Reference Library planning.
+The board's profile avatar binds to a prompt-staged or available `brand` or
+`character` Reference Asset; production spaces and signature props, when used,
+bind to typed Reference Library asset IDs. Then build and validate the editable
+HTML projection:
 
 ```bash
 python3 -m influencer_os rebuild-brand-board workspace-library/creators/luna-fit
@@ -321,8 +324,9 @@ only useful candidates into research records.
 Key presence is standing approval for this research tier only — no per-run
 prompt — bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and
 a global kill switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`). Generation
-provider calls (image/video/audio/render) keep the exact-approval gate and are
-unchanged. There is no scheduled/unattended path; scheduled automation stays
+provider calls (image/video/audio/render) keep the exact-approval gate except
+for ADR 0043's one bounded pass over approved creator-setup references. There is
+no scheduled/unattended path; scheduled automation stays
 deferred (Temporal Scheduling, ADR 0025).
 
 ## Validate Any Record

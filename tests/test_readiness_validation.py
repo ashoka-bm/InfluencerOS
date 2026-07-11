@@ -304,6 +304,17 @@ def remove_prompt_file(workspace_dir, relative_path):
         prompt_path.unlink()
 
 
+def revoke_setup_reference_generation(plan):
+    plan["setup_reference_generation"] = {
+        "status": "not_authorized",
+        "asset_ids": [],
+        "max_calls": 0,
+        "authorized_on": None,
+        "authorized_by": None,
+        "notice": "Visual Continuity Plan is not approved.",
+    }
+
+
 def init_workspace_with_status(temp_dir, status):
     manifest = json.loads((ROOT / "examples" / "creator-workspace.example.json").read_text())
     manifest["status"] = status
@@ -1084,12 +1095,87 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
 
 
 class ReferenceLibraryIntegrityTests(unittest.TestCase):
+    def test_setup_generation_authorization_rejects_unknown_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def add_unknown(plan):
+                authorization = plan["setup_reference_generation"]
+                authorization["asset_ids"].append("asset_luna_unknown")
+                authorization["max_calls"] = len(authorization["asset_ids"])
+
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                add_unknown,
+            )
+            with self.assertRaisesRegex(ValueError, "do not resolve"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_setup_generation_authorization_rejects_non_image_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def add_voice(plan):
+                authorization = plan["setup_reference_generation"]
+                authorization["asset_ids"].append("asset_luna_elevenlabs_voice_design")
+                authorization["max_calls"] = len(authorization["asset_ids"])
+
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                add_voice,
+            )
+            with self.assertRaisesRegex(ValueError, "image assets only"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_approved_visual_plan_authorizes_one_call_per_listed_setup_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+
+            def mismatch_call_cap(plan):
+                plan["setup_reference_generation"]["max_calls"] -= 1
+
+            rewrite_json(plan_path, mismatch_call_cap)
+
+            with self.assertRaisesRegex(ValueError, "one call per listed asset"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_approved_visual_plan_generation_package_must_include_board_avatar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+            library_path = workspace_dir / "references" / "reference-library.json"
+
+            def mark_avatar_pending(library):
+                avatar = next(
+                    asset for asset in library["assets"]
+                    if asset["asset_id"] == "asset_luna_identity_plate"
+                )
+                avatar["asset_status"] = "prompted"
+                avatar["prompt_path"] = "references/character/luna-avatar.prompt.md"
+
+            rewrite_json(library_path, mark_avatar_pending)
+            (workspace_dir / "references" / "character" / "luna-avatar.prompt.md").write_text(
+                "Generate the approved avatar.\n"
+            )
+
+            def omit_avatar(plan):
+                authorization = plan["setup_reference_generation"]
+                authorization["asset_ids"].remove("asset_luna_identity_plate")
+                authorization["max_calls"] = len(authorization["asset_ids"])
+
+            rewrite_json(plan_path, omit_avatar)
+
+            with self.assertRaisesRegex(ValueError, "pending brand-board avatar asset"):
+                validate_creator_workspace(workspace_dir)
+
     def test_visual_foundation_readiness_requires_presented_and_approved_candidates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = init_workspace_with_status(temp_dir, "foundation_ready")
             plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
 
             def leave_review_pending(plan):
+                revoke_setup_reference_generation(plan)
                 plan["selection_review"] = {
                     "status": "pending_user_review",
                     "presented_on": "2026-07-09",
@@ -1137,6 +1223,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                 "decided_by": None,
                 "notes": "Candidate props and production spaces are awaiting user review."
             }
+            revoke_setup_reference_generation(plan)
             for candidate in plan["candidates"]:
                 candidate["user_decision"] = "pending"
                 candidate["decision_notes"] = "Awaiting the user's decision."
@@ -1161,6 +1248,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                 "decided_by": None,
                 "notes": "Candidate selection is awaiting user review."
             }
+            revoke_setup_reference_generation(plan)
             for candidate in plan["candidates"]:
                 candidate["user_decision"] = "pending"
                 candidate["decision_notes"] = "Awaiting user review."
@@ -1355,6 +1443,42 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
 
 
 class FoundationReadyBlockerTests(unittest.TestCase):
+    def test_text_only_foundation_requires_a_complete_personal_brand_board(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def make_text_only(profile):
+                profile["content_strategy"]["content_mediums"] = ["text"]
+
+            rewrite_json(workspace_dir / "creator-profile.json", make_text_only)
+            (workspace_dir / "references" / "brand" / "personal-brand-board.json").unlink()
+            (workspace_dir / "references" / "brand" / "personal-brand-board.html").unlink()
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("personal brand board", str(ctx.exception))
+
+    def test_text_only_foundation_requires_explicit_personal_brand_board_approval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+
+            def make_text_only(profile):
+                profile["content_strategy"]["content_mediums"] = ["text"]
+
+            def reopen_board(spec):
+                spec["approval_status"] = "draft_for_review"
+
+            rewrite_json(workspace_dir / "creator-profile.json", make_text_only)
+            rewrite_json(
+                workspace_dir / "references" / "brand" / "personal-brand-board.json",
+                reopen_board,
+            )
+            rebuild_brand_board(workspace_dir)
+
+            with self.assertRaises(ValidationError) as ctx:
+                validate_creator_workspace(workspace_dir)
+            self.assertIn("personal brand board requires explicit approval", str(ctx.exception))
+
     def test_visual_foundation_requires_a_complete_personal_brand_board(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
@@ -1494,6 +1618,22 @@ class FoundationReadyBlockerTests(unittest.TestCase):
 
             rewrite_json(
                 workspace_dir / "references" / "reference-library.json", drop_outfit_and_brand
+            )
+            def remove_dropped_authorizations(plan):
+                authorization = plan["setup_reference_generation"]
+                authorization["asset_ids"] = [
+                    asset_id
+                    for asset_id in authorization["asset_ids"]
+                    if asset_id not in {
+                        "asset_luna_everyday_outfit",
+                        "asset_luna_brand_system",
+                    }
+                ]
+                authorization["max_calls"] = len(authorization["asset_ids"])
+
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                remove_dropped_authorizations,
             )
             remove_prompt_file(
                 workspace_dir, "references/outfits/luna-everyday-outfit.prompt.md"
@@ -1705,7 +1845,7 @@ class FoundationReadinessTests(unittest.TestCase):
 
 
 class TextFirstCreatorTests(unittest.TestCase):
-    def test_active_text_first_creator_validates_without_visual_assets(self):
+    def test_active_text_first_creator_validates_with_only_universal_visual_assets(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
 
@@ -1719,6 +1859,21 @@ class TextFirstCreatorTests(unittest.TestCase):
 
             def strip_visual_assets(library):
                 library["assets"] = [
+                    {
+                        "asset_id": "asset_luna_profile_mark",
+                        "asset_type": "brand",
+                        "asset_status": "prompted",
+                        "role": "Text-first social profile mark",
+                        "path": "references/brand/luna-profile-mark.png",
+                        "prompt_path": "references/brand/luna-profile-mark.prompt.md",
+                        "source": {
+                            "source_type": "derived",
+                            "source_ref": "brand_context/personal-brand.md",
+                        },
+                        "created_on": "2026-06-29",
+                        "usage_notes": "Universal profile avatar for a text-first creator.",
+                        "semantic_index_allowed": False,
+                    },
                     {
                         "asset_id": "asset_luna_voice_note",
                         "asset_type": "voice",
@@ -1738,15 +1893,18 @@ class TextFirstCreatorTests(unittest.TestCase):
             rewrite_json(workspace_dir / "references" / "reference-library.json", strip_visual_assets)
             rewrite_json(
                 workspace_dir / "references" / "visual-continuity-plan.json",
-                lambda plan: plan.update(
-                    candidates=[],
-                    selection_review={
-                        "status": "draft",
-                        "presented_on": None,
-                        "decided_on": None,
-                        "decided_by": None,
-                        "notes": "No reusable visual continuity candidates are in scope.",
-                    },
+                lambda plan: (
+                    plan.update(
+                        candidates=[],
+                        selection_review={
+                            "status": "draft",
+                            "presented_on": None,
+                            "decided_on": None,
+                            "decided_by": None,
+                            "notes": "No reusable visual continuity candidates are in scope.",
+                        },
+                    ),
+                    revoke_setup_reference_generation(plan),
                 ),
             )
             for prompt_path in (workspace_dir / "references").rglob("*.prompt.md"):
@@ -1754,6 +1912,20 @@ class TextFirstCreatorTests(unittest.TestCase):
             voice_note = workspace_dir / "references" / "voice" / "luna-voice-note.md"
             voice_note.parent.mkdir(parents=True, exist_ok=True)
             voice_note.write_text("Calm, encouraging, second person.\n")
+            profile_prompt = workspace_dir / "references" / "brand" / "luna-profile-mark.prompt.md"
+            profile_prompt.write_text("Create a simple text-first profile mark.\n")
+
+            def make_text_first_board(spec):
+                spec["hero_image"] = ""
+                spec["avatar_asset_id"] = "asset_luna_profile_mark"
+                spec["production_spaces"] = []
+                spec["signature_props"] = []
+
+            rewrite_json(
+                workspace_dir / "references" / "brand" / "personal-brand-board.json",
+                make_text_first_board,
+            )
+            rebuild_brand_board(workspace_dir)
 
             result = validate_creator_workspace(workspace_dir)
             self.assertEqual(result["creator_slug"], "luna-fit")

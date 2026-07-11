@@ -4,6 +4,11 @@
 
 Accepted
 
+Amended by ADR 0043 for one initial generation pass over the creator-setup
+reference assets listed in an approved Visual Continuity Plan. Dispatch still
+uses a bounded, single-use GenerationApprovalRecord; the amendment removes the
+duplicate second confirmation, not the record or provenance boundary.
+
 ## Context
 
 Phase 3 (Generation OS) needs a provider adapter boundary that can never

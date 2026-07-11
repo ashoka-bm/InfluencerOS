@@ -45,5 +45,13 @@
     "decided_on": null,
     "decided_by": null,
     "notes": "Candidate selection has not yet been presented to the user."
+  },
+  "setup_reference_generation": {
+    "status": "not_authorized",
+    "asset_ids": [],
+    "max_calls": 0,
+    "authorized_on": null,
+    "authorized_by": null,
+    "notice": "Visual Continuity Plan has not been approved; setup reference generation is not authorized."
   }
 }

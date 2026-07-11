@@ -103,7 +103,10 @@ Agentic OS divergence test:
   the InfluencerOS exact-approval invariant for the research-acquisition tier
   only: key presence is standing approval, bounded by per-run call caps and a
   kill switch. The generation provider gate (image/video/audio/render) is
-  unchanged and still requires exact per-call/batch approval.
+  unchanged at the provider-dispatch layer and still requires a recorded
+  approval. ADR 0043 later allowed the first creator-setup reference pass to
+  derive that record from an approved Visual Continuity Plan without a second
+  confirmation.
 - Classification: adaptation (tooling) + divergence (approval model).
 - Decision record: this ADR (0022); Accepted Divergences row in
   agentic-os-alignment.md; provider-boundary.md carve-out.

@@ -87,6 +87,208 @@ def _load_approval_record(project_dir, approval_record_id):
     return record_path, record
 
 
+def _load_reference_approval_record(workspace_dir, approval_record_id):
+    record_path = (
+        Path(workspace_dir)
+        / "references"
+        / "approval-records"
+        / f"{approval_record_id}.json"
+    )
+    if not record_path.exists():
+        raise GenerationDispatchError(
+            f"no reference approval record {approval_record_id!r} under "
+            "references/approval-records/"
+        )
+    record = load_json(record_path)
+    try:
+        validate_record("generation-approval-record", record)
+    except ValidationError as exc:
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} does not validate: {exc}"
+        ) from exc
+    if record["generation_approval_record_id"] != approval_record_id:
+        raise GenerationDispatchError(
+            f"approval record file {record_path.name} carries id "
+            f"{record['generation_approval_record_id']!r}"
+        )
+    return record_path, record
+
+
+def _require_dispatchable_status(record, approval_record_id):
+    status = record["status"]
+    messages = {
+        "draft": "is a draft; human authorization has not been recorded",
+        "cancelled": "is cancelled",
+        "executing": "is mid-execution or a dispatch crashed; investigate before continuing",
+        "executed": "is already consumed; re-generation requires fresh user approval",
+    }
+    if status in messages:
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} {messages[status]}"
+        )
+    if status != "approved":
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} has status {status!r}"
+        )
+
+
+def _resolve_adapter(record, config):
+    provider_id = record["provider_id"]
+    try:
+        get_provider(provider_id)
+    except KeyError as exc:
+        raise GenerationDispatchError(str(exc)) from exc
+    availability = {row["provider_id"]: row for row in provider_status(config)}[
+        provider_id
+    ]
+    if not availability["available"]:
+        raise GenerationDispatchError(
+            f"provider {provider_id!r} is unavailable: {availability['reason']}"
+        )
+    adapter = _ADAPTERS.get(provider_id)
+    if adapter is None:
+        raise GenerationDispatchError(
+            f"provider {provider_id!r} has no installed adapter; the first "
+            "real adapter is an operator-approved batch (ADR 0023 Decision 3)"
+        )
+    return adapter
+
+
+def dispatch_reference_generation(
+    workspace_path, approval_record_id, config=None, notice_callback=print
+):
+    """Consume one setup-reference standing approval exactly once."""
+    workspace_dir = Path(workspace_path)
+    config = config if config is not None else env.get_config()
+    if env.paid_connectors_disabled(config) or env.paid_connectors_disabled(
+        env.get_config()
+    ):
+        raise GenerationDispatchError(
+            "generation dispatch is disabled by "
+            "INFLUENCER_OS_DISABLE_PAID_CONNECTORS (kill switch)"
+        )
+
+    record_path, record = _load_reference_approval_record(
+        workspace_dir, approval_record_id
+    )
+    _require_dispatchable_status(record, approval_record_id)
+    library_lock = workspace_dir / "references" / "reference-library.lock"
+    try:
+        descriptor = os.open(
+            library_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        )
+    except FileExistsError:
+        raise GenerationDispatchError(
+            "the Reference Library is locked by another generation dispatch; "
+            "retry after it completes"
+        ) from None
+    try:
+        os.close(descriptor)
+        return _dispatch_reference_generation_locked(
+            workspace_dir,
+            approval_record_id,
+            record_path,
+            config,
+            notice_callback,
+        )
+    finally:
+        library_lock.unlink(missing_ok=True)
+
+
+def _dispatch_reference_generation_locked(
+    workspace_dir, approval_record_id, record_path, config, notice_callback
+):
+    _, record = _load_reference_approval_record(workspace_dir, approval_record_id)
+    _require_dispatchable_status(record, approval_record_id)
+    try:
+        asset, library = generation_records.validate_setup_reference_approval_binding(
+            workspace_dir, record, error_class=GenerationDispatchError
+        )
+    except (ValidationError, KeyError) as exc:
+        raise GenerationDispatchError(str(exc)) from exc
+    adapter = _resolve_adapter(record, config)
+
+    target = workspace_dir / asset["path"]
+    workspace_root = workspace_dir.resolve()
+    if target.is_symlink() or target.parent.is_symlink():
+        raise GenerationDispatchError("reference generation target may not be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.parent.resolve().is_relative_to(workspace_root):
+        raise GenerationDispatchError("reference generation target escapes the workspace")
+    if target.exists():
+        raise GenerationDispatchError(
+            f"reference generation target already exists: {target}"
+        )
+
+    notice_callback(
+        "Setup reference generation notice: "
+        f"provider={record['provider_id']}; model={record['model']}; calls=1; "
+        f"cost={record['cost_note']}"
+    )
+    lock_path = record_path.with_suffix(".lock")
+    try:
+        lock_descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise GenerationDispatchError(
+            f"approval record {approval_record_id!r} is locked by another dispatch"
+        ) from None
+    try:
+        os.close(lock_descriptor)
+        _, record = _load_reference_approval_record(
+            workspace_dir, approval_record_id
+        )
+        _require_dispatchable_status(record, approval_record_id)
+        generation_records.validate_setup_reference_approval_binding(
+            workspace_dir, record, error_class=GenerationDispatchError
+        )
+        record["status"] = "executing"
+        write_json_atomic(record_path, record)
+    finally:
+        lock_path.unlink(missing_ok=True)
+
+    request = record["requested_assets"][0]
+    requested_at = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    metadata = adapter(request, target.parent, record)
+    completed_at = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    call = {
+        **metadata,
+        "asset_id": request["asset_id"],
+        "request": request,
+        "requested_at": requested_at,
+        "completed_at": completed_at,
+    }
+    if Path(metadata["artifact_path"]).resolve() != target.resolve():
+        raise GenerationDispatchError("provider wrote outside the approved reference target")
+
+    updated_asset = next(
+        item for item in library["assets"] if item["asset_id"] == asset["asset_id"]
+    )
+    updated_asset["asset_status"] = "generated"
+    updated_asset["source"] = {
+        "source_type": "generated",
+        "source_ref": approval_record_id,
+    }
+    updated_asset["usage_notes"] = (
+        updated_asset["usage_notes"].rstrip()
+        + f" Generated {completed_at[:10]} via {record['provider_id']}/{record['model']}."
+    )
+    validate_record("reference-library", library)
+    write_json_atomic(
+        workspace_dir / "references" / "reference-library.json", library
+    )
+    # The board embeds a digest of the Reference Library, so lifecycle and
+    # provenance updates must refresh the projection in the same transaction.
+    from influencer_os.brand_boards import rebuild_brand_board
+
+    rebuild_brand_board(workspace_dir)
+
+    record["status"] = "executed"
+    record["executed_at"] = completed_at
+    record["resulting_asset_ids"] = [request["asset_id"]]
+    write_json_atomic(record_path, record)
+    return [call]
+
+
 def dispatch_generation(project_dir, approval_record_id, config=None):
     """Execute the approved generation described by an approval record.
 

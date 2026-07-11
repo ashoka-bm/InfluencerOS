@@ -23,7 +23,8 @@ Approved standing overrides:
 - creators replace generic clients,
 - Creator Workspaces replace client workspaces,
 - schemas are first-class workflow contracts,
-- provider-backed generation has stricter exact approval gates,
+- provider-backed generation has strict human authorization: exact approval by
+  default, with ADR 0043's bounded creator-setup reference exception,
 - creator memory is provenance-linked and creator-scoped,
 - platform publishing/scheduling is not v1,
 - Command Centre is deferred,
@@ -31,7 +32,7 @@ Approved standing overrides:
 - skills stay repo-central with no category prefixes (ADR 0017),
 - Creator Workspace propagation is built as CLI subcommands with gated content zones (ADR 0018),
 - `AGENTS.md` is the canonical adapter; `CLAUDE.md` and `SOUL.md` are thin importers (ADR 0019),
-- research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep the exact-approval gate (ADR 0022),
+- research-acquisition connectors are standing-approved by API-key presence — bounded by a per-run call cap and a kill switch — while generation-provider calls keep exact approval except for ADR 0043's one-pass approved-plan setup references,
 - Phase 4 is Improvement OS: feedback automation (event-triggered reflection with falsifiable criteria) replaces temporal scheduling, which is deferred (ADR 0025).
 - Creator is a multi-type umbrella entity: a required `creator_type` (`influencer | product | brand`) conditions which foundation documents and persona fields are required, reusing the medium-based blocker mechanism; the `creator_*` ID plumbing and downstream schemas are unchanged and a global rename is deferred (ADR 0026).
 

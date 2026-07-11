@@ -13,6 +13,7 @@ from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
 from influencer_os.projects import collect_anchored_learning_records
 from influencer_os.research import validate_approvals
+from influencer_os.reference_assets import SETUP_IMAGE_ASSET_TYPES
 from influencer_os.rubric import reflection_report, validate_events_ledger
 from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
 
@@ -360,6 +361,14 @@ def _initial_visual_continuity_plan(manifest):
                 "Candidate props, product/brand objects, and production spaces "
                 "have not been presented for review."
             ),
+        },
+        "setup_reference_generation": {
+            "status": "not_authorized",
+            "asset_ids": [],
+            "max_calls": 0,
+            "authorized_on": None,
+            "authorized_by": None,
+            "notice": "Visual Continuity Plan has not been approved; setup reference generation is not authorized.",
         },
     }
 
@@ -982,6 +991,82 @@ def _validate_visual_continuity_selection(
     }
     orphan_prompt_paths = sorted(set(prompt_paths) - all_declared_prompt_paths)
     review_status = plan["selection_review"]["status"]
+    generation_auth = plan["setup_reference_generation"]
+    if review_status == "approved":
+        if generation_auth["status"] != "authorized":
+            raise ValueError(
+                "Approved Visual Continuity Plan must authorize one initial "
+                "generation pass over its listed creator-setup reference assets"
+            )
+        if generation_auth["authorized_by"] != "user" or generation_auth["authorized_on"] is None:
+            raise ValueError(
+                "Visual Continuity Plan setup reference generation authorization "
+                "requires user approval metadata"
+            )
+        asset_ids = generation_auth["asset_ids"]
+        duplicate_authorized_assets = sorted(
+            asset_id
+            for asset_id, count in Counter(asset_ids).items()
+            if count > 1
+        )
+        if duplicate_authorized_assets:
+            raise ValueError(
+                "Visual Continuity Plan setup reference generation package has "
+                "duplicate asset ids: " + ", ".join(duplicate_authorized_assets)
+            )
+        if generation_auth["max_calls"] != len(asset_ids):
+            raise ValueError(
+                "Visual Continuity Plan setup reference generation max_calls must "
+                "equal one call per listed asset"
+            )
+        assets_by_id = {
+            asset["asset_id"]: asset for asset in reference_library["assets"]
+        }
+        missing_authorized_assets = sorted(set(asset_ids) - set(assets_by_id))
+        if missing_authorized_assets:
+            raise ValueError(
+                "Visual Continuity Plan setup reference generation asset ids do not "
+                "resolve in the Reference Library: "
+                + ", ".join(missing_authorized_assets)
+            )
+        unsupported_assets = sorted(
+            asset_id
+            for asset_id in asset_ids
+            if assets_by_id[asset_id]["asset_type"] not in SETUP_IMAGE_ASSET_TYPES
+        )
+        if unsupported_assets:
+            raise ValueError(
+                "Visual Continuity Plan standing approval covers eligible setup "
+                "image assets only: " + ", ".join(unsupported_assets)
+            )
+        board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+        if board_path.exists():
+            board_avatar_id = load_json(board_path)["avatar_asset_id"]
+            board_avatar = assets_by_id.get(board_avatar_id)
+            if (
+                board_avatar is not None
+                and board_avatar["asset_status"] in {"planned", "prompted"}
+                and board_avatar_id not in asset_ids
+            ):
+                raise ValueError(
+                    "Visual Continuity Plan setup reference generation package must "
+                    f"include pending brand-board avatar asset {board_avatar_id!r}"
+                )
+    elif generation_auth["status"] != "not_authorized":
+        raise ValueError(
+            "Setup reference generation cannot be authorized before the Visual "
+            "Continuity Plan is approved"
+        )
+    elif (
+        generation_auth["asset_ids"]
+        or generation_auth["max_calls"] != 0
+        or generation_auth["authorized_on"] is not None
+        or generation_auth["authorized_by"] is not None
+    ):
+        raise ValueError(
+            "Non-authorized Visual Continuity Plan must carry an empty setup "
+            "reference generation package"
+        )
     if (
         visual_in_scope
         and manifest["status"] in ONBOARDING_STATUS_ORDER
@@ -1222,15 +1307,14 @@ def _validate_readiness_milestones(
                 )
 
         blockers.extend(_voice_design_prompt_blockers(creator_profile, active_assets))
-        if set(creator_profile["content_strategy"]["content_mediums"]).intersection(VISUAL_MEDIUMS):
-            try:
-                brand_board = validate_brand_board(workspace_dir)
-                if brand_board["approval_status"] != "approved":
-                    blockers.append(
-                        "personal brand board requires explicit approval before foundation_ready"
-                    )
-            except (FileNotFoundError, ValidationError) as exc:
-                blockers.append(f"personal brand board is incomplete: {exc}")
+        try:
+            brand_board = validate_brand_board(workspace_dir)
+            if brand_board["approval_status"] != "approved":
+                blockers.append(
+                    "personal brand board requires explicit approval before foundation_ready"
+                )
+        except (FileNotFoundError, ValidationError) as exc:
+            blockers.append(f"personal brand board is incomplete: {exc}")
         blockers.extend(_asset_file_blockers(workspace_dir, active_assets))
         blockers.extend(_asset_source_ref_blockers(workspace_dir, manifest, active_assets))
         blockers.extend(

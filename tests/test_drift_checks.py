@@ -458,6 +458,42 @@ class GuidedE2EDriftTests(unittest.TestCase):
         self.assertIn("explicit user approval", skill)
 
 
+class CreatorSetupGenerationApprovalDriftTests(unittest.TestCase):
+    def test_approved_visual_plan_grants_one_bounded_setup_generation_pass(self):
+        sources = (
+            "AGENTS.md",
+            "docs/provider-boundary.md",
+            "skills/create-influencer/SKILL.md",
+            "skills/create-reference-library/SKILL.md",
+            "skills/request-generation-approval/SKILL.md",
+        )
+        required = (
+            "approved visual continuity plan",
+            "one initial generation pass",
+            "no second confirmation",
+            "creator-setup reference assets",
+        )
+        for path in sources:
+            body = re.sub(r"\s+", " ", read_repo_text(path).lower())
+            for phrase in required:
+                self.assertIn(phrase, body, f"{path} missing setup standing-approval phrase: {phrase}")
+
+    def test_setup_standing_approval_keeps_scope_change_and_regeneration_gated(self):
+        boundary = re.sub(
+            r"\s+", " ", read_repo_text("docs/provider-boundary.md").lower()
+        )
+        for phrase in (
+            "scope change",
+            "regeneration",
+            "production content",
+            "video",
+            "voice",
+            "upload",
+            "bounded to one call per asset",
+        ):
+            self.assertIn(phrase, boundary, f"provider boundary lost limit: {phrase}")
+
+
 class ResearchProvenanceSkillDriftTests(unittest.TestCase):
     def test_research_skill_forbids_public_web_as_youtube(self):
         skill = read_repo_text("skills/create-research-findings/SKILL.md").lower()

@@ -41,7 +41,7 @@ def make_brand_board_workspace(temp_dir):
         "brand_adjectives": ["calm", "practical", "kind"],
         "anti_adjectives": ["punishing", "clinical", "luxury"],
         "hero_image": "references/character/luna-fit-identity-plate.png",
-        "avatar_image": "references/character/luna-fit-identity-plate.png",
+        "avatar_asset_id": "asset_luna_identity_plate",
         "palette": [
             {"name": "Warm Paper", "hex": "#F6F0E6", "role": "Base", "usage": "46%"},
             {"name": "Soft Sand", "hex": "#D8CDBD", "role": "Surface", "usage": "14%"},
@@ -87,6 +87,8 @@ def make_brand_board_workspace(temp_dir):
     }
     image_path = workspace_dir / "references" / "character" / "luna-fit-identity-plate.png"
     image_path.write_bytes(b"fixture-image")
+    avatar_asset_path = workspace_dir / "references" / "character" / "luna-identity-plate.png"
+    avatar_asset_path.write_bytes(b"fixture-image")
     (workspace_dir / "references" / "locations" / "luna-living-room-master-location-sheet.png").write_bytes(b"fixture-location")
     (workspace_dir / "references" / "locations" / "luna-fit-living-room-wall.png").write_bytes(b"fixture-location")
     (workspace_dir / "references" / "objects" / "luna-fit-reset-timer.png").write_bytes(b"fixture-prop")
@@ -159,6 +161,39 @@ class PersonalBrandBoardTests(unittest.TestCase):
             ).read_text()
             self.assertIn('class="image-placeholder "', rendered)
             self.assertNotIn("luna-living-room-master-location-sheet.png", rendered)
+
+    def test_prompt_ready_avatar_renders_an_intentional_placeholder(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_brand_board_workspace(temp_dir)
+            library_path = workspace_dir / "references" / "reference-library.json"
+            library = json.loads(library_path.read_text())
+            for asset in library["assets"]:
+                if asset["asset_id"] == "asset_luna_identity_plate":
+                    asset["asset_status"] = "prompted"
+                    asset["prompt_path"] = "references/character/luna-identity-plate.prompt.md"
+            write_json(library_path, library)
+            prompt = workspace_dir / "references" / "character" / "luna-identity-plate.prompt.md"
+            prompt.write_text("Prompt-staged avatar.\n")
+
+            rebuild_brand_board(workspace_dir)
+            rendered = (
+                workspace_dir / "references" / "brand" / "personal-brand-board.html"
+            ).read_text()
+            self.assertIn('class="image-placeholder avatar"', rendered)
+            self.assertNotIn('alt="Avatar crop"', rendered)
+
+    def test_brand_board_rejects_an_unprompted_avatar_asset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_brand_board_workspace(temp_dir)
+            library_path = workspace_dir / "references" / "reference-library.json"
+            library = json.loads(library_path.read_text())
+            for asset in library["assets"]:
+                if asset["asset_id"] == "asset_luna_identity_plate":
+                    asset["asset_status"] = "planned"
+            write_json(library_path, library)
+
+            with self.assertRaisesRegex(ValidationError, "avatar asset.*prompted"):
+                rebuild_brand_board(workspace_dir)
 
     def test_production_space_rejects_a_non_location_reference(self):
         with tempfile.TemporaryDirectory() as temp_dir:

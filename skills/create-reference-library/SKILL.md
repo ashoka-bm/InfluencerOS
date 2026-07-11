@@ -106,6 +106,13 @@ only after the user explicitly accepts a fully resolved package. Validation is
 not approval. This is a Creator Setup review checkpoint under foundation
 acceptance, not a third production Gate.
 
+The review package must also list the creator-setup reference assets that will
+be generated if the plan is accepted. An approved Visual Continuity Plan grants
+standing approval for one initial generation pass over exactly those listed
+creator-setup reference assets, with no second confirmation. The authorization
+is bounded to one call per asset and does not cover a scope change,
+regeneration, production content, video, voice, uploads, or later-added assets.
+
 If the user requests changes, revise the plan and present the affected
 candidates again. Never infer approval from silence, a previous creator's
 choices, or approval of the broader profile.
@@ -147,6 +154,10 @@ validation is not approval.
 
 Select based on content strategy:
 
+- every creator: one social-profile avatar asset, using `character` for an
+  identity-bearing person/avatar or `brand` for a symbol, monogram, product, or
+  organization mark; it must be at least `prompted` before `foundation_ready`
+
 - character: identity plate, full-body turnaround sheet, macro detail card
 - location: recurring spaces
 - outfit: wardrobe constants
@@ -158,7 +169,8 @@ Select based on content strategy:
   `references/brand/personal-brand-board.json` and are owned by
   `personal-brand-board`
 
-The downstream personal brand board binds production spaces to `location`
+The downstream personal brand board binds its `avatar_asset_id` to that universal
+profile asset, production spaces to `location`
 assets and signature props to `object` assets by stable `asset_id`. Plan those
 entries before invoking `personal-brand-board`; do not duplicate their file
 paths as free-form board data.
@@ -358,12 +370,22 @@ Ask only for gaps that block the intended medium:
 ## Provider Boundary
 
 Drafting reference records and prompts is allowed, including ElevenLabs Voice
-Design prompt files. Generating reference images, video, audio, voices, or
-renders requires explicit approval for the exact call or batch.
+Design prompt files. For creator-setup reference images, an approved Visual
+Continuity Plan grants standing approval for one initial generation pass over
+the listed creator-setup reference assets with no second confirmation. A scope
+change, regeneration, production content, video, audio, voice, render, upload,
+or asset outside the plan requires exact call/batch approval.
 
 ## Completion Criteria
 
-Complete when every medium required by the selected channels and content strategy has either approved assets or planned/prompted assets with stable IDs, source refs, usage notes, prompt paths where needed, the character/outfit/location/object prompt family has been staged when visual generation is in scope, and character identity assets obey the neutral-background hard rules before being marked `approved`. `media_ready` foundation mode and image/video generation permissions require approved or user-provided media references, not merely planned entries.
+Complete when the universal profile-avatar asset is at least prompt-staged, every
+medium required by the selected channels and content strategy has either
+approved assets or planned/prompted assets with stable IDs, source refs, usage
+notes, prompt paths where needed, the character/outfit/location/object prompt
+family has been staged when visual generation is in scope, and character
+identity assets obey the neutral-background hard rules before being marked
+`approved`. `media_ready` foundation mode and image/video generation permissions
+require approved or user-provided media references, not merely planned entries.
 
 For object assets, completion additionally requires one distinct prop, product,
 packaging form, or organization-owned object per Reference Asset and per

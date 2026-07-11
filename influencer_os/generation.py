@@ -19,6 +19,7 @@ from pathlib import Path
 
 from influencer_os.json_io import write_json_atomic
 from influencer_os.providers.registry import get_provider
+from influencer_os.reference_assets import SETUP_IMAGE_ASSET_TYPES
 from influencer_os.validation import ValidationError, load_json, validate_record
 
 
@@ -154,6 +155,262 @@ def record_generation_approval(target_path, record_path):
         )
     write_json_atomic(destination, record)
     return destination
+
+
+def _contained_workspace_file(workspace_dir, relative_path, label, error_class=ValidationError):
+    workspace_dir = Path(workspace_dir)
+    candidate = workspace_dir / relative_path
+    current = workspace_dir
+    for part in Path(relative_path).parts:
+        current = current / part
+        if current.is_symlink():
+            raise error_class(f"{label} may not resolve through a symlink: {relative_path}")
+    if not candidate.is_file() or not candidate.resolve().is_relative_to(
+        workspace_dir.resolve()
+    ):
+        raise error_class(f"{label} does not resolve inside the creator workspace: {relative_path}")
+    return candidate
+
+
+def _setup_authorization_digest(
+    plan_path, provider_id, model, cost_note, asset, prompt_path, plan_ref, request
+):
+    payload = {
+        "visual_continuity_plan_sha256": hashlib.sha256(
+            Path(plan_path).read_bytes()
+        ).hexdigest(),
+        "provider_id": provider_id,
+        "model": model,
+        "cost_note": cost_note,
+        "reference_asset": asset,
+        "prompt_sha256": hashlib.sha256(Path(prompt_path).read_bytes()).hexdigest(),
+        "plan_ref": plan_ref,
+        "requested_asset": request,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def derive_setup_reference_approvals(
+    workspace_path, *, provider_id, model, cost_note
+):
+    """Derive one immutable, single-call approval per setup reference asset.
+
+    The human authorization is the approved Visual Continuity Plan (ADR 0043),
+    so this writer does not solicit or invent a second approval decision.
+    """
+    workspace_dir = Path(workspace_path)
+    plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+    library_path = workspace_dir / "references" / "reference-library.json"
+    _contained_workspace_file(
+        workspace_dir,
+        "references/visual-continuity-plan.json",
+        "Visual Continuity Plan",
+    )
+    _contained_workspace_file(
+        workspace_dir, "references/reference-library.json", "Reference Library"
+    )
+    plan = load_json(plan_path)
+    library = load_json(library_path)
+    validate_record("visual-continuity-plan", plan)
+    validate_record("reference-library", library)
+    try:
+        get_provider(provider_id)
+    except KeyError as exc:
+        raise ValidationError(str(exc)) from None
+    if not model or not cost_note:
+        raise ValidationError("setup approval derivation requires model and cost_note")
+    if plan["selection_review"]["status"] != "approved":
+        raise ValidationError("Visual Continuity Plan is not approved")
+    authorization = plan["setup_reference_generation"]
+    if authorization["status"] != "authorized":
+        raise ValidationError("setup reference generation is not authorized")
+    if authorization["authorized_by"] != "user" or not authorization["authorized_on"]:
+        raise ValidationError("setup reference generation lacks explicit user authorization")
+    asset_ids = authorization["asset_ids"]
+    if not asset_ids or len(asset_ids) != len(set(asset_ids)):
+        raise ValidationError("setup authorization asset_ids must be nonempty and unique")
+    if authorization["max_calls"] != len(asset_ids):
+        raise ValidationError("setup authorization is not bounded to one call per asset")
+    assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+    missing = sorted(set(asset_ids) - set(assets_by_id))
+    if missing:
+        raise ValidationError("authorized setup assets do not resolve: " + ", ".join(missing))
+
+    slug = library["creator_profile_id"].removeprefix("creator_")
+    approved_at = authorization["authorized_on"] + "T00:00:00"
+    records = []
+    for reference_asset_id in asset_ids:
+        asset = assets_by_id[reference_asset_id]
+        if asset["asset_type"] not in SETUP_IMAGE_ASSET_TYPES:
+            raise ValidationError(
+                f"authorized setup asset {reference_asset_id!r} is not an eligible image asset"
+            )
+        prompt_ref = asset.get("prompt_path")
+        if not prompt_ref:
+            raise ValidationError(
+                f"authorized setup asset {reference_asset_id!r} has no resolving prompt_path"
+            )
+        prompt_path = _contained_workspace_file(
+            workspace_dir,
+            prompt_ref,
+            f"setup prompt for {reference_asset_id}",
+        )
+        plan_ref = "references/visual-continuity-plan.json#setup_reference_generation"
+        request = {
+            "asset_id": f"gen_asset_{slug}_setup_{reference_asset_id.removeprefix('asset_')}",
+            "asset_kind": "image",
+            "prompt_ref": prompt_ref,
+            "filename": Path(asset["path"]).name,
+            "notes": f"Initial creator-setup reference for {reference_asset_id}.",
+        }
+        digest = _setup_authorization_digest(
+            plan_path,
+            provider_id,
+            model,
+            cost_note,
+            asset,
+            prompt_path,
+            plan_ref,
+            request,
+        )
+        suffix = reference_asset_id.removeprefix("asset_")
+        record_id = f"gen_approval_{slug}_setup_{suffix}"
+        record = {
+            "generation_approval_record_id": record_id,
+            "creator_profile_id": library["creator_profile_id"],
+            "reference_asset_id": reference_asset_id,
+            "provider_id": provider_id,
+            "model": model,
+            "plan_ref": plan_ref,
+            "scope": "single_call",
+            "requested_assets": [request],
+            "user_approval_statement": (
+                "Derived from the approved Visual Continuity Plan: "
+                + plan["selection_review"]["notes"]
+            ),
+            "approved_at": approved_at,
+            "status": "approved",
+            "cost_note": cost_note,
+            "approval_basis": "approved_visual_continuity_plan",
+            "authorization_source_digest": digest,
+            "created_at": approved_at,
+        }
+        validate_record("generation-approval-record", record)
+        records.append(record)
+
+    approvals_dir = workspace_dir / REFERENCE_APPROVALS_DIR
+    destinations = [
+        approvals_dir / f"{record['generation_approval_record_id']}.json"
+        for record in records
+    ]
+    derivation_lock = workspace_dir / "references" / "setup-approval-derivation.lock"
+    try:
+        lock_descriptor = os.open(
+            derivation_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        )
+    except FileExistsError:
+        raise FileExistsError(
+            "Setup reference approval derivation is already running; retry after "
+            "it completes"
+        ) from None
+    try:
+        os.close(lock_descriptor)
+        conflicts = []
+        for destination, record in zip(destinations, records):
+            if destination.is_symlink() or (
+                destination.exists() and load_json(destination) != record
+            ):
+                conflicts.append(destination)
+        if conflicts:
+            raise FileExistsError(
+                "Setup reference approval already recorded; provider/model changes or "
+                "regeneration require fresh user approval: "
+                + ", ".join(str(path) for path in conflicts)
+            )
+        if approvals_dir.is_symlink():
+            raise ValidationError("references/approval-records must not be a symlink")
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        for destination, record in zip(destinations, records):
+            if not destination.exists():
+                write_json_atomic(destination, record)
+    finally:
+        derivation_lock.unlink(missing_ok=True)
+    return destinations
+
+
+def validate_setup_reference_approval_binding(workspace_path, record, error_class=ValidationError):
+    workspace_dir = Path(workspace_path)
+    plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+    library_path = workspace_dir / "references" / "reference-library.json"
+    _contained_workspace_file(
+        workspace_dir,
+        "references/visual-continuity-plan.json",
+        "Visual Continuity Plan",
+        error_class,
+    )
+    _contained_workspace_file(
+        workspace_dir,
+        "references/reference-library.json",
+        "Reference Library",
+        error_class,
+    )
+    plan = load_json(plan_path)
+    library = load_json(library_path)
+    try:
+        validate_record("visual-continuity-plan", plan)
+        validate_record("reference-library", library)
+    except ValidationError as exc:
+        raise error_class(str(exc)) from exc
+    asset_id = record.get("reference_asset_id")
+    if record.get("approval_basis") != "approved_visual_continuity_plan":
+        raise error_class("reference standing approval must derive from the approved Visual Continuity Plan")
+    authorization = plan["setup_reference_generation"]
+    if (
+        plan["selection_review"]["status"] != "approved"
+        or authorization["status"] != "authorized"
+        or authorization["authorized_by"] != "user"
+        or authorization["max_calls"] != len(authorization["asset_ids"])
+    ):
+        raise error_class("Visual Continuity Plan no longer carries bounded user authorization")
+    if record["creator_profile_id"] != library["creator_profile_id"]:
+        raise error_class("setup reference approval creator does not match the Reference Library")
+    if asset_id not in plan["setup_reference_generation"]["asset_ids"]:
+        raise error_class(f"reference asset {asset_id!r} is outside the approved setup package")
+    assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+    asset = assets_by_id.get(asset_id)
+    if asset is None:
+        raise error_class(f"reference asset {asset_id!r} no longer resolves")
+    if record["scope"] != "single_call" or len(record["requested_assets"]) != 1:
+        raise error_class("setup reference approval must contain exactly one call")
+    request = record["requested_assets"][0]
+    if request["asset_kind"] != "image" or request["prompt_ref"] != asset.get("prompt_path"):
+        raise error_class("setup reference approval request does not match the frozen asset prompt")
+    if request.get("filename") != Path(asset["path"]).name:
+        raise error_class("setup reference approval filename does not match the Reference Asset path")
+    prompt_path = _contained_workspace_file(
+        workspace_dir,
+        request["prompt_ref"],
+        "setup reference approval prompt",
+        error_class,
+    )
+    expected_digest = _setup_authorization_digest(
+        plan_path,
+        record["provider_id"],
+        record["model"],
+        record["cost_note"],
+        asset,
+        prompt_path,
+        record["plan_ref"],
+        request,
+    )
+    if record.get("authorization_source_digest") != expected_digest:
+        raise error_class(
+            "Visual Continuity Plan, Reference Asset, prompt, or provider/model/cost "
+            "scope changed after setup approval derivation"
+        )
+    return asset, library
 
 
 def validate_approval_record_binding(project_dir, record, project=None, error_class=ValidationError):

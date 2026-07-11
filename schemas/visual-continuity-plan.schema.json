@@ -9,7 +9,8 @@
     "creator_profile_id",
     "created_on",
     "candidates",
-    "selection_review"
+    "selection_review",
+    "setup_reference_generation"
   ],
   "properties": {
     "visual_continuity_plan_id": {
@@ -221,6 +222,19 @@
           }
         }
       ]
+    },
+    "setup_reference_generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "asset_ids", "max_calls", "authorized_on", "authorized_by", "notice"],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_authorized", "authorized"] },
+        "asset_ids": { "type": "array", "items": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" } },
+        "max_calls": { "type": "integer", "minimum": 0 },
+        "authorized_on": { "type": ["string", "null"], "format": "date" },
+        "authorized_by": { "type": ["string", "null"], "enum": ["user", null] },
+        "notice": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

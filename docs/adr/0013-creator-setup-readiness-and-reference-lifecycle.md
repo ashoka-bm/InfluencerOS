@@ -44,4 +44,6 @@ A generated persona becomes acceptable as one foundation only after the user app
 - Agents can identify which blockers apply to text, image, video, audio, carousel, and story-sequence workflows.
 - Provider-neutral prompts can be tracked before generated files exist.
 - The onboarding flow can be tested as a self-contained module with a stable input and output contract.
-- Provider-backed generation remains separately gated by explicit approval for the exact call or batch.
+- Provider-backed generation remains human-gated. ADR 0043 later made an
+  approved Visual Continuity Plan the authorization for one initial bounded
+  setup-reference pass; other calls retain exact approval.

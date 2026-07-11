@@ -68,7 +68,10 @@ The system will enforce alignment through durable planning docs, ADRs, visual ma
 23. As a creator operator, I want a scored Idea Queue, so that researched opportunities can be compared, updated, and held before production.
 24. As a creator operator, I want human-approved Idea Promotions, so that the system can create one or more Projects without silently choosing production direction.
 25. As a creator operator, I want provider-neutral generation plans before media generation, so that we can review before paying or calling external providers.
-26. As a creator operator, I want an exact approval gate before image, video, audio, render, upload, paid, or irreversible calls, so that risky actions cannot happen implicitly.
+26. As a creator operator, I want explicit human authorization before image,
+video, audio, render, upload, paid, or irreversible calls. An approved Visual
+Continuity Plan may authorize one bounded initial pass over its listed
+creator-setup reference images; other calls require exact approval.
 27. As a creator operator, I want output packages to preserve provenance, so that every artifact traces back to creator profile, research, idea, template, plan, and generation plan.
 28. As a creator operator, I want analytics and performance summaries stored as evidence, so that future learning is grounded.
 29. As a creator operator, I want distilled creator memory, so that future plans improve without loading raw analytics by default.

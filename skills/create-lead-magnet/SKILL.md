@@ -39,7 +39,7 @@ Sequence: `foundation_ready` → strategy defined (record + draft) → **lead ma
 
 - `content-strategy.json` — the immediate upstream record. Copy its `content_strategy_id` into `source_content_strategy_id`; conversion paths and campaigns retain their reverse references to the asset ID.
 - `creator-profile.json` + `brand_context/personal-brand.md` — voice, positioning, visual direction, and disclosure/compliance rules.
-- `references/brand/personal-brand-board.json` when it exists — canonical exact visual tokens for visual creators.
+- `references/brand/personal-brand-board.json` — canonical exact visual tokens for every creator.
 - An approved identity-plate Reference Asset only when the user wants creator imagery. Text-first creators require no identity plate; use the generic text-only skeleton by default.
 
 ## Outputs And Paths

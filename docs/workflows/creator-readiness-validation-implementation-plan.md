@@ -163,7 +163,10 @@ Behavior tests (new `tests/test_readiness_validation.py`):
 7. `generation_ready`: a required kind still at `planned` fails; the
    workstream-14 approved-visual gate still enforced (existing tests keep
    passing).
-8. An `active` text-first creator with no visual assets validates.
+8. An `active` text-first creator with only the universal prompt-staged or
+   available profile-avatar asset and approved personal brand board validates;
+   no additional content-image, character, location, outfit, or video-style
+   assets are required.
 9. Dangling `reference_refs` primary asset id fails at any status.
 10. Schema: escaping or misplaced `path`/`prompt_path` values fail record
     validation (mirroring the intake schema tests).
@@ -200,17 +203,20 @@ test gap, all reproduced, fixed, and covered by negative tests the same day:
   primary, `video`/`carousel`/`story_sequence` require a video-style
   primary), retired primaries are blockers, and `generation_ready` requires
   primaries at `prompted` or later. `primary_video_style_asset_id` became
-  schema-optional so text-first creators without visual assets can validate.
+  schema-optional so text-first creators can validate without medium-specific
+  visual assets while retaining the universal profile-avatar asset and approved
+  personal brand board.
 - P2 — asset `source.source_ref` provenance could dangle: every asset
   pointing at `sources/intakes/does-not-exist.md` still validated at
   `content_ready`. Fixed: non-retired assets' `source_ref` must be either a
   recorded intake `source_id` or a workspace-contained existing file (same
   resolve-based containment as intake and asset paths); free-text refs are
   no longer accepted for non-retired assets.
-- Test gap — the text-first test kept all visual assets in place. Reworked:
-  it now strips the library to a single voice asset, empties the character
-  and location primaries, and drops the video-style primary, proving the
-  non-visual path end to end.
+- Test gap — the text-first test kept all medium-specific visual assets in
+  place. Reworked: it now retains only the universal prompt-staged profile mark
+  plus a voice asset, empties the character and location primaries, drops the
+  video-style primary, uses a board with zero production spaces, and proves the
+  text-first path end to end.
 
 ## Five-Slice Review (2026-07-03)
 

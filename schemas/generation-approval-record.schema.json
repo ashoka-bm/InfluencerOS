@@ -127,6 +127,14 @@
       "type": "string",
       "minLength": 1
     },
+    "approval_basis": {
+      "type": "string",
+      "enum": ["exact_user_statement", "approved_visual_continuity_plan"]
+    },
+    "authorization_source_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time"

@@ -12,7 +12,7 @@
   "brand_adjectives": ["calm", "practical", "kind"],
   "anti_adjectives": ["punishing", "clinical", "luxury"],
   "hero_image": "",
-  "avatar_image": "",
+  "avatar_asset_id": "asset_luna_identity_plate",
   "palette": [
     { "name": "Warm Paper", "hex": "#F6F0E6", "role": "Base", "usage": "46%" },
     { "name": "Soft Sand", "hex": "#D8CDBD", "role": "Surface", "usage": "14%" },

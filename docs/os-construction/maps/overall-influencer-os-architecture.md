@@ -76,7 +76,9 @@ Ignored Creator Workspaces hold:
 - creator memory,
 - creator-specific skill overrides.
 
-The system is local-first. Provider-backed generation, render jobs, uploads, paid calls, and irreversible actions require explicit approval for the exact call or batch.
+The system is local-first. Provider-backed work requires explicit human
+authorization: exact approval by default, with ADR 0043's one bounded pass over
+approved creator-setup reference images.
 
 ## Major Nodes
 

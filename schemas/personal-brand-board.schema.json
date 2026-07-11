@@ -4,7 +4,7 @@
   "title": "PersonalBrandBoard",
   "type": "object",
   "additionalProperties": false,
-  "required": ["board_type", "approval_status", "name", "handle", "tagline", "descriptor", "summary", "audience", "promise", "differentiator", "brand_adjectives", "anti_adjectives", "hero_image", "avatar_image", "palette", "typography", "wordmark", "production_spaces", "signature_props", "imagery_rules", "content_templates", "voice", "pillars", "qa_notes", "footer"],
+  "required": ["board_type", "approval_status", "name", "handle", "tagline", "descriptor", "summary", "audience", "promise", "differentiator", "brand_adjectives", "anti_adjectives", "hero_image", "avatar_asset_id", "palette", "typography", "wordmark", "production_spaces", "signature_props", "imagery_rules", "content_templates", "voice", "pillars", "qa_notes", "footer"],
   "properties": {
     "board_type": { "type": "string", "enum": ["brand_board", "mini_style_guide"] },
     "approval_status": { "type": "string", "enum": ["draft_for_review", "approved"] },
@@ -19,7 +19,7 @@
     "brand_adjectives": { "type": "array", "minItems": 3, "maxItems": 6, "items": { "type": "string", "minLength": 1 } },
     "anti_adjectives": { "type": "array", "minItems": 3, "maxItems": 6, "items": { "type": "string", "minLength": 1 } },
     "hero_image": { "type": "string" },
-    "avatar_image": { "type": "string" },
+    "avatar_asset_id": { "type": "string", "pattern": "^asset_[a-zA-Z0-9_-]+$" },
     "palette": {
       "type": "array", "minItems": 6, "maxItems": 8,
       "items": {
@@ -53,7 +53,7 @@
         "avatar_guidance": { "type": "string", "minLength": 1 }
       }
     },
-    "production_spaces": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "$ref": "#/definitions/production_space" } },
+    "production_spaces": { "type": "array", "maxItems": 6, "items": { "$ref": "#/definitions/production_space" } },
     "signature_props": { "type": "array", "maxItems": 6, "items": { "$ref": "#/definitions/signature_prop" } },
     "imagery_rules": {
       "type": "object", "additionalProperties": false,

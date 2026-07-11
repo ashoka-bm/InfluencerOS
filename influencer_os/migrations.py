@@ -7,7 +7,115 @@ from copy import deepcopy
 from pathlib import Path
 
 from influencer_os.json_io import write_json_atomic
+from influencer_os.reference_assets import SETUP_IMAGE_ASSET_TYPES
 from influencer_os.validation import ValidationError, load_json, validate_record
+
+
+def migrate_visual_foundation(workspace_path):
+    """Upgrade legacy avatar/visual-plan records to the required foundation."""
+    from influencer_os.brand_boards import rebuild_brand_board
+
+    workspace_dir = Path(workspace_path)
+    board_path = (
+        workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    )
+    plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+    library_path = workspace_dir / "references" / "reference-library.json"
+    profile_path = workspace_dir / "creator-profile.json"
+
+    board = deepcopy(load_json(board_path))
+    plan = deepcopy(load_json(plan_path))
+    library = load_json(library_path)
+    profile = load_json(profile_path)
+    validate_record("reference-library", library)
+    assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+
+    if "avatar_image" in board:
+        if "avatar_asset_id" in board:
+            raise ValidationError(
+                "legacy brand board carries both avatar_image and avatar_asset_id"
+            )
+        legacy_path = board.pop("avatar_image")
+        candidates = [
+            asset["asset_id"]
+            for asset in library["assets"]
+            if asset["path"] == legacy_path
+        ]
+        if not candidates:
+            candidates = [
+                asset_id
+                for asset_id in profile["reference_refs"].get(
+                    "primary_character_asset_ids", []
+                )
+                if asset_id in assets_by_id
+            ]
+        if len(candidates) != 1:
+            raise ValidationError(
+                "cannot migrate avatar_image unambiguously; expected one matching "
+                "Reference Asset or one primary character asset"
+            )
+        board["avatar_asset_id"] = candidates[0]
+
+    if "setup_reference_generation" not in plan:
+        review = plan["selection_review"]
+        if review["status"] == "approved":
+            asset_ids = [
+                asset["asset_id"]
+                for asset in library["assets"]
+                if asset["asset_type"] in SETUP_IMAGE_ASSET_TYPES
+                and asset["asset_status"] in {"planned", "prompted"}
+                and asset.get("prompt_path")
+            ]
+            avatar_id = board.get("avatar_asset_id")
+            avatar = assets_by_id.get(avatar_id)
+            if (
+                avatar is not None
+                and avatar["asset_status"] in {"planned", "prompted"}
+                and avatar_id not in asset_ids
+            ):
+                raise ValidationError(
+                    "cannot migrate setup authorization: the pending avatar has "
+                    "no provider-neutral prompt"
+                )
+            plan["setup_reference_generation"] = {
+                "status": "authorized",
+                "asset_ids": asset_ids,
+                "max_calls": len(asset_ids),
+                "authorized_on": review["decided_on"],
+                "authorized_by": "user",
+                "notice": (
+                    "Migrated authorization: one initial generation call per "
+                    "listed creator-setup reference asset was authorized by the "
+                    "approved Visual Continuity Plan."
+                ),
+            }
+        else:
+            plan["setup_reference_generation"] = {
+                "status": "not_authorized",
+                "asset_ids": [],
+                "max_calls": 0,
+                "authorized_on": None,
+                "authorized_by": None,
+                "notice": "Setup reference generation has not been authorized.",
+            }
+
+    validate_record("personal-brand-board", board)
+    validate_record("visual-continuity-plan", plan)
+    changed = []
+    if load_json(board_path) != board:
+        changed.append(board_path)
+    if load_json(plan_path) != plan:
+        changed.append(plan_path)
+    for path, record in ((board_path, board), (plan_path, plan)):
+        if path in changed:
+            write_json_atomic(path, record)
+    if board_path in changed:
+        result = rebuild_brand_board(workspace_dir)
+        changed.append(result["board_path"])
+    return {
+        "workspace_path": workspace_dir,
+        "changed_paths": [path.relative_to(workspace_dir) for path in changed],
+    }
 
 
 def migrate_content_series(workspace_path):

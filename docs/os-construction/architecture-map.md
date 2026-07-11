@@ -213,7 +213,7 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 8  Visual continuity analysis + user approval -> Skill(create-reference-library)
   Phase 9  Selected reference planning, prompt staging, and resolution -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
-  Phase 10 Brand board       -> Skill(personal-brand-board) (visual creators; typed Reference Library links)
+  Phase 10 Brand board       -> Skill(personal-brand-board) (all creators; typed avatar/location/object Reference Library links)
   Phase 12 Lead-magnet conversion assets -> Skill(create-lead-magnet)
              non-lead-magnet conversion types halt as unsupported in v1
   Phases 1,11,13-15 intake, onboarding records, readiness, milestone acceptance, generation gate (inline)

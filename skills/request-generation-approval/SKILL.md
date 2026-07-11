@@ -13,9 +13,30 @@ against `schemas/generation-approval-record.schema.json`.
 ## The Boundary Rule
 
 A general desire to create content is **not** generation approval
-(`docs/provider-boundary.md`). Approval must name the exact call or batch.
+(`docs/provider-boundary.md`). Approval normally names the exact call or batch;
+the bounded creator-setup reference exception below derives it from the approved
+Visual Continuity Plan.
 Key presence is never approval. You never dispatch; you record what the human
 approved, and `dispatch_generation` refuses anything else.
+
+### Creator-setup reference exception
+
+For creator-setup reference assets only, an approved Visual Continuity Plan is
+the human authorization for one initial generation pass over exactly its listed
+creator-setup reference assets, with no second confirmation. Build and record a
+bounded reference-scoped GenerationApprovalRecord from that plan approval; show
+provider, model, call count, and cost as a notice, but do not ask the user to
+approve the same package again. Preserve the plan approval statement or review
+note as the record's authorization source.
+
+Use `python3 -m influencer_os derive-setup-reference-approvals <workspace>
+--provider <id> --model <model> --cost-note <notice>` so the records are
+derived consistently and freeze the plan plus routing scope. Do not hand-author
+these standing-approval records.
+
+This exception is bounded to one call per asset. A scope change, regeneration,
+production content, video, voice, audio, render, upload, provider/model change,
+or asset added after plan approval requires normal exact call/batch approval.
 
 ## Assembling The Request
 

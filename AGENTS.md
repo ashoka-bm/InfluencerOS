@@ -85,7 +85,7 @@ Approval).
 - InfluencerOS v1 research is platform-scoped across the ADR 0020 platform set plus YouTube (ADR 0027). V1 production is format-first: visual-first formats remain centered on universal short-form vertical video, and article/thread text formats are now production-supported. Do not add platform-specific adapters, post-production treatments, publishing, scheduling, or analytics unless explicitly requested.
 - Audience and niche are creator-profile inputs. Do not invent or redefine them unless the user asks.
 - Research is time-sensitive. Date the research, cite sources, and keep trend claims tied to evidence.
-- Do not make provider-backed image, video, audio, or render calls without explicit user approval for the exact call or approved batch.
+- Do not make provider-backed image, video, audio, or render calls without explicit user approval. An approved Visual Continuity Plan grants standing approval for one initial generation pass over exactly its listed creator-setup reference assets, with no second confirmation; every scope change, regeneration, production-content call, video, voice, render, upload, or asset outside that package still requires exact call/batch approval (ADR 0043).
 - Drafting research packs, ideas, plans, prompts, shot lists, and generation plans is allowed without provider approval.
 - Do not commit user-provided media, generated works, private creator references, secrets, or API keys.
 - Prefer the smallest change that advances the first slice.

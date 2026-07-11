@@ -175,6 +175,260 @@ class DispatchSeamTests(unittest.TestCase):
                 dispatch_generation(temp_dir, "gen_approval_any", config=KILLED_CONFIG)
 
 
+class CreatorSetupStandingApprovalTests(unittest.TestCase):
+    def _prompt_ready_workspace(self, temp_dir):
+        from tests.test_readiness_validation import make_ready_workspace
+
+        workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+        plan = json.loads(
+            (workspace_dir / "references" / "visual-continuity-plan.json").read_text()
+        )
+        authorized = set(plan["setup_reference_generation"]["asset_ids"])
+        library_path = workspace_dir / "references" / "reference-library.json"
+        library = json.loads(library_path.read_text())
+        for asset in library["assets"]:
+            if asset["asset_id"] not in authorized:
+                continue
+            asset["asset_status"] = "prompted"
+            asset["prompt_path"] = (
+                f"references/{asset['asset_type']}/{asset['asset_id']}.prompt.md"
+            )
+            target = workspace_dir / asset["path"]
+            target.unlink(missing_ok=True)
+            prompt = workspace_dir / asset["prompt_path"]
+            prompt.parent.mkdir(parents=True, exist_ok=True)
+            prompt.write_text(f"Prompt for {asset['asset_id']}.\n")
+        write_json(library_path, library)
+        return workspace_dir, sorted(authorized)
+
+    def test_derives_single_use_records_from_approved_visual_plan(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, authorized = self._prompt_ready_workspace(temp_dir)
+            paths = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )
+
+            self.assertEqual(len(paths), len(authorized))
+            records = [json.loads(path.read_text()) for path in paths]
+            self.assertEqual(
+                {record["reference_asset_id"] for record in records}, set(authorized)
+            )
+            self.assertTrue(all(record["scope"] == "single_call" for record in records))
+            self.assertTrue(
+                all("approved Visual Continuity Plan" in record["user_approval_statement"] for record in records)
+            )
+            self.assertEqual(
+                derive_setup_reference_approvals(
+                    workspace_dir,
+                    provider_id="mock",
+                    model="mock-1",
+                    cost_note="Mock; zero cost.",
+                ),
+                paths,
+            )
+
+            with self.assertRaisesRegex(FileExistsError, "already recorded"):
+                derive_setup_reference_approvals(
+                    workspace_dir,
+                    provider_id="mock",
+                    model="different-model",
+                    cost_note="Changed route.",
+                )
+
+    def test_setup_approval_derivation_refuses_shared_lock(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            lock_path = workspace_dir / "references" / "setup-approval-derivation.lock"
+            lock_path.write_text("busy\n")
+
+            with self.assertRaisesRegex(FileExistsError, "already running"):
+                derive_setup_reference_approvals(
+                    workspace_dir,
+                    provider_id="mock",
+                    model="mock-1",
+                    cost_note="Mock; zero cost.",
+                )
+            self.assertFalse(
+                (workspace_dir / "references" / "approval-records").exists()
+            )
+
+    def test_reference_dispatch_is_single_use_and_updates_library(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_paths = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )
+            record = json.loads(approval_paths[0].read_text())
+            notices = []
+            calls = dispatch_reference_generation(
+                workspace_dir,
+                record["generation_approval_record_id"],
+                config=BASE_CONFIG,
+                notice_callback=notices.append,
+            )
+
+            self.assertEqual(len(calls), 1)
+            self.assertIn("provider=mock", notices[0])
+            self.assertIn("model=mock-1", notices[0])
+            self.assertIn("calls=1", notices[0])
+            self.assertIn("cost=Mock; zero cost.", notices[0])
+            library = json.loads(
+                (workspace_dir / "references" / "reference-library.json").read_text()
+            )
+            asset = next(
+                item for item in library["assets"]
+                if item["asset_id"] == record["reference_asset_id"]
+            )
+            self.assertEqual(asset["asset_status"], "generated")
+            self.assertEqual(asset["source"]["source_ref"], record["generation_approval_record_id"])
+            self.assertTrue((workspace_dir / asset["path"]).is_file())
+            from influencer_os.brand_boards import validate_brand_board
+
+            validate_brand_board(workspace_dir)
+
+            with self.assertRaisesRegex(GenerationDispatchError, "already consumed"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_reference_dispatch_rejects_changed_frozen_scope(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_path = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+            plan = json.loads(plan_path.read_text())
+            plan["setup_reference_generation"]["notice"] += " Changed."
+            plan_path.write_text(json.dumps(plan, indent=2) + "\n")
+
+            with self.assertRaisesRegex(GenerationDispatchError, "changed after"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_reference_dispatch_rejects_changed_prompt_content(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_path = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            prompt_path = workspace_dir / record["requested_assets"][0]["prompt_ref"]
+            prompt_path.write_text(prompt_path.read_text() + "Changed prompt.\n")
+
+            with self.assertRaisesRegex(GenerationDispatchError, "prompt.*changed"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_reference_dispatch_refuses_shared_library_lock_without_consuming(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_path = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            lock_path = workspace_dir / "references" / "reference-library.lock"
+            lock_path.write_text("busy\n")
+
+            with self.assertRaisesRegex(GenerationDispatchError, "Reference Library is locked"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+            self.assertEqual(json.loads(approval_path.read_text())["status"], "approved")
+
+    def test_reference_dispatch_rejects_tampered_request_fields(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_path = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            record["requested_assets"][0]["asset_id"] = "gen_asset_tampered"
+            approval_path.write_text(json.dumps(record, indent=2) + "\n")
+
+            with self.assertRaisesRegex(GenerationDispatchError, "scope changed"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_reference_dispatch_rejects_symlinked_prompt(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+        from influencer_os.providers.dispatch import dispatch_reference_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            approval_path = derive_setup_reference_approvals(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            prompt_path = workspace_dir / record["requested_assets"][0]["prompt_ref"]
+            external_prompt = Path(temp_dir) / "external.prompt.md"
+            external_prompt.write_text(prompt_path.read_text())
+            prompt_path.unlink()
+            prompt_path.symlink_to(external_prompt)
+
+            with self.assertRaisesRegex(GenerationDispatchError, "symlink"):
+                dispatch_reference_generation(
+                    workspace_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+
 class ApprovalRecordSemanticsTests(unittest.TestCase):
     def test_example_validates(self):
         validate_record("generation-approval-record", load_example("generation-approval-record"))

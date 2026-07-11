@@ -17,6 +17,8 @@ SOURCE_DIGEST_PATTERN = re.compile(
     r'<meta name="influencer-os-brand-board-source-digest" content="([0-9a-f]{64})">'
 )
 GENERIC_FAMILIES = {"serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui"}
+AVATAR_ASSET_TYPES = {"brand", "character"}
+AVATAR_READY_STATUSES = {"prompted", "user_provided", "generated", "approved"}
 
 
 def spec_path_for(workspace_dir):
@@ -70,29 +72,67 @@ def _load_spec(workspace_dir):
     return spec_path, spec, reference_library_path, reference_library
 
 
-def _reference_media_source(workspace_dir, assets_by_id, asset_id, expected_type):
+def _asset_media_source(
+    workspace_dir,
+    assets_by_id,
+    asset_id,
+    *,
+    label,
+    expected_types,
+    allowed_statuses,
+    placeholder_statuses,
+):
     asset = assets_by_id.get(asset_id)
     if asset is None:
-        raise ValidationError(f"brand board references missing asset {asset_id!r}")
-    if asset["asset_type"] != expected_type:
+        raise ValidationError(f"brand board references missing {label} asset {asset_id!r}")
+    if asset["asset_type"] not in expected_types:
+        expected = " or ".join(sorted(expected_types))
         raise ValidationError(
-            f"brand board asset {asset_id!r}: expected {expected_type}, "
+            f"brand board {label} asset {asset_id!r}: expected {expected}, "
             f"got {asset['asset_type']}"
         )
-    if asset["asset_status"] == "retired":
-        raise ValidationError(f"brand board references retired asset {asset_id!r}")
-    if asset["asset_status"] in {"planned", "prompted"}:
+    if asset["asset_status"] not in allowed_statuses:
+        allowed = ", ".join(sorted(allowed_statuses))
+        raise ValidationError(
+            f"brand board {label} asset {asset_id!r} must use one of these statuses: "
+            f"{allowed}"
+        )
+    if asset["asset_status"] in placeholder_statuses:
         return ""
     source = asset["path"]
     suffix = Path(source).suffix.lower()
     if suffix not in {".png", ".jpg", ".jpeg", ".webp", ".avif"}:
         raise ValidationError(
-            f"brand board media asset {asset_id!r} must use a supported image file"
+            f"brand board {label} asset {asset_id!r} must use a supported image file"
         )
     source_path = (Path(workspace_dir) / source).resolve()
     if not source_path.is_file():
-        raise ValidationError(f"brand board media asset is missing: {source}")
+        raise ValidationError(f"brand board {label} asset is missing: {source}")
     return source
+
+
+def _reference_media_source(workspace_dir, assets_by_id, asset_id, expected_type):
+    return _asset_media_source(
+        workspace_dir,
+        assets_by_id,
+        asset_id,
+        label=expected_type,
+        expected_types={expected_type},
+        allowed_statuses={"planned", "prompted", "user_provided", "generated", "approved"},
+        placeholder_statuses={"planned", "prompted"},
+    )
+
+
+def _avatar_media_source(workspace_dir, assets_by_id, asset_id):
+    return _asset_media_source(
+        workspace_dir,
+        assets_by_id,
+        asset_id,
+        label="avatar",
+        expected_types=AVATAR_ASSET_TYPES,
+        allowed_statuses=AVATAR_READY_STATUSES,
+        placeholder_statuses={"prompted"},
+    )
 
 
 def _esc(value):
@@ -257,7 +297,15 @@ def _render(workspace_dir, spec_path, spec, reference_library_path, reference_li
         "__WORDMARK__": _esc(spec["wordmark"]["primary"]),
         "__HANDLE_TREATMENT__": _esc(spec["wordmark"]["handle_treatment"]),
         "__SUBMARK__": _esc(spec["wordmark"]["submark"]),
-        "__AVATAR__": _image(workspace_dir, output_dir, spec["avatar_image"], "Avatar crop", "avatar"),
+        "__AVATAR__": _image(
+            workspace_dir,
+            output_dir,
+            _avatar_media_source(
+                workspace_dir, assets_by_id, spec["avatar_asset_id"]
+            ),
+            "Avatar crop",
+            "avatar",
+        ),
         "__AVATAR_GUIDANCE__": _esc(spec["wordmark"]["avatar_guidance"]),
         "__TYPE_ROWS__": type_rows,
         "__PRODUCTION_SPACES__": production_spaces,

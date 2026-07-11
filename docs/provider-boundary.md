@@ -28,7 +28,25 @@ Requires explicit user approval:
 - paid provider calls,
 - bulk generation batches.
 
-Approval must name the exact call or batch. A general desire to create content is not generation approval.
+Approval normally names the exact call or batch. A general desire to create
+content is not generation approval.
+
+## Creator-setup reference standing approval (ADR 0043)
+
+An approved Visual Continuity Plan grants standing approval for **one initial
+generation pass** over exactly its listed creator-setup reference assets, with
+**no second confirmation** immediately before generation. This includes the
+approved profile-avatar and brand-board reference package. The execution layer
+still writes a bounded GenerationApprovalRecord derived from the plan approval
+so provenance and single-use dispatch remain intact.
+
+The authorization is bounded to one call per asset. It does not cover a scope
+change, regeneration, additional variants, production content, video, voice,
+audio, render, upload, a different provider/model than the configured setup
+route, or assets added after plan approval. Those actions require a fresh exact
+call/batch approval. Before dispatch, surface the provider, model, call count,
+and cost note as a notice; do not turn that notice into a second approval prompt
+when the package remains inside the approved plan.
 
 ## Generation provider registry (ADR 0023)
 
@@ -36,12 +54,21 @@ Generation providers are registered in `influencer_os/providers/registry.py`
 and listed by `python3 -m influencer_os list-providers`. Every row is
 structurally `approval_model: exact_approval` — the registry fails closed at
 import if a row disagrees — and key presence makes a provider *available*,
-never *approved*. The only dispatch entry point
-(`influencer_os.providers.dispatch.dispatch_generation`) requires an approved
+never *approved*. The dispatch entry points (`dispatch_generation` for projects
+and `dispatch_reference_generation` for creator setup) require an approved
 GenerationApprovalRecord id as a positional argument, so no code path can
-reach an adapter without a recorded human approval. The
+reach an adapter without a recorded human approval. For creator-setup reference
+assets, ADR 0043 allows that record to derive from the approved Visual
+Continuity Plan instead of asking for a second confirmation. The
 `INFLUENCER_OS_DISABLE_PAID_CONNECTORS` kill switch disables generation
 dispatch entirely, even with an approved record.
+
+The setup runtime is explicit and auditable: run
+`derive-setup-reference-approvals` with the provider, model, and cost notice,
+then consume each emitted record with `dispatch-reference-generation`. The
+record freezes the approved plan plus that routing scope and is single-use.
+Legacy workspaces can be upgraded idempotently with
+`migrate-visual-foundation` before validation.
 
 Per ADR 0023 Decision 3, the only registered adapter is the deterministic
 `mock` test double; the first real (paid) provider adapter is chosen
@@ -57,7 +84,8 @@ bounded by a per-run call cap (`INFLUENCER_OS_CONNECTOR_MAX_CALLS`) and a kill
 switch (`INFLUENCER_OS_DISABLE_PAID_CONNECTORS=1`), and does not weaken any of
 the generation approvals above (image, video, render, audio, transcription
 fallback, uploads, bulk batches), which still require exact per-call/batch
-approval. A connector with no key is simply unavailable and the run falls back
+approval except for ADR 0043's one-pass approved-plan setup references. A
+connector with no key is simply unavailable and the run falls back
 to built-in public `WebSearch`/`WebFetch`.
 
 `bradautomates/claude-video` `/watch` is allowed as an external video-understanding research tool only within this boundary. It may use `yt-dlp` and `ffmpeg` locally for public URLs or user-provided local files. It must not use logged-in platform sessions, private URLs, scraping APIs, cookies, or platform API credentials in v1. Ask before first-run setup that installs tools or before processing a video batch.

@@ -87,7 +87,8 @@ The durable source of truth is always the filesystem:
   research, projects, analytics, memory, and local skill overrides;
 - SQL and semantic search are rebuildable projections, not canonical stores;
 - provider-backed generation, render, upload, paid, or irreversible calls sit
-  outside the planning loop until the user approves the exact call or batch.
+  outside the planning loop until the user approves the exact call or batch,
+  except for ADR 0043's one-pass approved-plan setup references.
 
 ## Operating Model Diagram
 
@@ -183,7 +184,7 @@ flowchart LR
 | Learning OS | Distilling performance evidence into future-useful creator lessons. | Output Package, Published Post Records, Analytics Snapshots, Performance Summary draft. | Performance Summary, distilled creator learnings, Creator Memory updates, indexable summaries. | Raw analytics as default memory, provider calls, project creation. | `performance-summary.json`, `memory/`, `schemas/performance-summary.schema.json` |
 | Lookup Projections | Rebuildable query and retrieval layers over creator files. | Creator workspace files, selected summaries, content hashes, record IDs. | SQL exact lookup, semantic decision-support lookup. | Becoming the canonical record store, indexing raw analytics or secrets by default. | `workspace-library/index/influencer-os.sqlite`, `workspace-library/index/semantic/` |
 | Runtime Mechanics | Reusable operational mechanics for scaffolding, syncing, validation, and drift checks. | File paths, manifests, records, CLI args. | Created folders, copied runtime skills, validation results, sync reports. | Business decisions, content policy, provider approval decisions. | `influencer_os/cli.py`, `creator_workspaces.py`, `projects.py`, `validation.py` |
-| Provider Boundary | Exact approval for external, paid, generative, upload, render, or irreversible actions. | Provider-neutral plan plus user-approved exact call or batch. | Approved provider call record later; generated/imported asset provenance. | Planning drafts, research summaries, silent provider execution. | `docs/provider-boundary.md`, future provider registry/approval records |
+| Provider Boundary | Human authorization for external, paid, generative, upload, render, or irreversible actions. | Exact call/batch approval normally; approved Visual Continuity Plan for one bounded initial setup-reference pass. | Approved provider call record; generated/imported asset provenance. | Planning drafts, research summaries, silent provider execution. | `docs/provider-boundary.md`, ADR 0023, ADR 0043 |
 
 ## Boundary Rules
 

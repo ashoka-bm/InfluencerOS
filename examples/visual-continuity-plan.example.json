@@ -169,5 +169,20 @@
     "decided_on": "2026-06-29",
     "decided_by": "user",
     "notes": "User reviewed the candidate recommendations and accepted the Anchor Spaces, Signature Prop, and supporting-motif classifications."
+  },
+  "setup_reference_generation": {
+    "status": "authorized",
+    "asset_ids": [
+      "asset_luna_identity_plate",
+      "asset_luna_living_room",
+      "asset_luna_living_room_wall",
+      "asset_luna_reset_timer",
+      "asset_luna_everyday_outfit",
+      "asset_luna_brand_system"
+    ],
+    "max_calls": 6,
+    "authorized_on": "2026-06-29",
+    "authorized_by": "user",
+    "notice": "One initial generation call per listed creator-setup reference asset is authorized by the approved Visual Continuity Plan."
   }
 }

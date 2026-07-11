@@ -102,6 +102,8 @@ Produce or update:
 - `brand_context/voice-samples.md`
 - `references/visual-continuity-plan.json`
 - `references/reference-library.json`
+- `references/brand/personal-brand-board.json`
+- `references/brand/personal-brand-board.html`
 - `conversion-assets/*.json` when lead magnets, offers, or other conversion
   assets are part of the strategy
 - provider-neutral prompt files under `references/`
@@ -116,6 +118,11 @@ strategy, conversion assets, and pre-research strategy scaffold are accepted or
 explicitly waived. The workspace reaches `production_ready` only after research
 has revised or confirmed that scaffold and the resulting research-informed
 calendar is accepted.
+
+The pre-research strategy scaffold must cover the complete declared planning
+period and exactly satisfy every monthly-mix target. A partial calendar is not
+`strategy_ready`. Both the scaffold and any later research-informed revision
+require current explicit schedule approval metadata.
 
 ## Setup State Reconciliation
 
@@ -186,10 +193,13 @@ Priority question order:
    and other continuity anchors;
 8. content cadence or first-use goals when they affect setup readiness.
 
-For visual creators, strongly recommend a user-provided person reference image:
-it improves identity continuity. The user may decline and allow the system to
-stage a generated identity prompt instead; generation still requires exact
-provider-call approval.
+Every creator requires a social-profile avatar asset, including text-only and
+long-form creators. Ask whether it should use a person, avatar, symbol, monogram,
+product, or brand mark. For human-backed visual creators, strongly recommend a
+user-provided person reference image because it improves identity continuity.
+When no face is appropriate, stage a non-figurative brand-avatar prompt instead.
+Generation is covered by the approved Visual Continuity Plan's one-pass setup
+authorization; changes or regeneration require exact provider-call approval.
 
 ## Platform And Asset Mapping
 
@@ -198,7 +208,7 @@ platforms. Map those platforms into content mediums and setup blockers:
 
 | Platform or surface | Common setup mediums | Setup implication |
 | --- | --- | --- |
-| X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | voice, editorial rules, topic/pillar strategy, publication style, optional portrait/avatar policy |
+| X, LinkedIn, Substack, Medium, blog/newsletter, Reddit text posts | text | voice, editorial rules, topic/pillar strategy, publication style, required profile-avatar asset, and tokenized personal brand board |
 | Instagram feed, Pinterest-style surfaces, image-led blog posts | image, text | person/avatar image policy, image style, brand visual system, optional location/object references |
 | TikTok, Instagram Reels, YouTube Shorts, Facebook Reels | video, text, optional audio | character identity assets, video/photo style, primary locations, outfits, recurring objects, ElevenLabs Voice Design prompt package, spoken/onscreen voice rules |
 | YouTube long-form, podcasts, music/audio-led surfaces | audio, video or text depending on format | ElevenLabs Voice Design prompt package, imported/approved voice sample before spoken generation, pronunciation/tone boundaries, video references when on-camera |
@@ -213,9 +223,9 @@ home); asset-level staging detail lives in `create-reference-library`.
 Setup is not `foundation_ready` for a selected medium until every required
 reference material for that medium is user-provided, approved, or prompt-staged
 with a stable reference asset ID, and media generation permissions remain false
-until the required approved/user-provided references exist. Provider-backed
-creation of the missing materials remains gated by explicit approval for the
-exact call or batch.
+until the required approved/user-provided references exist. The approved Visual
+Continuity Plan authorizes one initial pass over its listed setup references;
+changes, regeneration, and out-of-plan assets remain exact-approved.
 
 ## Subskills
 
@@ -236,7 +246,7 @@ Run these internal phases in order:
    boundary, continue through `create-reference-library` and its canonical
    templates. Import or generate only an exact approved batch, or retain
    `planned`/`prompted` assets for prompt-ready setup.
-10. **Personal brand board**: for image, video, carousel, or story-sequence creators, use `personal-brand-board` only after Reference Library asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
+10. **Personal brand board**: for every creator, use `personal-brand-board` only after the profile-avatar Reference Asset ID and any location/object asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind `avatar_asset_id` to a prompt-staged or available `brand` or `character` asset; bind any production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Text-only and long-form creators may have zero production spaces, but they still require the avatar, palette, typography, templates, and approved board. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
 11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
@@ -255,11 +265,11 @@ Run these internal phases in order:
 14. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
-15. **Generation gate**: stop before any remaining provider-backed generation unless the user approves the exact call or batch.
+15. **Generation gate**: an approved Visual Continuity Plan authorizes one initial generation pass over exactly its listed creator-setup reference assets with no second confirmation. Record or derive the bounded approval package before dispatch. Stop for every scope change, regeneration, production-content asset, video, voice, render, upload, provider/model change, or asset added after plan approval and request exact call/batch approval.
 
 ## Medium-Based Blockers
 
-All creators require tiny runtime context, identity, soul, personal brand, niche, audience, content strategy, boundaries, provenance, and acceptance.
+All creators require tiny runtime context, identity, soul, personal brand, niche, audience, content strategy, boundaries, provenance, acceptance, a prompt-staged or available social-profile avatar asset with a stable ID, and a validated, separately approved tokenized personal brand board.
 
 Text-first creators require brand voice, publication style, and topic/pillar strategy.
 
@@ -294,7 +304,8 @@ Run creator setup as an onboarding hierarchy:
 If setup recommends image, video, voiceover, carousel, or story-sequence
 channels, do not treat the creator foundation as complete until the required
 reference assets for those channels are user-provided, approved, generated
-behind an exact provider-call approval gate, or explicitly waived. For
+under the approved Visual Continuity Plan's bounded initial-pass authorization,
+fresh exact approval after a scope change/regeneration, or an explicit waiver. For
 Instagram, YouTube, TikTok, or other video/image-first channels, this normally
 includes identity-locking character images, video/photo style, recurring
 locations, wardrobe or object references when relevant, brand system, and a
@@ -302,8 +313,10 @@ staged ElevenLabs Voice Design prompt package. Explicit no-voiceover policy can
 block spoken generation, but it does not replace the foundation voice-design
 prompt requirement for audio/video creators.
 
-Before generating those assets, present the exact reference-asset batch implied
-by the selected platforms and ask for approval. Do not move to strategy or post
+Present the exact creator-setup reference asset package as part of the Visual
+Continuity Plan review. Once the user approves that plan, it grants standing
+approval for one initial generation pass over those listed creator-setup
+reference assets, with no second confirmation. Do not move to strategy or post
 creation until this creator-foundation readiness milestone is resolved or explicitly waived.
 Do not create image or video content featuring the creator unless
 `creator_image_generation_allowed` or `creator_video_generation_allowed` is true
@@ -313,7 +326,12 @@ spoken generation; it never waives the permission requirement.
 
 ## Provider Boundary
 
-Drafting files, reference requirements, prompts, shot lists, and generation plans is allowed. Image, video, audio, render, upload, bulk generation, or paid provider calls require explicit user approval for the exact call or batch.
+Drafting files, reference requirements, prompts, shot lists, and generation
+plans is allowed. An approved Visual Continuity Plan grants standing approval
+for one initial generation pass over its listed creator-setup reference assets,
+with no second confirmation. A scope change, regeneration, production content,
+video, voice, audio, render, upload, or provider/model change still requires
+exact call/batch approval.
 
 After any approved provider generation, update `progress/setup-checklist.md`,
 `context/MEMORY.md`, and the daily note in the same run — supersede every
@@ -363,6 +381,14 @@ last.*
 - 2026-07-09: Renamed the influencer appearance choice to Representation
   Model in §Decision Interview so it cannot be confused with ADR 0026's
   planned Creator Type discriminator (`influencer | product | brand`).
+- 2026-07-10: Made the social-profile avatar asset and tokenized personal brand
+  board universal Creator Foundation requirements after the Nova Vale text-first
+  run reached readiness without either asset. Text-only and long-form creators
+  may use a symbol, monogram, product, or brand mark and may have zero production
+  spaces, but must still stage the avatar and obtain distinct board approval.
+- 2026-07-10: Reduced creator-setup image-generation friction per ADR 0043:
+  approving the Visual Continuity Plan now authorizes one initial bounded pass
+  over its listed setup references; scope changes and regeneration remain gated.
 
 ## Self-Update
 

@@ -62,7 +62,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 7. **Applied Social Template or Production Structure**: choose the format-compatible structure that best pulls the viewer through the promoted idea.
 8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.
 9. **Base Generation Plan**: create a provider-neutral generation plan when the selected format needs generated assets.
-10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless the user explicitly approves the exact call or batch.
+10. **Generation Approval Gate**: stop before image, video, audio, render, upload, or paid provider calls unless authorized. For creator-setup reference assets only, an approved Visual Continuity Plan authorizes one initial bounded generation pass with no second confirmation (ADR 0043). All production generation, scope changes, and regeneration require explicit exact call/batch approval.
 
 ## Phase Checklist Contract
 
