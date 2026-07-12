@@ -20,6 +20,13 @@ explicit packet, never the authoring conversation:
 - broad Research Findings and Research Evidence that validate the strategy,
 - Creator Profile.
 
+For the first Review, the conductor supplies no prior review and the emitted
+record sets `research_demand_loop.extra_research_round: 0` with a null prior
+id. For each repeat, the conductor also supplies the prior Strategy Review
+Record and its unresolved Research Demand set. Include that record at
+`reviews/<prior_review_record_id>.json` in `artifact_refs`, link it in
+`research_demand_loop.prior_review_record_id`, and set the round to 1 or 2.
+
 Run after broad research and before the human final approval that grants
 `production_ready`. Record `reviewer_execution.source_skill:
 "review-strategy"` and `execution_mode: bounded_sub_agent`. If that path is
@@ -30,23 +37,25 @@ unavailable, use `fallback_separated_pass` with a truthful `fallback_reason`.
 Findings use only: `strategy`, `evidence`, `schedule`, `positioning`,
 `audience`, and `general`. A finding may set `research_demand: "new"` when it
 names specific missing evidence required before approval, or
-`"carried_forward"` only when repeating an unresolved Demand from an earlier
-review.
+`"carried_forward"` only when repeating an unresolved Demand from that supplied
+prior Review Record; do not let an earlier open question disappear silently.
 
 ## Record Rules
 
 - Set `review_role: strategy`, with the Creator Profile id as the workspace anchor.
 - Never include `project_id` or `concept_approval_id`.
 - `artifact_refs` are workspace-relative paths that resolve.
+- Strategy Review Records require `research_demand_loop`: round 0 has no prior
+  record; rounds 1 and 2 name the immediately prior Strategy Review Record.
 - `approval_status` is an advisory recommendation (`approve`, `revise`, or
   `block`) and halts nothing. State the recommendation aloud to the user.
 
 ## Slice Boundary
 
-The Strategy-block conductor reorder, the Research Demand loop with its
-two-extra-rounds cap, and the `strategy_ready`/`production_ready` checkpoints
-land in slice 3 (ADR 0044 Decision 7). This skill only produces the review
-record; if asked to run that loop or flip readiness, halt and say so.
+This skill only emits the Strategy Review record. The conductors
+(`create-influencer` and `influencer-os`) run the Research Demand loop and
+flip readiness; the terminal record either has no new Demand or is round 2.
+If asked to run that loop or flip readiness yourself, halt and say so.
 
 ## Validation
 

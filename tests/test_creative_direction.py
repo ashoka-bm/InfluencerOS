@@ -673,6 +673,11 @@ class ReviewRecordTests(unittest.TestCase):
                 "setup": "review-creator-setup",
                 "strategy": "review-strategy",
             }[role]
+            if role == "strategy":
+                review["research_demand_loop"] = {
+                    "extra_research_round": 0,
+                    "prior_review_record_id": None,
+                }
             validate_record("review-record", review)
 
     def test_ladder_reviews_require_complete_role_specific_packets(self):
@@ -693,6 +698,11 @@ class ReviewRecordTests(unittest.TestCase):
                         "setup": "review-creator-setup",
                         "strategy": "review-strategy",
                     }[role]
+                    if role == "strategy":
+                        review["research_demand_loop"] = {
+                            "extra_research_round": 0,
+                            "prior_review_record_id": None,
+                        }
                     with self.assertRaises(ValidationError):
                         validate_record("review-record", review)
 
@@ -710,6 +720,11 @@ class ReviewRecordTests(unittest.TestCase):
                 review["findings"] = [review["findings"][0]]
                 review["findings"][0]["area"] = area
                 review["reviewer_execution"]["source_skill"] = forged_skill
+                if role == "strategy":
+                    review["research_demand_loop"] = {
+                        "extra_research_round": 0,
+                        "prior_review_record_id": None,
+                    }
                 with self.assertRaisesRegex(ValidationError, "source_skill"):
                     validate_record("review-record", review)
 
@@ -782,6 +797,10 @@ class ReviewRecordTests(unittest.TestCase):
         workspace_review["findings"] = [workspace_review["findings"][0]]
         workspace_review["findings"][0].update(area="evidence", research_demand="new")
         workspace_review["reviewer_execution"]["source_skill"] = "review-strategy"
+        workspace_review["research_demand_loop"] = {
+            "extra_research_round": 0,
+            "prior_review_record_id": None,
+        }
         validate_record("review-record", workspace_review)
 
         workspace_review["findings"][0]["research_demand"] = "carried_forward"
@@ -1046,6 +1065,170 @@ class WorkspaceReviewRecordTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValidationError, "does not resolve"):
                 validate_creator_workspace(workspace_dir)
+
+
+class StrategyReviewLoopContractTests(unittest.TestCase):
+    """ADR 0044's capped Strategy Review loop is validated at rest."""
+
+    def write_strategy_review(
+        self,
+        workspace_dir,
+        review_id,
+        *,
+        extra_research_round,
+        prior_review_record_id=None,
+        research_demand=None,
+    ):
+        findings_path = workspace_dir / "research" / "findings.md"
+        findings_path.parent.mkdir(parents=True, exist_ok=True)
+        findings_path.write_text(
+            "---\n"
+            "finding_ids:\n"
+            "- finding_luna_fit_desk_reset_lunch\n"
+            "---\n"
+            "# Strategy Findings\n\nFixture evidence.\n"
+        )
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review.update(
+            review_record_id=review_id,
+            review_role="strategy",
+            artifact_refs=[
+                *STRATEGY_REVIEW_PACKET,
+                *(
+                    [f"reviews/{prior_review_record_id}.json"]
+                    if prior_review_record_id
+                    else []
+                ),
+            ],
+            findings=[
+                {
+                    "area": "evidence",
+                    "severity": "low",
+                    "note": "Confirm current platform guidance before approval.",
+                    **(
+                        {"research_demand": research_demand}
+                        if research_demand
+                        else {}
+                    ),
+                }
+            ],
+            research_demand_loop={
+                "extra_research_round": extra_research_round,
+                "prior_review_record_id": prior_review_record_id,
+            },
+        )
+        review["reviewer_execution"]["source_skill"] = "review-strategy"
+        path = workspace_dir / "reviews" / f"{review_id}.json"
+        path.parent.mkdir(exist_ok=True)
+        write_json(path, review)
+        return review
+
+    def mark_terminal(self, workspace_dir, review_id):
+        rewrite_json(
+            workspace_dir / "readiness-gates.json",
+            lambda gates: gates["milestones"]["production"].update(
+                status="ready",
+                approved_on="2026-07-12",
+                approved_by="user",
+                blockers=[],
+                terminal_review_record_id=review_id,
+            ),
+        )
+
+    def test_strategy_review_requires_loop_lineage(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review.update(
+            review_role="strategy",
+            artifact_refs=STRATEGY_REVIEW_PACKET,
+            findings=[
+                {
+                    "area": "evidence",
+                    "severity": "low",
+                    "note": "Confirm current platform guidance before approval.",
+                }
+            ],
+        )
+        review["reviewer_execution"]["source_skill"] = "review-strategy"
+        with self.assertRaisesRegex(ValidationError, "research_demand_loop"):
+            validate_record("review-record", review)
+
+    def test_production_terminal_must_close_the_loop_or_reach_the_cap(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            self.write_strategy_review(
+                workspace_dir,
+                "review_luna_strategy_001",
+                extra_research_round=0,
+                research_demand="new",
+            )
+            self.mark_terminal(workspace_dir, "review_luna_strategy_001")
+            with self.assertRaisesRegex(ValidationError, "issues new Research Demands"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_two_extra_round_cap_and_lineage_allow_production_terminal(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            self.write_strategy_review(
+                workspace_dir,
+                "review_luna_strategy_001",
+                extra_research_round=0,
+                research_demand="new",
+            )
+            self.write_strategy_review(
+                workspace_dir,
+                "review_luna_strategy_002",
+                extra_research_round=1,
+                prior_review_record_id="review_luna_strategy_001",
+                research_demand="new",
+            )
+            self.write_strategy_review(
+                workspace_dir,
+                "review_luna_strategy_003",
+                extra_research_round=2,
+                prior_review_record_id="review_luna_strategy_002",
+                research_demand="carried_forward",
+            )
+            rewrite_json(
+                workspace_dir / "reviews" / "review_luna_strategy_003.json",
+                lambda review: (
+                    review.update(approval_status="block"),
+                    review["findings"][0].update(severity="blocking"),
+                ),
+            )
+            self.mark_terminal(workspace_dir, "review_luna_strategy_003")
+            result = validate_creator_workspace(workspace_dir)
+            self.assertTrue(
+                any("advisory only" in warning for warning in result["warnings"]),
+                result["warnings"],
+            )
+
+    def test_third_extra_round_is_rejected(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review.update(
+            review_role="strategy",
+            artifact_refs=[*STRATEGY_REVIEW_PACKET, "reviews/review_luna_strategy_003.json"],
+            findings=[
+                {
+                    "area": "evidence",
+                    "severity": "low",
+                    "note": "Still missing current evidence.",
+                    "research_demand": "new",
+                }
+            ],
+            research_demand_loop={
+                "extra_research_round": 3,
+                "prior_review_record_id": "review_luna_strategy_003",
+            },
+        )
+        review["reviewer_execution"]["source_skill"] = "review-strategy"
+        with self.assertRaisesRegex(ValidationError, "extra_research_round"):
+            validate_record("review-record", review)
 
 
 if __name__ == "__main__":

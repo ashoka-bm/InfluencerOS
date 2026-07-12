@@ -87,7 +87,7 @@ Source layout per ADR 0017: repo-central, kebab-case, no category prefixes, opti
 | Skill | Category | Role | Status |
 | --- | --- | --- | --- |
 | `influencer-os` | conductor | Content-creation conductor (10 phases; `dependencies` + `## Phase Owners` declared). | [BUILT] |
-| `create-influencer` | conductor | Influencer-setup conductor (15 phases); product/brand routing remains planned under ADR 0026. | [BUILT] |
+| `create-influencer` | conductor | Influencer-setup conductor (22 phases, including the ADR 0044 Strategy-block research/review loop); product/brand routing remains planned under ADR 0026. | [BUILT — Strategy block reordered per ADR 0044/0046] |
 | `create-identity` | setup | `brand_context/identity.md`. | [BUILT] |
 | `create-soul` | setup | `brand_context/soul.md`. | [BUILT] |
 | `create-personal-brand` | setup | `brand_context/personal-brand.md`. | [BUILT] |
@@ -170,9 +170,12 @@ The content conductor owns the pipeline. Per ADR 0017 each conductor declares a 
 
 ```text
 skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + `## Phase Owners` [BUILT — WS10])
-  Phase 1  Creator Profile, Strategy, Schedule             owner: influencer-os (inline)         [BUILT]
+  Phase 1  Creator Profile, Strategy, Strategy Scaffold    owner: influencer-os (inline; strategy_ready is internal) [BUILT]
   Phase 2  Video Understanding Pack (when real videos)     owner: influencer-os (inline, v1)     [BUILT]
-  Phase 3  Research Findings           -> Skill(create-research-findings)                         [BUILT]
+  Phase 3  Research Findings           -> Skill(create-research-findings) (one-time broad research is inside
+             Strategy block; focused scheduled_needs research stays rolling-horizon work)         [BUILT]
+  Phase 3b Strategy Review + Demand loop -> Skill(review-strategy) after re-approved research-informed
+             strategy/schedule; terminal id -> readiness-gates production milestone                [BUILT]
   Phase 4  Opportunity Queue            -> Skill(manage-opportunity-queue)                         [BUILT]
   Phase 5  Concept Approval Gate        -> Skill(approve-concept) + user approval                 [BUILT]
   Phase 6  Project Creation             -> Skill(approve-concept) (exact approved project set)    [BUILT]
@@ -203,7 +206,7 @@ skills/influencer-os/SKILL.md  (content conductor; `dependencies` frontmatter + 
 ```
 
 ```text
-skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exist]
+skills/create-influencer/SKILL.md  (setup conductor; 22 phases)   [BUILT — all owners exist; Strategy block reordered per ADR 0044/0046]
   Phase 2  Identity          -> Skill(create-identity)
   Phase 3  Soul              -> Skill(create-soul)
   Phase 4  Personal brand    -> Skill(create-personal-brand)
@@ -216,13 +219,18 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
              typed avatar/location/object Reference Library links)
   Phase 10 Avatar Image auto-generation (inline: derive-avatar-approval + dispatch-avatar-generation
              on one system_avatar_setup batch record, max_calls 1 — ADR 0045)
-  Phase 11 Setup Review      -> advisory review of foundation + rendered Avatar Image (ADR 0046)
+  Phase 11 Setup Review      -> Skill(review-creator-setup) (advisory review of foundation + rendered Avatar Image; ADR 0046)
   Phase 12 Visual Continuity Plan approval (human; avatar accept/reject decision)
   Phase 13 Remaining reference resolution -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
   Phase 16 Lead-magnet conversion assets -> Skill(create-lead-magnet)
              non-lead-magnet conversion types halt as unsupported in v1
-  Phases 1,14,15,17,18 intake, onboarding records, generation gate, readiness, milestone acceptance (inline)
+  Phase 19 Broad strategy-validating research -> Skill(create-research-findings) (inside Strategy block)
+  Phase 20 Strategy Review -> Skill(review-strategy) (advisory workspace ReviewRecord; never blocks)
+  Phase 21 Research Demand loop -> re-research only Demand findings; at most two extra research rounds
+  Phase 22 production_ready human exit -> terminal Strategy Review id written to
+             readiness-gates.json milestones.production.terminal_review_record_id
+  Phases 1,14,15,17,18 intake, onboarding records, generation gate, readiness, internal scaffold acceptance (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)

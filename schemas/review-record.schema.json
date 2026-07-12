@@ -98,6 +98,22 @@
         }
       }
     },
+    "research_demand_loop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["extra_research_round", "prior_review_record_id"],
+      "properties": {
+        "extra_research_round": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "prior_review_record_id": {
+          "type": ["string", "null"],
+          "pattern": "^review_[a-zA-Z0-9_-]+$"
+        }
+      }
+    },
     "human_waiver": {
       "type": "object",
       "additionalProperties": false,
@@ -156,7 +172,37 @@
             { "contains": { "pattern": "^research/runs/research_run_[a-zA-Z0-9_-]+/evidence\\.jsonl$" } }
           ]
         }
-      }
+      },
+      "required": ["research_demand_loop"],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "research_demand_loop": {
+                  "properties": {
+                    "extra_research_round": { "const": 0 },
+                    "prior_review_record_id": { "const": null }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "research_demand_loop": {
+                  "properties": {
+                    "extra_research_round": { "enum": [1, 2] },
+                    "prior_review_record_id": {
+                      "type": "string",
+                      "pattern": "^review_[a-zA-Z0-9_-]+$"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "properties": {

@@ -472,6 +472,10 @@ def _write_terminal_strategy_review(workspace_dir):
     review.update(
         review_record_id="review_luna_strategy_001",
         review_role="strategy",
+        research_demand_loop={
+            "extra_research_round": 0,
+            "prior_review_record_id": None,
+        },
         artifact_refs=[
             "creator-profile.json",
             "content-strategy.json",
@@ -787,6 +791,14 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
                 validate_creator_workspace(workspace_dir)
             self.assertIn("content-strategy.json", str(ctx.exception))
             self.assertIn("approved", str(ctx.exception))
+
+    def test_strategy_ready_rejects_a_waived_scaffold_checkpoint(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+            write_readiness_milestones(workspace_dir, strategy_status="waived")
+
+            with self.assertRaisesRegex(ValidationError, "must be ready"):
+                validate_creator_workspace(workspace_dir)
 
     def test_strategy_ready_allows_a_drafted_conversion_asset(self):
         with tempfile.TemporaryDirectory() as temp_dir:

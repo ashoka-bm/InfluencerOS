@@ -1242,6 +1242,16 @@ def validate_review_record_semantics(record):
                 f"review record {review_id}: workspace-scoped review {review_role!r} "
                 "must not carry concept_approval_id"
             )
+    if review_role == "strategy" and "research_demand_loop" not in record:
+        raise ValidationError(
+            f"review record {review_id}: strategy reviews require "
+            "research_demand_loop"
+        )
+    if review_role != "strategy" and "research_demand_loop" in record:
+        raise ValidationError(
+            f"review record {review_id}: research_demand_loop is only "
+            "allowed on strategy reviews"
+        )
     allowed_areas = (
         CONTENT_BEAT_SPINE_AREAS
         if review_role in PROJECT_SCOPED_REVIEW_ROLES

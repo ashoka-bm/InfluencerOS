@@ -235,7 +235,7 @@ An immutable sequential version of the locked Content Strategy and schedule shap
 _Avoid_: in-place strategy edit
 
 **Research Demand**:
-A Review finding that names specific missing evidence the artifact needs before approval. The shipped machine-readable Review Record marker is `research_demand: "new"` or `"carried_forward"`, distinguishing a new Demand from a repeated unresolved one; the Strategy block's loop cap and conductor wiring land with slice 3. Research Demands drive the research-and-review loop in every cadence block; the loop closes when a Review issues no new Research Demands, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
+A Review finding that names specific missing evidence the artifact needs before approval. The shipped machine-readable Review Record marker is `research_demand: "new"` or `"carried_forward"`, distinguishing a new Demand from a repeated unresolved one. The Strategy block's loop cap and conductor wiring are live: each Strategy Review records its prior-review lineage and an `extra_research_round` of 0, 1, or 2; Research Demands drive the research-and-review loop, which closes when a Review issues no new Research Demands or reaches round 2, and remaining Demands attach to the human approval as open questions.
 
 **Setup Review**:
 The advisory bounded sub-agent Review inside Creator Setup that judges the text foundation and the auto-generated Avatar Image together, before fixes and the human Visual Continuity Plan approval (ADR 0046).

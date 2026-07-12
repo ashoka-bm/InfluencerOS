@@ -167,6 +167,10 @@ def write_strategy_review_fixture(workspace_dir):
     review.update(
         review_record_id="review_luna_strategy_001",
         review_role="strategy",
+        research_demand_loop={
+            "extra_research_round": 0,
+            "prior_review_record_id": None,
+        },
         artifact_refs=[
             "creator-profile.json",
             "content-strategy.json",

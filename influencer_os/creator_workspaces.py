@@ -897,6 +897,7 @@ def validate_creator_workspace(workspace_path):
     review_warnings, reviews_by_id = _validate_workspace_review_records(
         workspace_dir, manifest, reference_library
     )
+    _validate_strategy_review_loops(reviews_by_id)
     _validate_ladder_review_approval_refs(
         workspace_dir,
         reference_library,
@@ -1034,6 +1035,72 @@ def _validate_workspace_review_records(workspace_dir, manifest, reference_librar
     return warnings, reviews_by_id
 
 
+def _review_has_new_research_demand(review):
+    return any(
+        finding.get("research_demand") == "new"
+        for finding in review["findings"]
+    )
+
+
+def _validate_strategy_review_loops(reviews_by_id):
+    """Validate ADR 0044's two-extra-round Strategy Review loop at rest."""
+    for review in reviews_by_id.values():
+        if review["review_role"] != "strategy":
+            continue
+        review_id = review["review_record_id"]
+        loop = review["research_demand_loop"]
+        extra_round = loop["extra_research_round"]
+        prior_review_id = loop["prior_review_record_id"]
+        if extra_round == 0:
+            if prior_review_id is not None:
+                raise ValidationError(
+                    f"Strategy Review {review_id} round 0 must not name a prior review"
+                )
+            continue
+
+        prior_review = reviews_by_id.get(prior_review_id)
+        if prior_review is None:
+            raise ValidationError(
+                f"Strategy Review {review_id} prior_review_record_id {prior_review_id!r} "
+                "does not resolve under workspace reviews/"
+            )
+        if prior_review["review_role"] != "strategy":
+            raise ValidationError(
+                f"Strategy Review {review_id} prior_review_record_id {prior_review_id!r} "
+                "must reference a strategy review"
+            )
+        prior_loop = prior_review["research_demand_loop"]
+        if prior_loop["extra_research_round"] != extra_round - 1:
+            raise ValidationError(
+                f"Strategy Review {review_id} round {extra_round} must follow "
+                f"round {extra_round - 1}"
+            )
+        if f"reviews/{prior_review_id}.json" not in review["artifact_refs"]:
+            raise ValidationError(
+                f"Strategy Review {review_id} must include its prior Strategy Review "
+                "Record in artifact_refs"
+            )
+        if not _review_has_new_research_demand(prior_review):
+            raise ValidationError(
+                f"Strategy Review {review_id} may run only after prior review "
+                f"{prior_review_id} issues new Research Demands"
+            )
+        prior_demands = {
+            finding["note"]
+            for finding in prior_review["findings"]
+            if finding.get("research_demand") in {"new", "carried_forward"}
+        }
+        for finding in review["findings"]:
+            if (
+                finding.get("research_demand") == "carried_forward"
+                and finding["note"] not in prior_demands
+            ):
+                raise ValidationError(
+                    f"Strategy Review {review_id} marks a Demand carried_forward "
+                    "that is not unresolved in its prior Strategy Review"
+                )
+
+
 def _validate_ladder_review_approval_refs(
     workspace_dir,
     reference_library,
@@ -1059,12 +1126,21 @@ def _validate_ladder_review_approval_refs(
 
     production = readiness_state["milestones"]["production"]
     if production["status"] == "ready":
-        _validate_terminal_review_ref(
+        terminal_review = _validate_terminal_review_ref(
             production["terminal_review_record_id"],
             "strategy",
             reviews_by_id,
             "production readiness approval",
         )
+        loop = terminal_review["research_demand_loop"]
+        if (
+            loop["extra_research_round"] < 2
+            and _review_has_new_research_demand(terminal_review)
+        ):
+            raise ValidationError(
+                "production readiness terminal Strategy Review issues new Research "
+                "Demands before the two-extra-round cap; continue the Research Demand loop"
+            )
 
 
 def _validate_terminal_review_ref(review_id, expected_role, reviews_by_id, approval_label):
@@ -1737,8 +1813,8 @@ def _media_permission_blockers(readiness_state, creator_profile, active_assets):
 def _strategy_stage_blockers(workspace_dir, readiness_state, content_strategy, creator_profile):
     blockers = []
     strategy_milestone = readiness_state["milestones"]["strategy"]
-    if strategy_milestone["status"] not in {"ready", "waived"}:
-        blockers.append("strategy readiness milestone is not ready or waived in readiness-gates.json")
+    if strategy_milestone["status"] != "ready":
+        blockers.append("strategy readiness milestone must be ready; the required scaffold may not be waived")
     if content_strategy["strategy_status"] != "approved":
         blockers.append("content-strategy.json must have strategy_status 'approved'")
 

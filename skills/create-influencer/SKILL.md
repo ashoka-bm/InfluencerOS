@@ -11,6 +11,9 @@ dependencies:
   - create-runtime-context
   - create-reference-library
   - create-lead-magnet
+  - create-research-findings
+  - review-creator-setup
+  - review-strategy
 ---
 
 # Create An Influencer
@@ -113,11 +116,16 @@ Produce or update:
 
 The creator foundation step is complete when the Creator Workspace is
 `foundation_ready` for the accepted selected channels and foundation mode.
-Creator onboarding is complete at `strategy_ready`: the profile, foundation,
-strategy, conversion assets, and pre-research strategy scaffold are accepted or
-explicitly waived. The workspace reaches `production_ready` only after research
-has revised or confirmed that scaffold and the resulting research-informed
-calendar is accepted.
+`strategy_ready` is an internal checkpoint inside the Strategy block: the
+profile, foundation, strategy, conversion assets, and pre-research strategy
+scaffold are accepted by the human; the required scaffold must be approved; it
+may not be waived.
+The block then runs broad
+strategy-validating research, updates the scaffold, runs the Strategy Review
+and its Research Demand loop, and ends at `production_ready` — the human final
+approval that is the Strategy block's exit and completes creator onboarding.
+`production_ready` comes only after research has revised or confirmed the
+scaffold and the resulting research-informed calendar is accepted.
 
 The pre-research strategy scaffold must cover the complete declared planning
 period and exactly satisfy every monthly-mix target. A partial calendar is not
@@ -298,9 +306,39 @@ Run these internal phases in order:
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-18. **Milestone acceptance**: ask for approval before advancing each milestone:
-    `profile_ready`, `foundation_ready`, `strategy_ready`, and
-    `production_ready`.
+18. **Milestone and internal scaffold acceptance**: ask for approval before
+    advancing `profile_ready` and `foundation_ready`. Draft and present the
+    complete pre-research strategy scaffold, then accept it at `strategy_ready`;
+    this is an internal checkpoint inside the Strategy block, not the end of
+    onboarding.
+19. **Broad strategy-validating research**: run broad research inside the
+    Strategy block to validate the drafted strategy, platform roles, cadence,
+    compliance, conversion path, and derivative mechanics. Update both
+    `content-strategy.json` and the scaffold from the Research Findings and
+    Evidence; rebuild and present the calendar, then obtain fresh human
+    approval of the revised strategy and schedule before any Strategy Review.
+    Retain the resulting research run ids in the schedule's research basis.
+20. **Strategy Review**: invoke `review-strategy` as an advisory bounded
+    sub-agent with only the drafted `content-strategy.json`, approved scaffold,
+    broad Research Findings/Evidence, and Creator Profile. The first review
+    records `research_demand_loop.extra_research_round: 0`. Each repeat also
+    receives the prior Strategy Review Record and its unresolved Research
+    Demand set, records that review id in `research_demand_loop`, and includes
+    it in `artifact_refs`; it never blocks.
+21. **Research Demand loop**: re-research only findings flagged
+    `research_demand: "new"`, update and re-approve the strategy/scaffold as
+    evidence warrants, and invoke another Strategy Review. Set the repeat
+    review's `extra_research_round` to 1, then at most 2. Close the loop when a
+    Strategy Review issues no new Research Demands or round 2 is reached.
+    Attach any leftover Demands from the terminal record to the
+    `production_ready` approval as open questions.
+22. **Production-ready human exit**: present the research-informed strategy,
+    calendar, and terminal Strategy Review for the human final approval that
+    grants `production_ready`, the Strategy block's exit. Write that terminal
+    review's `review_record_id` to
+    `readiness-gates.json` `milestones.production.terminal_review_record_id`,
+    and state its remaining `research_demand` findings aloud as the approval's
+    open questions.
 
 ## Medium-Based Blockers
 
@@ -329,10 +367,19 @@ Run creator setup as an onboarding hierarchy:
 2. **Strategy**: the platform roles, conversion path, lead magnet or offer
    mechanism, game-theory cadence, monthly format mix per platform, and
    related-post chains such as a Substack article feeding Instagram or TikTok
-   clips.
+   clips. Its approved pre-research scaffold is the `strategy_ready` internal
+   checkpoint inside the Strategy block.
+
+   Still inside the Strategy block, run broad strategy-validating research,
+   update the strategy and scaffold, invoke the advisory Strategy Review through
+   `review-strategy`, and close its Research Demand loop when a Review issues no
+   new Demands. Run at most two extra research rounds; surface any remaining
+   Demands as open questions at the final approval.
 3. **Production Readiness**: create required lead magnets via
    `create-lead-magnet`; halt and surface other unsupported conversion-asset
-   types. Confirm or skip channel handles, then translate strategy into slots.
+   types. Confirm or skip channel handles, then accept the research-informed
+   calendar at `production_ready` — the human final approval and Strategy
+   block's exit — while recording the terminal Strategy Review reference.
 4. **Post Production**: research and create individual posts only after the
    creator foundation and strategy calendar are approved.
 
@@ -429,6 +476,11 @@ last.*
   one designated Avatar Image first on a bounded `system_avatar_setup` record
   with no human pre-approval; the human accepts or rejects it at Visual
   Continuity Plan approval, which still authorizes only the remaining reference pass.
+- 2026-07-12: Reordered the Strategy block per ADR 0044 Decision 7 and ADR
+  0046 — `strategy_ready` is its internal scaffold checkpoint; broad research,
+  Strategy Review, and the capped Research Demand loop precede the human
+  `production_ready` exit. See §Output Contract, §Subskills, and §Setup
+  Readiness Hierarchy.
 
 ## Self-Update
 

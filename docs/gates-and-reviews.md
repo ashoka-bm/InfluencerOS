@@ -68,12 +68,19 @@ an approved Visual Continuity Plan names its Setup Review in
 `selection_review.terminal_review_record_id`, and a ready production milestone
 names its Strategy Review in `terminal_review_record_id`. Workspace validation
 resolves each reference under `reviews/` and verifies its expected role.
+Strategy Review Records carry `research_demand_loop`: round 0 has no prior
+review, while rounds 1 and 2 link the immediately prior Strategy Review Record
+and include it in the review packet. Workspace validation resolves that lineage,
+requires each repeat to follow a prior `new` Demand, and permits a ready
+production milestone only when the terminal Review has no new Demand or reaches
+round 2. The conductor surfaces any remaining Demand findings from that terminal
+Review as open questions at human approval.
 
 ## Built Reviews And Passes (v1 First Slice)
 
 - `review-hook-payoff` — Review. Checks the hook earns attention, the payoff is delivered and traces to the promoted idea's `intended_payoff`, the body sustains retention, and the CTA follows from the payoff.
 - `review-creator-setup` — Setup Review. Advises on the text foundation, Avatar Image, and draft Visual Continuity Plan.
-- `review-strategy` — Strategy Review. Advises on the drafted strategy, schedule, and evidence packet.
+- `review-strategy` — Strategy Review. Advises on the re-approved research-informed strategy, schedule, and evidence packet; repeat packets include the prior Review Record and unresolved Demand set.
 - `clear-writing-pass` — Pass. Removes clutter and filler from drafted text; bounded edit depth; change trace; no record.
 - `human-voice-pass` — Pass. Strips AI tells against the creator's actual voice (Creator Profile + voice samples); change trace; no record.
 

@@ -7,6 +7,7 @@ dependencies:
   - approve-concept
   - apply-social-template
   - create-production-plan
+  - review-strategy
   - review-hook-payoff
   - clear-writing-pass
   - human-voice-pass
@@ -53,7 +54,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 
 ## Phase Order
 
-1. **Creator Profile, Content Strategy, and Strategy Scaffold**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. Calendar slots establish publishing demand: date or window, platform, format, editorial goal or pillar, funnel role, and derivative relationships. Do not preselect specific premises, hooks, or titles merely to make a month look complete. Before research, slots are a `strategy_scaffold`; rebuild and present `boards/content-calendar.html` for human review, then stop at `strategy_ready`.
+1. **Creator Profile, Content Strategy, and Strategy Scaffold**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. Calendar slots establish publishing demand: date or window, platform, format, editorial goal or pillar, funnel role, and derivative relationships. Do not preselect specific premises, hooks, or titles merely to make a month look complete. Before research, slots are a `strategy_scaffold`; rebuild and present `boards/content-calendar.html` for human review. Stopping at `strategy_ready` is an internal checkpoint inside the Strategy block, not a stage boundary: the block continues through broad research, Strategy Review, and the human final approval that grants `production_ready`.
 
    The scaffold must cover the full declared planning period. For every
    `content-strategy.json.monthly_mix` row, its slot count must exactly match
@@ -61,7 +62,7 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
    approval metadata in `content-schedule.json`; a partial calendar cannot
    claim `strategy_ready`.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
-3. **Research Intelligence, Findings, and Rolling Slot Revision**: broad research may validate platform strategy, cadence, compliance, and derivative mechanics, but it does not research every post in a monthly schedule. For each upcoming anchor slot, run focused `scheduled_needs` research before shortlisting or promotion, and produce multiple evidence-backed candidates when credible alternatives exist. Replace the slot's generic purpose with a specific topic only after human selection. Derivatives may inherit the selected anchor's subject evidence, but still need native format adaptation; high-stakes factual claims require current primary-source verification for the exact unit. Keep later slots open and repeat on a rolling horizon.
+3. **Research Intelligence, Findings, and Rolling Slot Revision**: broad research validating platform strategy, cadence, compliance, and derivative mechanics runs once inside the Strategy block. Apply its evidence to both `content-strategy.json` and `content-schedule.json`, rebuild the calendar, and obtain fresh human approval of the revised strategy and schedule before each Strategy Review; no Review may assess the pre-research artifacts. The schedule must carry current approval metadata and a `research_informed` basis. It then feeds the Strategy Review and Research Demand loop before the block's human final approval/exit at `production_ready`; `production_ready` is not granted by a deterministic check. By contrast, per-anchor focused `scheduled_needs` research remains ongoing rolling-horizon pipeline work in Weekly Planning Cycle territory (slice 6): before shortlisting or promotion, produce multiple evidence-backed candidates when credible alternatives exist. Replace the slot's generic purpose with a specific topic only after human selection. Derivatives may inherit the selected anchor's subject evidence, but still need native format adaptation; high-stakes factual claims require current primary-source verification for the exact unit. Keep later slots open and repeat on a rolling horizon. Invoke `review-strategy` after each approved revision. Its first Review Record has `research_demand_loop.extra_research_round: 0`; repeats link the prior Strategy Review Record and use rounds 1 then 2. The Strategy block closes when the Review issues no new Demands, or at the two extra research rounds cap; remaining Demands are open questions for the human final approval. Write that terminal review's id to `readiness-gates.json` `milestones.production.terminal_review_record_id`.
 4. **Opportunity Queue**: add or update scored Content Opportunities grounded in findings, evidence, schedule state, and creator fit; assign an opportunity to a Campaign Concept when the campaign direction is known.
 5. **Concept Approval Gate**: ask the user to approve the full approval package — including commercial-expression ceilings and the exact Project set — before creating production work. Recommend options if useful, but do not silently approve a concept.
    Staging or constructing production work is mechanically blocked until the
@@ -93,7 +94,7 @@ For the pre-research Phase 1 scaffold review, the required sequence is:
 5. run `validate calendar` and `validate workspace` before claiming
    `strategy_ready`.
 
-After broad Phase 3 research, attach completed baseline runs in
+After the one-time broad research inside the Strategy block, attach completed baseline runs in
 `research_basis.research_run_ids` when they materially inform the cadence. This
 global basis does not imply that every slot has post-level research. For each
 anchor, require a resolvable focused research run on the queue candidates before
@@ -133,6 +134,7 @@ Phase Owners table below maps every phase to its owner and invocation.
 | 1. Creator Profile, Content Strategy, Schedule | `influencer-os` (inline) | — |
 | 2. Video Understanding Pack | `influencer-os` (inline, v1) | — |
 | 3. Research Findings | `create-research-findings` | `Skill(skill: "create-research-findings")` |
+| 3b. Strategy Review and Research Demand loop | `review-strategy` (advisory review) + `influencer-os` (inline loop) | `Skill(skill: "review-strategy")`; re-run only for new Research Demands, at most twice |
 | 4. Opportunity Queue | `manage-opportunity-queue` | `Skill(skill: "manage-opportunity-queue")` |
 | 5. Concept Approval Gate | `approve-concept` + user approval | `Skill(skill: "approve-concept")` |
 | 6. Project Creation | `approve-concept` (an approval creates its exact Project set) | `Skill(skill: "approve-concept")` |
@@ -249,6 +251,10 @@ newest last.*
   — see §Record Constructors And Anticipation. Seeds replace hand-authored
   records wherever `scaffold --list` names the type; deterministic local
   work starts at its earliest knowledge point.
+- 2026-07-12: Aligned Phase 1 and Phase 3 with ADR 0044 Decision 7 —
+  `strategy_ready` is internal to the Strategy block; one-time broad research,
+  Strategy Review, and the capped Research Demand loop precede its human
+  `production_ready` exit. Focused `scheduled_needs` research stays rolling-horizon work.
 
 ## Self-Update
 

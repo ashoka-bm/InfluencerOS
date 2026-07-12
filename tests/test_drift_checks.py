@@ -569,6 +569,49 @@ def skill_body(skill_name):
     return text.split("---", 2)[2] if text.startswith("---") else text
 
 
+class StrategyBlockCadenceDriftTests(unittest.TestCase):
+    """ADR 0044's Strategy-block order belongs to both conductors."""
+
+    def test_strategy_block_conductors_keep_the_adr_0044_order(self):
+        create_influencer = read_repo_text("skills/create-influencer/SKILL.md")
+        influencer_os = read_repo_text("skills/influencer-os/SKILL.md")
+        review_strategy = read_repo_text("skills/review-strategy/SKILL.md")
+
+        for path, text in (
+            ("skills/create-influencer/SKILL.md", create_influencer),
+            ("skills/influencer-os/SKILL.md", influencer_os),
+        ):
+            self.assertIn("internal checkpoint", text, f"{path} must demote strategy_ready")
+            self.assertIn("inside the Strategy block", text, f"{path} must place broad research in the block")
+            self.assertIn("two extra research rounds", text, f"{path} must cap Research Demand rounds")
+
+        self.assertIn("Strategy Review", create_influencer)
+        self.assertIn("review-strategy", create_influencer)
+        self.assertRegex(
+            create_influencer,
+            r"human final\s+approval that is the Strategy block's exit",
+        )
+        self.assertIn("Strategy Review", influencer_os)
+        self.assertIn("review-strategy", frontmatter_dependencies("influencer-os"))
+        self.assertRegex(
+            influencer_os,
+            r"Strategy Review.*review-strategy|review-strategy.*Strategy Review",
+        )
+        self.assertIn("terminal_review_record_id", influencer_os)
+        self.assertIn(
+            "human final approval/exit at `production_ready`", influencer_os
+        )
+        self.assertNotIn(
+            "Creator onboarding is complete at strategy_ready", create_influencer
+        )
+        self.assertIn("review-strategy", frontmatter_dependencies("create-influencer"))
+        self.assertIn("required scaffold must be approved", create_influencer)
+        self.assertIn("may not be waived", create_influencer)
+        self.assertIn("prior Strategy Review Record", review_strategy)
+        self.assertIn("unresolved Research Demand set", review_strategy)
+        self.assertNotIn("land in slice 3", review_strategy)
+
+
 class ResearchEnumDriftTests(unittest.TestCase):
     def iter_enums_by_names(self, node, kinds, path=""):
         """Yield (location, kind, enum-or-None) for every pinned-name
