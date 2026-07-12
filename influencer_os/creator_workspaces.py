@@ -1042,15 +1042,10 @@ def _validate_visual_continuity_selection(
         board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
         if board_path.exists():
             board_avatar_id = load_json(board_path)["avatar_asset_id"]
-            board_avatar = assets_by_id.get(board_avatar_id)
-            if (
-                board_avatar is not None
-                and board_avatar["asset_status"] in {"planned", "prompted"}
-                and board_avatar_id not in asset_ids
-            ):
+            if board_avatar_id in asset_ids:
                 raise ValueError(
                     "Visual Continuity Plan setup reference generation package must "
-                    f"include pending brand-board avatar asset {board_avatar_id!r}"
+                    f"exclude designated brand-board avatar asset {board_avatar_id!r}"
                 )
     elif generation_auth["status"] != "not_authorized":
         raise ValueError(

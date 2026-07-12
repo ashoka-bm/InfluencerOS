@@ -240,6 +240,32 @@ class CreatorSetupStandingApprovalTests(unittest.TestCase):
                     cost_note="Changed route.",
                 )
 
+    def test_visual_plan_derivation_excludes_the_designated_avatar(self):
+        from influencer_os.generation import derive_setup_reference_approvals
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._prompt_ready_workspace(temp_dir)
+            board = json.loads(
+                (workspace_dir / "references" / "brand" / "personal-brand-board.json").read_text()
+            )
+            plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+            plan = json.loads(plan_path.read_text())
+            plan["setup_reference_generation"]["asset_ids"].append(
+                board["avatar_asset_id"]
+            )
+            plan["setup_reference_generation"]["max_calls"] = len(
+                plan["setup_reference_generation"]["asset_ids"]
+            )
+            write_json(plan_path, plan)
+
+            with self.assertRaisesRegex(ValidationError, "exclude the designated Avatar Image"):
+                derive_setup_reference_approvals(
+                    workspace_dir,
+                    provider_id="mock",
+                    model="mock-1",
+                    cost_note="Mock; zero cost.",
+                )
+
     def test_setup_approval_derivation_refuses_shared_lock(self):
         from influencer_os.generation import derive_setup_reference_approvals
 
@@ -429,6 +455,285 @@ class CreatorSetupStandingApprovalTests(unittest.TestCase):
                 )
 
 
+class AvatarAutoGenerationTests(unittest.TestCase):
+    """ADR 0045's single, system-derived creator-setup call."""
+
+    def _avatar_prompt_ready_workspace(self, temp_dir):
+        from influencer_os.brand_boards import rebuild_brand_board
+        from tests.test_readiness_validation import make_ready_workspace
+
+        workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
+        profile_path = workspace_dir / "creator-profile.json"
+        profile = json.loads(profile_path.read_text())
+        profile["content_strategy"]["content_mediums"] = ["text"]
+        profile["reference_refs"]["primary_character_asset_ids"] = []
+        profile["reference_refs"]["primary_location_asset_ids"] = []
+        profile["reference_refs"].pop("primary_video_style_asset_id", None)
+        write_json(profile_path, profile)
+
+        board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+        board = json.loads(board_path.read_text())
+        board["production_spaces"] = []
+        board["signature_props"] = []
+
+        library_path = workspace_dir / "references" / "reference-library.json"
+        library = json.loads(library_path.read_text())
+        avatar_id = board["avatar_asset_id"]
+        avatar = next(asset for asset in library["assets"] if asset["asset_id"] == avatar_id)
+        avatar["asset_status"] = "prompted"
+        avatar["prompt_path"] = "references/character/avatar.prompt.md"
+        (workspace_dir / avatar["path"]).unlink(missing_ok=True)
+        prompt_path = workspace_dir / avatar["prompt_path"]
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text("Prompt for the platform-facing avatar.\n")
+        library["assets"] = [
+            avatar,
+            next(asset for asset in library["assets"] if asset["asset_id"] == "asset_luna_brand_system"),
+            next(asset for asset in library["assets"] if asset["asset_id"] == "asset_luna_elevenlabs_voice_design"),
+        ]
+        write_json(library_path, library)
+        declared_prompts = {
+            asset["prompt_path"] for asset in library["assets"] if asset.get("prompt_path")
+        }
+        for path in (workspace_dir / "references").rglob("*.prompt.md"):
+            if path.relative_to(workspace_dir).as_posix() not in declared_prompts:
+                path.unlink()
+        write_json(board_path, board)
+
+        plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
+        plan = json.loads(plan_path.read_text())
+        plan["candidates"] = []
+        plan["selection_review"] = {
+            "status": "draft",
+            "presented_on": None,
+            "decided_on": None,
+            "decided_by": None,
+            "notes": "Avatar generation precedes Visual Continuity Plan approval.",
+        }
+        plan["setup_reference_generation"] = {
+            "status": "not_authorized",
+            "asset_ids": [],
+            "max_calls": 0,
+            "authorized_on": None,
+            "authorized_by": None,
+            "notice": "Visual Continuity Plan has not been approved; setup reference generation is not authorized.",
+        }
+        write_json(plan_path, plan)
+        rebuild_brand_board(workspace_dir)
+        return workspace_dir, avatar_id
+
+    def test_avatar_approval_derives_without_visual_continuity_plan(self):
+        from influencer_os.generation import derive_avatar_approval
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, avatar_id = self._avatar_prompt_ready_workspace(temp_dir)
+            paths = derive_avatar_approval(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )
+
+            self.assertEqual(len(paths), 1)
+            record = json.loads(paths[0].read_text())
+            self.assertEqual(record["approval_basis"], "system_avatar_setup")
+            self.assertEqual(record["scope"], "batch")
+            self.assertEqual(record["max_calls"], 1)
+            self.assertEqual(record["reference_asset_id"], avatar_id)
+            self.assertEqual(record["status"], "approved")
+            self.assertNotIn("user_approval_statement", record)
+            self.assertEqual(len(record["requested_assets"]), 1)
+            self.assertEqual(record["requested_assets"][0]["asset_kind"], "image")
+            self.assertNotIn(
+                "user_approval_statement",
+                inspect.signature(derive_avatar_approval).parameters,
+            )
+
+    def test_avatar_dispatch_generates_with_no_prompt_and_reconciles(self):
+        from influencer_os.generation import derive_avatar_approval
+        from influencer_os.providers.dispatch import dispatch_avatar_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, avatar_id = self._avatar_prompt_ready_workspace(temp_dir)
+            approval_path = derive_avatar_approval(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            record = json.loads(approval_path.read_text())
+            calls = dispatch_avatar_generation(
+                workspace_dir,
+                record["generation_approval_record_id"],
+                config=BASE_CONFIG,
+            )
+
+            self.assertEqual(len(calls), 1)
+            library = json.loads(
+                (workspace_dir / "references" / "reference-library.json").read_text()
+            )
+            avatar = next(asset for asset in library["assets"] if asset["asset_id"] == avatar_id)
+            self.assertEqual(avatar["asset_status"], "generated")
+            self.assertEqual(
+                avatar["source"],
+                {"source_type": "generated", "source_ref": record["generation_approval_record_id"]},
+            )
+            self.assertTrue((workspace_dir / avatar["path"]).is_file())
+            executed = json.loads(approval_path.read_text())
+            self.assertEqual(executed["status"], "executed")
+            self.assertEqual(executed["resulting_asset_ids"], [record["requested_assets"][0]["asset_id"]])
+            result = subprocess.run(
+                [sys.executable, "-m", "influencer_os", "validate", "workspace", str(workspace_dir)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
+    def test_avatar_carve_out_cannot_widen(self):
+        from influencer_os.generation import (
+            derive_avatar_approval,
+            validate_avatar_approval_binding,
+        )
+        from influencer_os.providers.dispatch import dispatch_avatar_generation
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = self._avatar_prompt_ready_workspace(temp_dir)
+            approval_path = derive_avatar_approval(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            with self.assertRaisesRegex(FileExistsError, "already recorded"):
+                derive_avatar_approval(
+                    workspace_dir,
+                    provider_id="mock",
+                    model="mock-1",
+                    cost_note="Mock; zero cost.",
+                )
+
+            forged = json.loads(approval_path.read_text())
+            forged["generation_approval_record_id"] = "gen_approval_luna_fit_avatar_forged"
+            forged["reference_asset_id"] = "asset_luna_brand_system"
+            forged_path = approval_path.with_name(
+                f"{forged['generation_approval_record_id']}.json"
+            )
+            write_json(forged_path, forged)
+            with self.assertRaisesRegex(ValidationError, "designated single-use id"):
+                validate_avatar_approval_binding(workspace_dir, forged)
+            with self.assertRaisesRegex(GenerationDispatchError, "designated single-use id"):
+                dispatch_avatar_generation(
+                    workspace_dir,
+                    forged["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
+
+    def test_avatar_semantics_are_bounded_and_other_bases_stay_fail_closed(self):
+        from influencer_os.validation import validate_generation_approval_semantics
+
+        record = load_example("generation-approval-record")
+        record.update(
+            approval_basis="system_avatar_setup",
+            scope="batch",
+            max_calls=1,
+            reference_asset_id="asset_luna_identity_plate",
+        )
+        record.pop("project_id")
+        record["requested_assets"][0]["asset_kind"] = "image"
+        record.pop("user_approval_statement")
+        record.pop("approved_at")
+        validate_generation_approval_semantics(record)
+
+        for mutate in (
+            lambda value: value.update(scope="single_call") or value.pop("max_calls"),
+            lambda value: value.update(max_calls=2),
+            lambda value: value["requested_assets"][0].update(asset_kind="video"),
+            lambda value: value.update(user_approval_statement="I approve this."),
+        ):
+            invalid = json.loads(json.dumps(record))
+            mutate(invalid)
+            with self.assertRaises(ValidationError):
+                validate_generation_approval_semantics(invalid)
+
+        for basis in (None, "exact_user_statement", "approved_visual_continuity_plan"):
+            invalid = json.loads(json.dumps(record))
+            invalid["approval_basis"] = basis
+            if basis is None:
+                invalid.pop("approval_basis")
+            with self.assertRaisesRegex(ValidationError, "verbatim user_approval_statement"):
+                validate_generation_approval_semantics(invalid)
+
+        project_scoped = json.loads(json.dumps(record))
+        project_scoped["project_id"] = "project_luna_tiny_reset_001"
+        project_scoped.pop("reference_asset_id")
+        with self.assertRaisesRegex(ValidationError, "reference-library scoped"):
+            validate_generation_approval_semantics(project_scoped)
+
+    def test_rejected_avatar_can_regenerate_only_from_fresh_exact_reference_approval(self):
+        from influencer_os.brand_boards import rebuild_brand_board
+        from influencer_os.generation import derive_avatar_approval
+        from influencer_os.providers.dispatch import (
+            dispatch_avatar_generation,
+            dispatch_reference_generation,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, avatar_id = self._avatar_prompt_ready_workspace(temp_dir)
+            initial_path = derive_avatar_approval(
+                workspace_dir,
+                provider_id="mock",
+                model="mock-1",
+                cost_note="Mock; zero cost.",
+            )[0]
+            initial = json.loads(initial_path.read_text())
+            dispatch_avatar_generation(
+                workspace_dir,
+                initial["generation_approval_record_id"],
+                config=BASE_CONFIG,
+            )
+
+            library_path = workspace_dir / "references" / "reference-library.json"
+            library = json.loads(library_path.read_text())
+            avatar = next(asset for asset in library["assets"] if asset["asset_id"] == avatar_id)
+            (workspace_dir / avatar["path"]).unlink()
+            avatar["asset_status"] = "prompted"
+            write_json(library_path, library)
+            rebuild_brand_board(workspace_dir)
+
+            regeneration = {
+                **initial,
+                "generation_approval_record_id": "gen_approval_luna_fit_avatar_regeneration_001",
+                "scope": "single_call",
+                "requested_assets": [
+                    {
+                        **initial["requested_assets"][0],
+                        "asset_id": "gen_asset_luna_fit_avatar_regeneration_001",
+                    }
+                ],
+                "user_approval_statement": (
+                    "Approved: regenerate the rejected Avatar Image with mock/mock-1, "
+                    "one exact reference call."
+                ),
+                "approved_at": "2026-07-12T12:00:00",
+                "approval_basis": "exact_user_statement",
+                "created_at": "2026-07-12T12:00:00",
+            }
+            regeneration.pop("max_calls")
+            regeneration.pop("authorization_source_digest")
+            input_path = Path(temp_dir) / "avatar-regeneration-approval.json"
+            write_json(input_path, regeneration)
+            record_generation_approval(workspace_dir, input_path)
+
+            calls = dispatch_reference_generation(
+                workspace_dir,
+                regeneration["generation_approval_record_id"],
+                config=BASE_CONFIG,
+            )
+            self.assertEqual(len(calls), 1)
+            self.assertTrue((workspace_dir / avatar["path"]).is_file())
+
+
 class ApprovalRecordSemanticsTests(unittest.TestCase):
     def test_example_validates(self):
         validate_record("generation-approval-record", load_example("generation-approval-record"))
@@ -551,6 +856,33 @@ class DispatchConsumptionTests(unittest.TestCase):
         record_path, record = stage_approval_record(temp_dir, mutate=mutate)
         record_generation_approval(project_dir, record_path)
         return project_dir, record["generation_approval_record_id"]
+
+    def test_project_dispatch_rejects_forged_system_avatar_carve_out(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _, project_dir = scaffold_generation_ready_project(temp_dir)
+            record = load_example("generation-approval-record")
+            record.update(
+                approval_basis="system_avatar_setup",
+                scope="batch",
+                max_calls=1,
+            )
+            record["requested_assets"][0]["asset_kind"] = "image"
+            record.pop("user_approval_statement")
+            record.pop("approved_at")
+            record_path = (
+                project_dir
+                / "generation"
+                / "approval-records"
+                / f"{record['generation_approval_record_id']}.json"
+            )
+            write_json(record_path, record)
+
+            with self.assertRaisesRegex(GenerationDispatchError, "reference-library scoped"):
+                dispatch_generation(
+                    project_dir,
+                    record["generation_approval_record_id"],
+                    config=BASE_CONFIG,
+                )
 
     def test_mock_dispatch_executes_and_consumes(self):
         with tempfile.TemporaryDirectory() as temp_dir:

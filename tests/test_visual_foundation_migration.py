@@ -40,6 +40,7 @@ class VisualFoundationMigrationTests(unittest.TestCase):
             self.assertEqual(second["changed_paths"], [])
             migrated_plan = json.loads(plan_path.read_text())
             authorized_ids = migrated_plan["setup_reference_generation"]["asset_ids"]
+            self.assertNotIn(avatar_id, authorized_ids)
             self.assertTrue(
                 all(
                     next(

@@ -708,6 +708,7 @@ def validate_generation_approval_semantics(record):
             )
 
     status = record.get("status")
+    approval_basis = record.get("approval_basis")
     has_statement = "user_approval_statement" in record
     has_approved_at = "approved_at" in record
     has_executed_at = "executed_at" in record
@@ -718,7 +719,28 @@ def validate_generation_approval_semantics(record):
                 f"generation approval {record_id}: a draft carries no "
                 "approval statement, approval timestamp, or execution fields"
             )
-    if status in ("approved", "executing", "executed"):
+    if approval_basis == "system_avatar_setup":
+        if not has_reference:
+            raise ValidationError(
+                f"generation approval {record_id}: system_avatar_setup must be "
+                "reference-library scoped"
+            )
+        if scope != "batch" or record.get("max_calls") != 1:
+            raise ValidationError(
+                f"generation approval {record_id}: system_avatar_setup must be a "
+                "batch with max_calls 1"
+            )
+        if len(requested) != 1 or requested[0].get("asset_kind") != "image":
+            raise ValidationError(
+                f"generation approval {record_id}: system_avatar_setup must request "
+                "exactly one image asset"
+            )
+        if has_statement or has_approved_at:
+            raise ValidationError(
+                f"generation approval {record_id}: system_avatar_setup carries no "
+                "user approval metadata"
+            )
+    elif status in ("approved", "executing", "executed"):
         if not (has_statement and has_approved_at):
             raise ValidationError(
                 f"generation approval {record_id}: status {status!r} requires "

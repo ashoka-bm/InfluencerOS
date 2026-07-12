@@ -140,6 +140,12 @@ def record_generation_approval(target_path, record_path):
                 f"generation approval {record_id} creator does not match the "
                 "Reference Library owner"
             )
+        if record.get("approval_basis") == "system_avatar_setup":
+            validate_avatar_approval_binding(workspace_dir, record)
+        elif record.get("approval_basis") == "approved_visual_continuity_plan":
+            validate_setup_reference_approval_binding(workspace_dir, record)
+        else:
+            validate_exact_reference_approval_binding(workspace_dir, record)
         destination_dir = workspace_dir / REFERENCE_APPROVALS_DIR
 
     if destination_dir.is_symlink():
@@ -192,6 +198,126 @@ def _setup_authorization_digest(
     ).hexdigest()
 
 
+def _avatar_authorization_digest(
+    board_path, provider_id, model, cost_note, asset, prompt_path, plan_ref, request
+):
+    """Digest the one ADR 0045 authorization source and exact provider call."""
+    frozen_asset = {
+        key: value
+        for key, value in asset.items()
+        if key not in {"asset_status", "source", "usage_notes"}
+    }
+    payload = {
+        "personal_brand_board_sha256": hashlib.sha256(
+            Path(board_path).read_bytes()
+        ).hexdigest(),
+        "provider_id": provider_id,
+        "model": model,
+        "cost_note": cost_note,
+        "reference_asset": frozen_asset,
+        "prompt_sha256": hashlib.sha256(Path(prompt_path).read_bytes()).hexdigest(),
+        "plan_ref": plan_ref,
+        "requested_asset": request,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def derive_avatar_approval(workspace_path, *, provider_id, model, cost_note):
+    """Derive ADR 0045's one bounded Avatar Image approval without a VCP."""
+    workspace_dir = Path(workspace_path)
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    library_path = workspace_dir / "references" / "reference-library.json"
+    _contained_workspace_file(
+        workspace_dir,
+        "references/brand/personal-brand-board.json",
+        "personal brand board",
+    )
+    _contained_workspace_file(
+        workspace_dir, "references/reference-library.json", "Reference Library"
+    )
+    board = load_json(board_path)
+    library = load_json(library_path)
+    validate_record("personal-brand-board", board)
+    validate_record("reference-library", library)
+    try:
+        get_provider(provider_id)
+    except KeyError as exc:
+        raise ValidationError(str(exc)) from None
+    if not model or not cost_note:
+        raise ValidationError("avatar approval derivation requires model and cost_note")
+
+    avatar_asset_id = board["avatar_asset_id"]
+    assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+    asset = assets_by_id.get(avatar_asset_id)
+    if asset is None:
+        raise ValidationError(f"avatar asset {avatar_asset_id!r} does not resolve")
+    if asset["asset_type"] not in SETUP_IMAGE_ASSET_TYPES:
+        raise ValidationError(f"avatar asset {avatar_asset_id!r} is not an eligible image asset")
+    if asset["asset_status"] != "prompted":
+        raise ValidationError(f"avatar asset {avatar_asset_id!r} must be prompted")
+    prompt_ref = asset.get("prompt_path")
+    if not prompt_ref:
+        raise ValidationError(f"avatar asset {avatar_asset_id!r} has no resolving prompt_path")
+    prompt_path = _contained_workspace_file(
+        workspace_dir, prompt_ref, f"avatar prompt for {avatar_asset_id}"
+    )
+
+    slug = library["creator_profile_id"].removeprefix("creator_")
+    record_id = f"gen_approval_{slug}_avatar"
+    plan_ref = "references/brand/personal-brand-board.json#avatar_asset_id"
+    request = {
+        "asset_id": f"gen_asset_{slug}_avatar",
+        "asset_kind": "image",
+        "prompt_ref": prompt_ref,
+        "filename": Path(asset["path"]).name,
+        "notes": f"Initial platform-facing Avatar Image for {avatar_asset_id}.",
+    }
+    record = {
+        "generation_approval_record_id": record_id,
+        "creator_profile_id": library["creator_profile_id"],
+        "reference_asset_id": avatar_asset_id,
+        "provider_id": provider_id,
+        "model": model,
+        "plan_ref": plan_ref,
+        "scope": "batch",
+        "max_calls": 1,
+        "requested_assets": [request],
+        "status": "approved",
+        "cost_note": cost_note,
+        "approval_basis": "system_avatar_setup",
+        "authorization_source_digest": _avatar_authorization_digest(
+            board_path, provider_id, model, cost_note, asset, prompt_path, plan_ref, request
+        ),
+        "created_at": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    validate_record("generation-approval-record", record)
+
+    approvals_dir = workspace_dir / REFERENCE_APPROVALS_DIR
+    destination = approvals_dir / f"{record_id}.json"
+    derivation_lock = workspace_dir / "references" / "avatar-approval-derivation.lock"
+    try:
+        lock_descriptor = os.open(
+            derivation_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        )
+    except FileExistsError:
+        raise FileExistsError(
+            "Avatar approval derivation is already running; retry after it completes"
+        ) from None
+    try:
+        os.close(lock_descriptor)
+        if destination.exists() or destination.is_symlink():
+            raise FileExistsError("Avatar approval already recorded")
+        if approvals_dir.is_symlink():
+            raise ValidationError("references/approval-records must not be a symlink")
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(destination, record)
+    finally:
+        derivation_lock.unlink(missing_ok=True)
+    return [destination]
+
+
 def derive_setup_reference_approvals(
     workspace_path, *, provider_id, model, cost_note
 ):
@@ -234,6 +360,22 @@ def derive_setup_reference_approvals(
     if authorization["max_calls"] != len(asset_ids):
         raise ValidationError("setup authorization is not bounded to one call per asset")
     assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    avatar_asset_id = None
+    if board_path.exists():
+        _contained_workspace_file(
+            workspace_dir,
+            "references/brand/personal-brand-board.json",
+            "personal brand board",
+        )
+        board = load_json(board_path)
+        validate_record("personal-brand-board", board)
+        avatar_asset_id = board["avatar_asset_id"]
+        if avatar_asset_id in asset_ids:
+            raise ValidationError(
+                "Visual Continuity Plan standing approval must exclude the "
+                "designated Avatar Image"
+            )
     missing = sorted(set(asset_ids) - set(assets_by_id))
     if missing:
         raise ValidationError("authorized setup assets do not resolve: " + ", ".join(missing))
@@ -378,6 +520,24 @@ def validate_setup_reference_approval_binding(workspace_path, record, error_clas
         raise error_class("setup reference approval creator does not match the Reference Library")
     if asset_id not in plan["setup_reference_generation"]["asset_ids"]:
         raise error_class(f"reference asset {asset_id!r} is outside the approved setup package")
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    if board_path.exists():
+        _contained_workspace_file(
+            workspace_dir,
+            "references/brand/personal-brand-board.json",
+            "personal brand board",
+            error_class,
+        )
+        board = load_json(board_path)
+        try:
+            validate_record("personal-brand-board", board)
+        except ValidationError as exc:
+            raise error_class(str(exc)) from exc
+        if asset_id == board["avatar_asset_id"]:
+            raise error_class(
+                "Visual Continuity Plan standing approval must exclude the "
+                "designated Avatar Image"
+            )
     assets_by_id = {asset["asset_id"]: asset for asset in library["assets"]}
     asset = assets_by_id.get(asset_id)
     if asset is None:
@@ -413,6 +573,111 @@ def validate_setup_reference_approval_binding(workspace_path, record, error_clas
     return asset, library
 
 
+def validate_avatar_approval_binding(workspace_path, record, error_class=ValidationError):
+    """Bind ADR 0045's carve-out to the board's one designated avatar."""
+    workspace_dir = Path(workspace_path)
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    library_path = workspace_dir / "references" / "reference-library.json"
+    _contained_workspace_file(
+        workspace_dir,
+        "references/brand/personal-brand-board.json",
+        "personal brand board",
+        error_class,
+    )
+    _contained_workspace_file(
+        workspace_dir, "references/reference-library.json", "Reference Library", error_class
+    )
+    board = load_json(board_path)
+    library = load_json(library_path)
+    try:
+        validate_record("personal-brand-board", board)
+        validate_record("reference-library", library)
+    except ValidationError as exc:
+        raise error_class(str(exc)) from exc
+    if record.get("approval_basis") != "system_avatar_setup":
+        raise error_class("avatar approval must use system_avatar_setup")
+    slug = library["creator_profile_id"].removeprefix("creator_")
+    if record.get("generation_approval_record_id") != f"gen_approval_{slug}_avatar":
+        raise error_class("avatar approval record id is not the designated single-use id")
+    avatar_asset_id = board["avatar_asset_id"]
+    if record.get("reference_asset_id") != avatar_asset_id:
+        raise error_class(
+            f"avatar approval must target board avatar asset {avatar_asset_id!r}"
+        )
+    if record.get("creator_profile_id") != library["creator_profile_id"]:
+        raise error_class("avatar approval creator does not match the Reference Library")
+    asset = next(
+        (item for item in library["assets"] if item["asset_id"] == avatar_asset_id), None
+    )
+    if asset is None:
+        raise error_class(f"avatar asset {avatar_asset_id!r} does not resolve")
+    if asset["asset_type"] not in SETUP_IMAGE_ASSET_TYPES:
+        raise error_class(f"avatar asset {avatar_asset_id!r} is not an eligible image asset")
+    requested = record.get("requested_assets", [])
+    if record.get("scope") != "batch" or record.get("max_calls") != 1 or len(requested) != 1:
+        raise error_class("avatar approval must be a one-call batch")
+    request = requested[0]
+    if request.get("asset_kind") != "image" or request.get("prompt_ref") != asset.get("prompt_path"):
+        raise error_class("avatar approval request does not match the frozen asset prompt")
+    if request.get("filename") != Path(asset["path"]).name:
+        raise error_class("avatar approval filename does not match the Reference Asset path")
+    prompt_path = _contained_workspace_file(
+        workspace_dir, request["prompt_ref"], "avatar approval prompt", error_class
+    )
+    expected_digest = _avatar_authorization_digest(
+        board_path,
+        record["provider_id"],
+        record["model"],
+        record["cost_note"],
+        asset,
+        prompt_path,
+        record.get("plan_ref"),
+        request,
+    )
+    if record.get("authorization_source_digest") != expected_digest:
+        raise error_class(
+            "personal brand board, Reference Asset, prompt, or provider/model/cost "
+            "scope changed after avatar approval derivation"
+        )
+    return asset, library
+
+
+def validate_exact_reference_approval_binding(
+    workspace_path, record, error_class=ValidationError
+):
+    """Bind a fresh exact-user reference approval to one prompted asset."""
+    workspace_dir = Path(workspace_path)
+    library_path = workspace_dir / "references" / "reference-library.json"
+    _contained_workspace_file(
+        workspace_dir, "references/reference-library.json", "Reference Library", error_class
+    )
+    library = load_json(library_path)
+    try:
+        validate_record("reference-library", library)
+    except ValidationError as exc:
+        raise error_class(str(exc)) from exc
+    if record.get("approval_basis") not in (None, "exact_user_statement"):
+        raise error_class("reference approval must carry an exact user approval basis")
+    if record.get("creator_profile_id") != library["creator_profile_id"]:
+        raise error_class("exact reference approval creator does not match the Reference Library")
+    asset_id = record.get("reference_asset_id")
+    asset = next((item for item in library["assets"] if item["asset_id"] == asset_id), None)
+    if asset is None:
+        raise error_class(f"reference asset {asset_id!r} does not resolve")
+    requested = record.get("requested_assets", [])
+    if record.get("scope") != "single_call" or len(requested) != 1:
+        raise error_class("exact reference approval must contain exactly one call")
+    request = requested[0]
+    if request.get("asset_kind") != "image" or request.get("prompt_ref") != asset.get("prompt_path"):
+        raise error_class("exact reference approval request does not match the Reference Asset prompt")
+    if request.get("filename") != Path(asset["path"]).name:
+        raise error_class("exact reference approval filename does not match the Reference Asset path")
+    _contained_workspace_file(
+        workspace_dir, request["prompt_ref"], "exact reference approval prompt", error_class
+    )
+    return asset, library
+
+
 def validate_approval_record_binding(project_dir, record, project=None, error_class=ValidationError):
     """The one project-binding contract, shared by the writer, dispatch, and
     the at-rest validator (batch-1 review finding): a project-scoped approval
@@ -423,6 +688,14 @@ def validate_approval_record_binding(project_dir, record, project=None, error_cl
 
     project_dir = Path(project_dir)
     record_id = record.get("generation_approval_record_id", "<unknown>")
+    if record.get("approval_basis") in {
+        "approved_visual_continuity_plan",
+        "system_avatar_setup",
+    }:
+        raise error_class(
+            f"generation approval {record_id}: {record['approval_basis']} is "
+            "reference-library scoped and cannot authorize project dispatch"
+        )
     if "project_id" not in record:
         raise error_class(
             f"generation approval {record_id} is reference-scoped; it cannot "
@@ -1080,6 +1353,12 @@ def validate_reference_approval_records(workspace_dir, reference_library):
                     f"{record['reference_asset_id']!r} does not resolve in "
                     "the Reference Library"
                 )
+            if record.get("approval_basis") == "system_avatar_setup":
+                validate_avatar_approval_binding(workspace_dir, record)
+            elif record.get("approval_basis") == "approved_visual_continuity_plan":
+                validate_setup_reference_approval_binding(workspace_dir, record)
+            else:
+                validate_exact_reference_approval_binding(workspace_dir, record)
             records_by_id[record_id] = record
 
     for asset in reference_library["assets"]:

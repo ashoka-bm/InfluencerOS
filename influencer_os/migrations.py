@@ -59,24 +59,15 @@ def migrate_visual_foundation(workspace_path):
     if "setup_reference_generation" not in plan:
         review = plan["selection_review"]
         if review["status"] == "approved":
+            avatar_id = board.get("avatar_asset_id")
             asset_ids = [
                 asset["asset_id"]
                 for asset in library["assets"]
                 if asset["asset_type"] in SETUP_IMAGE_ASSET_TYPES
                 and asset["asset_status"] in {"planned", "prompted"}
                 and asset.get("prompt_path")
+                and asset["asset_id"] != avatar_id
             ]
-            avatar_id = board.get("avatar_asset_id")
-            avatar = assets_by_id.get(avatar_id)
-            if (
-                avatar is not None
-                and avatar["asset_status"] in {"planned", "prompted"}
-                and avatar_id not in asset_ids
-            ):
-                raise ValidationError(
-                    "cannot migrate setup authorization: the pending avatar has "
-                    "no provider-neutral prompt"
-                )
             plan["setup_reference_generation"] = {
                 "status": "authorized",
                 "asset_ids": asset_ids,

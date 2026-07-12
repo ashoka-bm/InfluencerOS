@@ -129,7 +129,7 @@
     },
     "approval_basis": {
       "type": "string",
-      "enum": ["exact_user_statement", "approved_visual_continuity_plan"]
+      "enum": ["exact_user_statement", "approved_visual_continuity_plan", "system_avatar_setup"]
     },
     "authorization_source_digest": {
       "type": "string",

@@ -730,13 +730,19 @@ class ConductorCallGraphDriftTests(unittest.TestCase):
     CONDUCTORS = ("influencer-os", "create-influencer")
     MAP_SECTION = "Creation-Flow Call Graph (skill → skill)"
 
-    def test_creator_setup_builds_brand_board_after_reference_planning(self):
+    def test_creator_setup_generates_avatar_before_vcp_approval(self):
         body = skill_body("create-influencer")
-        reference_phase = body.index("**Reference planning, prompt staging, and resolution**")
+        planning_phase = body.index("**Visual continuity planning and avatar staging**")
         board_phase = body.index("**Personal brand board**")
+        avatar_phase = body.index("**Avatar Image auto-generation**")
+        vcp_phase = body.index("**Visual Continuity Plan approval**")
+        remaining_reference_phase = body.index("**Remaining reference resolution**")
         readiness_phase = body.index("**State reconciliation and readiness check**")
-        self.assertLess(reference_phase, board_phase)
-        self.assertLess(board_phase, readiness_phase)
+        self.assertLess(planning_phase, board_phase)
+        self.assertLess(board_phase, avatar_phase)
+        self.assertLess(avatar_phase, vcp_phase)
+        self.assertLess(vcp_phase, remaining_reference_phase)
+        self.assertLess(remaining_reference_phase, readiness_phase)
 
     def test_conductors_declare_dependencies_frontmatter(self):
         for skill in self.CONDUCTORS:

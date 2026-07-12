@@ -1176,7 +1176,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one call per listed asset"):
                 validate_creator_workspace(workspace_dir)
 
-    def test_approved_visual_plan_generation_package_must_include_board_avatar(self):
+    def test_approved_visual_plan_generation_package_rejects_board_avatar(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "foundation_ready")
             plan_path = workspace_dir / "references" / "visual-continuity-plan.json"
@@ -1195,14 +1195,14 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                 "Generate the approved avatar.\n"
             )
 
-            def omit_avatar(plan):
+            def include_avatar(plan):
                 authorization = plan["setup_reference_generation"]
-                authorization["asset_ids"].remove("asset_luna_identity_plate")
+                authorization["asset_ids"].append("asset_luna_identity_plate")
                 authorization["max_calls"] = len(authorization["asset_ids"])
 
-            rewrite_json(plan_path, omit_avatar)
+            rewrite_json(plan_path, include_avatar)
 
-            with self.assertRaisesRegex(ValueError, "pending brand-board avatar asset"):
+            with self.assertRaisesRegex(ValueError, "exclude designated brand-board avatar"):
                 validate_creator_workspace(workspace_dir)
 
     def test_visual_foundation_readiness_requires_presented_and_approved_candidates(self):

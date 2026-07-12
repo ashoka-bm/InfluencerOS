@@ -226,12 +226,28 @@ def main(argv=None):
     setup_approval_parser.add_argument("--model", required=True)
     setup_approval_parser.add_argument("--cost-note", required=True)
 
+    avatar_approval_parser = subparsers.add_parser(
+        "derive-avatar-approval",
+        help="Derive the one system-authorized creator Avatar Image approval (ADR 0045).",
+    )
+    avatar_approval_parser.add_argument("creator_workspace")
+    avatar_approval_parser.add_argument("--provider", required=True)
+    avatar_approval_parser.add_argument("--model", required=True)
+    avatar_approval_parser.add_argument("--cost-note", required=True)
+
     reference_dispatch_parser = subparsers.add_parser(
         "dispatch-reference-generation",
         help="Consume one approved creator-setup reference generation record.",
     )
     reference_dispatch_parser.add_argument("creator_workspace")
     reference_dispatch_parser.add_argument("approval_record_id")
+
+    avatar_dispatch_parser = subparsers.add_parser(
+        "dispatch-avatar-generation",
+        help="Consume the one system-authorized creator Avatar Image approval.",
+    )
+    avatar_dispatch_parser.add_argument("creator_workspace")
+    avatar_dispatch_parser.add_argument("approval_record_id")
 
     import_asset_parser = subparsers.add_parser("import-generated-asset", help="Import an externally generated or user-provided media file with full provenance (ADR 0023 slice 3): copies into generation/assets/ and writes the asset-manifest row, or routes into the Reference Library with --reference-asset.")
     import_asset_parser.add_argument("target", help="Project directory, or the creator workspace when using --reference-asset.")
@@ -846,6 +862,18 @@ def main(argv=None):
                 print(f"- {destination}")
             return 0
 
+        if args.command == "derive-avatar-approval":
+            from influencer_os.generation import derive_avatar_approval
+
+            destinations = derive_avatar_approval(
+                args.creator_workspace,
+                provider_id=args.provider,
+                model=args.model,
+                cost_note=args.cost_note,
+            )
+            print(f"Derived Avatar Image approval: {destinations[0]}")
+            return 0
+
         if args.command == "dispatch-reference-generation":
             from influencer_os.providers.dispatch import dispatch_reference_generation
 
@@ -853,6 +881,15 @@ def main(argv=None):
                 args.creator_workspace, args.approval_record_id
             )
             print(f"Generated {len(calls)} reference asset.")
+            return 0
+
+        if args.command == "dispatch-avatar-generation":
+            from influencer_os.providers.dispatch import dispatch_avatar_generation
+
+            calls = dispatch_avatar_generation(
+                args.creator_workspace, args.approval_record_id
+            )
+            print(f"Generated {len(calls)} Avatar Image.")
             return 0
 
         if args.command == "import-generated-asset":

@@ -172,6 +172,7 @@ def dispatch_reference_generation(
         workspace_dir, approval_record_id
     )
     _require_dispatchable_status(record, approval_record_id)
+    binding_validator = _reference_binding_validator(record)
     library_lock = workspace_dir / "references" / "reference-library.lock"
     try:
         descriptor = os.open(
@@ -190,18 +191,82 @@ def dispatch_reference_generation(
             record_path,
             config,
             notice_callback,
+            binding_validator=binding_validator,
         )
     finally:
         library_lock.unlink(missing_ok=True)
 
 
+def dispatch_avatar_generation(
+    workspace_path, approval_record_id, config=None, notice_callback=print
+):
+    """Consume ADR 0045's one system-derived Avatar Image approval."""
+    workspace_dir = Path(workspace_path)
+    config = config if config is not None else env.get_config()
+    if env.paid_connectors_disabled(config) or env.paid_connectors_disabled(
+        env.get_config()
+    ):
+        raise GenerationDispatchError(
+            "generation dispatch is disabled by "
+            "INFLUENCER_OS_DISABLE_PAID_CONNECTORS (kill switch)"
+        )
+
+    record_path, record = _load_reference_approval_record(
+        workspace_dir, approval_record_id
+    )
+    _require_dispatchable_status(record, approval_record_id)
+    library_lock = workspace_dir / "references" / "reference-library.lock"
+    try:
+        descriptor = os.open(
+            library_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        )
+    except FileExistsError:
+        raise GenerationDispatchError(
+            "the Reference Library is locked by another generation dispatch; "
+            "retry after it completes"
+        ) from None
+    try:
+        os.close(descriptor)
+        return _dispatch_reference_generation_locked(
+            workspace_dir,
+            approval_record_id,
+            record_path,
+            config,
+            notice_callback,
+            binding_validator=generation_records.validate_avatar_approval_binding,
+        )
+    finally:
+        library_lock.unlink(missing_ok=True)
+
+
+def _reference_binding_validator(record):
+    """Choose the sole binding contract for a non-system reference dispatch."""
+    basis = record.get("approval_basis")
+    if basis == "approved_visual_continuity_plan":
+        return generation_records.validate_setup_reference_approval_binding
+    if basis in (None, "exact_user_statement"):
+        return generation_records.validate_exact_reference_approval_binding
+    if basis == "system_avatar_setup":
+        raise GenerationDispatchError(
+            "system_avatar_setup must dispatch through dispatch-avatar-generation"
+        )
+    raise GenerationDispatchError(
+        f"reference approval basis {basis!r} has no dispatch route"
+    )
+
+
 def _dispatch_reference_generation_locked(
-    workspace_dir, approval_record_id, record_path, config, notice_callback
+    workspace_dir,
+    approval_record_id,
+    record_path,
+    config,
+    notice_callback,
+    binding_validator=generation_records.validate_setup_reference_approval_binding,
 ):
     _, record = _load_reference_approval_record(workspace_dir, approval_record_id)
     _require_dispatchable_status(record, approval_record_id)
     try:
-        asset, library = generation_records.validate_setup_reference_approval_binding(
+        asset, library = binding_validator(
             workspace_dir, record, error_class=GenerationDispatchError
         )
     except (ValidationError, KeyError) as exc:
@@ -238,7 +303,7 @@ def _dispatch_reference_generation_locked(
             workspace_dir, approval_record_id
         )
         _require_dispatchable_status(record, approval_record_id)
-        generation_records.validate_setup_reference_approval_binding(
+        binding_validator(
             workspace_dir, record, error_class=GenerationDispatchError
         )
         record["status"] = "executing"
