@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Superseded by ADR 0045 as the current creator-setup image authorization
+record. The bounded standing authorization decided here is carried forward by
+ADR 0045 for the reference assets listed in the approved Visual Continuity
+Plan; ADR 0045 narrowly amends this ADR by moving the Avatar Image's first
+generation ahead of that approval. All other decisions remain active through
+ADR 0045.
 
 ## Context
 

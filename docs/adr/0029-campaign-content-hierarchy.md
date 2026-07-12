@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: ADR 0047 adds the required Campaign Duration Target at Campaign creation and names the Quarterly Planning Cycle as the default Campaign lifecycle decision home.
 ---
 
 # Campaign Content Uses A Stable Ownership Hierarchy

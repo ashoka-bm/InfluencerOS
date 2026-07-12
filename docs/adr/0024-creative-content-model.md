@@ -4,6 +4,9 @@
 
 Accepted
 
+Extended by ADR 0046: workspace-level Review Records with new review roles,
+and the Research Demand research-review loop.
+
 ## Context
 
 InfluencerOS's roadmap "Phase 3 (Generation OS)" is a provider-safety and

@@ -4,6 +4,11 @@
 
 Accepted
 
+The workspace status enum below was superseded by the ADR 0028 readiness
+milestones. ADR 0044, ADR 0045, and ADR 0046 adjust the setup flow: the
+Avatar Image is generated first, and the Setup Review (owned by ADR 0046)
+runs before the Visual Continuity Plan approval.
+
 ## Context
 
 Creator Setup can begin from minimal input, a guided interview, a master breakdown, user-provided files, media references, or a request to generate a persona. That flexibility is useful, but downstream research, planning, and generation need a stricter foundation.

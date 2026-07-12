@@ -4,6 +4,13 @@
 
 Accepted
 
+Decisions 1, 3, 4, 7, 8, 10, and 17 amended by ADR 0044 and ADR 0047:
+`strategy_ready` survives as a recorded status and milestone but becomes an
+internal checkpoint inside the Strategy block ending at `production_ready`,
+block exits are granted by human final approvals, the approved schedule
+scaffold check moves to `strategy_ready`, and calendar-shaped planning moves
+to the Quarterly and Weekly Planning Cycles.
+
 ## Context
 
 Creator setup currently uses broad workspace statuses such as `content_ready`

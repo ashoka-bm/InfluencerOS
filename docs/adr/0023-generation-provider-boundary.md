@@ -9,6 +9,10 @@ reference assets listed in an approved Visual Continuity Plan. Dispatch still
 uses a bounded, single-use GenerationApprovalRecord; the amendment removes the
 duplicate second confirmation, not the record or provenance boundary.
 
+Amended a second time by ADR 0045, which authorizes the one bounded Avatar
+Image generation call at creator setup via a system-derived, single-use
+GenerationApprovalRecord (max_calls: 1).
+
 ## Context
 
 Phase 3 (Generation OS) needs a provider adapter boundary that can never

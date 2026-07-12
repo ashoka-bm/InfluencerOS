@@ -42,7 +42,7 @@ The ignored local folder for one creator's private identity, references, researc
 The strict foundation workflow that turns minimal instructions, guided interview answers, source files, media references, or a generated persona request into a Creator Workspace. Setup is permissive at intake and strict at readiness.
 
 **Creator Readiness**:
-The setup status that says what the creator can safely do next. Readiness statuses are `draft`, `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, `active`, and `archived`. The legacy-named `readiness-gates.json` file stores readiness milestone state, blockers, human waivers, foundation mode, and media permission booleans that decide whether image, video, or spoken-voice content is allowed. These milestones are deterministic checks, not pipeline Gates; only the two human approvals defined under Gate can block production authorization.
+The setup status that says what the creator can safely do next. Readiness statuses are `draft`, `profile_ready`, `foundation_ready`, `strategy_ready`, `production_ready`, `active`, and `archived`. The legacy-named `readiness-gates.json` file stores readiness milestone state, blockers, human waivers, foundation mode, and media permission booleans that decide whether image, video, or spoken-voice content is allowed. Milestones are validated by deterministic checks, but the block exits of the operating cadence are human decisions: `foundation_ready` flips on the human ready check that closes Creator Setup, and `production_ready` is granted by the Strategy block's human final approval (ADR 0044). These block-exit approvals are readiness decisions, not pipeline Gates; only the two human approvals defined under Gate block the content pipeline.
 
 **Project**:
 One independently planned publishable content unit created from a Concept Approval and owned by exactly one Campaign Concept. It is the source of truth for exact planned Offer Integration, CTA Intensity, and derived Commercial Pressure; it has one format, one materially stable Hook-Retain-Payoff execution and core asset, and its own lifecycle, output package, publications, analytics, and evaluation. Platform adaptations remain one Project, while a materially changed execution is another.
@@ -207,13 +207,21 @@ A creator-relative planning horizon of thirteen weeks, anchored at the creator's
 The once-per-Quarter Planning Cycle: a retrospective over the closing Quarter's performance and learnings, per-Campaign research, next-Quarter Campaign Concepts and schedule shape, and any amendment proposals for the locked setup and strategy foundations. Human-initiated, never clock-scheduled; an expired Quarter surfaces as a Warning.
 
 **Weekly Planning Cycle (Accepted Target; Not Yet Shipped)**:
-The once-per-week Planning Cycle that finalizes the coming week's slots: focused research on the week's scheduled Campaign Concepts, candidate Content Opportunities per slot, an advisory Review, and the Concept Approvals that promote the week's Projects.
+The once-per-week Planning Cycle that finalizes the coming week's slots: focused research on the week's scheduled Campaign Concepts, candidate Content Opportunities per Anchor Slot, an advisory Review, and the Concept Approvals that promote the week's Projects.
+
+**Anchor Slot**:
+A calendar slot carrying an anchor content unit — one that needs its own focused research and human topic selection rather than inheriting another slot's. Derivative slots point to one Anchor Slot and inherit its selected subject evidence while still needing native format adaptation.
+_Avoid_: derivative slot (as a synonym)
 
 **Quarter Plan (Accepted Target; Not Yet Shipped)**:
-The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
+The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, Campaign Duration Target changes, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
 
 **Reactive Slot (Accepted Target; Not Yet Shipped)**:
-A reserved open calendar slot for timely, news-driven content, allocated by the Content Strategy and filled through a fast-path Concept Approval when a watched development breaks. The human gate is not skipped; speed comes from the standing reactive Campaign, pre-chosen templates, and the reserved slot.
+A reserved open calendar slot for timely, news-driven content, allocated by the Content Strategy and filled through a fast-path Concept Approval when a watched development breaks. The human gate is not skipped; speed comes from the Reactive Campaign, pre-chosen templates, and the reserved slot.
+
+**Reactive Campaign (Accepted Target; Not Yet Shipped)**:
+The standing Campaign that owns news-driven timely content. Approved once with the Content Strategy and re-confirmed each Quarter Plan; its Concepts fill Reactive Slots through fast-path Concept Approvals.
+_Avoid_: news campaign, standing reactive campaign
 
 **Monitor Note (Accepted Target; Not Yet Shipped)**:
 A watchlist annotation flagging an expected imminent development worth waiting for — a release, announcement, or event. Weekly Planning Cycle research maintains Monitor Notes; a triggered note is the signal to fill a Reactive Slot.
@@ -227,7 +235,19 @@ An immutable sequential version of the locked Content Strategy and schedule shap
 _Avoid_: in-place strategy edit
 
 **Research Demand (Accepted Target; Not Yet Shipped)**:
-A Review finding that names specific missing evidence the artifact needs before approval. Research Demands drive the research-and-review loop in the strategy and quarterly blocks; the loop closes when a Review issues none, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
+A Review finding that names specific missing evidence the artifact needs before approval. Research Demands drive the research-and-review loop in every cadence block; the loop closes when a Review issues no new Research Demands, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
+
+**Setup Review (Accepted Target; Not Yet Shipped)**:
+The advisory bounded sub-agent Review inside Creator Setup that judges the text foundation and the auto-generated Avatar Image together, before fixes and the human Visual Continuity Plan approval (ADR 0046).
+
+**Strategy Review (Accepted Target; Not Yet Shipped)**:
+The advisory bounded sub-agent Review inside the Strategy block that judges the drafted creator strategy after the broad research validating it, before the human final approval that grants `production_ready` (ADR 0046).
+
+**Quarterly Review (Accepted Target; Not Yet Shipped)**:
+The advisory bounded sub-agent Review inside the Quarterly Planning Cycle that judges the draft Quarter Plan content (ADR 0046). It is a Review inside the cycle, never a name for the ceremony itself: the ceremony is the Quarterly Planning Cycle.
+
+**Concept Review (Accepted Target; Not Yet Shipped)**:
+The advisory bounded sub-agent Review inside the Weekly Planning Cycle that judges the promotion packages before the human Concept Approvals promote the week's Projects (ADR 0046). Advisory only — distinct from Concept Approval, the human Gate that blocks.
 
 **Avatar Image (Accepted Target; Not Yet Shipped)**:
 The one platform-facing identity image every creator must have, regardless of Representation Model. Setup generates it automatically when the user has not provided one; the intake interview decides what it depicts (a persona face or a non-face mark) for text-first creators. For synthetic and avatar-led creators it doubles as the visual-continuity calibration reference for the setup image pass. The human accepts or rejects it at Visual Continuity Plan approval; regeneration follows normal exact approval.
@@ -331,16 +351,23 @@ The v1 output target: vertical, short, hook-first, visually legible without plat
 **Provider Boundary**:
 The line between local planning and external generation. Drafting plans is
 allowed. An approved Visual Continuity Plan authorizes one initial generation
-pass over exactly its listed creator-setup reference images; other image, video,
-render, voice, regeneration, upload, and changed-scope calls require exact
-approval.
+pass over exactly its listed creator-setup reference images, and Creator Setup
+auto-generates the one Avatar Image on a bounded, single-use, system-derived
+approval record with no human pre-approval (ADR 0045); every other image,
+video, render, voice, regeneration, upload, and changed-scope call requires
+exact approval.
 
 **Gate**:
 A human approval that can block the pipeline until granted. InfluencerOS has
 two: Concept Approval (moving a Campaign Concept into production) and the
 Provider Boundary generation approval. Gates are always human-owned. Creator
 Setup may reuse the approved Visual Continuity Plan as the authorization for its
-one bounded initial reference-image pass; this is not automatic approval.
+one bounded initial reference-image pass; this is not automatic approval. The
+one bounded creator-setup Avatar Image call is a recorded carve-out from the
+Provider Boundary (ADR 0045): it runs on a system-derived record with no human
+pre-approval, and the human accepts or rejects the avatar at Visual Continuity
+Plan approval. Block-exit human final approvals in the operating cadence are
+readiness or plan decisions, not additional Gates.
 
 **Review**:
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.

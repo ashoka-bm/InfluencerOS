@@ -4,6 +4,9 @@
 
 Accepted (user approved 2026-07-10)
 
+Amended by ADR 0045: the never-anticipate-provider-calls rule gains an avatar
+carve-out for the one bounded creator-setup Avatar Image call.
+
 ## Context
 
 Skills currently instruct the model to author every canonical JSON record in

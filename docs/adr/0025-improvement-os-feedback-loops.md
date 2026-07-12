@@ -4,6 +4,9 @@
 
 Accepted (operator decision, 2026-07-06).
 
+Decision 4 amended by ADR 0044: the human-initiated Quarterly Planning Cycle
+is permitted calendar-shaped reflection; automation stays event-triggered.
+
 ## Context
 
 Phase 4 was "Automation OS": scheduled creator operations (research refresh,
