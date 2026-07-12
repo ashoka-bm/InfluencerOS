@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tests.test_user_journey import (
     ROOT,
+    authorize_production_entry,
     frontmatter,
     run_cli,
     seed_creator_setup_outputs,
@@ -373,6 +374,7 @@ class GuidedNewcomerE2ETests(unittest.TestCase):
             run_cli("validate", "workspace", workspace_dir)
 
             seed_guided_public_web_research(workspace_dir)
+            authorize_production_entry(workspace_dir)
             run_cli(
                 "init-project",
                 ROOT / "examples" / "project.example.json",

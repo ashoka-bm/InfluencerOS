@@ -4,6 +4,15 @@
   "creator_slug": "luna-fit",
   "content_strategy_id": "content_strategy_luna_fit",
   "updated_on": "2026-07-03",
+  "planning_period": {
+    "start": "2026-07-01",
+    "end": "2026-07-31"
+  },
+  "approval": {
+    "status": "approved",
+    "approved_by": "user",
+    "approved_on": "2026-07-03"
+  },
   "research_basis": {
     "status": "strategy_scaffold",
     "research_run_ids": []

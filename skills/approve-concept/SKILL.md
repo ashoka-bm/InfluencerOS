@@ -67,6 +67,10 @@ rationale — record `approval_note` only when the user volunteers one.
 
 ## Stage, Present, Commit
 
+Before staging, verify the production readiness milestone is `ready` or
+human-waived. The CLI constructors enforce this guard; do not work around it by
+hand-authoring approval or Project records.
+
 1. **Author the bundle seed** (authored fields only —
    `docs/record-constructors.md` §2): `approved_platforms`,
    `approved_formats`, `max_offer_integration`, `max_cta_intensity`,

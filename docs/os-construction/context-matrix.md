@@ -64,6 +64,8 @@ Current workflow coverage:
 | `create-research-findings` | Social research |
 | `manage-opportunity-queue` | Idea generation |
 | `approve-concept` | Idea promotion |
+| `manage-idea-queue` | Idea generation |
+| `promote-idea` | Idea promotion |
 | `apply-social-template` | Template application |
 | `create-production-plan` | Production planning, generation planning |
 | `create-output-package` | Output packaging |

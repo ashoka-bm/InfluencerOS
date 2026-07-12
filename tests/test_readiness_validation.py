@@ -481,6 +481,11 @@ def make_ready_workspace(temp_dir, status):
     write_readiness_milestones(workspace_dir)
     write_channels(workspace_dir)
     write_content_strategy(workspace_dir, status="approved")
+    if status in {"strategy_ready", "production_ready", "active"}:
+        write_content_schedule(
+            workspace_dir,
+            research_informed=status in {"production_ready", "active"},
+        )
     write_conversion_asset(workspace_dir)
     (workspace_dir / "references" / "brand" / "personal-brand-board.json").write_text(
         (ROOT / "examples" / "personal-brand-board.example.json").read_text()
@@ -803,6 +808,7 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
                 strategy_status="ready",
                 production_status="ready",
             )
+            (workspace_dir / "content-schedule.json").unlink()
 
             with self.assertRaises(ValidationError) as ctx:
                 validate_creator_workspace(workspace_dir)
@@ -1028,14 +1034,44 @@ class OnboardingReadinessMilestoneTests(unittest.TestCase):
             self.assertTrue(any("prompt_ready" in warning for warning in result["warnings"]))
             self.assertTrue(any("skipped" in warning and "handle" in warning for warning in result["warnings"]))
 
-    def test_strategy_ready_without_calendar_slots_reports_warning(self):
+    def test_strategy_ready_without_calendar_slots_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
             write_readiness_milestones(workspace_dir, strategy_status="ready")
+            (workspace_dir / "content-schedule.json").unlink()
 
-            result = validate_creator_workspace(workspace_dir)
+            with self.assertRaisesRegex(
+                ValidationError, "complete content-schedule.json strategy scaffold"
+            ):
+                validate_creator_workspace(workspace_dir)
 
-            self.assertTrue(any("no strategy scaffold calendar slots" in warning for warning in result["warnings"]))
+    def test_strategy_ready_rejects_calendar_below_monthly_mix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+
+            def require_two(strategy):
+                strategy["monthly_mix"][0]["target_count_per_month"] = 2
+
+            rewrite_json(workspace_dir / "content-strategy.json", require_two)
+
+            with self.assertRaisesRegex(ValidationError, "requires 2 slot.*found 1"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_strategy_ready_rejects_unapproved_calendar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = make_ready_workspace(temp_dir, "strategy_ready")
+
+            def reopen(schedule):
+                schedule["approval"] = {
+                    "status": "pending",
+                    "approved_by": None,
+                    "approved_on": None,
+                }
+
+            rewrite_json(workspace_dir / "content-schedule.json", reopen)
+
+            with self.assertRaisesRegex(ValidationError, "explicit user approval"):
+                validate_creator_workspace(workspace_dir)
 
     def test_foundation_ready_rejects_stale_foundation_blocker_prose(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -54,10 +54,18 @@ InfluencerOS v1 research is platform-scoped across X, Instagram, TikTok, Substac
 ## Phase Order
 
 1. **Creator Profile, Content Strategy, and Strategy Scaffold**: identify or create the creator profile and canonical `content-schedule.json`. Audience and niche are inputs, not agent guesses. Calendar slots establish publishing demand: date or window, platform, format, editorial goal or pillar, funnel role, and derivative relationships. Do not preselect specific premises, hooks, or titles merely to make a month look complete. Before research, slots are a `strategy_scaffold`; rebuild and present `boards/content-calendar.html` for human review, then stop at `strategy_ready`.
+
+   The scaffold must cover the full declared planning period. For every
+   `content-strategy.json.monthly_mix` row, its slot count must exactly match
+   `target_count_per_month`. Record `planning_period` and explicit schedule
+   approval metadata in `content-schedule.json`; a partial calendar cannot
+   claim `strategy_ready`.
 2. **Video Understanding Pack**: when research uses real videos, inspect frames and transcripts and store timestamp-aware observations before final research synthesis.
 3. **Research Intelligence, Findings, and Rolling Slot Revision**: broad research may validate platform strategy, cadence, compliance, and derivative mechanics, but it does not research every post in a monthly schedule. For each upcoming anchor slot, run focused `scheduled_needs` research before shortlisting or promotion, and produce multiple evidence-backed candidates when credible alternatives exist. Replace the slot's generic purpose with a specific topic only after human selection. Derivatives may inherit the selected anchor's subject evidence, but still need native format adaptation; high-stakes factual claims require current primary-source verification for the exact unit. Keep later slots open and repeat on a rolling horizon.
 4. **Opportunity Queue**: add or update scored Content Opportunities grounded in findings, evidence, schedule state, and creator fit; assign an opportunity to a Campaign Concept when the campaign direction is known.
 5. **Concept Approval Gate**: ask the user to approve the full approval package — including commercial-expression ceilings and the exact Project set — before creating production work. Recommend options if useful, but do not silently approve a concept.
+   Staging or constructing production work is mechanically blocked until the
+   production readiness milestone is ready or human-waived.
 6. **Project Creation**: when approved, create one or more Projects from the promoted queue entry. Create Projects only for formats production currently supports; if an approved format is not yet supported, record the approval intent on the queue entry, surface that production support is pending, and do not create an invalid Project.
 7. **Applied Social Template or Production Structure**: choose the format-compatible structure that best pulls the viewer through the promoted idea.
 8. **Format-Specific Production Plan**: route the promoted idea by target format and platform needs.

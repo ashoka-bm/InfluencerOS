@@ -39,6 +39,7 @@ from pathlib import Path
 
 from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.campaigns import campaign_dir
+from influencer_os.readiness import require_production_ready
 from influencer_os.constructors import (
     STAGING_DIR,
     build_project_manifest,
@@ -270,6 +271,7 @@ def stage_concept_approval(seed, creator_workspace, concept_id, now=None):
     """Build the full concept-approval draft bundle into system/staging/,
     prevalidated through the real gate. Writes nothing canonical."""
     workspace_dir = Path(creator_workspace)
+    require_production_ready(workspace_dir)
     seed = load_seed(seed)
     check_seed_fields(
         seed, APPROVAL_SEED_REQUIRED, APPROVAL_SEED_OPTIONAL, "approval"

@@ -74,6 +74,43 @@ def set_workspace_status(workspace_dir, status):
     write_json(manifest_path, manifest)
 
 
+def authorize_production_entry(workspace_dir):
+    set_workspace_status(workspace_dir, "production_ready")
+    strategy = json.loads(
+        (ROOT / "examples" / "content-strategy.example.json").read_text()
+    )
+    strategy["strategy_status"] = "approved"
+    write_json(workspace_dir / "content-strategy.json", strategy)
+
+    schedule_path = workspace_dir / "content-schedule.json"
+    schedule = json.loads(schedule_path.read_text())
+    run_ids = sorted(
+        path.name for path in (workspace_dir / "research" / "runs").iterdir()
+        if path.is_dir()
+    )
+    schedule["research_basis"] = {
+        "status": "research_informed",
+        "research_run_ids": run_ids,
+    }
+    write_json(schedule_path, schedule)
+
+    gates_path = workspace_dir / "readiness-gates.json"
+    gates = json.loads(gates_path.read_text())
+    gates["milestones"]["strategy"].update(
+        status="ready",
+        approved_on="2026-07-09",
+        approved_by="user",
+        blockers=[],
+    )
+    gates["milestones"]["production"].update(
+        status="ready",
+        approved_on="2026-07-09",
+        approved_by="user",
+        blockers=[],
+    )
+    write_json(gates_path, gates)
+
+
 def write_research_markdown(workspace_dir):
     findings = json.loads((ROOT / "examples" / "research-findings.example.json").read_text())
     stable = json.loads((ROOT / "examples" / "stable-finding.example.json").read_text())
@@ -278,6 +315,7 @@ class PhaseOneUserJourneyTests(unittest.TestCase):
             run_cli("validate", "workspace", workspace_dir)
 
             seed_research_outputs(workspace_dir)
+            authorize_production_entry(workspace_dir)
             run_cli(
                 "init-project",
                 ROOT / "examples" / "project.example.json",

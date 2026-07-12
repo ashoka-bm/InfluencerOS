@@ -27,6 +27,7 @@ from influencer_os.constructors import (
 from influencer_os.creator_workspaces import init_creator
 from influencer_os.full_validation import validate_all
 from influencer_os.projects import validate_project
+from influencer_os.readiness import require_production_ready
 from influencer_os.staging import commit_stage, stage_concept_approval
 from influencer_os.validation import ValidationError, load_json
 from tests.support import (
@@ -59,6 +60,12 @@ def _promotion_ready_workspace(temp_dir):
     populate_workspace_records(workspace_dir)
     populate_video_understanding_packs(workspace_dir)
     populate_approval_records(workspace_dir)
+    _rewrite_json(
+        workspace_dir / "readiness-gates.json",
+        lambda gates: gates["milestones"]["production"].update(
+            status="ready", approved_by="user", approved_on="2026-07-03", blockers=[]
+        ),
+    )
     return workspace_dir
 
 
@@ -95,11 +102,46 @@ def _search_plan_seed_from_example():
     }
 
 
+class ReadinessGuardTests(unittest.TestCase):
+    def test_requires_workspace_status_and_production_milestone(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = init_creator(
+                ROOT / "examples" / "creator-workspace.example.json",
+                workspace_root=Path(temp_dir) / "creators",
+            )
+            with self.assertRaisesRegex(ValidationError, "workspace status"):
+                require_production_ready(workspace)
+
+            _rewrite_json(
+                workspace / "creator-workspace.json",
+                lambda manifest: manifest.update(status="production_ready"),
+            )
+            with self.assertRaisesRegex(ValidationError, "production milestone"):
+                require_production_ready(workspace)
+
+            _rewrite_json(
+                workspace / "readiness-gates.json",
+                lambda gates: gates["milestones"]["production"].update(
+                    status="ready",
+                    approved_by="user",
+                    approved_on="2026-07-03",
+                    blockers=[],
+                ),
+            )
+            result = require_production_ready(workspace)
+            self.assertEqual(result["status"], "production_ready")
+
+
 class ScaffoldProjectTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.workspace = _promotion_ready_workspace(self.temp.name)
+        self.guard = mock.patch(
+            "influencer_os.constructors.require_production_ready"
+        )
+        self.guard.start()
+        self.addCleanup(self.guard.stop)
 
     def test_canonical_seed_reproduces_example_manifest(self):
         result = scaffold_project(
@@ -294,6 +336,9 @@ class StageConceptApprovalTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.workspace = _promotion_ready_workspace(self.temp.name)
+        self.guard = mock.patch("influencer_os.staging.require_production_ready")
+        self.guard.start()
+        self.addCleanup(self.guard.stop)
         # De-approve the fixture: the concept is pre-gate, no approval
         # exists, the claimed slot is open (research already selected).
         (

@@ -25,6 +25,7 @@ from pathlib import Path
 
 from influencer_os.json_io import write_json_atomic
 from influencer_os.projects import init_project
+from influencer_os.readiness import require_production_ready
 from influencer_os.validation import (
     ValidationError,
     load_json,
@@ -338,6 +339,7 @@ def scaffold_project(seed, creator_workspace, now=None):
     """Build and create one project from a seed against its locked concept
     approval. The project id comes from a seed pin or the approval's single
     unclaimed pre-listed id."""
+    require_production_ready(creator_workspace)
     workspace_dir = Path(creator_workspace)
     seed = load_seed(seed)
     check_seed_fields(

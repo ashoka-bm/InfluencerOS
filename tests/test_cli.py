@@ -47,6 +47,22 @@ def rewrite_json(path, mutate):
     path.write_text(json.dumps(record, indent=2) + "\n")
 
 
+def authorize_production_entry(workspace_dir):
+    rewrite_json(
+        workspace_dir / "creator-workspace.json",
+        lambda manifest: manifest.update(status="production_ready"),
+    )
+    rewrite_json(
+        workspace_dir / "readiness-gates.json",
+        lambda gates: gates["milestones"]["production"].update(
+            status="ready",
+            approved_by="user",
+            approved_on="2026-07-03",
+            blockers=[],
+        ),
+    )
+
+
 def text_production_plan(unit_type):
     if unit_type == "article":
         return {
@@ -475,6 +491,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            authorize_production_entry(workspace_dir)
             populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
@@ -510,6 +527,46 @@ class CliTests(unittest.TestCase):
             self.assertFalse((project_dir / "performance-summary.json").exists())
             self.assertFalse((project_dir / "performance-summary.md").exists())
 
+    def test_init_project_fails_before_production_readiness(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            init_creator_result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "init-creator",
+                    "examples/creator-workspace.example.json",
+                    "--workspace-root",
+                    temp_dir,
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(init_creator_result.returncode, 0)
+            workspace_dir = Path(temp_dir) / "luna-fit"
+            populate_approval_records(workspace_dir)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "init-project",
+                    "examples/project.example.json",
+                    "--creator-workspace",
+                    str(workspace_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("production work requires creator workspace status", result.stderr)
+
     def test_validate_project_command_accepts_initialized_project(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             init_creator_result = subprocess.run(
@@ -530,6 +587,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            authorize_production_entry(workspace_dir)
             populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
@@ -590,6 +648,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             workspace_dir = Path(temp_dir) / "luna-fit"
+            authorize_production_entry(workspace_dir)
             populate_approval_records(workspace_dir)
             init_project_result = subprocess.run(
                 [
@@ -646,6 +705,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(init_creator_result.returncode, 0, init_creator_result.stderr)
 
             project_path = Path(temp_dir) / "wrong-project.json"
+            authorize_production_entry(Path(temp_dir) / "luna-fit")
             project = json.loads((ROOT / "examples" / "project.example.json").read_text())
             project["creator_profile_id"] = "creator_other"
             project_path.write_text(json.dumps(project, indent=2) + "\n")

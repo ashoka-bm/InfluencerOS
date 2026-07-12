@@ -10,6 +10,8 @@
     "creator_slug",
     "content_strategy_id",
     "updated_on",
+    "planning_period",
+    "approval",
     "research_basis",
     "cadence_expectations",
     "content_goals",
@@ -36,6 +38,25 @@
     "updated_on": {
       "type": "string",
       "format": "date"
+    },
+    "planning_period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_by", "approved_on"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "approved"] },
+        "approved_by": { "type": ["string", "null"], "enum": ["user", null] },
+        "approved_on": { "type": ["string", "null"], "format": "date" }
+      }
     },
     "research_basis": {
       "type": "object",

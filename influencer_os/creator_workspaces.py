@@ -1552,6 +1552,29 @@ def _strategy_stage_blockers(workspace_dir, readiness_state, content_strategy, c
 
     blockers.extend(_strategy_variant_ref_blockers(content_strategy))
 
+    schedule_path = workspace_dir / "content-schedule.json"
+    if not schedule_path.exists():
+        blockers.append(
+            "strategy_ready requires a complete content-schedule.json strategy scaffold"
+        )
+    else:
+        try:
+            validate_file("creator-content-schedule", schedule_path)
+        except ValidationError as exc:
+            blockers.append(f"Invalid content-schedule.json: {exc}")
+        else:
+            schedule = load_json(schedule_path)
+            if schedule["creator_profile_id"] != creator_profile["creator_profile_id"]:
+                blockers.append(
+                    "content-schedule.json creator_profile_id does not match workspace creator"
+                )
+            if schedule["content_strategy_id"] != content_strategy["content_strategy_id"]:
+                blockers.append(
+                    "content-schedule.json content_strategy_id does not match the accepted strategy"
+                )
+            blockers.extend(_schedule_approval_blockers(schedule))
+            blockers.extend(_schedule_mix_coverage_blockers(schedule, content_strategy))
+
     conversion_assets, conversion_asset_blockers = _load_conversion_assets(
         workspace_dir, creator_profile, content_strategy
     )
@@ -1559,6 +1582,55 @@ def _strategy_stage_blockers(workspace_dir, readiness_state, content_strategy, c
     for asset_id in sorted(_strategy_conversion_asset_ids(content_strategy)):
         if asset_id not in conversion_assets:
             blockers.append(f"content-strategy.json references missing conversion asset {asset_id}")
+    return blockers
+
+
+def _schedule_approval_blockers(schedule):
+    approval = schedule["approval"]
+    if (
+        approval["status"] != "approved"
+        or approval["approved_by"] != "user"
+        or approval["approved_on"] is None
+    ):
+        return [
+            "content-schedule.json requires explicit user approval before readiness advances"
+        ]
+    if approval["approved_on"] < schedule["updated_on"]:
+        return [
+            "content-schedule.json approval predates its latest update; present the current calendar again"
+        ]
+    return []
+
+
+def _schedule_mix_coverage_blockers(schedule, content_strategy):
+    blockers = []
+    period = schedule["planning_period"]
+    if period["start"] > period["end"]:
+        return ["content schedule planning_period start must not follow end"]
+    if period["start"][:7] != period["end"][:7]:
+        return [
+            "content schedule planning_period must stay within one calendar month "
+            "when validating monthly_mix targets"
+        ]
+    slots_in_period = [
+        slot
+        for slot in schedule["calendar_slots"]
+        if period["start"] <= slot["target_date"] <= period["end"]
+    ]
+    counts = Counter(
+        slot.get("variant_id")
+        for slot in slots_in_period
+        if slot.get("variant_id")
+    )
+    for mix in content_strategy["monthly_mix"]:
+        actual = counts[mix["variant_id"]]
+        expected = mix["target_count_per_month"]
+        if actual != expected:
+            blockers.append(
+                f"content schedule planning period requires {expected} slot(s) for "
+                f"variant {mix['variant_id']}, found {actual}"
+            )
+
     return blockers
 
 

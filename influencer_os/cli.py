@@ -39,6 +39,7 @@ from influencer_os.projects import init_project, validate_project
 from influencer_os.projects import add_analytics_snapshot, register_output_package, register_published_post
 from influencer_os.prune import DEFAULT_RETENTION_DAYS, prune_research
 from influencer_os.recall_index import rebuild_index
+from influencer_os.readiness import require_production_ready
 from influencer_os.research import validate_queue, validate_research
 from influencer_os.semantic_lookup import query_lookup, rebuild_lookup
 from influencer_os.skill_runtime import sync_codex_skills, validate_codex_skill_drift
@@ -478,6 +479,7 @@ def main(argv=None):
             return 0
 
         if args.command == "init-project":
+            require_production_ready(args.creator_workspace)
             project_dir = init_project(
                 args.project,
                 creator_workspace=Path(args.creator_workspace),

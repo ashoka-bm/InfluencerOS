@@ -280,6 +280,13 @@ blockers.
 
 `content-schedule.json` is the Creator Content Schedule: accepted-strategy reference, research basis, cadence expectations, content goals, calendar slots, and drift checks. It is one canonical record that matures in place. Before research it is a `strategy_scaffold`: cadence, platform mix, and campaign structure are reviewable, while topics and titles remain provisional. Broad research may make the schedule globally `research_informed`, but each slot separately records `research_state` as `unresearched`, `candidates_ready`, `selected`, or `inherits_anchor`. Focused plans and runs name exact slots; selection records the queue entry and run before promotion can fill the slot. Slots may reference strategy campaigns/variants; any slot promoting a conversion asset names the approved use and platform. It is separate from `creator-profile.json` because schedule state changes more often than creator identity. Research reads it as an input; it is not a research-module record.
 
+The schedule declares one monthly `planning_period` and explicit human
+`approval` metadata. At `strategy_ready`, slot counts in that period must
+exactly satisfy every `content-strategy.json.monthly_mix` target. Any schedule
+revision invalidates an older approval; `approved_on` may not predate
+`updated_on`. `production_ready` additionally requires a user-approved,
+`research_informed` revision.
+
 `research/` stores Research Findings, dated Research Runs, Research Evidence, Metric Snapshots, research intelligence, Content Opportunity entries, and Concept Approvals. Other modules read only the module's public records (`findings.md`, `content-opportunity-queue/`, `approvals/`); run evidence and intelligence files are research-internal and resolve by ID through the local recall index.
 
 `boards/content-board.json` is the rebuildable Content Board projection for Kanban views. It is derived from canonical queue, promotion, and project records and is never the source of truth. Card IDs are derived deterministically from source record IDs so rebuilds preserve manual order.
