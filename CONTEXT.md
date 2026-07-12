@@ -192,6 +192,43 @@ The specific feeling, identity signal, or brand meaning that a candidate object 
 **Medium-Based Blocker**:
 A Creator Setup blocker that applies only when a content medium requires it. Text-first creators need identity, soul, and brand context; image and video creators also need visual references; audio/video creators need a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken generation requires an approved/imported voice reference.
 
+**Planning Cycle (Accepted Target; Not Yet Shipped)**:
+A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in one human final approval. The two cycles are the Quarterly Planning Cycle and the Weekly Planning Cycle. A Planning Cycle contains Reviews; it is not itself a Review.
+_Avoid_: quarterly review, weekly review (as ceremony names)
+
+**Quarter (Accepted Target; Not Yet Shipped)**:
+A creator-relative planning horizon of thirteen weeks, anchored at the creator's `production_ready` date and rolling thereafter. Quarters are per-creator, not calendar-aligned.
+
+**Quarterly Planning Cycle (Accepted Target; Not Yet Shipped)**:
+The once-per-Quarter Planning Cycle: a retrospective over the closing Quarter's performance and learnings, per-Campaign research, next-Quarter Campaign Concepts and schedule shape, and any amendment proposals for the locked setup and strategy foundations. Human-initiated, never clock-scheduled; an expired Quarter surfaces as a Warning.
+
+**Weekly Planning Cycle (Accepted Target; Not Yet Shipped)**:
+The once-per-week Planning Cycle that finalizes the coming week's slots: focused research on the week's scheduled Campaign Concepts, candidate Content Opportunities per slot, an advisory Review, and the Concept Approvals that promote the week's Projects.
+
+**Quarter Plan (Accepted Target; Not Yet Shipped)**:
+The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
+
+**Reactive Slot (Accepted Target; Not Yet Shipped)**:
+A reserved open calendar slot for timely, news-driven content, allocated by the Content Strategy and filled through a fast-path Concept Approval when a watched development breaks. The human gate is not skipped; speed comes from the standing reactive Campaign, pre-chosen templates, and the reserved slot.
+
+**Monitor Note (Accepted Target; Not Yet Shipped)**:
+A watchlist annotation flagging an expected imminent development worth waiting for — a release, announcement, or event. Weekly Planning Cycle research maintains Monitor Notes; a triggered note is the signal to fill a Reactive Slot.
+
+**Foundation Revision (Accepted Target; Not Yet Shipped)**:
+An immutable sequential version of the locked creator setup foundation (profile, identity, soul, brand, references). Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and readiness milestones never regress when one lands.
+_Avoid_: in-place foundation edit
+
+**Strategy Revision (Accepted Target; Not Yet Shipped)**:
+An immutable sequential version of the locked Content Strategy and schedule shape. Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and prior Quarters retain the Revision that governed them.
+_Avoid_: in-place strategy edit
+
+**Research Demand (Accepted Target; Not Yet Shipped)**:
+A Review finding that names specific missing evidence the artifact needs before approval. Research Demands drive the research-and-review loop in the strategy and quarterly blocks; the loop closes when a Review issues none, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
+
+**Avatar Image (Accepted Target; Not Yet Shipped)**:
+The one platform-facing identity image every creator must have, regardless of Representation Model. Setup generates it automatically when the user has not provided one; the intake interview decides what it depicts (a persona face or a non-face mark) for text-first creators. For synthetic and avatar-led creators it doubles as the visual-continuity calibration reference for the setup image pass. The human accepts or rejects it at Visual Continuity Plan approval; regeneration follows normal exact approval.
+_Avoid_: anchor image, profile picture
+
 **Research Findings**:
 The concise rolling creator-scoped summary of what current research shows. It is
 backed by dated evidence records and should stay short enough for practical
@@ -329,7 +366,7 @@ The rule that converts taste into criteria: every rejection of a draft, prompt, 
 A durable, recurrence-keyed system event recording that a draft, prompt, or asset was rejected and why — the cited criterion plus a one-line reason. Verdicts are durable; the rejected material itself stays ephemeral and is never committed.
 
 **Reflection Trigger**:
-The event-driven signal that reflection is due: when recurrence counts or unprocessed-event thresholds are crossed, an advisory warning is surfaced and badged. Improvement work is triggered by what happened, never by the clock; the human review rides this trigger — distillation proposes, the human approves.
+The event-driven signal that reflection is due: when recurrence counts or unprocessed-event thresholds are crossed, an advisory warning is surfaced and badged. Improvement *automation* is triggered by what happened, never by the clock; the human-initiated Quarterly Planning Cycle is the one calendar-shaped reflection ritual, and it is run by the human, not scheduled by the OS — an overdue cycle surfaces only as a Warning.
 
 **Improvement Claim**:
 The falsifiable statement attached to a distilled skill or routine update, naming the criterion it targets and the expected violation-rate change, verified against subsequent runs. A refuted claim reopens the fix; a confirmed claim closes it.
