@@ -101,3 +101,19 @@ Together with ADR 0044, this ADR also amends ADR 0028 Decision 10: strategy
 and schedule records remain split, but Strategy Revisions (Decision 5) now own
 the evolution of the locked Content Strategy and schedule shape, and the
 Quarter Plan carries the schedule shape each cycle.
+
+## Settlement (implementation)
+
+- The past-target signal is computed: campaign validation returns an advisory
+  warning and the campaign evaluation projection exposes `past_target`; no
+  durable warning record is stored because it would immediately become stale.
+- Only `active` Campaigns warn. Draft, paused, completed, and archived
+  Campaigns are not running.
+- Duration state belongs to `derive_campaign_evaluation` and the
+  `campaign-status` projection, not the unrelated Commercial Pressure
+  projection.
+- `target_end_date` has no lower bound relative to `created_on`; the Duration
+  Target remains unbounded in either direction.
+- The committed example uses static `2027-07-01` for constructor parity,
+  while the healthy integration fixture stamps a date one year in the future
+  so its zero-warning assertion remains evergreen.

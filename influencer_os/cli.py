@@ -776,6 +776,12 @@ def main(argv=None):
                 )
                 print(f"  outcome: {summary['measurable_outcome']}")
                 print(f"  measured progress: {summary['measured_progress']}")
+                if summary["past_target"]:
+                    print(
+                        "  advisory: past target end date "
+                        f"{summary['target_end_date']} (retarget in the next "
+                        "Quarterly Planning Cycle)"
+                    )
                 for concept_id, concept in summary["concepts"].items():
                     pressure_text = ", ".join(
                         f"{tier}={count}"

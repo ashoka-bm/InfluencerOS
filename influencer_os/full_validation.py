@@ -74,6 +74,7 @@ def validate_all(workspace_path):
         result = _run_layer(
             "campaigns", validate_campaign_records, workspace_dir
         )
+        warnings.extend(result.get("warnings", []))
         layers.append(
             ("campaigns", f"{len(result['checked_paths'])} campaign records")
         )

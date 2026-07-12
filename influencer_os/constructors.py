@@ -47,8 +47,9 @@ SCAFFOLD_TYPES = {
         "system/staging/research-runs/ (complete-run moves it canonical)"
     ),
     "campaign": (
-        "Draft Campaign under campaigns/<campaign_id>/ (activate with the "
-        "human activation decision)"
+        "Draft Campaign with required Duration Target under "
+        "campaigns/<campaign_id>/ (activate with the human activation "
+        "decision)"
     ),
     "campaign-concept": (
         "Draft Campaign Concept; assigning a content opportunity copies its "

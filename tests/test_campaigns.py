@@ -8,6 +8,8 @@ every derived and copied field.
 
 import datetime
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,6 +41,7 @@ def _campaign_seed_from_example():
     return {
         "name": example["name"],
         "objective": example["objective"],
+        "target_end_date": example["target_end_date"],
         "primary_content_pillar_id": example["primary_content_pillar_id"],
         "supporting_content_pillar_ids": example["supporting_content_pillar_ids"],
         "primary_audience_segment": example["primary_audience_segment"],
@@ -201,6 +204,19 @@ class ScaffoldCampaignTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "missing authored"):
             scaffold_campaign(seed, self.workspace_dir)
 
+    def test_seed_missing_target_end_date_fails(self):
+        seed = _campaign_seed_from_example()
+        del seed["target_end_date"]
+        with self.assertRaisesRegex(ValidationError, "target_end_date"):
+            scaffold_campaign(seed, self.workspace_dir)
+
+    def test_scaffold_copies_target_end_date_verbatim(self):
+        seed = _campaign_seed_from_example()
+        seed["target_end_date"] = "2031-12-31"
+        result = scaffold_campaign(seed, self.workspace_dir)
+        written = load_json(result["campaign_path"])
+        self.assertEqual(written["target_end_date"], "2031-12-31")
+
     def test_unknown_pillar_fails(self):
         seed = _campaign_seed_from_example()
         seed["primary_content_pillar_id"] = "pillar_never_declared"
@@ -228,6 +244,47 @@ class ScaffoldCampaignTests(unittest.TestCase):
         activate_campaign(self.workspace_dir, "campaign_luna_fit_001")
         with self.assertRaisesRegex(ValidationError, "only a draft"):
             activate_campaign(self.workspace_dir, "campaign_luna_fit_001")
+
+    def test_campaign_status_reports_only_past_target_advisories(self):
+        result = scaffold_campaign(
+            _campaign_seed_from_example(), self.workspace_dir
+        )
+        activate_campaign(self.workspace_dir, result["campaign_id"])
+        campaign = load_json(result["campaign_path"])
+        campaign["target_end_date"] = "2999-01-01"
+        write_json_atomic(result["campaign_path"], campaign)
+
+        future = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "influencer_os",
+                "campaign-status",
+                str(self.workspace_dir),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        self.assertEqual(future.returncode, 0, future.stderr)
+        self.assertNotIn("advisory: past target", future.stdout)
+
+        campaign["target_end_date"] = "2020-01-01"
+        write_json_atomic(result["campaign_path"], campaign)
+        past = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "influencer_os",
+                "campaign-status",
+                str(self.workspace_dir),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        self.assertEqual(past.returncode, 0, past.stderr)
+        self.assertIn("advisory: past target end date 2020-01-01", past.stdout)
 
 
 class ScaffoldCampaignConceptTests(unittest.TestCase):
@@ -565,6 +622,50 @@ class ValidateCampaignRecordsTests(unittest.TestCase):
         self.assertIn(
             "research/content-opportunity-queue/queue.json", checked
         )
+        self.assertEqual(result["warnings"], [])
+
+    def test_active_campaign_past_target_returns_advisory_warning(self):
+        campaign_path = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "campaign.json"
+        )
+        campaign = load_json(campaign_path)
+        campaign["target_end_date"] = "2020-01-01"
+        write_json_atomic(campaign_path, campaign)
+
+        result = validate_campaign_records(self.workspace_dir)
+
+        self.assertIn("checked_paths", result)
+        self.assertEqual(len(result["warnings"]), 1)
+        self.assertIn("campaign_luna_fit_001", result["warnings"][0])
+        self.assertIn("past target", result["warnings"][0])
+
+    def test_active_campaign_future_target_returns_no_warning(self):
+        campaign_path = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "campaign.json"
+        )
+        campaign = load_json(campaign_path)
+        campaign["target_end_date"] = "2999-01-01"
+        write_json_atomic(campaign_path, campaign)
+
+        result = validate_campaign_records(self.workspace_dir)
+
+        self.assertEqual(result["warnings"], [])
+
+    def test_nonrunning_campaign_past_target_returns_no_warning(self):
+        campaign_path = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "campaign.json"
+        )
+        campaign = load_json(campaign_path)
+        campaign["target_end_date"] = "2020-01-01"
+        campaign["status"] = "completed"
+        write_json_atomic(campaign_path, campaign)
+
+        result = validate_campaign_records(self.workspace_dir)
+
+        self.assertEqual(result["warnings"], [])
 
     def test_workspace_without_campaigns_validates(self):
         import shutil
@@ -1014,10 +1115,15 @@ class CampaignEvaluationTests(unittest.TestCase):
     def test_evaluation_aggregates_only_canonical_facts(self):
         from influencer_os.campaigns import derive_campaign_evaluation
 
-        result = derive_campaign_evaluation(self.workspace_dir)
+        result = derive_campaign_evaluation(
+            self.workspace_dir,
+            now=datetime.datetime(2028, 7, 1, 9, 0, 0),
+        )
         campaign = result["campaigns"]["campaign_luna_fit_001"]
         self.assertEqual(campaign["status"], "active")
         self.assertEqual(campaign["objective"], "lead_generation")
+        self.assertEqual(campaign["target_end_date"], "2027-07-01")
+        self.assertTrue(campaign["past_target"])
         self.assertEqual(campaign["measured_progress"], "unknown")
         self.assertEqual(campaign["concept_count"], 1)
         concept = campaign["concepts"]["campaign_concept_luna_fit_001"]
@@ -1030,6 +1136,38 @@ class CampaignEvaluationTests(unittest.TestCase):
         # embedded + soft derives low (ADR 0030); pressure is derived,
         # never read from a stored field.
         self.assertEqual(concept["pressure_tier_counts"], {"low": 1})
+
+    def test_evaluation_reports_completed_past_target_as_not_past(self):
+        from influencer_os.campaigns import derive_campaign_evaluation
+
+        campaign_path = (
+            self.workspace_dir / "campaigns" / "campaign_luna_fit_001"
+            / "campaign.json"
+        )
+        campaign = load_json(campaign_path)
+        campaign["status"] = "completed"
+        campaign["target_end_date"] = "2020-01-01"
+        write_json_atomic(campaign_path, campaign)
+
+        result = derive_campaign_evaluation(
+            self.workspace_dir,
+            now=datetime.datetime(2028, 7, 1, 9, 0, 0),
+        )
+
+        self.assertFalse(
+            result["campaigns"]["campaign_luna_fit_001"]["past_target"]
+        )
+
+    def test_evaluation_reports_future_target_as_not_past(self):
+        from influencer_os.campaigns import derive_campaign_evaluation
+
+        result = derive_campaign_evaluation(
+            self.workspace_dir,
+            now=datetime.datetime(2026, 7, 1, 9, 0, 0),
+        )
+        campaign = result["campaigns"]["campaign_luna_fit_001"]
+        self.assertEqual(campaign["target_end_date"], "2027-07-01")
+        self.assertFalse(campaign["past_target"])
 
     def test_evaluation_counts_superseded_approval_projects(self):
         # Projects locked to a superseded approval are delivered history,

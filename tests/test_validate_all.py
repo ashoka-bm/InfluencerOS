@@ -157,6 +157,57 @@ class ValidateAllTests(unittest.TestCase):
             ]
             self.assertEqual(len(matching), 1, result["warnings"])
 
+    def test_active_campaign_past_target_warning_surfaces_once(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            campaign_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "campaign.json"
+            )
+            rewrite_json(
+                campaign_path,
+                lambda campaign: campaign.update(target_end_date="2020-01-01"),
+            )
+
+            result = validate_all(workspace_dir)
+
+            matching = [
+                warning for warning in result["warnings"]
+                if "past target" in warning
+            ]
+            self.assertEqual(len(matching), 1, result["warnings"])
+            self.assertIn("campaign_luna_fit_001", matching[0])
+
+    def test_cli_validate_all_past_target_stays_nonblocking(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            campaign_path = (
+                workspace_dir / "campaigns" / "campaign_luna_fit_001"
+                / "campaign.json"
+            )
+            rewrite_json(
+                campaign_path,
+                lambda campaign: campaign.update(target_end_date="2020-01-01"),
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "validate",
+                    "all",
+                    str(workspace_dir),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=ROOT,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn("warnings: 1.", completed.stdout)
+            self.assertEqual(completed.stderr.count("past target end date"), 1)
+
     def test_entries_without_queue_manifest_fail(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)

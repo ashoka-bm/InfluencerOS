@@ -48,6 +48,7 @@ CAMPAIGN_SEED_REQUIRED = (
     "primary_content_pillar_id",
     "primary_audience_segment",
     "measurable_outcome",
+    "target_end_date",
 )
 CAMPAIGN_SEED_OPTIONAL = (
     "supporting_content_pillar_ids",
@@ -124,6 +125,20 @@ OPPORTUNITY_SEED_OPTIONAL = (
 def _today(now):
     moment = now if now is not None else datetime.datetime.now()
     return moment.strftime("%Y-%m-%d")
+
+
+def _campaign_past_target_warning(campaign, today):
+    """Return the advisory for an active Campaign past its Duration Target."""
+    if (
+        campaign["status"] == "active"
+        and campaign["target_end_date"] < today
+    ):
+        return (
+            f"Campaign {campaign['campaign_id']} is past target end date "
+            f"{campaign['target_end_date']}; retarget in the next Quarterly "
+            "Planning Cycle."
+        )
+    return None
 
 
 def campaign_dir(creator_workspace, campaign_id):
@@ -243,6 +258,7 @@ def scaffold_campaign(seed, creator_workspace, now=None):
             seed.get("supporting_audience_segments", [])
         ),
         "measurable_outcome": seed["measurable_outcome"],
+        "target_end_date": seed["target_end_date"],
         "created_on": today,
         "updated_on": today,
     }
@@ -758,7 +774,7 @@ def derive_pressure_projection(creator_workspace):
     }
 
 
-def derive_campaign_evaluation(creator_workspace):
+def derive_campaign_evaluation(creator_workspace, now=None):
     """Rebuildable Campaign and Concept evaluation summaries aggregated
     solely from canonical records (ADR 0032): lifecycle and delivery
     counts, commercial function and pressure mix, and the campaign's
@@ -768,6 +784,7 @@ def derive_campaign_evaluation(creator_workspace):
     from influencer_os.pressure import derive_commercial_pressure
 
     workspace_dir = Path(creator_workspace)
+    today = _today(now)
     projects = _workspace_project_manifests(workspace_dir)
     campaigns = {}
     for campaign_path in sorted(
@@ -839,6 +856,9 @@ def derive_campaign_evaluation(creator_workspace):
             "objective": campaign["objective"],
             "status": campaign["status"],
             "measurable_outcome": campaign["measurable_outcome"],
+            "target_end_date": campaign["target_end_date"],
+            "past_target": _campaign_past_target_warning(campaign, today)
+            is not None,
             "measured_progress": "unknown",
             "concept_count": len(concepts),
             "concepts": concept_summaries,
@@ -1028,6 +1048,8 @@ def validate_campaign_records(workspace_path):
     profile = None
     conversion_asset_ids = set()
     campaign_ids = set()
+    warnings = []
+    today = datetime.date.today().isoformat()
     concepts_by_campaign = {}
     approvals_by_campaign = {}
     if campaigns_root.exists():
@@ -1053,6 +1075,9 @@ def validate_campaign_records(workspace_path):
                     f"{campaign['campaign_id']!r}"
                 )
             _check_campaign_profile_refs(campaign, profile, conversion_asset_ids)
+            warning = _campaign_past_target_warning(campaign, today)
+            if warning:
+                warnings.append(warning)
             campaign_ids.add(campaign["campaign_id"])
             checked.append(str(campaign_path.relative_to(workspace_dir)))
 
@@ -1117,4 +1142,8 @@ def validate_campaign_records(workspace_path):
     _check_schedule_ownership(
         workspace_dir, campaign_ids, concepts_by_campaign, approvals_by_campaign
     )
-    return {"workspace_path": workspace_dir, "checked_paths": checked}
+    return {
+        "workspace_path": workspace_dir,
+        "checked_paths": checked,
+        "warnings": warnings,
+    }

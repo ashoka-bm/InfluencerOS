@@ -253,6 +253,7 @@ metadata, not a new production Gate — ADR 0029).
 | `primary_content_pillar_id`, `supporting_content_pillar_ids` | authored | Must resolve to creator-profile pillars |
 | `primary_audience_segment`, `supporting_audience_segments` | authored | Audience is a creator-profile input; free-form, never invented |
 | `primary_offer_conversion_asset_id`, `supporting_conversion_asset_ids` | authored | Offer required when objective is `paid_conversion`; must resolve under `conversion-assets/` |
+| `target_end_date` | authored | Required target end date, unbounded in either direction; a measurement hypothesis, not an auto-stop |
 | `notes` | authored | Optional |
 | `campaign_id` | derived | `campaign_<creator>_<seq>`; seed may pin |
 | `creator_profile_id`, `created_on`, `updated_on` | derived | |
@@ -272,6 +273,7 @@ Canonical seed:
   "primary_offer_conversion_asset_id": "conversion_asset_luna_reset_checklist",
   "supporting_conversion_asset_ids": [],
   "measurable_outcome": "Grow reset-checklist downloads from desk-reset content to 200 per month.",
+  "target_end_date": "2027-07-01",
   "notes": "Runs indefinitely; a paid-offer change would open a new campaign."
 }
 ```

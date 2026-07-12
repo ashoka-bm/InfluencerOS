@@ -1,5 +1,6 @@
 """Shared integration-test workspace and project builders."""
 
+import datetime
 import json
 from pathlib import Path
 
@@ -264,6 +265,14 @@ def populate_approval_records(workspace_dir):
     (campaign_root / "approvals").mkdir(parents=True, exist_ok=True)
     _copy_example_record(
         "campaign.example.json", campaign_root / "campaign.json"
+    )
+    _rewrite_json(
+        campaign_root / "campaign.json",
+        lambda campaign: campaign.update(
+            target_end_date=(
+                datetime.date.today() + datetime.timedelta(days=365)
+            ).isoformat()
+        ),
     )
     _copy_example_record(
         "campaign-concept.example.json",

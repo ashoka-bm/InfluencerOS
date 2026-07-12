@@ -5,7 +5,8 @@ InfluencerOS is an agent operating system for creating researched content plans 
 ## Language
 
 The Campaign, Content Opportunity, and commercial-expression terms below are
-the shipped runtime model (ADRs 0029-0032, landed 2026-07-10): the campaign,
+the shipped runtime model (ADRs 0029-0032, landed 2026-07-10, and ADR 0047,
+landed 2026-07-12): the campaign,
 concept, approval, opportunity, and queue schemas, constructors, and staged
 approval commands are implemented, and the idea-queue records they replace
 are gone (ADR 0031). Terms explicitly marked Deferred remain compatibility
@@ -83,8 +84,8 @@ _Avoid_: funnel stage, campaign objective
 A stable identity for a coordinated stream of work with one typed primary objective and, for sales, one primary paid offer. Its lifecycle is `draft`, `active`, `paused`, `completed`, or `archived`; it may run indefinitely through extended Duration Targets, while a material objective or primary-offer change creates a separate Campaign. Immutable Campaign Revisions and Waves are accepted but deferred.
 _Avoid_: temporary content batch, objective-changing phase
 
-**Campaign Duration Target (Accepted Target; Not Yet Shipped)**:
-The target end date every Campaign declares at creation — unbounded in either direction, shorter or far longer than a Quarter. It is a measurement hypothesis, never an auto-stop: running past it surfaces a Warning and a retro question, and the Quarterly Planning Cycle extends, shortens, or completes against it. A retarget is not a material identity change and never creates a new Campaign.
+**Campaign Duration Target**:
+The `target_end_date` every Campaign declares at creation — unbounded in either direction, shorter or far longer than a Quarter. It is a measurement hypothesis, never an auto-stop: an active Campaign running past it surfaces an advisory Warning in validation and the campaign projection, and a retro question; the Quarterly Planning Cycle retargets, extends, shortens, or completes against it. A retarget is not a material identity change and never creates a new Campaign (ADR 0047).
 _Avoid_: campaign deadline, fixed campaign length
 
 **Campaign Revision (Accepted Target; Deferred)**:

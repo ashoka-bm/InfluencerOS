@@ -15,6 +15,7 @@
  "primary_offer_conversion_asset_id": "conversion_asset_luna_reset_checklist",
  "supporting_conversion_asset_ids": [],
  "measurable_outcome": "Grow reset-checklist downloads from desk-reset content to 200 per month.",
+ "target_end_date": "2027-07-01",
  "activation": {
   "approved_by": "user",
   "activated_on": "2026-07-03",
