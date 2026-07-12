@@ -40,6 +40,7 @@ VALIDATION_KEYWORDS = {
     "allOf",
     "anyOf",
     "const",
+    "contains",
     "enum",
     "format",
     "items",
@@ -173,9 +174,27 @@ def prediction_holds(measured_value, comparator, threshold):
     raise ValidationError(f"unknown prediction comparator {comparator!r}")
 
 # Review roles with a built reviewer skill. The schema enum carries the full
-# decided vocabulary (creator_fit and fact_check are approved for the reviews
-# second slice), but a record claiming an unbuilt review ran fails closed.
-BUILT_REVIEW_ROLES = {"hook_payoff"}
+# decided vocabulary, but a record claiming an unbuilt review ran fails closed.
+PROJECT_SCOPED_REVIEW_ROLES = {"hook_payoff", "creator_fit", "fact_check"}
+WORKSPACE_SCOPED_REVIEW_ROLES = {"setup", "strategy", "quarterly", "concept"}
+BUILT_REVIEW_ROLES = {"hook_payoff", "setup", "strategy"}
+REVIEW_ROLE_SOURCE_SKILLS = {
+    "hook_payoff": "review-hook-payoff",
+    "setup": "review-creator-setup",
+    "strategy": "review-strategy",
+}
+
+CONTENT_BEAT_SPINE_AREAS = {"hook", "retain", "payoff", "cta", "general"}
+WORKSPACE_REVIEW_AREAS = {
+    "foundation",
+    "positioning",
+    "audience",
+    "strategy",
+    "evidence",
+    "schedule",
+    "visual_identity",
+    "general",
+}
 
 # Access methods for the ADR 0022 key-gated research-acquisition connectors.
 # Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
@@ -405,6 +424,22 @@ def validate_schema_subset(schema, value, path="$", root_schema=None):
         if item_schema:
             for index, item in enumerate(value):
                 validate_schema_subset(item_schema, item, f"{path}[{index}]", root_schema)
+        if "contains" in schema:
+            matches = 0
+            failures = []
+            for index, item in enumerate(value):
+                try:
+                    validate_schema_subset(
+                        schema["contains"], item, f"{path}[{index}]", root_schema
+                    )
+                except ValidationError as exc:
+                    failures.append(str(exc))
+                else:
+                    matches += 1
+            if matches == 0:
+                raise ValidationError(
+                    f"{path}: array contains no matching item: {failures!r}"
+                )
 
     if isinstance(value, dict):
         required = schema.get("required", [])
@@ -471,6 +506,7 @@ def _require_keyword_shapes(schema, path):
         ("required", list),
         ("properties", dict),
         ("items", dict),
+        ("contains", dict),
         ("definitions", dict),
         ("allOf", list),
         ("anyOf", list),
@@ -1190,7 +1226,52 @@ def validate_review_record_semantics(record):
             "approved but unbuilt (reviews second slice); a record may not "
             "claim an unbuilt review ran"
         )
+    if review_role in PROJECT_SCOPED_REVIEW_ROLES and "project_id" not in record:
+        raise ValidationError(
+            f"review record {review_id}: project-scoped review {review_role!r} "
+            "requires project_id"
+        )
+    if review_role in WORKSPACE_SCOPED_REVIEW_ROLES:
+        if "project_id" in record:
+            raise ValidationError(
+                f"review record {review_id}: workspace-scoped review {review_role!r} "
+                "must not carry project_id; it anchors by creator_profile_id"
+            )
+        if "concept_approval_id" in record:
+            raise ValidationError(
+                f"review record {review_id}: workspace-scoped review {review_role!r} "
+                "must not carry concept_approval_id"
+            )
+    allowed_areas = (
+        CONTENT_BEAT_SPINE_AREAS
+        if review_role in PROJECT_SCOPED_REVIEW_ROLES
+        else WORKSPACE_REVIEW_AREAS
+    )
+    scope_label = "project-scoped" if review_role in PROJECT_SCOPED_REVIEW_ROLES else "workspace-scoped"
+    for finding in record.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        area = finding.get("area")
+        if area not in allowed_areas:
+            raise ValidationError(
+                f"review record {review_id}: {scope_label} review area {area!r} "
+                "is outside its allowed vocabulary"
+            )
+        if (
+            "research_demand" in finding
+            and review_role not in WORKSPACE_SCOPED_REVIEW_ROLES
+        ):
+            raise ValidationError(
+                f"review record {review_id}: research_demand marker is only "
+                "allowed on ladder review roles"
+            )
     execution = record.get("reviewer_execution", {})
+    expected_skill = REVIEW_ROLE_SOURCE_SKILLS.get(review_role)
+    if expected_skill is not None and execution.get("source_skill") != expected_skill:
+        raise ValidationError(
+            f"review record {review_id}: review_role {review_role!r} requires "
+            f"reviewer_execution.source_skill {expected_skill!r}"
+        )
     mode = execution.get("execution_mode")
     if mode == "fallback_separated_pass" and "fallback_reason" not in execution:
         raise ValidationError(

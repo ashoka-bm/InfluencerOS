@@ -59,6 +59,7 @@ def authorize_production_entry(workspace_dir):
             approved_by="user",
             approved_on="2026-07-03",
             blockers=[],
+            terminal_review_record_id="review_luna_strategy_001",
         ),
     )
 

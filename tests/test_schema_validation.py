@@ -751,17 +751,16 @@ class ValidatorSubsetTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_schema_subset(schema, "ab")
 
-    def test_unknown_keyword_fails_closed(self):
+    def test_contains_requires_a_matching_item(self):
         schema = {"type": "array", "contains": {"type": "string"}}
 
-        with self.assertRaises(SchemaDefinitionError):
+        with self.assertRaises(ValidationError):
             validate_schema_subset(schema, [])
 
-    def test_unknown_keyword_inside_a_matching_combinator_still_fails_closed(self):
+    def test_contains_is_supported_inside_a_matching_combinator(self):
         schema = {"anyOf": [{"type": "string"}, {"contains": {"type": "string"}}]}
 
-        with self.assertRaises(SchemaDefinitionError):
-            validate_schema_subset(schema, "matches-first-branch")
+        validate_schema_subset(schema, "matches-first-branch")
 
     def test_date_format_rejects_impossible_calendar_dates(self):
         # Shape-only checking would accept 2026-99-99 as durable evidence dates.

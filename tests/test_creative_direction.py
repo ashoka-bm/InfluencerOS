@@ -37,6 +37,24 @@ from tests.test_research_validation import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
+SETUP_REVIEW_PACKET = [
+    "creator-profile.json",
+    "brand_context/identity.md",
+    "brand_context/soul.md",
+    "brand_context/personal-brand.md",
+    "references/reference-library.json",
+    "references/character/luna-identity-plate.png",
+    "references/visual-continuity-plan.json",
+]
+
+STRATEGY_REVIEW_PACKET = [
+    "creator-profile.json",
+    "content-strategy.json",
+    "content-schedule.json",
+    "research/findings.md",
+    "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+]
+
 
 def copy_example_record(example_name, destination):
     destination.write_text((ROOT / "examples" / example_name).read_text())
@@ -639,6 +657,164 @@ class ReviewRecordTests(unittest.TestCase):
             with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
                 validate_record("review-record", review)
 
+    def test_setup_and_strategy_roles_validate(self):
+        for role, packet, area in (
+            ("setup", SETUP_REVIEW_PACKET, "foundation"),
+            ("strategy", STRATEGY_REVIEW_PACKET, "strategy"),
+        ):
+            review = load_example("review-record")
+            review.pop("project_id")
+            review.pop("concept_approval_id", None)
+            review["review_role"] = role
+            review["artifact_refs"] = packet
+            review["findings"] = [review["findings"][0]]
+            review["findings"][0]["area"] = area
+            review["reviewer_execution"]["source_skill"] = {
+                "setup": "review-creator-setup",
+                "strategy": "review-strategy",
+            }[role]
+            validate_record("review-record", review)
+
+    def test_ladder_reviews_require_complete_role_specific_packets(self):
+        for role, packet, area in (
+            ("setup", SETUP_REVIEW_PACKET, "foundation"),
+            ("strategy", STRATEGY_REVIEW_PACKET, "strategy"),
+        ):
+            for missing_ref in packet:
+                with self.subTest(role=role, missing_ref=missing_ref):
+                    review = load_example("review-record")
+                    review.pop("project_id")
+                    review.pop("concept_approval_id", None)
+                    review["review_role"] = role
+                    review["artifact_refs"] = [ref for ref in packet if ref != missing_ref]
+                    review["findings"] = [review["findings"][0]]
+                    review["findings"][0]["area"] = area
+                    review["reviewer_execution"]["source_skill"] = {
+                        "setup": "review-creator-setup",
+                        "strategy": "review-strategy",
+                    }[role]
+                    with self.assertRaises(ValidationError):
+                        validate_record("review-record", review)
+
+    def test_review_role_requires_its_exact_reviewer_skill(self):
+        for role, packet, area, forged_skill in (
+            ("setup", SETUP_REVIEW_PACKET, "foundation", "review-hook-payoff"),
+            ("strategy", STRATEGY_REVIEW_PACKET, "strategy", "review-creator-setup"),
+        ):
+            with self.subTest(role=role):
+                review = load_example("review-record")
+                review.pop("project_id")
+                review.pop("concept_approval_id", None)
+                review["review_role"] = role
+                review["artifact_refs"] = packet
+                review["findings"] = [review["findings"][0]]
+                review["findings"][0]["area"] = area
+                review["reviewer_execution"]["source_skill"] = forged_skill
+                with self.assertRaisesRegex(ValidationError, "source_skill"):
+                    validate_record("review-record", review)
+
+    def test_quarterly_and_concept_roles_fail_closed(self):
+        for role in ("quarterly", "concept"):
+            review = load_example("review-record")
+            review.pop("project_id")
+            review.pop("concept_approval_id", None)
+            review["review_role"] = role
+            review["artifact_refs"] = ["creator-profile.json"]
+            review["findings"] = [review["findings"][0]]
+            review["findings"][0]["area"] = "strategy"
+            with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
+                validate_record("review-record", review)
+
+    def test_project_scoped_role_requires_project_id(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        with self.assertRaisesRegex(ValidationError, "project-scoped review.*requires project_id"):
+            validate_record("review-record", review)
+
+    def test_workspace_scoped_role_forbids_project_id(self):
+        review = load_example("review-record")
+        review["review_role"] = "setup"
+        review.pop("concept_approval_id", None)
+        review["artifact_refs"] = SETUP_REVIEW_PACKET
+        review["findings"][0]["area"] = "foundation"
+        review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+        with self.assertRaisesRegex(ValidationError, "workspace-scoped review.*must not carry project_id"):
+            validate_record("review-record", review)
+
+    def test_workspace_scoped_role_forbids_concept_approval_id(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        review["review_role"] = "setup"
+        review["artifact_refs"] = SETUP_REVIEW_PACKET
+        review["findings"][0]["area"] = "foundation"
+        review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+        with self.assertRaisesRegex(
+            ValidationError, "workspace-scoped review.*must not carry concept_approval_id"
+        ):
+            validate_record("review-record", review)
+
+    def test_workspace_area_vocab_enforced_by_scope(self):
+        workspace_review = load_example("review-record")
+        workspace_review.pop("project_id")
+        workspace_review.pop("concept_approval_id", None)
+        workspace_review["review_role"] = "setup"
+        workspace_review["artifact_refs"] = SETUP_REVIEW_PACKET
+        workspace_review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+        with self.assertRaisesRegex(ValidationError, "workspace.*area.*hook"):
+            validate_record("review-record", workspace_review)
+
+        project_review = load_example("review-record")
+        project_review["findings"][0]["area"] = "strategy"
+        with self.assertRaisesRegex(ValidationError, "project.*area.*strategy"):
+            validate_record("review-record", project_review)
+
+    def test_research_demand_marker_only_on_ladder_roles(self):
+        project_review = load_example("review-record")
+        project_review["findings"][0]["research_demand"] = True
+        with self.assertRaisesRegex(ValidationError, "research_demand"):
+            validate_record("review-record", project_review)
+
+        workspace_review = load_example("review-record")
+        workspace_review.pop("project_id")
+        workspace_review.pop("concept_approval_id", None)
+        workspace_review["review_role"] = "strategy"
+        workspace_review["artifact_refs"] = STRATEGY_REVIEW_PACKET
+        workspace_review["findings"] = [workspace_review["findings"][0]]
+        workspace_review["findings"][0].update(area="evidence", research_demand="new")
+        workspace_review["reviewer_execution"]["source_skill"] = "review-strategy"
+        validate_record("review-record", workspace_review)
+
+        workspace_review["findings"][0]["research_demand"] = "carried_forward"
+        validate_record("review-record", workspace_review)
+
+        workspace_review["findings"][0]["research_demand"] = True
+        with self.assertRaises(ValidationError):
+            validate_record("review-record", workspace_review)
+
+    def test_project_review_rejects_research_demand_by_field_presence(self):
+        review = load_example("review-record")
+        for value in (False, "new", "carried_forward"):
+            with self.subTest(value=value):
+                review["findings"][0]["research_demand"] = value
+                with self.assertRaisesRegex(ValidationError, "research_demand"):
+                    validate_record("review-record", review)
+
+    def test_human_ladder_approvals_require_terminal_review_references(self):
+        plan = load_example("visual-continuity-plan")
+        plan["selection_review"].pop("terminal_review_record_id")
+        with self.assertRaises(ValidationError):
+            validate_record("visual-continuity-plan", plan)
+
+        readiness = load_example("readiness-gates")
+        readiness["milestones"]["production"].update(
+            status="ready",
+            approved_on="2026-07-12",
+            approved_by="user",
+            blockers=[],
+        )
+        with self.assertRaises(ValidationError):
+            validate_record("readiness-gates", readiness)
+
     def test_unwaived_blocking_finding_warns_regardless_of_status(self):
         # Slice 4 review finding: the must-acknowledge advisory keys on the
         # finding severity, not only on a block approval_status.
@@ -727,6 +903,149 @@ class ReviewRecordTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "locked approval"):
                 validate_project(project_dir)
+
+
+class WorkspaceReviewRecordTests(unittest.TestCase):
+    def _materialize_setup_packet(self, workspace_dir):
+        for relative_path in SETUP_REVIEW_PACKET:
+            path = workspace_dir / relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if not path.exists():
+                path.write_text("review packet fixture\n")
+
+        board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+        board_path.parent.mkdir(parents=True, exist_ok=True)
+        board_path.write_text(
+            json.dumps({"avatar_asset_id": "asset_luna_identity_plate"}) + "\n"
+        )
+
+    def write_workspace_review(self, workspace_dir, mutate=None):
+        self._materialize_setup_packet(workspace_dir)
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review["review_role"] = "setup"
+        review["artifact_refs"] = SETUP_REVIEW_PACKET
+        review["findings"] = [review["findings"][0]]
+        review["findings"][0]["area"] = "foundation"
+        review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+        if mutate is not None:
+            mutate(review)
+        reviews_dir = workspace_dir / "reviews"
+        reviews_dir.mkdir(exist_ok=True)
+        path = reviews_dir / f"{review['review_record_id']}.json"
+        write_json(path, review)
+        return path, review
+
+    def test_workspace_review_validates_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            self.write_workspace_review(workspace_dir)
+            result = validate_creator_workspace(workspace_dir)
+            self.assertEqual(result["warnings"], [])
+
+    def test_workspace_block_review_halts_nothing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            self.write_workspace_review(
+                workspace_dir,
+                mutate=lambda review: (
+                    review.update(approval_status="block"),
+                    review["findings"][0].update(severity="blocking"),
+                ),
+            )
+            result = validate_creator_workspace(workspace_dir)
+            advisory = [warning for warning in result["warnings"] if "advisory only" in warning]
+            self.assertEqual(len(advisory), 1)
+
+    def test_workspace_scoped_role_rejected_under_project_reviews(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, project_dir = scaffold_project_workspace(temp_dir)
+            review = load_example("review-record")
+            review.pop("project_id")
+            review.pop("concept_approval_id", None)
+            review["review_role"] = "setup"
+            review["artifact_refs"] = SETUP_REVIEW_PACKET
+            review["findings"] = [review["findings"][0]]
+            review["findings"][0]["area"] = "foundation"
+            review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+            write_json(project_dir / "reviews" / f"{review['review_record_id']}.json", review)
+            with self.assertRaisesRegex(ValidationError, "workspace-scoped review.*does not belong"):
+                validate_project(project_dir)
+
+    def test_project_scoped_role_rejected_under_workspace_reviews(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            review = load_example("review-record")
+            review["artifact_refs"] = ["creator-profile.json"]
+            reviews_dir = workspace_dir / "reviews"
+            reviews_dir.mkdir(exist_ok=True)
+            write_json(reviews_dir / f"{review['review_record_id']}.json", review)
+            with self.assertRaisesRegex(ValidationError, "project-scoped review"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_dangling_workspace_artifact_ref_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            self.write_workspace_review(
+                workspace_dir,
+                mutate=lambda review: review.update(
+                    artifact_refs=[
+                        *SETUP_REVIEW_PACKET,
+                        "missing-artifact.md",
+                    ]
+                ),
+            )
+            with self.assertRaisesRegex(FileNotFoundError, "does not resolve"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_reviews_directory_must_be_a_real_directory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            reviews_dir = workspace_dir / "reviews"
+            for path in reviews_dir.iterdir():
+                path.unlink()
+            reviews_dir.rmdir()
+            reviews_dir.write_text("not a directory\n")
+            with self.assertRaisesRegex(ValidationError, "reviews.*directory"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_reviews_directory_symlink_is_rejected_before_scanning(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            external_reviews = Path(temp_dir) / "external-reviews"
+            external_reviews.mkdir()
+            reviews_dir = workspace_dir / "reviews"
+            for path in reviews_dir.iterdir():
+                path.unlink()
+            reviews_dir.rmdir()
+            reviews_dir.symlink_to(external_reviews, target_is_directory=True)
+            with self.assertRaisesRegex(ValidationError, "reviews.*symlink"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_workspace_review_file_symlink_is_rejected_before_reading(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            external_review = Path(temp_dir) / "external-review.json"
+            review = load_example("review-record")
+            external_review.write_text(json.dumps(review) + "\n")
+            reviews_dir = workspace_dir / "reviews"
+            reviews_dir.mkdir(exist_ok=True)
+            (reviews_dir / "review_luna_hook_payoff_001.json").symlink_to(external_review)
+            with self.assertRaisesRegex(ValidationError, "review file.*symlink"):
+                validate_creator_workspace(workspace_dir)
+
+    def test_terminal_review_reference_requires_the_matching_ladder_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir, _ = scaffold_project_workspace(temp_dir)
+            rewrite_json(
+                workspace_dir / "references" / "visual-continuity-plan.json",
+                lambda plan: plan["selection_review"].update(
+                    terminal_review_record_id="review_luna_hook_payoff_001"
+                ),
+            )
+            with self.assertRaisesRegex(ValidationError, "does not resolve"):
+                validate_creator_workspace(workspace_dir)
 
 
 if __name__ == "__main__":

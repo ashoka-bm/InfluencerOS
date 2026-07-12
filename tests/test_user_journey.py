@@ -12,6 +12,7 @@ from tests.test_readiness_validation import (
     write_channels,
     write_readiness_milestones,
 )
+from tests.support import write_setup_review_fixture, write_strategy_review_fixture
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -107,8 +108,10 @@ def authorize_production_entry(workspace_dir):
         approved_on="2026-07-09",
         approved_by="user",
         blockers=[],
+        terminal_review_record_id="review_luna_strategy_001",
     )
     write_json(gates_path, gates)
+    write_strategy_review_fixture(workspace_dir)
 
 
 def write_research_markdown(workspace_dir):
@@ -158,6 +161,7 @@ def seed_creator_setup_outputs(workspace_dir):
     )
     place_brand_board_space_files(workspace_dir)
     run_cli("rebuild-brand-board", workspace_dir)
+    write_setup_review_fixture(workspace_dir)
 
 
 def seed_research_outputs(workspace_dir):

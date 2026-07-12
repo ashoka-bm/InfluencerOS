@@ -333,6 +333,49 @@ def init_workspace_with_status(temp_dir, status):
     (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
         (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
     )
+    for relative_path in (
+        "brand_context/identity.md",
+        "brand_context/soul.md",
+        "brand_context/personal-brand.md",
+        "references/character/luna-identity-plate.png",
+    ):
+        path = workspace_dir / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("review packet fixture\n")
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    board_path.parent.mkdir(parents=True, exist_ok=True)
+    board_path.write_text(
+        json.dumps({"avatar_asset_id": "asset_luna_identity_plate"}) + "\n"
+    )
+    review = json.loads((ROOT / "examples" / "review-record.example.json").read_text())
+    review.pop("project_id")
+    review.pop("concept_approval_id")
+    review.update(
+        review_record_id="review_luna_setup_001",
+        review_role="setup",
+        artifact_refs=[
+            "creator-profile.json",
+            "brand_context/identity.md",
+            "brand_context/soul.md",
+            "brand_context/personal-brand.md",
+            "references/reference-library.json",
+            "references/character/luna-identity-plate.png",
+            "references/visual-continuity-plan.json",
+        ],
+    )
+    review["findings"] = [
+        {
+            "area": "foundation",
+            "severity": "none",
+            "note": "The fixture foundation is internally consistent.",
+        }
+    ]
+    review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+    reviews_dir = workspace_dir / "reviews"
+    reviews_dir.mkdir(exist_ok=True)
+    (reviews_dir / f"{review['review_record_id']}.json").write_text(
+        json.dumps(review, indent=2) + "\n"
+    )
     return workspace_dir
 
 
@@ -396,12 +439,60 @@ def write_readiness_milestones(
             milestone["approved_on"] = None
             milestone["approved_by"] = None
             milestone["blockers"] = ["Milestone is not ready."]
+    production = record["milestones"]["production"]
+    production["terminal_review_record_id"] = (
+        "review_luna_strategy_001" if production_status == "ready" else None
+    )
     record["permissions"] = {
         "creator_image_generation_allowed": image_allowed,
         "creator_video_generation_allowed": video_allowed,
         "spoken_voice_generation_allowed": spoken_allowed,
     }
     (workspace_dir / "readiness-gates.json").write_text(json.dumps(record, indent=2) + "\n")
+    if production_status == "ready":
+        _write_terminal_strategy_review(workspace_dir)
+
+
+def _write_terminal_strategy_review(workspace_dir):
+    findings_path = workspace_dir / "research" / "findings.md"
+    findings_path.parent.mkdir(parents=True, exist_ok=True)
+    findings_path.write_text("# Research Findings\n\nStrategy review fixture.\n")
+    evidence_path = (
+        workspace_dir
+        / "research"
+        / "runs"
+        / "research_run_luna_strategy_001"
+        / "evidence.jsonl"
+    )
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text('{"evidence_id":"evidence_luna_strategy_001"}\n')
+    review = json.loads((ROOT / "examples" / "review-record.example.json").read_text())
+    review.pop("project_id")
+    review.pop("concept_approval_id")
+    review.update(
+        review_record_id="review_luna_strategy_001",
+        review_role="strategy",
+        artifact_refs=[
+            "creator-profile.json",
+            "content-strategy.json",
+            "content-schedule.json",
+            "research/findings.md",
+            "research/runs/research_run_luna_strategy_001/evidence.jsonl",
+        ],
+        findings=[
+            {
+                "area": "strategy",
+                "severity": "none",
+                "note": "The fixture strategy is internally consistent.",
+            }
+        ],
+    )
+    review["reviewer_execution"]["source_skill"] = "review-strategy"
+    reviews_dir = workspace_dir / "reviews"
+    reviews_dir.mkdir(exist_ok=True)
+    (reviews_dir / "review_luna_strategy_001.json").write_text(
+        json.dumps(review, indent=2) + "\n"
+    )
 
 
 def write_channels(workspace_dir):
@@ -1217,6 +1308,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                     "presented_on": "2026-07-09",
                     "decided_on": None,
                     "decided_by": None,
+                    "terminal_review_record_id": None,
                     "notes": "Candidates were presented and await the user's decision.",
                 }
                 for candidate in plan["candidates"]:
@@ -1257,6 +1349,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                 "presented_on": "2026-07-09",
                 "decided_on": None,
                 "decided_by": None,
+                "terminal_review_record_id": None,
                 "notes": "Candidate props and production spaces are awaiting user review."
             }
             revoke_setup_reference_generation(plan)
@@ -1282,6 +1375,7 @@ class ReferenceLibraryIntegrityTests(unittest.TestCase):
                 "presented_on": "2026-07-09",
                 "decided_on": None,
                 "decided_by": None,
+                "terminal_review_record_id": None,
                 "notes": "Candidate selection is awaiting user review."
             }
             revoke_setup_reference_generation(plan)
@@ -1937,6 +2031,7 @@ class TextFirstCreatorTests(unittest.TestCase):
                             "presented_on": None,
                             "decided_on": None,
                             "decided_by": None,
+                            "terminal_review_record_id": None,
                             "notes": "No reusable visual continuity candidates are in scope.",
                         },
                     ),

@@ -37,7 +37,7 @@
         "profile": { "$ref": "#/definitions/milestone" },
         "foundation": { "$ref": "#/definitions/foundation_milestone" },
         "strategy": { "$ref": "#/definitions/milestone" },
-        "production": { "$ref": "#/definitions/milestone" }
+        "production": { "$ref": "#/definitions/production_milestone" }
       }
     },
     "permissions": {
@@ -67,6 +67,36 @@
         "blockers": { "$ref": "#/definitions/blocker_list" },
         "waivers": { "$ref": "#/definitions/waiver_list" }
       }
+    },
+    "production_milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_on", "approved_by", "terminal_review_record_id", "blockers", "waivers"],
+      "properties": {
+        "status": { "$ref": "#/definitions/milestone_status" },
+        "approved_on": { "$ref": "#/definitions/approval_date" },
+        "approved_by": { "$ref": "#/definitions/approval_actor" },
+        "terminal_review_record_id": {
+          "type": ["string", "null"],
+          "pattern": "^review_[a-zA-Z0-9_-]+$"
+        },
+        "blockers": { "$ref": "#/definitions/blocker_list" },
+        "waivers": { "$ref": "#/definitions/waiver_list" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "status": { "const": "ready" },
+            "terminal_review_record_id": { "type": "string", "pattern": "^review_[a-zA-Z0-9_-]+$" }
+          }
+        },
+        {
+          "properties": {
+            "status": { "enum": ["not_started", "in_progress", "blocked", "waived"] },
+            "terminal_review_record_id": { "const": null }
+          }
+        }
+      ]
     },
     "foundation_milestone": {
       "type": "object",

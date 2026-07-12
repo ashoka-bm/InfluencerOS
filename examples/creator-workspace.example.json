@@ -30,6 +30,7 @@
     "research": "research/",
     "conversion_assets": "conversion-assets/",
     "projects": "projects/",
+    "reviews": "reviews/",
     "memory": "memory/",
     "progress": "progress/",
     "claude_skills": ".claude/skills/",

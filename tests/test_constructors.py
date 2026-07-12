@@ -36,6 +36,7 @@ from tests.support import (
     populate_video_understanding_packs,
     populate_workspace_records,
     scaffold_project_workspace,
+    write_strategy_review_fixture,
 )
 
 
@@ -63,9 +64,14 @@ def _promotion_ready_workspace(temp_dir):
     _rewrite_json(
         workspace_dir / "readiness-gates.json",
         lambda gates: gates["milestones"]["production"].update(
-            status="ready", approved_by="user", approved_on="2026-07-03", blockers=[]
+            status="ready", approved_by="user", approved_on="2026-07-03", blockers=[],
+            terminal_review_record_id="review_luna_strategy_001",
         ),
     )
+    (workspace_dir / "content-strategy.json").write_text(
+        (ROOT / "examples" / "content-strategy.example.json").read_text()
+    )
+    write_strategy_review_fixture(workspace_dir)
     return workspace_dir
 
 
@@ -126,6 +132,7 @@ class ReadinessGuardTests(unittest.TestCase):
                     approved_by="user",
                     approved_on="2026-07-03",
                     blockers=[],
+                    terminal_review_record_id="review_luna_strategy_001",
                 ),
             )
             result = require_production_ready(workspace)

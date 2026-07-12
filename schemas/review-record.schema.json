@@ -6,7 +6,6 @@
   "additionalProperties": false,
   "required": [
     "review_record_id",
-    "project_id",
     "creator_profile_id",
     "review_role",
     "artifact_refs",
@@ -34,7 +33,7 @@
     },
     "review_role": {
       "type": "string",
-      "enum": ["hook_payoff", "creator_fit", "fact_check"]
+      "enum": ["hook_payoff", "creator_fit", "fact_check", "setup", "strategy", "quarterly", "concept"]
     },
     "artifact_refs": {
       "type": "array",
@@ -54,7 +53,7 @@
         "properties": {
           "area": {
             "type": "string",
-            "enum": ["hook", "retain", "payoff", "cta", "general"]
+            "enum": ["hook", "retain", "payoff", "cta", "general", "foundation", "positioning", "audience", "strategy", "evidence", "schedule", "visual_identity"]
           },
           "severity": {
             "type": "string",
@@ -67,6 +66,11 @@
           "recommended_revision": {
             "type": "string",
             "minLength": 1
+          },
+          "research_demand": {
+            "type": "string",
+            "enum": ["new", "carried_forward"],
+            "description": "machine-readable ADR 0046 state: a newly issued Research Demand or a prior unresolved demand carried into this review; only valid on ladder review roles"
           }
         }
       }
@@ -117,5 +121,47 @@
       "type": "string",
       "format": "date-time"
     }
-  }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "review_role": { "enum": ["hook_payoff", "creator_fit", "fact_check"] }
+      }
+    },
+    {
+      "properties": {
+        "review_role": { "const": "setup" },
+        "artifact_refs": {
+          "allOf": [
+            { "contains": { "const": "creator-profile.json" } },
+            { "contains": { "const": "brand_context/identity.md" } },
+            { "contains": { "const": "brand_context/soul.md" } },
+            { "contains": { "const": "brand_context/personal-brand.md" } },
+            { "contains": { "const": "references/reference-library.json" } },
+            { "contains": { "pattern": "^references/(character|brand)/[^/]+\\.(png|jpg|jpeg|webp)$" } },
+            { "contains": { "const": "references/visual-continuity-plan.json" } }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "review_role": { "const": "strategy" },
+        "artifact_refs": {
+          "allOf": [
+            { "contains": { "const": "creator-profile.json" } },
+            { "contains": { "const": "content-strategy.json" } },
+            { "contains": { "const": "content-schedule.json" } },
+            { "contains": { "const": "research/findings.md" } },
+            { "contains": { "pattern": "^research/runs/research_run_[a-zA-Z0-9_-]+/evidence\\.jsonl$" } }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "review_role": { "enum": ["quarterly", "concept"] }
+      }
+    }
+  ]
 }

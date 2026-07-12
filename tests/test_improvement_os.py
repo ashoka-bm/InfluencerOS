@@ -21,6 +21,7 @@ from influencer_os.rubric import (
     reflection_report,
 )
 from influencer_os.validation import ValidationError, validate_record
+from tests.support import write_setup_review_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,6 +78,7 @@ class WorkspaceScaffoldMixin:
             ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md",
             workspace / "sources" / "intakes" / "luna-fit-breakdown.md",
         )
+        write_setup_review_fixture(workspace)
         cls._template_workspace = workspace
 
     @classmethod

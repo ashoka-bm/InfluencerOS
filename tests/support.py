@@ -43,6 +43,151 @@ def populate_workspace_records(workspace_dir):
     (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
         (ROOT / "examples" / "sources" / "luna-fit-breakdown.example.md").read_text()
     )
+    for relative_path in (
+        "brand_context/identity.md",
+        "brand_context/soul.md",
+        "brand_context/personal-brand.md",
+        "references/character/luna-identity-plate.png",
+    ):
+        path = workspace_dir / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("review packet fixture\n")
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    board_path.parent.mkdir(parents=True, exist_ok=True)
+    board_path.write_text(
+        json.dumps({"avatar_asset_id": "asset_luna_identity_plate"}) + "\n"
+    )
+    review = json.loads((ROOT / "examples" / "review-record.example.json").read_text())
+    review.pop("project_id")
+    review.pop("concept_approval_id")
+    review.update(
+        review_record_id="review_luna_setup_001",
+        review_role="setup",
+        artifact_refs=[
+            "creator-profile.json",
+            "brand_context/identity.md",
+            "brand_context/soul.md",
+            "brand_context/personal-brand.md",
+            "references/reference-library.json",
+            "references/character/luna-identity-plate.png",
+            "references/visual-continuity-plan.json",
+        ],
+    )
+    review["findings"] = [
+        {
+            "area": "foundation",
+            "severity": "none",
+            "note": "The fixture foundation is internally consistent.",
+        }
+    ]
+    review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+    reviews_dir = workspace_dir / "reviews"
+    reviews_dir.mkdir(exist_ok=True)
+    (reviews_dir / f"{review['review_record_id']}.json").write_text(
+        json.dumps(review, indent=2) + "\n"
+    )
+
+
+def write_setup_review_fixture(workspace_dir):
+    """Add the terminal Setup Review required by an approved plan fixture."""
+    for relative_path in (
+        "brand_context/identity.md",
+        "brand_context/soul.md",
+        "brand_context/personal-brand.md",
+        "references/character/luna-identity-plate.png",
+    ):
+        path = workspace_dir / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("review packet fixture\n")
+    board_path = workspace_dir / "references" / "brand" / "personal-brand-board.json"
+    board_path.parent.mkdir(parents=True, exist_ok=True)
+    if not board_path.exists():
+        board_path.write_text(
+            json.dumps({"avatar_asset_id": "asset_luna_identity_plate"}) + "\n"
+        )
+    review = json.loads((ROOT / "examples" / "review-record.example.json").read_text())
+    review.pop("project_id")
+    review.pop("concept_approval_id")
+    review.update(
+        review_record_id="review_luna_setup_001",
+        review_role="setup",
+        artifact_refs=[
+            "creator-profile.json",
+            "brand_context/identity.md",
+            "brand_context/soul.md",
+            "brand_context/personal-brand.md",
+            "references/reference-library.json",
+            "references/character/luna-identity-plate.png",
+            "references/visual-continuity-plan.json",
+        ],
+        findings=[
+            {
+                "area": "foundation",
+                "severity": "none",
+                "note": "The fixture foundation is internally consistent.",
+            }
+        ],
+    )
+    review["reviewer_execution"]["source_skill"] = "review-creator-setup"
+    reviews_dir = workspace_dir / "reviews"
+    reviews_dir.mkdir(exist_ok=True)
+    (reviews_dir / "review_luna_setup_001.json").write_text(
+        json.dumps(review, indent=2) + "\n"
+    )
+
+
+def write_strategy_review_fixture(workspace_dir):
+    """Add the terminal Strategy Review required by production readiness."""
+    findings_path = workspace_dir / "research" / "findings.md"
+    findings_path.parent.mkdir(parents=True, exist_ok=True)
+    if not findings_path.exists():
+        findings_path.write_text(
+            "---\n"
+            "research_findings_id: research_findings_luna_fit\n"
+            "creator_profile_id: creator_luna_fit\n"
+            "last_updated: 2026-07-03\n"
+            "last_ran: 2026-07-03T09:40:00\n"
+            "summary_char_limit: 6000\n"
+            "active_platforms:\n"
+            "- instagram\n"
+            "- tiktok\n"
+            "active_topic_clusters:\n"
+            "- desk resets\n"
+            "- evening wind-down\n"
+            "source_run_ids:\n"
+            "- research_run_luna_fit_2026_07_03_001\n"
+            "finding_ids:\n"
+            "- finding_luna_fit_desk_reset_lunch\n"
+            "---\n"
+        )
+    review = json.loads((ROOT / "examples" / "review-record.example.json").read_text())
+    review.pop("project_id")
+    review.pop("concept_approval_id")
+    review.update(
+        review_record_id="review_luna_strategy_001",
+        review_role="strategy",
+        artifact_refs=[
+            "creator-profile.json",
+            "content-strategy.json",
+            "content-schedule.json",
+            "research/findings.md",
+            "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+        ],
+        findings=[
+            {
+                "area": "strategy",
+                "severity": "none",
+                "note": "The fixture strategy is internally consistent.",
+            }
+        ],
+    )
+    review["reviewer_execution"]["source_skill"] = "review-strategy"
+    reviews_dir = workspace_dir / "reviews"
+    reviews_dir.mkdir(exist_ok=True)
+    (reviews_dir / "review_luna_strategy_001.json").write_text(
+        json.dumps(review, indent=2) + "\n"
+    )
 
 
 def populate_video_understanding_packs(workspace_dir):

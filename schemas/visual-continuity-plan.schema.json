@@ -165,7 +165,7 @@
     "selection_review": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "presented_on", "decided_on", "decided_by", "notes"],
+      "required": ["status", "presented_on", "decided_on", "decided_by", "terminal_review_record_id", "notes"],
       "properties": {
         "status": {
           "type": "string",
@@ -183,6 +183,10 @@
           "type": ["string", "null"],
           "enum": ["user", null]
         },
+        "terminal_review_record_id": {
+          "type": ["string", "null"],
+          "pattern": "^review_[a-zA-Z0-9_-]+$"
+        },
         "notes": {
           "type": "string",
           "minLength": 1
@@ -194,7 +198,8 @@
             "status": { "const": "draft" },
             "presented_on": { "const": null },
             "decided_on": { "const": null },
-            "decided_by": { "const": null }
+            "decided_by": { "const": null },
+            "terminal_review_record_id": { "const": null }
           }
         },
         {
@@ -202,7 +207,8 @@
             "status": { "const": "pending_user_review" },
             "presented_on": { "type": "string", "format": "date" },
             "decided_on": { "const": null },
-            "decided_by": { "const": null }
+            "decided_by": { "const": null },
+            "terminal_review_record_id": { "const": null }
           }
         },
         {
@@ -210,7 +216,8 @@
             "status": { "const": "changes_requested" },
             "presented_on": { "type": "string", "format": "date" },
             "decided_on": { "type": "string", "format": "date" },
-            "decided_by": { "const": "user" }
+            "decided_by": { "const": "user" },
+            "terminal_review_record_id": { "const": null }
           }
         },
         {
@@ -218,7 +225,8 @@
             "status": { "const": "approved" },
             "presented_on": { "type": "string", "format": "date" },
             "decided_on": { "type": "string", "format": "date" },
-            "decided_by": { "const": "user" }
+            "decided_by": { "const": "user" },
+            "terminal_review_record_id": { "type": "string", "pattern": "^review_[a-zA-Z0-9_-]+$" }
           }
         }
       ]

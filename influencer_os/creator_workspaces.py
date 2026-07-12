@@ -11,11 +11,18 @@ from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.generation import validate_reference_approval_records
 from influencer_os.json_io import write_json_atomic
 from influencer_os.memory import validate_creator_lessons
-from influencer_os.projects import collect_anchored_learning_records
+from influencer_os.projects import _ensure_contained_file, collect_anchored_learning_records
 from influencer_os.research import validate_approvals
 from influencer_os.reference_assets import SETUP_IMAGE_ASSET_TYPES
 from influencer_os.rubric import reflection_report, validate_events_ledger
-from influencer_os.validation import ROOT, ValidationError, load_json, validate_file, validate_record
+from influencer_os.validation import (
+    ROOT,
+    WORKSPACE_SCOPED_REVIEW_ROLES,
+    ValidationError,
+    load_json,
+    validate_file,
+    validate_record,
+)
 
 
 DEFAULT_CREATOR_WORKSPACE_ROOT = ROOT / "workspace-library" / "creators"
@@ -241,6 +248,7 @@ STANDARD_DIRECTORIES = [
     "system",
     "system/reflection-runs",
     "projects",
+    "reviews",
     "memory/daily",
     "progress",
 ]
@@ -357,6 +365,7 @@ def _initial_visual_continuity_plan(manifest):
             "presented_on": None,
             "decided_on": None,
             "decided_by": None,
+            "terminal_review_record_id": None,
             "notes": (
                 "Candidate props, product/brand objects, and production spaces "
                 "have not been presented for review."
@@ -528,14 +537,19 @@ def _slug_id(slug):
     return slug.replace("-", "_")
 
 
-def _initial_milestone(status="not_started", blocker="Awaiting setup."):
-    return {
+def _initial_milestone(
+    status="not_started", blocker="Awaiting setup.", include_terminal_review=False
+):
+    milestone = {
         "status": status,
         "approved_on": None,
         "approved_by": None,
         "blockers": [blocker] if blocker else [],
         "waivers": [],
     }
+    if include_terminal_review:
+        milestone["terminal_review_record_id"] = None
+    return milestone
 
 
 def _initial_readiness_milestones(manifest):
@@ -555,7 +569,11 @@ def _initial_readiness_milestones(manifest):
                 "mode": None,
             },
             "strategy": _initial_milestone("not_started", "Content strategy has not been created."),
-            "production": _initial_milestone("not_started", "Content schedule has not been created."),
+            "production": _initial_milestone(
+                "not_started",
+                "Content schedule has not been created.",
+                include_terminal_review=True,
+            ),
         },
         "permissions": {
             "creator_image_generation_allowed": False,
@@ -876,6 +894,17 @@ def validate_creator_workspace(workspace_path):
     )
 
     warnings = list(approval_warnings)
+    review_warnings, reviews_by_id = _validate_workspace_review_records(
+        workspace_dir, manifest, reference_library
+    )
+    _validate_ladder_review_approval_refs(
+        workspace_dir,
+        reference_library,
+        visual_continuity_plan,
+        readiness_state,
+        reviews_by_id,
+    )
+    warnings.extend(review_warnings)
     if deprecated_status:
         warnings.append(
             f"warning: deprecated status {deprecated_status!r}; migrate this workspace "
@@ -911,6 +940,174 @@ def validate_creator_workspace(workspace_path):
         "checked_paths": sorted(set(required_paths)),
         "warnings": warnings,
     }
+
+
+def _validate_workspace_review_records(workspace_dir, manifest, reference_library):
+    """At-rest checks for workspace-root reviews/*.json (ADR 0046)."""
+    reviews_dir = Path(workspace_dir) / "reviews"
+    warnings = []
+    reviews_by_id = {}
+    if reviews_dir.is_symlink():
+        raise ValidationError(
+            f"Workspace reviews directory must not be a symlink: {reviews_dir}"
+        )
+    if not reviews_dir.exists():
+        return warnings, reviews_by_id
+    if not reviews_dir.is_dir():
+        raise ValidationError(
+            f"Workspace reviews path must be a real directory: {reviews_dir}"
+        )
+    for review_path in sorted(reviews_dir.glob("*.json")):
+        if review_path.is_symlink():
+            raise ValidationError(
+                f"Workspace review file must not be a symlink: {review_path}"
+            )
+        if not review_path.is_file():
+            raise ValidationError(
+                f"Workspace review path must be a regular file: {review_path}"
+            )
+        _ensure_contained_file(
+            review_path,
+            workspace_dir,
+            f"Workspace review file {review_path.name}",
+        )
+        try:
+            validate_file("review-record", review_path)
+        except ValidationError as exc:
+            raise ValidationError(f"Invalid workspace review record {review_path}: {exc}") from exc
+        review = load_json(review_path)
+        review_id = review["review_record_id"]
+        if review_id != review_path.stem:
+            raise ValidationError(
+                f"{review_path}: filename does not match review_record_id {review_id!r}"
+            )
+        if review["creator_profile_id"] != manifest["creator_profile_id"]:
+            raise ValueError(
+                f"Review record {review_id} creator_profile_id does not match workspace: "
+                f"{review['creator_profile_id']!r} != {manifest['creator_profile_id']!r}"
+            )
+        if review["review_role"] not in WORKSPACE_SCOPED_REVIEW_ROLES:
+            raise ValidationError(
+                f"Review record {review_id}: project-scoped review {review['review_role']!r} "
+                "does not belong under workspace reviews/"
+            )
+        if "project_id" in review:
+            raise ValidationError(
+                f"Review record {review_id}: workspace-scoped review "
+                f"{review['review_role']!r} must not carry project_id"
+            )
+        for ref in review["artifact_refs"]:
+            relative_path = Path(ref)
+            if relative_path.is_absolute() or ".." in relative_path.parts:
+                raise ValueError(
+                    f"Review record {review_id} artifact_refs must be relative "
+                    f"paths inside the workspace: {ref!r}"
+                )
+            artifact_path = Path(workspace_dir) / relative_path
+            if not artifact_path.exists():
+                raise FileNotFoundError(
+                    f"Review record {review_id} artifact ref does not resolve "
+                    f"to a file: {ref!r}"
+                )
+            _ensure_contained_file(
+                artifact_path,
+                workspace_dir,
+                f"Review record {review_id} artifact ref {ref!r}",
+            )
+        reviews_by_id[review_id] = review
+        has_blocking_finding = any(
+            finding.get("severity") == "blocking" for finding in review["findings"]
+        )
+        if (
+            review["approval_status"] == "block" or has_blocking_finding
+        ) and "human_waiver" not in review:
+            what = (
+                "carries an unwaived blocking-severity finding"
+                if has_blocking_finding
+                else "recommends block"
+            )
+            warnings.append(
+                f"warning: review {review_id} ({review['review_role']}) {what} "
+                "— advisory only; creative reviews never halt the pipeline, "
+                "but the human must revise or waive (ADR 0046)"
+            )
+    return warnings, reviews_by_id
+
+
+def _validate_ladder_review_approval_refs(
+    workspace_dir,
+    reference_library,
+    visual_continuity_plan,
+    readiness_state,
+    reviews_by_id,
+):
+    """Bind the two shipped ladder-review exits to their terminal records."""
+    selection_review = visual_continuity_plan["selection_review"]
+    if selection_review["status"] == "approved":
+        setup_review = _validate_terminal_review_ref(
+            selection_review["terminal_review_record_id"],
+            "setup",
+            reviews_by_id,
+            "Visual Continuity Plan approval",
+        )
+        _validate_setup_review_avatar_ref(
+            workspace_dir,
+            setup_review["review_record_id"],
+            setup_review["artifact_refs"],
+            reference_library,
+        )
+
+    production = readiness_state["milestones"]["production"]
+    if production["status"] == "ready":
+        _validate_terminal_review_ref(
+            production["terminal_review_record_id"],
+            "strategy",
+            reviews_by_id,
+            "production readiness approval",
+        )
+
+
+def _validate_terminal_review_ref(review_id, expected_role, reviews_by_id, approval_label):
+    review = reviews_by_id.get(review_id)
+    if review is None:
+        raise ValidationError(
+            f"{approval_label} terminal_review_record_id {review_id!r} does not "
+            "resolve under workspace reviews/"
+        )
+    if review["review_role"] != expected_role:
+        raise ValidationError(
+            f"{approval_label} terminal_review_record_id {review_id!r} must "
+            f"reference a {expected_role!r} review"
+        )
+    return review
+
+
+def _validate_setup_review_avatar_ref(
+    workspace_dir, review_id, artifact_refs, reference_library
+):
+    """Require the Setup Review packet to name the board-designated Avatar Image."""
+    board_path = Path(workspace_dir) / "references" / "brand" / "personal-brand-board.json"
+    if not board_path.is_file():
+        raise ValidationError(
+            f"Review record {review_id}: Setup Review requires the Personal Brand Board "
+            "to resolve its Avatar Image"
+        )
+    board = load_json(board_path)
+    avatar_asset_id = board.get("avatar_asset_id")
+    assets_by_id = {
+        asset["asset_id"]: asset for asset in reference_library["assets"]
+    }
+    avatar = assets_by_id.get(avatar_asset_id)
+    if avatar is None:
+        raise ValidationError(
+            f"Review record {review_id}: Personal Brand Board Avatar Image "
+            f"{avatar_asset_id!r} does not resolve in the Reference Library"
+        )
+    if avatar["path"] not in artifact_refs:
+        raise ValidationError(
+            f"Review record {review_id}: Setup Review packet must include the "
+            "Personal Brand Board Avatar Image"
+        )
 
 
 def _validate_visual_continuity_selection(

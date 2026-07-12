@@ -147,6 +147,7 @@
         "research",
         "conversion_assets",
         "projects",
+        "reviews",
         "memory",
         "progress",
         "claude_skills",
@@ -185,6 +186,10 @@
         "projects": {
           "type": "string",
           "const": "projects/"
+        },
+        "reviews": {
+          "type": "string",
+          "const": "reviews/"
         },
         "memory": {
           "type": "string",

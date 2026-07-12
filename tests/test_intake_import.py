@@ -13,6 +13,7 @@ from influencer_os.creator_workspaces import (
     validate_creator_workspace,
 )
 from influencer_os.validation import ValidationError
+from tests.support import write_setup_review_fixture
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +42,7 @@ def scaffold_valid_workspace(temp_dir):
     (workspace_dir / "sources" / "intakes" / "luna-fit-breakdown.md").write_text(
         EXAMPLE_BREAKDOWN.read_text()
     )
+    write_setup_review_fixture(workspace_dir)
     return workspace_dir
 
 

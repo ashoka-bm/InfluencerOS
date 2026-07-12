@@ -7,6 +7,7 @@ from pathlib import Path
 from influencer_os.json_io import write_json_atomic
 from influencer_os.research import find_campaign_concept, validate_approval_gate
 from influencer_os.validation import (
+    PROJECT_SCOPED_REVIEW_ROLES,
     RESEARCH_PLATFORMS,
     TEXT_FORMAT_IDS,
     ValidationError,
@@ -1729,6 +1730,16 @@ def _validate_review_records(project_dir, project):
             raise ValidationError(
                 f"{review_path}: filename does not match review_record_id "
                 f"{review_id!r}"
+            )
+        if review["review_role"] not in PROJECT_SCOPED_REVIEW_ROLES:
+            raise ValidationError(
+                f"Review record {review_id}: workspace-scoped review "
+                f"{review['review_role']!r} does not belong under a project reviews/ dir"
+            )
+        if "project_id" not in review:
+            raise ValidationError(
+                f"Review record {review_id}: project-scoped review "
+                f"{review['review_role']!r} requires project_id"
             )
         if review["project_id"] != project["project_id"]:
             raise ValueError(

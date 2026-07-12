@@ -32,6 +32,7 @@
       "status": "not_started",
       "approved_on": null,
       "approved_by": null,
+      "terminal_review_record_id": null,
       "blockers": [
         "Content schedule has not been created."
       ],

@@ -81,6 +81,8 @@ reference approval instead.
 | `distill-creator-learning` | Learning distillation |
 | `distill-production-learning` | Production reflection |
 | `review-hook-payoff` | Creative review |
+| `review-creator-setup` | Creative review |
+| `review-strategy` | Creative review |
 | `clear-writing-pass` | Editorial pass |
 | `human-voice-pass` | Editorial pass |
 | `request-generation-approval` | Generation approval |

@@ -43,6 +43,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: 2026-07-09: No feedback — routine session after onboarding readiness and calendar review remediation.
 - 2026-07-09: No feedback — routine session after lean routing and ownership cleanup.
 - 2026-07-10: Codex CLI on this machine cannot execute tools (codex-code-mode-host missing); smoke-test with a tool-using task before delegating reviews or implementation to it.
+- 2026-07-12: No feedback — routine session after ADR 0046 slice 2 implementation.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.

@@ -508,6 +508,7 @@ class AvatarAutoGenerationTests(unittest.TestCase):
             "presented_on": None,
             "decided_on": None,
             "decided_by": None,
+            "terminal_review_record_id": None,
             "notes": "Avatar generation precedes Visual Continuity Plan approval.",
         }
         plan["setup_reference_generation"] = {
@@ -1610,6 +1611,7 @@ class Batch2HardeningTests(unittest.TestCase):
             )
             destination = workspace_dir / asset["path"]
             destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.unlink(missing_ok=True)
             outside = Path(temp_dir) / "outside-target.png"
             outside.write_bytes(b"outside\n")
             destination.symlink_to(outside)

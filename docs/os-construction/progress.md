@@ -1,6 +1,6 @@
 # InfluencerOS Progress
 
-Last updated: 2026-07-09
+Last updated: 2026-07-12
 
 This file tracks repo-level product progress. It is public project state. Private creator-specific progress belongs under `workspace-library/creators/<creator-slug>/progress/`.
 
@@ -15,6 +15,7 @@ This includes generated personas, generated reference images, prompts, research 
 - Completed the routing and lean-architecture cleanup (2026-07-09): removed the superseded Content Idea Set / Selected Content Idea schemas, examples, and obsolete system map; made the connector route table own both CLI choices and dispatch; made generation records own asset containment and manifest construction; loaded environment keys from both research and generation registries; and removed fragile schema/connector counts from current docs. Verification: the full suite passes and 53 schema examples validate.
 - Added `docs/workflow-creator-to-video.html` (2026-07-09): a focused visual map of the create-influencer-to-created-video path. It shows each workflow step, the related skills/schemas/templates/workspace records, both human gates, and the exact stopping condition for "video created" before quality review and output packaging.
 - Hardened object reference planning (2026-07-09): traced Adira's grouped prop output to one Reference Asset and prompt that explicitly requested eight distinct objects, then made object references atomic across the creator-setup workflow, `create-reference-library`, and the canonical object prompt template. Added a drift regression requiring one distinct prop per asset, prompt, provider request, and output image; multi-angle sheets may show only repeated views of the same object.
+- Implemented ADR 0046 slice 2 (2026-07-12): workspace-anchored Setup and Strategy Review Records now validate at rest under `reviews/`, retain advisory-only warnings, and are kept distinct from project reviews. The Review Record contract now carries scope-specific areas and a machine-readable `research_demand` marker; Quarterly and Concept reviews remain fail-closed until their conductors ship.
 
 ## Phase Map
 

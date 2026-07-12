@@ -168,6 +168,7 @@
     "presented_on": "2026-06-29",
     "decided_on": "2026-06-29",
     "decided_by": "user",
+    "terminal_review_record_id": "review_luna_setup_001",
     "notes": "User reviewed the candidate recommendations and accepted the Anchor Spaces, Signature Prop, and supporting-motif classifications."
   },
   "setup_reference_generation": {

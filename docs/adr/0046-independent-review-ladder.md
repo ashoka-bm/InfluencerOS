@@ -101,3 +101,22 @@ confused with provider-gated work.
   are accepted targets, not yet shipped; Setup Review and Strategy Review
   land with the setup and strategy block work. This ADR creates the contract,
   not a build obligation beyond it.
+
+## Open question settled
+
+**Settlement (implementation):** Unresolved Research Demands get no new field
+on approval records; instead, they remain findings flagged
+`research_demand: "new"` or `research_demand: "carried_forward"` on the
+terminal Review Record: the last record that
+closes a block's research-and-review loop, either by issuing no new Demands or
+by reaching the two-extra-round cap. A block has open questions at approval
+time exactly when that terminal record carries one or more such findings;
+the human approval references it and the conductor surfaces its remaining
+Demands, avoiding
+schema changes to the heterogeneous approval records.
+
+For the two shipped ladder exits, the existing approval records carry the
+terminal review reference: Visual Continuity Plan `selection_review` records
+the Setup Review id, while the production readiness milestone records the
+Strategy Review id. Workspace validation resolves both references under the
+workspace review root and checks their roles.

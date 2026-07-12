@@ -234,13 +234,13 @@ _Avoid_: in-place foundation edit
 An immutable sequential version of the locked Content Strategy and schedule shape. Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and prior Quarters retain the Revision that governed them.
 _Avoid_: in-place strategy edit
 
-**Research Demand (Accepted Target; Not Yet Shipped)**:
-A Review finding that names specific missing evidence the artifact needs before approval. Research Demands drive the research-and-review loop in every cadence block; the loop closes when a Review issues no new Research Demands, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
+**Research Demand**:
+A Review finding that names specific missing evidence the artifact needs before approval. The shipped machine-readable Review Record marker is `research_demand: "new"` or `"carried_forward"`, distinguishing a new Demand from a repeated unresolved one; the Strategy block's loop cap and conductor wiring land with slice 3. Research Demands drive the research-and-review loop in every cadence block; the loop closes when a Review issues no new Research Demands, and after two extra research rounds any remaining Demands attach to the human approval as open questions.
 
-**Setup Review (Accepted Target; Not Yet Shipped)**:
+**Setup Review**:
 The advisory bounded sub-agent Review inside Creator Setup that judges the text foundation and the auto-generated Avatar Image together, before fixes and the human Visual Continuity Plan approval (ADR 0046).
 
-**Strategy Review (Accepted Target; Not Yet Shipped)**:
+**Strategy Review**:
 The advisory bounded sub-agent Review inside the Strategy block that judges the drafted creator strategy after the broad research validating it, before the human final approval that grants `production_ready` (ADR 0046).
 
 **Quarterly Review (Accepted Target; Not Yet Shipped)**:
@@ -373,7 +373,7 @@ readiness or plan decisions, not additional Gates.
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.
 
 **Review Record**:
-The record a Review produces (lean v1 shape, `schemas/review-record.schema.json`). It names the artifact refs under review, the reviewing role, spine-keyed findings with severity and recommended revisions, how the reviewer ran (`reviewer_execution`), and an advisory status of approve, revise, or block. Only a human may waive a blocking finding. Matched/drifted tracking is deferred until the Creator-Fit Critique ships.
+The record a Review produces (lean v1 shape, `schemas/review-record.schema.json`). It is project-anchored for creative reviews or workspace-anchored by Creator Profile for ladder reviews, and names the artifact refs under review, reviewing role, scope-appropriate findings, reviewer execution, and an advisory status of approve, revise, or block. Only a human may waive a blocking finding. Matched/drifted tracking is deferred until the Creator-Fit Critique ships.
 
 **Pass**:
 A bounded editorial rewrite of an artifact, such as a Clear Writing Pass or a Human Voice Pass, that returns improved text and a change trace. A Pass emits no Review Record, makes no judgment, and never blocks.
