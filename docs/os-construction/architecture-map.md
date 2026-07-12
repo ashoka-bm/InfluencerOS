@@ -210,13 +210,19 @@ skills/create-influencer/SKILL.md  (setup conductor)   [BUILT — all owners exi
   Phase 5  Voice samples     -> Skill(create-voice-samples)
   Phase 6  Operational summary -> Skill(create-creator-profile)
   Phase 7  Runtime context   -> Skill(create-runtime-context)
-  Phase 8  Visual continuity analysis + user approval -> Skill(create-reference-library)
-  Phase 9  Selected reference planning, prompt staging, and resolution -> Skill(create-reference-library)
+  Phase 8  Visual continuity planning + avatar staging -> Skill(create-reference-library)
+             VCP drafted but not approved; only the designated Avatar Image asset is prompt-staged
+  Phase 9  Brand board       -> Skill(personal-brand-board) (all creators; binds avatar_asset_id;
+             typed avatar/location/object Reference Library links)
+  Phase 10 Avatar Image auto-generation (inline: derive-avatar-approval + dispatch-avatar-generation
+             on one system_avatar_setup batch record, max_calls 1 — ADR 0045)
+  Phase 11 Setup Review      -> advisory review of foundation + rendered Avatar Image (ADR 0046)
+  Phase 12 Visual Continuity Plan approval (human; avatar accept/reject decision)
+  Phase 13 Remaining reference resolution -> Skill(create-reference-library)
              voice prompt staging is owned by create-reference-library via elevenlabs-voice-design
-  Phase 10 Brand board       -> Skill(personal-brand-board) (all creators; typed avatar/location/object Reference Library links)
-  Phase 12 Lead-magnet conversion assets -> Skill(create-lead-magnet)
+  Phase 16 Lead-magnet conversion assets -> Skill(create-lead-magnet)
              non-lead-magnet conversion types halt as unsupported in v1
-  Phases 1,11,13-15 intake, onboarding records, readiness, milestone acceptance, generation gate (inline)
+  Phases 1,14,15,17,18 intake, onboarding records, generation gate, readiness, milestone acceptance (inline)
 ```
 
 ## Self-Improvement Loop Call Graph (ADR 0016)
