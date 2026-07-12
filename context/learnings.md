@@ -44,6 +44,7 @@ Creator performance learnings belong in Creator Workspaces, not here.
 - 2026-07-09: No feedback — routine session after lean routing and ownership cleanup.
 - 2026-07-10: Codex CLI on this machine cannot execute tools (codex-code-mode-host missing); smoke-test with a tool-using task before delegating reviews or implementation to it.
 - 2026-07-12: No feedback — routine session after ADR 0046 slice 2 implementation.
+- 2026-07-12: No feedback - routine session after operating cadence model (ADRs 0044-0047) implementation.
 
 ### create-personal-brand
 - 2026-07-03: Personal-brand setup owns ICP-grade audience operating signals; keep them in personal-brand.md rather than expanding creator-profile.json.
@@ -94,3 +95,13 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### quarterly-planning-cycle
 - 2026-07-12: Construct the approved Quarter Plan before proposed Revisions, then execute every approved lifecycle, Duration Target, schedule, and Revision change before the ready check.
+- 2026-07-12: Quarter Plan closure is referentially closed in validate_cadence_records; approved plans require their exact terminal Quarterly Review, and lesson_refs stay unresolved by design (ADR 0047 settlement).
+
+### review-strategy
+- 2026-07-12: Loop caps stated in prose are unenforced; the Research Demand loop cap must be a counted, validator-checked lineage on the Review Record chain.
+
+### review-concept-promotion
+- 2026-07-12: Concept Review records are point-in-time audits: validate write-time preconditions at construction, never re-validate persisted records against mutable schedule state, or the first weekly topic selection makes the workspace permanently unvalidatable.
+
+### weekly-planning-cycle
+- 2026-07-12: Weekly Opportunity-to-Concept reconciliation needs no new promotion path; the shipped ADR 0031 assignment model covers it (ADR 0044 settlement).

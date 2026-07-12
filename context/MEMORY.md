@@ -13,6 +13,7 @@ Do not store secrets, private creator data, API keys, raw transcripts, or genera
 - Research connectors use bounded key-presence approval. Generation stays exact-approved except ADR 0043's one-pass approved-plan setup references. Exercise the manual research loop before scheduling.
 - The first real (paid) generation provider adapter is deliberately unpicked (ADR 0023 Decision 3): the operator chooses it, and it lands as its own approved batch following the adapter contract. Scheduled/unattended generation stays Phase 4.
 - validate all <creator-workspace> is the alpha release gate (composed workspace/research/queue/board/projects run); the runbook for real onboarding is docs/onboard-real-creator-runbook.md. ADR 0022 run 2 (2026-07-07): reddit discovery + youtube + firecrawl work live; reddit.com blocks free enrichment reads (metrics missing); xAI needs credits; Apify unkeyed.
+- Cadence model (ADRs 0044-0047) shipped 2026-07-12. The workspace-library fixtures predate readiness gates and fail validate workspace; use fresh scaffolds until the deferred rebuild.
 
 ## Environment Notes
 
