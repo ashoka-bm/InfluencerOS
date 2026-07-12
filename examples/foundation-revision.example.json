@@ -1,0 +1,11 @@
+{
+  "foundation_revision_id": "foundation_revision_luna_fit_001",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "version": 1,
+  "quarter_plan_id": "quarter_plan_luna_fit_001",
+  "amended_areas": ["identity", "brand"],
+  "rationale": "Clarify the creator's public role after the first Quarter.",
+  "created_on": "2026-07-12",
+  "notes": "The locked setup baseline remains preserved as version zero."
+}

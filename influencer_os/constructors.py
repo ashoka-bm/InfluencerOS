@@ -59,6 +59,15 @@ SCAFFOLD_TYPES = {
         "Content Opportunity entry + queue manifest upsert under "
         "research/content-opportunity-queue/"
     ),
+    "quarter-plan": (
+        "Quarter Plan anchored to the creator's production-ready date"
+    ),
+    "foundation-revision": (
+        "Immutable sequential Foundation Revision under revisions/foundation/"
+    ),
+    "strategy-revision": (
+        "Immutable sequential Strategy Revision under revisions/strategy/"
+    ),
 }
 
 PROJECT_SEED_REQUIRED = (

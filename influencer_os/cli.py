@@ -510,6 +510,11 @@ def main(argv=None):
                 scaffold_campaign_concept,
                 scaffold_content_opportunity,
             )
+            from influencer_os.cadence import (
+                scaffold_foundation_revision,
+                scaffold_quarter_plan,
+                scaffold_strategy_revision,
+            )
             from influencer_os.constructors import (
                 scaffold_project,
                 scaffold_search_plan,
@@ -551,6 +556,28 @@ def main(argv=None):
                 print(
                     f"Scaffolded content opportunity "
                     f"{result['content_opportunity_id']}: {result['entry_path']}"
+                )
+            elif args.record_type == "quarter-plan":
+                result = scaffold_quarter_plan(args.seed, args.creator_workspace)
+                print(
+                    f"Scaffolded Quarter Plan {result['id']}: "
+                    f"{result['path']}"
+                )
+            elif args.record_type == "foundation-revision":
+                result = scaffold_foundation_revision(
+                    args.seed, args.creator_workspace
+                )
+                print(
+                    f"Scaffolded Foundation Revision {result['id']}: "
+                    f"{result['path']}"
+                )
+            elif args.record_type == "strategy-revision":
+                result = scaffold_strategy_revision(
+                    args.seed, args.creator_workspace
+                )
+                print(
+                    f"Scaffolded Strategy Revision {result['id']}: "
+                    f"{result['path']}"
                 )
             else:
                 result = scaffold_search_plan(args.seed, args.creator_workspace)

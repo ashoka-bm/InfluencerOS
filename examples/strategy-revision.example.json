@@ -1,0 +1,11 @@
+{
+  "strategy_revision_id": "strategy_revision_luna_fit_001",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "version": 1,
+  "quarter_plan_id": "quarter_plan_luna_fit_001",
+  "amended_areas": ["content_strategy", "schedule_shape"],
+  "rationale": "Shift the mix toward the formats that retained attention.",
+  "created_on": "2026-07-12",
+  "notes": "No readiness milestone regresses."
+}

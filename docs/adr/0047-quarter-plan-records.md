@@ -117,3 +117,14 @@ Quarter Plan carries the schedule shape each cycle.
 - The committed example uses static `2027-07-01` for constructor parity,
   while the healthy integration fixture stamps a date one year in the future
   so its zero-warning assertion remains evergreen.
+- The Quarter anchor is
+  `readiness-gates.json -> milestones.production.approved_on`, the recorded
+  `production_ready` flip date. The constructor fails closed unless the
+  production milestone is ready and has that date; date
+  granularity is sufficient for a thirteen-week horizon.
+- Revision files are immutable and sequential under
+  `revisions/foundation/` and `revisions/strategy/`. The highest version is
+  current; unique contiguous versions make that current Revision singular
+  without a mutable pointer file. Each Quarter Plan stamps its governing
+  Foundation and Strategy Revision ids, preserving the governing versions
+  for prior Quarters.

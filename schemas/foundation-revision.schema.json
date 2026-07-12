@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/foundation-revision.schema.json",
+  "title": "FoundationRevision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["foundation_revision_id", "creator_profile_id", "creator_slug", "version", "quarter_plan_id", "amended_areas", "rationale", "created_on"],
+  "properties": {
+    "foundation_revision_id": { "type": "string", "pattern": "^foundation_revision_[a-zA-Z0-9_-]+$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "creator_slug": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "quarter_plan_id": { "type": "string", "pattern": "^quarter_plan_[a-zA-Z0-9_-]+$" },
+    "amended_areas": { "type": "array", "minItems": 1, "items": { "type": "string", "enum": ["profile", "identity", "soul", "brand", "references"] } },
+    "rationale": { "type": "string", "minLength": 1 },
+    "created_on": { "type": "string", "format": "date" },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

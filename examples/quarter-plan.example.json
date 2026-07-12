@@ -1,0 +1,30 @@
+{
+  "quarter_plan_id": "quarter_plan_luna_fit_001",
+  "creator_profile_id": "creator_luna_fit",
+  "creator_slug": "luna-fit",
+  "quarter_number": 1,
+  "quarter_start_date": "2026-07-09",
+  "quarter_end_date": "2026-10-08",
+  "production_ready_anchor_date": "2026-07-09",
+  "retrospective": {
+    "findings": [],
+    "performance_summary_ids": [],
+    "lesson_refs": []
+  },
+  "campaign_concept_set": [],
+  "campaign_lifecycle_decisions": [],
+  "campaign_duration_target_changes": [],
+  "schedule_shape": {
+    "anchor_slots_per_week": 2,
+    "reactive_capacity": "one optional slot"
+  },
+  "revision_proposals": [],
+  "governing_foundation_revision_id": null,
+  "governing_strategy_revision_id": null,
+  "approval": {
+    "approved_by": "user",
+    "approved_on": "2026-07-12"
+  },
+  "created_on": "2026-07-12",
+  "notes": "Keep the first Quarter deliberately light."
+}

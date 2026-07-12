@@ -346,6 +346,98 @@ its exact Project set are one transactional operation behind the human
 gate (ADR 0029), so its constructor is the staged approval bundle that
 replaces `stage promotion`/`commit-stage` at the workflow cutover.
 
+## 7. QuarterPlan (`scaffold_quarter_plan`)
+
+Upstream input: the creator's production readiness milestone. The constructor
+uses `readiness-gates.json -> milestones.production.approved_on` as the single
+Quarter anchor and fails closed when that approved milestone date is absent.
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `retrospective` | authored | Findings, PerformanceSummary ids, and durable lesson refs; each array may be empty |
+| `campaign_concept_set` | authored | New or re-confirmed Campaign Concepts |
+| `campaign_lifecycle_decisions` | authored | Pause, complete, archive, or continue decisions |
+| `campaign_duration_target_changes` | authored | Campaign retargets for the Quarter |
+| `schedule_shape` | authored | The next Quarter's planning shape |
+| `revision_proposals` | authored | Foundation/Strategy Revision ids that must resolve on disk |
+| `governing_foundation_revision_id`, `governing_strategy_revision_id`, `notes` | authored | Optional; governing ids must resolve |
+| `quarter_plan_id`, `quarter_number` | derived | Next workspace sequence and highest Quarter number plus one |
+| `quarter_start_date`, `quarter_end_date`, `production_ready_anchor_date` | derived | Thirteen-week rolling window from the recorded production-ready date |
+| `creator_profile_id`, `creator_slug`, `created_on` | derived | Workspace scope and constructor date |
+| `approval` | stamped | One human approval over the whole plan (`approved_by: user`) |
+
+Canonical seed:
+
+```json
+{
+  "retrospective": {
+    "findings": [],
+    "performance_summary_ids": [],
+    "lesson_refs": []
+  },
+  "campaign_concept_set": [],
+  "campaign_lifecycle_decisions": [],
+  "campaign_duration_target_changes": [],
+  "schedule_shape": {
+    "anchor_slots_per_week": 2,
+    "reactive_capacity": "one optional slot"
+  },
+  "revision_proposals": [],
+  "approval": {
+    "approved_by": "user",
+    "approved_on": "2026-07-12"
+  },
+  "notes": "Keep the first Quarter deliberately light."
+}
+```
+
+## 8. FoundationRevision (`scaffold_foundation_revision`)
+
+Upstream input: the Quarter Plan that produced and approved the amendment.
+The locked setup is baseline version zero, not a Revision record.
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `quarter_plan_id` | authored | Required and must resolve to a Quarter Plan |
+| `amended_areas`, `rationale`, `notes` | authored | At least one setup-foundation area and a non-empty rationale; notes optional |
+| `foundation_revision_id`, `version` | derived | Immutable `foundation_revision_<creator>_NNN`; versions are contiguous from 1 |
+| `creator_profile_id`, `creator_slug`, `created_on` | derived | Workspace scope and constructor date |
+
+Canonical seed:
+
+```json
+{
+  "quarter_plan_id": "quarter_plan_luna_fit_001",
+  "amended_areas": ["identity", "brand"],
+  "rationale": "Clarify the creator's public role after the first Quarter.",
+  "notes": "The locked setup baseline remains preserved as version zero."
+}
+```
+
+## 9. StrategyRevision (`scaffold_strategy_revision`)
+
+Upstream input: the Quarter Plan that produced and approved the amendment.
+Strategy Revisions own changes to the locked Content Strategy and schedule
+shape without regressing readiness.
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `quarter_plan_id` | authored | Required and must resolve to a Quarter Plan |
+| `amended_areas`, `rationale`, `notes` | authored | At least one strategy area and a non-empty rationale; notes optional |
+| `strategy_revision_id`, `version` | derived | Immutable `strategy_revision_<creator>_NNN`; versions are contiguous from 1 |
+| `creator_profile_id`, `creator_slug`, `created_on` | derived | Workspace scope and constructor date |
+
+Canonical seed:
+
+```json
+{
+  "quarter_plan_id": "quarter_plan_luna_fit_001",
+  "amended_areas": ["content_strategy", "schedule_shape"],
+  "rationale": "Shift the mix toward the formats that retained attention.",
+  "notes": "No readiness milestone regresses."
+}
+```
+
 ## Anticipation Points
 
 | Trigger | Deterministic work started |

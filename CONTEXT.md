@@ -201,7 +201,7 @@ A Creator Setup blocker that applies only when a content medium requires it. Tex
 A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in one human final approval. The two cycles are the Quarterly Planning Cycle and the Weekly Planning Cycle. A Planning Cycle contains Reviews; it is not itself a Review.
 _Avoid_: quarterly review, weekly review (as ceremony names)
 
-**Quarter (Accepted Target; Not Yet Shipped)**:
+**Quarter**:
 A creator-relative planning horizon of thirteen weeks, anchored at the creator's `production_ready` date and rolling thereafter. Quarters are per-creator, not calendar-aligned.
 
 **Quarterly Planning Cycle (Accepted Target; Not Yet Shipped)**:
@@ -214,7 +214,7 @@ The once-per-week Planning Cycle that finalizes the coming week's slots: focused
 A calendar slot carrying an anchor content unit — one that needs its own focused research and human topic selection rather than inheriting another slot's. Derivative slots point to one Anchor Slot and inherit its selected subject evidence while still needing native format adaptation.
 _Avoid_: derivative slot (as a synonym)
 
-**Quarter Plan (Accepted Target; Not Yet Shipped)**:
+**Quarter Plan**:
 The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, Campaign Duration Target changes, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
 
 **Reactive Slot (Accepted Target; Not Yet Shipped)**:
@@ -227,11 +227,11 @@ _Avoid_: news campaign, standing reactive campaign
 **Monitor Note (Accepted Target; Not Yet Shipped)**:
 A watchlist annotation flagging an expected imminent development worth waiting for — a release, announcement, or event. Weekly Planning Cycle research maintains Monitor Notes; a triggered note is the signal to fill a Reactive Slot.
 
-**Foundation Revision (Accepted Target; Not Yet Shipped)**:
+**Foundation Revision**:
 An immutable sequential version of the locked creator setup foundation (profile, identity, soul, brand, references). Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and readiness milestones never regress when one lands.
 _Avoid_: in-place foundation edit
 
-**Strategy Revision (Accepted Target; Not Yet Shipped)**:
+**Strategy Revision**:
 An immutable sequential version of the locked Content Strategy and schedule shape. Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and prior Quarters retain the Revision that governed them.
 _Avoid_: in-place strategy edit
 

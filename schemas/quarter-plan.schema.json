@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://influencer-os.local/schemas/quarter-plan.schema.json",
+  "title": "QuarterPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "quarter_plan_id",
+    "creator_profile_id",
+    "creator_slug",
+    "quarter_number",
+    "quarter_start_date",
+    "quarter_end_date",
+    "production_ready_anchor_date",
+    "retrospective",
+    "campaign_concept_set",
+    "campaign_lifecycle_decisions",
+    "campaign_duration_target_changes",
+    "schedule_shape",
+    "revision_proposals",
+    "approval",
+    "created_on"
+  ],
+  "properties": {
+    "quarter_plan_id": { "type": "string", "pattern": "^quarter_plan_[a-zA-Z0-9_-]+$" },
+    "creator_profile_id": { "type": "string", "pattern": "^creator_[a-zA-Z0-9_-]+$" },
+    "creator_slug": { "type": "string", "minLength": 1 },
+    "quarter_number": { "type": "integer", "minimum": 1 },
+    "quarter_start_date": { "type": "string", "format": "date" },
+    "quarter_end_date": { "type": "string", "format": "date" },
+    "production_ready_anchor_date": { "type": "string", "format": "date" },
+    "retrospective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findings", "performance_summary_ids", "lesson_refs"],
+      "properties": {
+        "findings": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "performance_summary_ids": { "type": "array", "items": { "type": "string", "pattern": "^performance_summary_[a-zA-Z0-9_-]+$" } },
+        "lesson_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "campaign_concept_set": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["campaign_concept_id", "disposition"],
+        "properties": {
+          "campaign_concept_id": { "type": "string", "pattern": "^campaign_concept_[a-zA-Z0-9_-]+$" },
+          "disposition": { "type": "string", "enum": ["new", "re_confirmed"] }
+        }
+      }
+    },
+    "campaign_lifecycle_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["campaign_id", "decision"],
+        "properties": {
+          "campaign_id": { "type": "string", "pattern": "^campaign_[a-zA-Z0-9_-]+$" },
+          "decision": { "type": "string", "enum": ["pause", "complete", "archive", "continue"] }
+        }
+      }
+    },
+    "campaign_duration_target_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["campaign_id", "target_end_date"],
+        "properties": {
+          "campaign_id": { "type": "string", "pattern": "^campaign_[a-zA-Z0-9_-]+$" },
+          "target_end_date": { "type": "string", "format": "date" }
+        }
+      }
+    },
+    "schedule_shape": { "type": "object" },
+    "revision_proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["revision_type", "revision_id"],
+        "properties": {
+          "revision_type": { "type": "string", "enum": ["foundation", "strategy"] },
+          "revision_id": { "type": "string", "pattern": "^(foundation|strategy)_revision_[a-zA-Z0-9_-]+$" }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved_by", "approved_on"],
+      "properties": {
+        "approved_by": { "type": "string", "const": "user" },
+        "approved_on": { "type": "string", "format": "date" }
+      }
+    },
+    "governing_foundation_revision_id": { "type": ["string", "null"], "pattern": "^foundation_revision_[a-zA-Z0-9_-]+$" },
+    "governing_strategy_revision_id": { "type": ["string", "null"], "pattern": "^strategy_revision_[a-zA-Z0-9_-]+$" },
+    "created_on": { "type": "string", "format": "date" },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

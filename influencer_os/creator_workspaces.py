@@ -894,6 +894,11 @@ def validate_creator_workspace(workspace_path):
     )
 
     warnings = list(approval_warnings)
+    from influencer_os.cadence import validate_cadence_records
+
+    cadence_result = validate_cadence_records(workspace_dir)
+    required_paths.extend(cadence_result["checked_paths"])
+    warnings.extend(cadence_result["warnings"])
     review_warnings, reviews_by_id = _validate_workspace_review_records(
         workspace_dir, manifest, reference_library
     )
