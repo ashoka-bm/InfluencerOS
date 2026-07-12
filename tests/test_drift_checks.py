@@ -644,6 +644,40 @@ class QuarterlyPlanningCycleDriftTests(unittest.TestCase):
         self.assertIn("schedule", execute_body)
 
 
+class WeeklyPlanningCycleDriftTests(unittest.TestCase):
+    """ADR 0044 Decision 9 reviews every candidate before selection."""
+
+    def test_concept_review_precedes_topic_selection_and_assignment(self):
+        skill = read_repo_text("skills/weekly-planning-cycle/SKILL.md")
+
+        review_phase = skill.index("### Phase C")
+        selection_phase = skill.index("### Phase D")
+        assignment_phase = skill.index("### Phase E")
+        approval_phase = skill.index("### Phase F")
+
+        self.assertLess(review_phase, selection_phase)
+        self.assertLess(selection_phase, assignment_phase)
+        self.assertLess(assignment_phase, approval_phase)
+        review_body = skill[review_phase:selection_phase]
+        selection_body = skill[selection_phase:assignment_phase]
+        self.assertIn("one Anchor Slot's complete 2-3 candidate package", review_body)
+        self.assertIn("still-`candidates_ready` schedule", review_body)
+        self.assertIn("one workspace-level, point-in-time Concept Review", review_body)
+        self.assertIn("refresh-concept-research", selection_body)
+        self.assertIn("before marking the slot `selected`", selection_body)
+
+    def test_monitor_notes_remain_narrative_only_and_unconsumed(self):
+        skill = read_repo_text("skills/weekly-planning-cycle/SKILL.md")
+
+        research_phase = skill[
+            skill.index("### Phase A"):skill.index("### Phase B")
+        ]
+        self.assertIn("Monitor Note maintenance as conductor prose only", research_phase)
+        self.assertIn("create a Monitor Note record", research_phase)
+        self.assertIn("do not\ncreate", research_phase)
+        self.assertIn("consume a `triggered` note", research_phase)
+
+
 class ResearchEnumDriftTests(unittest.TestCase):
     def iter_enums_by_names(self, node, kinds, path=""):
         """Yield (location, kind, enum-or-None) for every pinned-name
@@ -802,7 +836,12 @@ class ResearchEnumDriftTests(unittest.TestCase):
         )
 
 class ConductorCallGraphDriftTests(unittest.TestCase):
-    CONDUCTORS = ("influencer-os", "create-influencer", "quarterly-planning-cycle")
+    CONDUCTORS = (
+        "influencer-os",
+        "create-influencer",
+        "quarterly-planning-cycle",
+        "weekly-planning-cycle",
+    )
     MAP_SECTION = "Creation-Flow Call Graph (skill → skill)"
 
     def test_creator_setup_generates_avatar_before_vcp_approval(self):

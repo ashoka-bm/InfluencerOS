@@ -11,6 +11,7 @@ from influencer_os.research import (
     validate_findings_file,
     validate_approval_gate,
     validate_queue,
+    refresh_campaign_concept_research,
     validate_research,
 )
 from influencer_os.validation import ValidationError, validate_jsonl_file
@@ -166,6 +167,16 @@ def scaffold_research_workspace(temp_dir):
     return workspace_dir
 
 
+def set_project_evidence_cache(workspace_dir, evidence_ids):
+    project_path = Path(workspace_dir) / "projects" / PROJECT_ID / "project.json"
+    edit_json(
+        project_path,
+        lambda project: project["source_refs"].__setitem__(
+            "research_evidence_ids", list(evidence_ids)
+        ),
+    )
+
+
 def make_research_phase_only(workspace_dir):
     """Strip the workspace back to a pre-approval research phase: the run,
     findings, and a shortlisted opportunity candidate, with no campaign
@@ -241,6 +252,279 @@ class SlotResearchProvenanceTests(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 ValidationError, "does not cite evidence from the slot's selected research runs"
+            ):
+                validate_research(workspace_dir)
+
+    def test_scheduled_concept_can_be_selected_from_a_new_focused_slot_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "candidates_ready",
+                        "research_run_ids": [RUN_ID_2],
+                    },
+                ),
+            )
+            refresh_campaign_concept_research(
+                workspace_dir, CONCEPT_ID, RUN_ID_2
+            )
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "selected",
+                        "research_run_ids": [RUN_ID_2],
+                        "selected_campaign_concept_id": CONCEPT_ID,
+                    },
+                ),
+            )
+
+            result = validate_research(workspace_dir)
+
+            self.assertIn("content-schedule.json", result["checked_paths"])
+            concept = json.loads(
+                (
+                    workspace_dir
+                    / "campaigns"
+                    / CAMPAIGN_ID
+                    / "concepts"
+                    / f"{CONCEPT_ID}.json"
+                ).read_text()
+            )
+            self.assertIn(
+                {
+                    "research_run_id": RUN_ID_2,
+                    "evidence_id": "evidence_luna_fit_002",
+                },
+                concept["evidence_refs"],
+            )
+            validate_research(workspace_dir)
+
+    def test_concept_refresh_requires_run_in_slot_canonical_research_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "canonical research_state.research_run_ids"
+            ):
+                refresh_campaign_concept_research(
+                    workspace_dir, CONCEPT_ID, RUN_ID_2
+                )
+
+    def test_concept_refresh_requires_the_matching_slot_to_remain_candidates_ready(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            entry_path = (
+                workspace_dir
+                / "research"
+                / "content-opportunity-queue"
+                / "entries"
+                / f"{ENTRY_ID}.json"
+            )
+            entry = json.loads(entry_path.read_text())
+            entry["evidence_refs"] = [{
+                "research_run_id": RUN_ID_2,
+                "evidence_id": "evidence_luna_fit_002",
+            }]
+            write_json(entry_path, entry)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "selected",
+                        "research_run_ids": [RUN_ID_2],
+                        "selected_content_opportunity_id": ENTRY_ID,
+                    },
+                ),
+            )
+
+            with self.assertRaisesRegex(ValidationError, "candidates_ready"):
+                refresh_campaign_concept_research(
+                    workspace_dir, CONCEPT_ID, RUN_ID_2
+                )
+
+            concept = load_example("campaign-concept")
+            persisted = json.loads(
+                (
+                    workspace_dir
+                    / "campaigns"
+                    / CAMPAIGN_ID
+                    / "concepts"
+                    / f"{CONCEPT_ID}.json"
+                ).read_text()
+            )
+            self.assertEqual(persisted["evidence_refs"], concept["evidence_refs"])
+
+    def test_concept_refresh_rejects_symlinked_concept_directory_before_external_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: (
+                    schedule["calendar_slots"][0].update(
+                        campaign_concept_id=CONCEPT_ID,
+                        status="open",
+                        research_state={
+                            "status": "candidates_ready",
+                            "research_run_ids": [RUN_ID_2],
+                        },
+                    )
+                ),
+            )
+            concepts_dir = workspace_dir / "campaigns" / CAMPAIGN_ID / "concepts"
+            outside_concepts = Path(temp_dir) / "outside-concepts"
+            concepts_dir.rename(outside_concepts)
+            concepts_dir.symlink_to(outside_concepts, target_is_directory=True)
+            outside_path = outside_concepts / f"{CONCEPT_ID}.json"
+            before = outside_path.read_text()
+
+            with self.assertRaisesRegex((ValidationError, ValueError), "escapes"):
+                refresh_campaign_concept_research(
+                    workspace_dir, CONCEPT_ID, RUN_ID_2
+                )
+
+            self.assertEqual(outside_path.read_text(), before)
+
+    def test_concept_refresh_rejects_symlinked_research_run_before_external_read(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            run_dir = add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "candidates_ready",
+                        "research_run_ids": [RUN_ID_2],
+                    },
+                ),
+            )
+            outside_run = Path(temp_dir) / "outside-run"
+            run_dir.rename(outside_run)
+            run_dir.symlink_to(outside_run, target_is_directory=True)
+
+            with self.assertRaisesRegex((ValidationError, ValueError), "escapes"):
+                refresh_campaign_concept_research(
+                    workspace_dir, CONCEPT_ID, RUN_ID_2
+                )
+
+    def test_scheduled_concept_selection_without_refresh_still_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "selected",
+                        "research_run_ids": [RUN_ID_2],
+                        "selected_campaign_concept_id": CONCEPT_ID,
+                    },
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError,
+                "does not cite evidence from the slot's selected research runs",
+            ):
+                validate_research(workspace_dir)
+
+    def test_unscheduled_concept_cannot_use_direct_selection_carve_out(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    status="open",
+                    research_state={
+                        "status": "selected",
+                        "research_run_ids": [RUN_ID_2],
+                        "selected_campaign_concept_id": CONCEPT_ID,
+                    },
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError,
+                "does not cite evidence from the slot's selected research runs",
             ):
                 validate_research(workspace_dir)
 
@@ -1395,6 +1679,9 @@ class PromotionGateTests(unittest.TestCase):
                 record = json.loads(path.read_text())
                 record["evidence_refs"][0]["evidence_id"] = "evidence_luna_fit_missing"
                 write_json(path, record)
+            set_project_evidence_cache(
+                workspace_dir, ["evidence_luna_fit_missing"]
+            )
 
             with self.assertRaisesRegex(
                 ValidationError, "focused scheduled_needs run"
@@ -1418,6 +1705,10 @@ class PromotionGateTests(unittest.TestCase):
                 unresolved_ref["evidence_id"] = "evidence_luna_fit_missing"
                 record["evidence_refs"].append(unresolved_ref)
                 write_json(path, record)
+            set_project_evidence_cache(
+                workspace_dir,
+                ["evidence_luna_fit_001", "evidence_luna_fit_missing"],
+            )
 
             result = validate_research(workspace_dir)
 
@@ -1440,6 +1731,10 @@ class PromotionGateTests(unittest.TestCase):
             concept = load_example("campaign-concept")
             concept["status"] = "active"
             concept["evidence_refs"] = [dict(ref) for ref in promotion["evidence_refs"]]
+            set_project_evidence_cache(
+                workspace_dir,
+                ["evidence_luna_fit_001", "evidence_luna_fit_missing"],
+            )
 
             with self.assertRaisesRegex(
                 ValidationError, "focused scheduled_needs run"
@@ -1465,6 +1760,49 @@ class PromotionGateTests(unittest.TestCase):
                 ValidationError, "does not match concept"
             ):
                 validate_approval_gate(workspace_dir, promotion)
+
+    def test_approval_evidence_must_equal_its_ordered_historical_concept_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            add_second_run(workspace_dir)
+            concept = load_example("campaign-concept")
+            concept["status"] = "active"
+            second_ref = {
+                "research_run_id": RUN_ID_2,
+                "evidence_id": "evidence_luna_fit_002",
+            }
+            concept["evidence_refs"].append(second_ref)
+            original_snapshot = [
+                dict(ref) for ref in concept["evidence_refs"]
+            ]
+            set_project_evidence_cache(
+                workspace_dir,
+                ["evidence_luna_fit_001", "evidence_luna_fit_002"],
+            )
+
+            tampered_snapshots = {
+                "trailing_deletion": [dict(original_snapshot[0])],
+                "reordering": [
+                    dict(original_snapshot[1]),
+                    dict(original_snapshot[0]),
+                ],
+                "duplication": [
+                    dict(original_snapshot[0]),
+                    dict(original_snapshot[0]),
+                ],
+            }
+            for tamper, evidence_refs in tampered_snapshots.items():
+                with self.subTest(tamper=tamper):
+                    approval = load_example("concept-approval")
+                    approval["evidence_refs"] = evidence_refs
+                    approval["schedule_slot_ids"] = []
+
+                    with self.assertRaisesRegex(
+                        ValidationError, "historical snapshot"
+                    ):
+                        validate_approval_gate(
+                            workspace_dir, approval, concept=concept
+                        )
 
     def test_unresolved_video_pack_warns_for_human_approved_promotion(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2141,6 +2479,13 @@ class ValidatorPathParityTests(unittest.TestCase):
                 / "concepts" / "campaign_concept_luna_fit_001.json",
                 append_unresolved_ref,
             )
+            set_project_evidence_cache(
+                workspace_dir,
+                [
+                    "evidence_luna_fit_001",
+                    "evidence_luna_fit_never_existed",
+                ],
+            )
 
             result = validate_queue(workspace_dir)
             self.assertTrue(result["warnings"])
@@ -2314,6 +2659,63 @@ class ResearchCliTests(unittest.TestCase):
             queue_result = self.run_cli("validate", "queue", str(workspace_dir))
             self.assertEqual(queue_result.returncode, 0, queue_result.stderr)
             self.assertIn("Checked 1 queue entries", queue_result.stdout)
+
+    def test_refresh_concept_research_command_uses_canonical_run_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_dir = scaffold_research_workspace(temp_dir)
+            shutil.rmtree(workspace_dir / "projects")
+            shutil.rmtree(workspace_dir / "boards")
+            shutil.rmtree(
+                workspace_dir / "campaigns" / CAMPAIGN_ID / "approvals"
+            )
+            write_jsonl(
+                workspace_dir / "system" / "project-warnings.jsonl", []
+            )
+            add_second_run(workspace_dir)
+            edit_json(
+                workspace_dir / "content-schedule.json",
+                lambda schedule: schedule["calendar_slots"][0].update(
+                    campaign_concept_id=CONCEPT_ID,
+                    status="open",
+                    research_state={
+                        "status": "candidates_ready",
+                        "research_run_ids": [RUN_ID_2],
+                    },
+                ),
+            )
+
+            result = self.run_cli(
+                "refresh-concept-research",
+                "--concept",
+                CONCEPT_ID,
+                "--run",
+                RUN_ID_2,
+                "--creator-workspace",
+                str(workspace_dir),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(CONCEPT_ID, result.stdout)
+            concept = json.loads(
+                (
+                    workspace_dir
+                    / "campaigns"
+                    / CAMPAIGN_ID
+                    / "concepts"
+                    / f"{CONCEPT_ID}.json"
+                ).read_text()
+            )
+            self.assertIn(
+                {
+                    "research_run_id": RUN_ID_2,
+                    "evidence_id": "evidence_luna_fit_002",
+                },
+                concept["evidence_refs"],
+            )
+
+            # The new Concept research package must not rewrite or invalidate
+            # the immutable evidence snapshot on an older active Approval.
+            validate_research(workspace_dir)
 
 
 if __name__ == "__main__":

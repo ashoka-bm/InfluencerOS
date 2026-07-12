@@ -31,6 +31,7 @@ from influencer_os.validation import (
     load_json,
     validate_record,
     validate_jsonl_file,
+    validate_concept_review_creation_packet,
     validate_research_search_plan_semantics,
 )
 
@@ -68,6 +69,10 @@ SCAFFOLD_TYPES = {
     "strategy-revision": (
         "Immutable sequential Strategy Revision under revisions/strategy/"
     ),
+    "review-record": (
+        "Point-in-time Concept Review under reviews/ from a validated "
+        "Anchor Slot candidate packet"
+    ),
 }
 
 PROJECT_SEED_REQUIRED = (
@@ -103,6 +108,18 @@ SEARCH_PLAN_SEED_OPTIONAL = (
     "approval_gates",
     "future_connector_notes",
     "research_run_id",
+)
+
+CONCEPT_REVIEW_SEED_REQUIRED = (
+    "anchor_slot_id",
+    "artifact_refs",
+    "findings",
+    "approval_status",
+    "reviewer_execution",
+)
+CONCEPT_REVIEW_SEED_OPTIONAL = (
+    "review_record_id",
+    "human_waiver",
 )
 
 
@@ -168,6 +185,60 @@ def _now(now):
 
 def _iso_seconds(moment):
     return moment.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+# --- point-in-time Concept Review -----------------------------------------
+
+
+def scaffold_review_record(seed, creator_workspace, now=None):
+    """Construct one Concept Review after validating its live Anchor packet."""
+    workspace_dir = Path(creator_workspace)
+    seed = load_seed(seed)
+    check_seed_fields(
+        seed,
+        CONCEPT_REVIEW_SEED_REQUIRED,
+        CONCEPT_REVIEW_SEED_OPTIONAL,
+        "review-record",
+    )
+    manifest = load_workspace_manifest(workspace_dir)
+    reviews_dir = workspace_dir / "reviews"
+    if reviews_dir.is_symlink():
+        raise ValidationError(
+            f"Concept Review reviews directory must not be a symlink: {reviews_dir}"
+        )
+    existing_ids = {
+        path.stem for path in reviews_dir.glob("*.json")
+    } if reviews_dir.exists() else set()
+    review_id = seed.get("review_record_id") or next_sequenced_id(
+        f"review_{creator_id_suffix(manifest['creator_profile_id'])}_concept",
+        existing_ids,
+    )
+    if review_id in existing_ids:
+        raise FileExistsError(f"Concept Review already exists: {review_id}")
+    review = {
+        "review_record_id": review_id,
+        "creator_profile_id": manifest["creator_profile_id"],
+        "review_role": "concept",
+        "artifact_refs": list(seed["artifact_refs"]),
+        "findings": list(seed["findings"]),
+        "approval_status": seed["approval_status"],
+        "reviewer_execution": dict(seed["reviewer_execution"]),
+        "created_at": _iso_seconds(_now(now)),
+    }
+    if "human_waiver" in seed:
+        review["human_waiver"] = dict(seed["human_waiver"])
+    validate_record("review-record", review)
+    review_path = reviews_dir / f"{review_id}.json"
+    validate_concept_review_creation_packet(
+        review_path, review, seed["anchor_slot_id"]
+    )
+    reviews_dir.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(review_path, review)
+    return {
+        "review_record_id": review_id,
+        "review_path": review_path,
+        "anchor_slot_id": seed["anchor_slot_id"],
+    }
 
 
 # --- project ---------------------------------------------------------------

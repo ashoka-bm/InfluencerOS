@@ -148,6 +148,23 @@ def main(argv=None):
     complete_run_parser.add_argument("--finding", dest="finding_ids", nargs="+", metavar="FINDING_ID", help="Explicit finding ids the run produced (default: scan stable findings citing the run).")
     complete_run_parser.add_argument("--intelligence", dest="intelligence_updates", nargs="+", metavar="NOTE", help="Research intelligence update notes.")
 
+    refresh_concept_research_parser = subparsers.add_parser(
+        "refresh-concept-research",
+        help=(
+            "Append one canonical focused scheduled-needs run's evidence to "
+            "a pre-existing scheduled Campaign Concept."
+        ),
+    )
+    refresh_concept_research_parser.add_argument(
+        "--concept", required=True, help="Scheduled Campaign Concept id."
+    )
+    refresh_concept_research_parser.add_argument(
+        "--run", required=True, help="Completed focused research run id."
+    )
+    refresh_concept_research_parser.add_argument(
+        "--creator-workspace", required=True, help="Path to the Creator Workspace."
+    )
+
     refresh_parser = subparsers.add_parser("refresh-workspace", help="Session-open refresh (ADR 0042): validate all, then rebuild the recall index, semantic lookup, and content board in one invocation. Suitable as a background task when a creator session opens.")
     refresh_parser.add_argument("creator_workspace", help="Path to the Creator Workspace.")
 
@@ -517,6 +534,7 @@ def main(argv=None):
             )
             from influencer_os.constructors import (
                 scaffold_project,
+                scaffold_review_record,
                 scaffold_search_plan,
             )
 
@@ -556,6 +574,12 @@ def main(argv=None):
                 print(
                     f"Scaffolded content opportunity "
                     f"{result['content_opportunity_id']}: {result['entry_path']}"
+                )
+            elif args.record_type == "review-record":
+                result = scaffold_review_record(args.seed, args.creator_workspace)
+                print(
+                    f"Scaffolded Concept Review {result['review_record_id']}: "
+                    f"{result['review_path']}"
                 )
             elif args.record_type == "quarter-plan":
                 result = scaffold_quarter_plan(args.seed, args.creator_workspace)
@@ -640,6 +664,22 @@ def main(argv=None):
                 f"{len(outputs['metric_snapshot_ids'])} metric snapshots, "
                 f"{len(outputs['finding_ids'])} findings, "
                 f"{len(outputs['content_opportunity_ids'])} opportunities"
+            )
+            return 0
+
+        if args.command == "refresh-concept-research":
+            from influencer_os.research import refresh_campaign_concept_research
+
+            result = refresh_campaign_concept_research(
+                args.creator_workspace, args.concept, args.run
+            )
+            print(
+                f"Refreshed Campaign Concept {result['campaign_concept_id']} "
+                f"from {result['research_run_id']}: {result['concept_path']}"
+            )
+            print(
+                f"- added {len(result['evidence_refs_added'])} evidence refs "
+                f"for slots {', '.join(result['focused_slot_ids'])}"
             )
             return 0
 

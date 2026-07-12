@@ -2,17 +2,27 @@
 
 import datetime
 import json
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from influencer_os.cadence import (
+    coming_week_staleness_warnings,
     scaffold_foundation_revision,
     scaffold_quarter_plan,
     scaffold_strategy_revision,
 )
 from influencer_os.creator_workspaces import validate_creator_workspace
-from influencer_os.validation import ValidationError, validate_examples
+from influencer_os import constructors
+from influencer_os.validation import (
+    ValidationError,
+    validate_examples,
+    validate_file,
+    validate_record,
+)
 from tests.support import scaffold_project_workspace, write_strategy_review_fixture
 from tests.test_readiness_validation import (
     place_asset_files,
@@ -372,6 +382,717 @@ class CadenceRecordContractTests(unittest.TestCase):
         reviews_dir.mkdir(exist_ok=True)
         write_json(reviews_dir / f"{review_id}.json", review)
         return review_id
+
+    def write_concept_review_fixture(
+        self,
+        workspace,
+        *,
+        review_id="review_luna_concept_001",
+        source_skill="review-concept-promotion",
+        approval_status="approve",
+        severity="none",
+        research_demand=None,
+        research_demand_loop=False,
+        persist=True,
+    ):
+        """Write a workspace-root Concept Review over a resolved weekly packet."""
+        review = json.loads(
+            (ROOT / "examples" / "review-record.example.json").read_text()
+        )
+        review.pop("project_id", None)
+        review.pop("concept_approval_id", None)
+        review.pop("research_demand_loop", None)
+        finding = {
+            "area": "evidence",
+            "severity": severity,
+            "note": "The weekly promotion package is evidence-backed.",
+        }
+        if research_demand is not None:
+            finding["research_demand"] = research_demand
+        if research_demand_loop:
+            review["research_demand_loop"] = {
+                "extra_research_round": 0,
+                "prior_review_record_id": None,
+            }
+        schedule_path = workspace / "content-schedule.json"
+        schedule = read_json(schedule_path)
+        schedule["calendar_slots"][0].update(
+            status="open",
+            research_state={
+                "status": "candidates_ready",
+                "research_run_ids": [
+                    "research_run_luna_fit_2026_07_03_001"
+                ],
+                "candidate_content_opportunity_ids": [
+                    "content_opportunity_luna_fit_002",
+                    "content_opportunity_luna_fit_003",
+                    "content_opportunity_luna_fit_004",
+                ],
+            },
+        )
+        write_json(schedule_path, schedule)
+        approval_path = (
+            workspace
+            / "campaigns"
+            / "campaign_luna_fit_001"
+            / "approvals"
+            / "concept_approval_luna_fit_001.json"
+        )
+        approval = read_json(approval_path)
+        approval["schedule_slot_ids"] = []
+        write_json(approval_path, approval)
+
+        queue_dir = workspace / "research" / "content-opportunity-queue"
+        source_entry = read_json(
+            queue_dir / "entries" / "content_opportunity_luna_fit_001.json"
+        )
+        candidate_refs = []
+        for suffix in ("002", "003", "004"):
+            candidate = dict(source_entry)
+            candidate_id = f"content_opportunity_luna_fit_{suffix}"
+            candidate["content_opportunity_id"] = candidate_id
+            candidate["status"] = "shortlisted"
+            candidate.pop("linked_campaign_concept_ids", None)
+            write_json(queue_dir / "entries" / f"{candidate_id}.json", candidate)
+            candidate_refs.append(
+                f"research/content-opportunity-queue/entries/{candidate_id}.json"
+            )
+        queue = read_json(queue_dir / "queue.json")
+        queue["entry_refs"].extend(
+            {
+                "content_opportunity_id": Path(ref).stem,
+                "status": "shortlisted",
+            }
+            for ref in candidate_refs
+        )
+        queue["status_counts"] = {"assigned": 1, "shortlisted": 3}
+        write_json(queue_dir / "queue.json", queue)
+
+        review.update(
+            review_record_id=review_id,
+            review_role="concept",
+            artifact_refs=[
+                "creator-profile.json",
+                "content-schedule.json",
+                "research/findings.md",
+                *candidate_refs,
+                "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+            ],
+            findings=[finding],
+            approval_status=approval_status,
+        )
+        review["reviewer_execution"]["source_skill"] = source_skill
+        if persist:
+            constructors.scaffold_review_record(
+                self.concept_review_seed(
+                    review,
+                    anchor_slot_id=schedule["calendar_slots"][0]["slot_id"],
+                ),
+                workspace,
+                now=datetime.datetime(2026, 7, 12, 10, 0),
+            )
+        return review
+
+    def concept_review_seed(self, review, *, anchor_slot_id):
+        return {
+            "anchor_slot_id": anchor_slot_id,
+            "artifact_refs": list(review["artifact_refs"]),
+            "findings": list(review["findings"]),
+            "approval_status": review["approval_status"],
+            "reviewer_execution": dict(review["reviewer_execution"]),
+            "review_record_id": review["review_record_id"],
+        }
+
+    def test_concept_review_validates_as_workspace_scoped_built_review(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+
+            validate_record("review-record", review)
+            result = validate_creator_workspace(workspace)
+
+            self.assertEqual(result["creator_profile_id"], "creator_luna_fit")
+
+    def test_concept_review_rejects_candidate_not_tracked_by_queue(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            (workspace / "reviews" / "review_luna_concept_001.json").unlink()
+            queue_path = (
+                workspace
+                / "research"
+                / "content-opportunity-queue"
+                / "queue.json"
+            )
+            queue = read_json(queue_path)
+            queue["entry_refs"] = [
+                ref
+                for ref in queue["entry_refs"]
+                if ref["content_opportunity_id"]
+                != "content_opportunity_luna_fit_003"
+            ]
+            queue["status_counts"] = {"assigned": 1, "shortlisted": 2}
+            write_json(queue_path, queue)
+            anchor_slot_id = read_json(
+                workspace / "content-schedule.json"
+            )["calendar_slots"][0]["slot_id"]
+
+            with self.assertRaisesRegex(
+                ValidationError, "queue.*track|queue provenance|entry_refs"
+            ):
+                constructors.scaffold_review_record(
+                    self.concept_review_seed(
+                        review, anchor_slot_id=anchor_slot_id
+                    ),
+                    workspace,
+                )
+
+    def test_concept_review_accepts_explicit_two_candidate_anchor_packet(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            omitted_ref = (
+                "research/content-opportunity-queue/entries/"
+                "content_opportunity_luna_fit_004.json"
+            )
+            review["artifact_refs"].remove(omitted_ref)
+            (workspace / "reviews" / "review_luna_concept_001.json").unlink()
+            schedule_path = workspace / "content-schedule.json"
+            schedule = read_json(schedule_path)
+            anchor_slot_id = schedule["calendar_slots"][0]["slot_id"]
+            schedule["calendar_slots"][0]["research_state"][
+                "candidate_content_opportunity_ids"
+            ].remove(Path(omitted_ref).stem)
+            write_json(schedule_path, schedule)
+
+            result = constructors.scaffold_review_record(
+                self.concept_review_seed(
+                    review, anchor_slot_id=anchor_slot_id
+                ),
+                workspace,
+            )
+
+            self.assertEqual(result["review_record_id"], review["review_record_id"])
+
+    def test_historical_concept_review_survives_topic_selection_and_assignment(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            self.write_concept_review_fixture(workspace)
+            schedule_path = workspace / "content-schedule.json"
+            schedule = read_json(schedule_path)
+            schedule["calendar_slots"][0]["research_state"] = {
+                "status": "selected",
+                "research_run_ids": [
+                    "research_run_luna_fit_2026_07_03_001"
+                ],
+                "selected_content_opportunity_id": (
+                    "content_opportunity_luna_fit_002"
+                ),
+            }
+            write_json(schedule_path, schedule)
+            chosen_path = (
+                workspace
+                / "research"
+                / "content-opportunity-queue"
+                / "entries"
+                / "content_opportunity_luna_fit_002.json"
+            )
+            chosen = read_json(chosen_path)
+            chosen["status"] = "assigned"
+            write_json(chosen_path, chosen)
+
+            result = validate_creator_workspace(workspace)
+
+            self.assertEqual(result["creator_profile_id"], "creator_luna_fit")
+            self.assertTrue(
+                (workspace / "reviews" / "review_luna_concept_001.json").exists()
+            )
+
+    def test_new_concept_review_requires_candidates_ready_anchor_packet(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            (workspace / "reviews" / "review_luna_concept_001.json").unlink()
+            schedule_path = workspace / "content-schedule.json"
+            schedule = read_json(schedule_path)
+            anchor_slot_id = schedule["calendar_slots"][0]["slot_id"]
+            schedule["calendar_slots"][0]["research_state"] = {
+                "status": "selected",
+                "research_run_ids": [
+                    "research_run_luna_fit_2026_07_03_001"
+                ],
+                "selected_content_opportunity_id": (
+                    "content_opportunity_luna_fit_002"
+                ),
+            }
+            write_json(schedule_path, schedule)
+
+            with self.assertRaisesRegex(ValidationError, "candidates_ready"):
+                constructors.scaffold_review_record(
+                    self.concept_review_seed(
+                        review, anchor_slot_id=anchor_slot_id
+                    ),
+                    workspace,
+                    now=datetime.datetime(2026, 7, 12, 10, 30),
+                )
+
+            self.assertFalse(
+                (workspace / "reviews" / "review_luna_concept_001.json").exists()
+            )
+
+    def test_new_concept_review_is_scoped_to_its_anchor_slot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            (workspace / "reviews" / "review_luna_concept_001.json").unlink()
+            schedule_path = workspace / "content-schedule.json"
+            schedule = read_json(schedule_path)
+            anchor_slot_id = schedule["calendar_slots"][0]["slot_id"]
+            second_run_id = "research_run_luna_fit_2026_07_03_002"
+            unrelated = dict(schedule["calendar_slots"][0])
+            unrelated.update(
+                slot_id="slot_luna_unrelated_candidates_ready",
+                target_date="2026-07-16",
+                research_state={
+                    "status": "candidates_ready",
+                    "research_run_ids": [second_run_id],
+                },
+            )
+            schedule["calendar_slots"].append(unrelated)
+            write_json(schedule_path, schedule)
+            first_run_dir = (
+                workspace
+                / "research"
+                / "runs"
+                / "research_run_luna_fit_2026_07_03_001"
+            )
+            second_run_dir = workspace / "research" / "runs" / second_run_id
+            shutil.copytree(first_run_dir, second_run_dir)
+            run = read_json(second_run_dir / "research-run.json")
+            run.update(
+                research_run_id=second_run_id,
+                schedule_slot_ids=[unrelated["slot_id"]],
+                outputs={
+                    "finding_ids": [],
+                    "content_opportunity_ids": [],
+                    "evidence_ids": ["evidence_luna_fit_002"],
+                    "metric_snapshot_ids": [],
+                    "research_intelligence_updates": [],
+                },
+            )
+            write_json(second_run_dir / "research-run.json", run)
+            plan = read_json(second_run_dir / "search-plan.json")
+            plan.update(
+                research_search_plan_id=(
+                    "research_search_plan_luna_fit_2026_07_03_002"
+                ),
+                research_run_id=second_run_id,
+                schedule_slot_ids=[unrelated["slot_id"]],
+            )
+            write_json(second_run_dir / "search-plan.json", plan)
+            evidence = json.loads(
+                (second_run_dir / "evidence.jsonl").read_text().splitlines()[0]
+            )
+            evidence.update(
+                research_run_id=second_run_id,
+                evidence_id="evidence_luna_fit_002",
+            )
+            (second_run_dir / "evidence.jsonl").write_text(
+                json.dumps(evidence) + "\n"
+            )
+            (second_run_dir / "metric-snapshots.jsonl").write_text("")
+            source_yield = json.loads(
+                (second_run_dir / "source-yield.jsonl").read_text().splitlines()[0]
+            )
+            source_yield.update(
+                research_source_yield_id=(
+                    "research_source_yield_luna_fit_002"
+                ),
+                research_run_id=second_run_id,
+                evidence_ids=["evidence_luna_fit_002"],
+                metric_snapshot_ids=[],
+                finding_ids=[],
+                content_opportunity_ids=[],
+            )
+            (second_run_dir / "source-yield.jsonl").write_text(
+                json.dumps(source_yield) + "\n"
+            )
+
+            result = constructors.scaffold_review_record(
+                self.concept_review_seed(review, anchor_slot_id=anchor_slot_id),
+                workspace,
+                now=datetime.datetime(2026, 7, 12, 10, 30),
+            )
+
+            self.assertEqual(result["review_record_id"], review["review_record_id"])
+
+    def test_shared_run_keeps_each_anchor_slots_explicit_candidate_packet_separate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            review_path = workspace / "reviews" / "review_luna_concept_001.json"
+            review_path.unlink()
+            schedule_path = workspace / "content-schedule.json"
+            schedule = read_json(schedule_path)
+            anchor_slot_id = schedule["calendar_slots"][0]["slot_id"]
+            second_slot = dict(schedule["calendar_slots"][0])
+            second_slot.update(
+                slot_id="slot_luna_shared_run_packet_002",
+                target_date="2026-07-16",
+            )
+            schedule["calendar_slots"].append(second_slot)
+            write_json(schedule_path, schedule)
+            run_dir = (
+                workspace
+                / "research"
+                / "runs"
+                / "research_run_luna_fit_2026_07_03_001"
+            )
+            for filename in ("research-run.json", "search-plan.json"):
+                run_record = read_json(run_dir / filename)
+                run_record["schedule_slot_ids"].append(second_slot["slot_id"])
+                write_json(run_dir / filename, run_record)
+
+            queue_dir = workspace / "research" / "content-opportunity-queue"
+            source_entry = read_json(
+                queue_dir / "entries" / "content_opportunity_luna_fit_002.json"
+            )
+            queue = read_json(queue_dir / "queue.json")
+            second_candidate_refs = []
+            for suffix in ("005", "006", "007"):
+                candidate = dict(source_entry)
+                candidate_id = f"content_opportunity_luna_fit_{suffix}"
+                candidate["content_opportunity_id"] = candidate_id
+                write_json(queue_dir / "entries" / f"{candidate_id}.json", candidate)
+                second_candidate_refs.append(
+                    "research/content-opportunity-queue/entries/"
+                    f"{candidate_id}.json"
+                )
+                queue["entry_refs"].append(
+                    {
+                        "content_opportunity_id": candidate_id,
+                        "status": "shortlisted",
+                    }
+                )
+            queue["status_counts"] = {"assigned": 1, "shortlisted": 6}
+            write_json(queue_dir / "queue.json", queue)
+            second_slot["research_state"] = {
+                **second_slot["research_state"],
+                "candidate_content_opportunity_ids": [
+                    Path(ref).stem for ref in second_candidate_refs
+                ],
+            }
+            schedule["calendar_slots"][1] = second_slot
+            write_json(schedule_path, schedule)
+
+            contaminated_review = dict(review)
+            contaminated_review["artifact_refs"] = [
+                ref
+                for ref in review["artifact_refs"]
+                if "content-opportunity-queue/entries/" not in ref
+            ] + second_candidate_refs
+
+            with self.assertRaisesRegex(
+                ValidationError, "named Anchor Slot.*candidate packet"
+            ):
+                constructors.scaffold_review_record(
+                    self.concept_review_seed(
+                        contaminated_review, anchor_slot_id=anchor_slot_id
+                    ),
+                    workspace,
+                    now=datetime.datetime(2026, 7, 12, 10, 30),
+                )
+
+            result = constructors.scaffold_review_record(
+                self.concept_review_seed(review, anchor_slot_id=anchor_slot_id),
+                workspace,
+                now=datetime.datetime(2026, 7, 12, 10, 30),
+            )
+
+            self.assertEqual(result["review_record_id"], review["review_record_id"])
+
+    def test_standalone_concept_review_validation_pins_filename_and_workspace_creator(self):
+        for tamper in ("filename", "creator"):
+            with self.subTest(tamper=tamper):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    self.write_concept_review_fixture(workspace)
+                    review_path = (
+                        workspace / "reviews" / "review_luna_concept_001.json"
+                    )
+                    if tamper == "filename":
+                        tampered_path = review_path.with_name(
+                            "review_luna_concept_copied.json"
+                        )
+                        review_path.rename(tampered_path)
+                    else:
+                        review = read_json(review_path)
+                        review["creator_profile_id"] = "creator_copied_audit"
+                        write_json(review_path, review)
+                        tampered_path = review_path
+
+                    with self.assertRaisesRegex(
+                        (ValidationError, ValueError),
+                        "filename does not match review_record_id|does not match workspace",
+                    ):
+                        validate_file("review-record", tampered_path)
+
+    def test_standalone_ladder_review_validation_pins_filename_and_workspace_creator(self):
+        for tamper in ("filename", "creator"):
+            with self.subTest(tamper=tamper):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    review_id = self.write_quarterly_review_fixture(workspace)
+                    review_path = workspace / "reviews" / f"{review_id}.json"
+                    if tamper == "filename":
+                        tampered_path = review_path.with_name(
+                            "review_luna_quarterly_copied.json"
+                        )
+                        review_path.rename(tampered_path)
+                    else:
+                        review = read_json(review_path)
+                        review["creator_profile_id"] = "creator_copied_audit"
+                        write_json(review_path, review)
+                        tampered_path = review_path
+
+                    with self.assertRaisesRegex(
+                        (ValidationError, ValueError),
+                        "filename does not match review_record_id|does not match workspace",
+                    ):
+                        validate_file("review-record", tampered_path)
+
+    def test_concept_review_constructor_rejects_symlinked_reviews_directory_before_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace, persist=False)
+            reviews_dir = workspace / "reviews"
+            shutil.rmtree(reviews_dir)
+            outside_reviews = Path(temp_dir) / "outside-reviews"
+            outside_reviews.mkdir()
+            reviews_dir.symlink_to(outside_reviews, target_is_directory=True)
+            anchor_slot_id = read_json(
+                workspace / "content-schedule.json"
+            )["calendar_slots"][0]["slot_id"]
+
+            with self.assertRaisesRegex((ValidationError, ValueError), "symlink"):
+                constructors.scaffold_review_record(
+                    self.concept_review_seed(
+                        review, anchor_slot_id=anchor_slot_id
+                    ),
+                    workspace,
+                )
+
+            self.assertEqual(list(outside_reviews.iterdir()), [])
+
+    def test_concept_review_constructor_cli_writes_the_point_in_time_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            review_path = workspace / "reviews" / "review_luna_concept_001.json"
+            review_path.unlink()
+            anchor_slot_id = read_json(
+                workspace / "content-schedule.json"
+            )["calendar_slots"][0]["slot_id"]
+            seed_path = Path(temp_dir) / "concept-review-seed.json"
+            write_json(
+                seed_path,
+                self.concept_review_seed(
+                    review, anchor_slot_id=anchor_slot_id
+                ),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "scaffold",
+                    "review-record",
+                    "--seed",
+                    str(seed_path),
+                    "--creator-workspace",
+                    str(workspace),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(review_path.exists())
+
+    def test_concept_review_artifact_symlink_escape_fails_workspace_and_cli(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(workspace)
+            candidate_ref = next(
+                ref
+                for ref in review["artifact_refs"]
+                if ref.endswith("content_opportunity_luna_fit_002.json")
+            )
+            candidate_path = workspace / candidate_ref
+            outside = Path(temp_dir) / "outside-candidate.json"
+            outside.write_text(candidate_path.read_text())
+            candidate_path.unlink()
+            candidate_path.symlink_to(outside)
+
+            with self.assertRaisesRegex((ValidationError, ValueError), "escapes"):
+                validate_creator_workspace(workspace)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "influencer_os",
+                    "validate",
+                    "record",
+                    "review-record",
+                    str(workspace / "reviews" / "review_luna_concept_001.json"),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("escapes", result.stderr)
+
+    def test_concept_review_rejects_research_demand_loop(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(
+                workspace, research_demand_loop=True, persist=False
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "research_demand_loop is only allowed"
+            ):
+                validate_record("review-record", review)
+
+    def test_concept_review_requires_its_source_skill(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            review = self.write_concept_review_fixture(
+                workspace, source_skill="review-quarter-plan", persist=False
+            )
+
+            with self.assertRaisesRegex(
+                ValidationError, "review-concept-promotion"
+            ):
+                validate_record("review-record", review)
+
+    def test_concept_review_block_is_advisory_workspace_warning(self):
+        for approval_status, severity in (
+            ("block", "none"),
+            ("approve", "blocking"),
+        ):
+            with self.subTest(
+                approval_status=approval_status, severity=severity
+            ):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    self.write_concept_review_fixture(
+                        workspace,
+                        approval_status=approval_status,
+                        severity=severity,
+                    )
+
+                    warnings = validate_creator_workspace(workspace)["warnings"]
+
+                    self.assertTrue(
+                        any(
+                            "review review_luna_concept_001 (concept)" in warning
+                            and (
+                                "recommends block" in warning
+                                or "blocking-severity" in warning
+                            )
+                            for warning in warnings
+                        )
+                    )
+
+    def test_concept_review_findings_may_carry_research_demand_markers(self):
+        for marker in ("new", "carried_forward"):
+            with self.subTest(marker=marker):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    review = self.write_concept_review_fixture(
+                        workspace, research_demand=marker
+                    )
+
+                    validate_record("review-record", review)
+                    validate_creator_workspace(workspace)
+
+    def test_coming_week_slot_staleness_is_advisory_and_bounded(self):
+        today = datetime.date.today()
+        cases = (
+            ("unresearched", "open", 0, True),
+            ("candidates_ready", "open", 6, True),
+            ("selected", "open", 2, False),
+            ("selected", "filled", 2, False),
+            ("unresearched", "open", 7, False),
+        )
+        for research_status, slot_status, day_offset, should_warn in cases:
+            with self.subTest(
+                research_status=research_status,
+                slot_status=slot_status,
+                day_offset=day_offset,
+            ):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    schedule_path = workspace / "content-schedule.json"
+                    schedule = read_json(schedule_path)
+                    slot = dict(schedule["calendar_slots"][0])
+                    slot["slot_id"] = "slot_luna_weekly_probe"
+                    for field in (
+                        "campaign_id",
+                        "campaign_concept_id",
+                        "project_id",
+                        "variant_id",
+                        "content_series_id",
+                    ):
+                        slot.pop(field, None)
+                    slot["target_date"] = (
+                        today + datetime.timedelta(days=day_offset)
+                    ).isoformat()
+                    slot["status"] = slot_status
+                    if research_status == "unresearched":
+                        slot["research_state"] = {
+                            "status": "unresearched",
+                            "research_run_ids": [],
+                        }
+                    elif research_status == "candidates_ready":
+                        slot["research_state"] = {
+                            "status": "candidates_ready",
+                            "research_run_ids": [
+                                "research_run_luna_fit_2026_07_03_001"
+                            ],
+                        }
+                    else:
+                        slot["research_state"] = {
+                            "status": "selected",
+                            "research_run_ids": [
+                                "research_run_luna_fit_2026_07_03_001"
+                            ],
+                            "selected_campaign_concept_id": (
+                                "campaign_concept_luna_fit_001"
+                            ),
+                        }
+                    schedule["calendar_slots"].append(slot)
+                    write_json(schedule_path, schedule)
+
+                    warnings = validate_creator_workspace(workspace)["warnings"]
+                    slot_warnings = [
+                        warning
+                        for warning in warnings
+                        if slot["slot_id"] in warning
+                        and "Weekly Planning Cycle" in warning
+                    ]
+                    self.assertEqual(bool(slot_warnings), should_warn)
+
+    def test_coming_week_warning_ignores_workspace_without_schedule(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.assertEqual(coming_week_staleness_warnings(temp_dir), [])
 
     def test_approved_quarter_plan_requires_terminal_quarterly_review(self):
         plan = json.loads(

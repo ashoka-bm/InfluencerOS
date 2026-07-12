@@ -1171,7 +1171,7 @@ class ProvenanceResolutionTests(unittest.TestCase):
                 ),
             )
 
-            with self.assertRaises(ValueError) as ctx:
+            with self.assertRaises((ValueError, ValidationError)) as ctx:
                 validate_project(project_dir)
             self.assertIn("evidence_luna_fit_uncarried", str(ctx.exception))
 

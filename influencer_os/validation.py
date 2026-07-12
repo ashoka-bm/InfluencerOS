@@ -177,12 +177,13 @@ def prediction_holds(measured_value, comparator, threshold):
 # decided vocabulary, but a record claiming an unbuilt review ran fails closed.
 PROJECT_SCOPED_REVIEW_ROLES = {"hook_payoff", "creator_fit", "fact_check"}
 WORKSPACE_SCOPED_REVIEW_ROLES = {"setup", "strategy", "quarterly", "concept"}
-BUILT_REVIEW_ROLES = {"hook_payoff", "setup", "strategy", "quarterly"}
+BUILT_REVIEW_ROLES = {"hook_payoff", "setup", "strategy", "quarterly", "concept"}
 REVIEW_ROLE_SOURCE_SKILLS = {
     "hook_payoff": "review-hook-payoff",
     "setup": "review-creator-setup",
     "strategy": "review-strategy",
     "quarterly": "review-quarter-plan",
+    "concept": "review-concept-promotion",
 }
 
 CONTENT_BEAT_SPINE_AREAS = {"hook", "retain", "payoff", "cta", "general"}
@@ -196,6 +197,14 @@ WORKSPACE_REVIEW_AREAS = {
     "visual_identity",
     "general",
 }
+CONCEPT_REVIEW_AREAS = {"evidence", "strategy", "audience", "general"}
+CONCEPT_OPPORTUNITY_REF_PATTERN = re.compile(
+    r"^research/content-opportunity-queue/entries/"
+    r"content_opportunity_[a-zA-Z0-9_-]+\.json$"
+)
+RESEARCH_EVIDENCE_REF_PATTERN = re.compile(
+    r"^research/runs/research_run_[a-zA-Z0-9_-]+/evidence\.jsonl$"
+)
 
 
 def review_has_new_research_demand(review):
@@ -347,7 +356,183 @@ def validate_record(schema_name, record, root=ROOT):
 
 
 def validate_file(schema_name, record_path, root=ROOT):
-    validate_record(schema_name, load_json(record_path), root=root)
+    record = load_json(record_path)
+    validate_record(schema_name, record, root=root)
+    if schema_name == "review-record":
+        validate_persisted_review_file(record_path, record)
+        if record.get("review_role") == "concept":
+            validate_concept_review_file(record_path, record)
+
+
+def validate_persisted_review_file(record_path, review):
+    """Pin every persisted Review Record to its file and owning workspace."""
+    record_path = Path(record_path)
+    review_id = review.get("review_record_id", "<unknown>")
+    if record_path.stem != review_id:
+        raise ValidationError(
+            f"{record_path}: filename does not match review_record_id {review_id!r}"
+        )
+    if record_path.parent.is_symlink():
+        raise ValidationError(
+            f"Review Record {review_id} reviews directory must not be a symlink: "
+            f"{record_path.parent}"
+        )
+    workspace_dir = next(
+        (
+            parent
+            for parent in record_path.parents
+            if (parent / "creator-workspace.json").is_file()
+        ),
+        None,
+    )
+    if workspace_dir is None:
+        raise ValidationError(
+            f"Review Record {review_id} has no owning Creator Workspace"
+        )
+    from influencer_os.projects import _ensure_contained_file
+
+    _ensure_contained_file(
+        record_path, workspace_dir, f"Review Record {review_id}"
+    )
+    manifest = load_json(workspace_dir / "creator-workspace.json")
+    validate_record("creator-workspace", manifest)
+    if review.get("creator_profile_id") != manifest["creator_profile_id"]:
+        raise ValidationError(
+            f"Review Record {review_id} creator_profile_id does not match workspace: "
+            f"{review.get('creator_profile_id')!r} != "
+            f"{manifest['creator_profile_id']!r}"
+        )
+
+
+def validate_concept_review_file(record_path, review):
+    """Validate the durable properties of a persisted Concept Review.
+
+    A Concept Review is a point-in-time audit record. Mutable schedule and
+    queue state may advance after it is written, so at-rest validation only
+    resolves and contains its retained artifact packet. The constructor owns
+    the pre-selection packet checks.
+    """
+    record_path = Path(record_path)
+    review_id = review.get("review_record_id", "<unknown>")
+    if record_path.parent.name != "reviews":
+        raise ValidationError(
+            f"Concept Review {review_id} must live under workspace reviews/ "
+            "so its packet provenance can be resolved"
+        )
+    workspace_dir = record_path.parent.parent
+    from influencer_os.projects import _ensure_contained_file
+
+    for ref in review["artifact_refs"]:
+        relative = Path(ref)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValidationError(
+                f"Concept Review {review_id} artifact ref must stay inside "
+                f"the workspace: {ref!r}"
+            )
+        artifact_path = workspace_dir / relative
+        if not artifact_path.exists():
+            raise ValidationError(
+                f"Concept Review {review_id} artifact ref does not resolve "
+                f"to a workspace file: {ref!r}"
+            )
+        _ensure_contained_file(
+            artifact_path,
+            workspace_dir,
+            f"Concept Review {review_id} artifact ref {ref!r}",
+        )
+
+
+def validate_concept_review_creation_packet(record_path, review, anchor_slot_id):
+    """Fail closed on the mutable weekly packet before writing its audit."""
+    record_path = Path(record_path)
+    workspace_dir = record_path.parent.parent
+    review_id = review.get("review_record_id", "<unknown>")
+    validate_concept_review_file(record_path, review)
+    artifact_refs = set(review["artifact_refs"])
+
+    schedule_path = workspace_dir / "content-schedule.json"
+    validate_file("creator-content-schedule", schedule_path)
+    schedule = load_json(schedule_path)
+    candidate_slots = [
+        slot
+        for slot in schedule["calendar_slots"]
+        if slot["slot_id"] == anchor_slot_id
+    ]
+    if len(candidate_slots) != 1:
+        raise ValidationError(
+            f"Concept Review {review_id} anchor slot {anchor_slot_id!r} must "
+            f"resolve exactly once; found {len(candidate_slots)}"
+        )
+    anchor_slot = candidate_slots[0]
+    if anchor_slot["research_state"]["status"] != "candidates_ready":
+        raise ValidationError(
+            f"Concept Review {review_id} requires Anchor Slot {anchor_slot_id} "
+            "to be candidates_ready at creation"
+        )
+    candidate_run_ids = set(
+        anchor_slot["research_state"]["research_run_ids"]
+    )
+    named_candidate_ids = anchor_slot["research_state"].get(
+        "candidate_content_opportunity_ids"
+    )
+    if named_candidate_ids is None or len(named_candidate_ids) != len(
+        set(named_candidate_ids)
+    ):
+        raise ValidationError(
+            f"Concept Review {review_id} named Anchor Slot {anchor_slot_id} "
+            "must carry one unique 2-3 candidate packet"
+        )
+
+    # Local import avoids a module cycle: research validation itself uses the
+    # generic schema/file validators from this module.
+    from influencer_os.research import validate_queue
+
+    validate_queue(workspace_dir)
+    candidate_refs = sorted(
+        ref
+        for ref in artifact_refs
+        if CONCEPT_OPPORTUNITY_REF_PATTERN.fullmatch(ref)
+    )
+    if not 2 <= len(candidate_refs) <= 3:
+        raise ValidationError(
+            f"Concept Review {review_id} requires 2-3 shortlisted candidates "
+            f"for Anchor Slot {anchor_slot_id}; found {len(candidate_refs)}"
+        )
+    candidate_ids = [Path(ref).stem for ref in candidate_refs]
+    if set(candidate_ids) != set(named_candidate_ids):
+        raise ValidationError(
+            f"Concept Review {review_id} must validate only the named Anchor "
+            f"Slot {anchor_slot_id} candidate packet: expected "
+            f"{sorted(named_candidate_ids)}, found {sorted(candidate_ids)}"
+        )
+
+    for ref in candidate_refs:
+        candidate = load_json(workspace_dir / ref)
+        candidate_id = candidate["content_opportunity_id"]
+        if candidate["status"] != "shortlisted":
+            raise ValidationError(
+                f"Concept Review {review_id} candidate {candidate_id} must be "
+                "shortlisted before human topic selection"
+            )
+        supporting_run_ids = {
+            evidence_ref["research_run_id"]
+            for evidence_ref in candidate["evidence_refs"]
+        }
+        if not supporting_run_ids.intersection(candidate_run_ids):
+            raise ValidationError(
+                f"Concept Review {review_id} candidate {candidate_id} has no "
+                f"queue provenance to Anchor Slot {anchor_slot_id}"
+            )
+        missing_evidence_refs = sorted(
+            f"research/runs/{run_id}/evidence.jsonl"
+            for run_id in supporting_run_ids
+            if f"research/runs/{run_id}/evidence.jsonl" not in artifact_refs
+        )
+        if missing_evidence_refs:
+            raise ValidationError(
+                f"Concept Review {review_id} omits supporting Research Evidence "
+                f"for candidate {candidate_id}: {missing_evidence_refs}"
+            )
 
 
 def iter_jsonl_lines(path):
@@ -1332,11 +1517,12 @@ def validate_review_record_semantics(record):
             f"review record {review_id}: research_demand_loop is only allowed "
             "on strategy and quarterly reviews"
         )
-    allowed_areas = (
-        CONTENT_BEAT_SPINE_AREAS
-        if review_role in PROJECT_SCOPED_REVIEW_ROLES
-        else WORKSPACE_REVIEW_AREAS
-    )
+    if review_role in PROJECT_SCOPED_REVIEW_ROLES:
+        allowed_areas = CONTENT_BEAT_SPINE_AREAS
+    elif review_role == "concept":
+        allowed_areas = CONCEPT_REVIEW_AREAS
+    else:
+        allowed_areas = WORKSPACE_REVIEW_AREAS
     scope_label = "project-scoped" if review_role in PROJECT_SCOPED_REVIEW_ROLES else "workspace-scoped"
     for finding in record.get("findings", []):
         if not isinstance(finding, dict):
@@ -1354,6 +1540,31 @@ def validate_review_record_semantics(record):
             raise ValidationError(
                 f"review record {review_id}: research_demand marker is only "
                 "allowed on ladder review roles"
+            )
+    if review_role == "concept":
+        artifact_refs = record.get("artifact_refs", [])
+        required_refs = {
+            "creator-profile.json",
+            "content-schedule.json",
+            "research/findings.md",
+        }
+        missing_refs = sorted(required_refs - set(artifact_refs))
+        candidate_refs = [
+            ref
+            for ref in artifact_refs
+            if CONCEPT_OPPORTUNITY_REF_PATTERN.fullmatch(ref)
+        ]
+        evidence_refs = [
+            ref
+            for ref in artifact_refs
+            if RESEARCH_EVIDENCE_REF_PATTERN.fullmatch(ref)
+        ]
+        if missing_refs or len(candidate_refs) < 2 or not evidence_refs:
+            raise ValidationError(
+                f"review record {review_id}: concept review packet requires "
+                "creator-profile.json, content-schedule.json, research/findings.md, "
+                "at least two canonical Content Opportunity entry refs, and at "
+                "least one Research Evidence ref"
             )
     execution = record.get("reviewer_execution", {})
     expected_skill = REVIEW_ROLE_SOURCE_SKILLS.get(review_role)

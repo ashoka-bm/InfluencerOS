@@ -19,6 +19,7 @@ from influencer_os.validation import (
     load_json,
     review_has_new_research_demand,
     validate_research_demand_loops,
+    validate_file,
     validate_record,
 )
 
@@ -461,8 +462,34 @@ def _validate_revision_family(workspace_dir, scope, family, plan_ids, checked):
         )
 
 
+def coming_week_staleness_warnings(workspace_dir, now=None):
+    """Return advisory warnings for unresolved slots in the coming week."""
+    schedule_path = Path(workspace_dir) / "content-schedule.json"
+    if not schedule_path.exists():
+        return []
+    validate_file("creator-content-schedule", schedule_path)
+    schedule = load_json(schedule_path)
+    today = _today(now)
+    window_end = today + datetime.timedelta(days=6)
+    warnings = []
+    for slot in schedule["calendar_slots"]:
+        target_date = datetime.date.fromisoformat(slot["target_date"])
+        research_status = slot["research_state"]["status"]
+        if (
+            today <= target_date <= window_end
+            and slot["status"] not in {"filled", "skipped"}
+            and research_status in {"unresearched", "candidates_ready"}
+        ):
+            warnings.append(
+                f"warning: coming-week Anchor Slot {slot['slot_id']} targets "
+                f"{slot['target_date']} but research is {research_status}. Run "
+                "the human-initiated Weekly Planning Cycle."
+            )
+    return warnings
+
+
 def validate_cadence_records(workspace_dir):
-    """Validate cadence records and return the advisory Quarter warning."""
+    """Validate cadence records and return advisory cadence warnings."""
     workspace_dir = Path(workspace_dir)
     scope = load_workspace_scope(workspace_dir)
     checked = []
@@ -525,7 +552,7 @@ def validate_cadence_records(workspace_dir):
         _check_reference_closure(plan, concepts, campaigns, summaries)
         _check_terminal_review_ref(workspace_dir, plan)
 
-    warnings = []
+    warnings = coming_week_staleness_warnings(workspace_dir)
     if anchor is not None:
         current_number = max(
             (plan["quarter_number"] for plan in plans), default=1

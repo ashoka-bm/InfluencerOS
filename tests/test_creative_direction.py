@@ -19,6 +19,7 @@ from influencer_os.projects import validate_project
 from influencer_os.research import validate_approval_gate, validate_research
 from influencer_os.validation import (
     ValidationError,
+    validate_file,
     validate_record,
 )
 from tests.support import scaffold_project_workspace
@@ -61,6 +62,15 @@ QUARTERLY_REVIEW_PACKET = [
     "quarter-plans/packets/quarter_plan_luna_fit_001/campaign-concept-set.json",
     "research/findings.md",
     "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+]
+
+CONCEPT_REVIEW_PACKET = [
+    "creator-profile.json",
+    "content-schedule.json",
+    "research/findings.md",
+    "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+    "research/content-opportunity-queue/entries/content_opportunity_luna_fit_001.json",
+    "research/content-opportunity-queue/entries/content_opportunity_luna_fit_002.json",
 ]
 
 
@@ -736,9 +746,32 @@ class ReviewRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValidationError, "source_skill"):
                     validate_record("review-record", review)
 
-    def test_concept_role_fails_closed(self):
-        # Concept Review is still approved-but-unbuilt (slice 6); Quarterly
-        # Review shipped in slice 5b and now validates.
+    def test_concept_review_file_rejects_arbitrary_fixture_packet(self):
+        # Path-shaped strings are not provenance. At-rest validation must
+        # resolve the schedule, queue candidates, Findings, and Evidence in
+        # the owning workspace.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "creator"
+            review_path = workspace / "reviews" / "review_luna_concept_001.json"
+            review = load_example("review-record")
+            review.pop("project_id")
+            review.pop("concept_approval_id", None)
+            review["review_record_id"] = review_path.stem
+            review["review_role"] = "concept"
+            review["artifact_refs"] = CONCEPT_REVIEW_PACKET
+            review["findings"] = [review["findings"][0]]
+            review["findings"][0]["area"] = "strategy"
+            review["reviewer_execution"]["source_skill"] = (
+                "review-concept-promotion"
+            )
+            write_json(review_path, review)
+
+            with self.assertRaisesRegex(
+                ValidationError, "artifact ref does not resolve|Workspace"
+            ):
+                validate_file("review-record", review_path)
+
+    def test_concept_review_rejects_profile_only_packet(self):
         review = load_example("review-record")
         review.pop("project_id")
         review.pop("concept_approval_id", None)
@@ -746,8 +779,75 @@ class ReviewRecordTests(unittest.TestCase):
         review["artifact_refs"] = ["creator-profile.json"]
         review["findings"] = [review["findings"][0]]
         review["findings"][0]["area"] = "strategy"
-        with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
+        review["reviewer_execution"]["source_skill"] = (
+            "review-concept-promotion"
+        )
+
+        with self.assertRaises(ValidationError):
             validate_record("review-record", review)
+
+    def test_concept_review_requires_each_packet_component(self):
+        for missing_ref in (
+            "content-schedule.json",
+            "research/findings.md",
+            "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+            "research/content-opportunity-queue/entries/content_opportunity_luna_fit_002.json",
+        ):
+            with self.subTest(missing_ref=missing_ref):
+                review = load_example("review-record")
+                review.pop("project_id")
+                review.pop("concept_approval_id", None)
+                review["review_role"] = "concept"
+                review["artifact_refs"] = [
+                    ref for ref in CONCEPT_REVIEW_PACKET if ref != missing_ref
+                ]
+                review["findings"] = [review["findings"][0]]
+                review["findings"][0]["area"] = "evidence"
+                review["reviewer_execution"]["source_skill"] = (
+                    "review-concept-promotion"
+                )
+
+                with self.assertRaises(ValidationError):
+                    validate_record("review-record", review)
+
+    def test_concept_review_uses_only_bounded_area_vocabulary(self):
+        for area in ("evidence", "strategy", "audience", "general"):
+            with self.subTest(area=area):
+                review = load_example("review-record")
+                review.pop("project_id")
+                review.pop("concept_approval_id", None)
+                review["review_role"] = "concept"
+                review["artifact_refs"] = CONCEPT_REVIEW_PACKET
+                review["findings"] = [review["findings"][0]]
+                review["findings"][0]["area"] = area
+                review["reviewer_execution"]["source_skill"] = (
+                    "review-concept-promotion"
+                )
+                validate_record("review-record", review)
+
+        for area in (
+            "foundation",
+            "positioning",
+            "schedule",
+            "visual_identity",
+            "hook",
+        ):
+            with self.subTest(area=area):
+                review = load_example("review-record")
+                review.pop("project_id")
+                review.pop("concept_approval_id", None)
+                review["review_role"] = "concept"
+                review["artifact_refs"] = CONCEPT_REVIEW_PACKET
+                review["findings"] = [review["findings"][0]]
+                review["findings"][0]["area"] = area
+                review["reviewer_execution"]["source_skill"] = (
+                    "review-concept-promotion"
+                )
+
+                with self.assertRaisesRegex(
+                    ValidationError, "outside its allowed vocabulary"
+                ):
+                    validate_record("review-record", review)
 
     def test_quarterly_role_validates(self):
         review = load_example("review-record")

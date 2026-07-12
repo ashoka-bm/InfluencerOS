@@ -197,6 +197,15 @@
                   "pattern": "^research_run_[a-zA-Z0-9_-]+$"
                 }
               },
+              "candidate_content_opportunity_ids": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 3,
+                "items": {
+                  "type": "string",
+                  "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"
+                }
+              },
               "selected_content_opportunity_id": {
                 "type": "string",
                 "pattern": "^content_opportunity_[a-zA-Z0-9_-]+$"

@@ -129,7 +129,7 @@ class ValidateAllTests(unittest.TestCase):
         # D2: warn-only promotion refs stay warnings, but the composed command
         # must report them (deduplicated across layers), never swallow them.
         with tempfile.TemporaryDirectory() as temp_dir:
-            workspace_dir, _project_dir = scaffold_full_workspace(temp_dir)
+            workspace_dir, project_dir = scaffold_full_workspace(temp_dir)
             promotion_path = (
                 workspace_dir / "campaigns" / "campaign_luna_fit_001" / "approvals" / "concept_approval_luna_fit_001.json"
             )
@@ -138,16 +138,22 @@ class ValidateAllTests(unittest.TestCase):
             )
 
             def break_promotion_ref(promotion):
-                # Append (never replace) so the project's cached refs stay a
-                # subset of the locked approval and only the gate warns; the
-                # approval copies its concept's evidence verbatim, so both
-                # records carry the ghost ref together.
+                # Append (never replace) so one valid ref still supports the
+                # focused slot. The approval copies its concept's evidence
+                # verbatim, and its created Project durably witnesses the
+                # original ordered Evidence ids.
                 ghost = json.loads(json.dumps(promotion["evidence_refs"][0]))
                 ghost["evidence_id"] = "evidence_luna_fit_ghost"
                 promotion["evidence_refs"].append(ghost)
 
             rewrite_json(promotion_path, break_promotion_ref)
             rewrite_json(concept_path, break_promotion_ref)
+            rewrite_json(
+                project_dir / "project.json",
+                lambda project: project["source_refs"][
+                    "research_evidence_ids"
+                ].append("evidence_luna_fit_ghost"),
+            )
 
             result = validate_all(workspace_dir)
             matching = [

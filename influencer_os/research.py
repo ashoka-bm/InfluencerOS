@@ -6,12 +6,14 @@ philosophy — fail-closed, no third-party dependency. Supported: top-level
 ``key: value`` scalars and ``key:`` followed by ``- item`` string lists.
 Nested mappings or any other construct are errors, never silent skips.
 """
+import datetime
 import json
 from collections import Counter
 from pathlib import Path
 
 from influencer_os.calendars import schedule_research_state_errors
 from influencer_os.creator_scope import check_creator_scope, load_workspace_scope
+from influencer_os.json_io import write_json_atomic
 from influencer_os.rubric import validate_events_ledger
 from influencer_os.validation import (
     GATED_RESEARCH_ACCESS_METHODS,
@@ -65,6 +67,15 @@ PRODUCTION_SUPPORTED_FORMATS = frozenset({
 # evidence rate to mean anything, so they are not evaluated.
 THIN_EVIDENCE_MIN_CHECKED = 3
 THIN_EVIDENCE_PROMOTION_RATE = 0.34
+
+
+def _ensure_contained_workspace_file(path, workspace_dir, context):
+    workspace_root = Path(workspace_dir).resolve()
+    resolved = Path(path).resolve()
+    if not resolved.is_relative_to(workspace_root):
+        raise ValidationError(f"{context} escapes Creator Workspace: {path}")
+    if not resolved.is_file():
+        raise ValidationError(f"{context} is not a file: {path}")
 
 
 def check_project_warning_pairing(record):
@@ -141,6 +152,9 @@ def check_approval_created_projects(approval, projects_by_id):
     in v1, so a dangling id is invalid state."""
     approval_id = approval["concept_approval_id"]
     listed = set(approval["project_ids_created"])
+    approval_evidence_ids = list(dict.fromkeys(
+        ref["evidence_id"] for ref in approval["evidence_refs"]
+    ))
     for project_id in approval["project_ids_created"]:
         if project_id not in projects_by_id:
             raise ValidationError(
@@ -154,6 +168,16 @@ def check_approval_created_projects(approval, projects_by_id):
                 f"Concept approval {approval_id} lists created project "
                 f"{project_id!r}, but that project's locked approval is "
                 f"{locked!r}; source_refs.concept_approval_id does not point back"
+            )
+        cached_evidence_ids = project.get("source_refs", {}).get(
+            "research_evidence_ids"
+        )
+        if cached_evidence_ids != approval_evidence_ids:
+            raise ValidationError(
+                f"Concept approval {approval_id} evidence does not match its "
+                "ordered historical snapshot retained by created project "
+                f"{project_id}: {cached_evidence_ids!r} != "
+                f"{approval_evidence_ids!r}"
             )
     for project_id, (_path, project) in projects_by_id.items():
         locked = project.get("source_refs", {}).get("concept_approval_id")
@@ -269,6 +293,11 @@ def check_approval_slot_claims(workspace_dir, approval, concept,
                     f"calendar slot {source_slot_id} references missing focused "
                     f"research run {run_id}"
                 )
+            _ensure_contained_workspace_file(
+                run_path,
+                workspace_dir,
+                f"calendar slot {source_slot_id} research run {run_id}",
+            )
             validate_file("research-run", run_path)
             run = load_json(run_path)
             if run["research_run_id"] != run_id:
@@ -322,6 +351,11 @@ def check_schedule_research_provenance(workspace_dir, opportunities, concepts):
                 raise ValidationError(
                     f"calendar slot {slot_id} references missing research run {run_id}"
                 )
+            _ensure_contained_workspace_file(
+                run_path,
+                workspace_dir,
+                f"calendar slot {slot_id} research run {run_id}",
+            )
             validate_file("research-run", run_path)
             run = load_json(run_path)
             if run["research_run_id"] != run_id:
@@ -380,6 +414,197 @@ def check_schedule_research_provenance(workspace_dir, opportunities, concepts):
             )
 
 
+def refresh_campaign_concept_research(workspace_dir, concept_id, research_run_id,
+                                      now=None):
+    """Append one focused run's canonical evidence to a scheduled Concept.
+
+    The Weekly Planning Cycle may re-confirm an existing Campaign Concept, but
+    its next Concept Approval still needs the new slot-specific research. This
+    deterministic updater derives refs from the canonical run ledgers; callers
+    never hand-edit the Campaign Concept record.
+    """
+    workspace_dir = Path(workspace_dir)
+    scope = load_workspace_scope(workspace_dir)
+    validate_research(workspace_dir)
+    concept_paths = sorted(
+        workspace_dir.glob(f"campaigns/*/concepts/{concept_id}.json")
+    )
+    if len(concept_paths) != 1:
+        raise ValidationError(
+            f"campaign_concept_id {concept_id!r} must resolve to exactly one "
+            f"concept; found {len(concept_paths)}"
+        )
+    concept_path = concept_paths[0]
+    _ensure_contained_workspace_file(
+        concept_path, workspace_dir, f"campaign concept {concept_id}"
+    )
+    concept = load_json(concept_path)
+    validate_record("campaign-concept", concept)
+    check_creator_scope(concept, scope, f"concept {concept_id}")
+    if concept["status"] == "retired":
+        raise ValidationError(
+            f"campaign concept {concept_id} is retired and cannot receive "
+            "weekly research"
+        )
+
+    schedule_path = workspace_dir / "content-schedule.json"
+    validate_file("creator-content-schedule", schedule_path)
+    schedule = load_json(schedule_path)
+    matching_slots = [
+        slot
+        for slot in schedule["calendar_slots"]
+        if slot.get("campaign_concept_id") == concept_id
+    ]
+    matching_slot_ids = {slot["slot_id"] for slot in matching_slots}
+
+    run_dir = workspace_dir / "research" / "runs" / research_run_id
+    run_path = run_dir / "research-run.json"
+    if not run_path.exists():
+        raise ValidationError(
+            f"research run {research_run_id!r} does not exist"
+        )
+    _ensure_contained_workspace_file(
+        run_path, workspace_dir, f"research run {research_run_id}"
+    )
+    validate_file("research-run", run_path)
+    run = load_json(run_path)
+    check_creator_scope(run, scope, f"research run {research_run_id}")
+    if run["research_run_id"] != research_run_id:
+        raise ValidationError(
+            f"research run path {research_run_id!r} declares "
+            f"{run['research_run_id']!r}"
+        )
+    declared_focused_slots = matching_slot_ids.intersection(
+        run["schedule_slot_ids"]
+    )
+    non_ready_slot_ids = sorted(
+        slot["slot_id"]
+        for slot in matching_slots
+        if (
+            slot["slot_id"] in declared_focused_slots
+            and research_run_id in slot["research_state"]["research_run_ids"]
+            and slot["research_state"]["status"] != "candidates_ready"
+        )
+    )
+    if non_ready_slot_ids:
+        raise ValidationError(
+            f"research run {research_run_id} may refresh concept {concept_id} "
+            "only while its matching scheduled slot remains candidates_ready; "
+            f"found {non_ready_slot_ids}"
+        )
+    canonical_run_slot_ids = {
+        slot["slot_id"]
+        for slot in matching_slots
+        if (
+            slot["research_state"]["status"] == "candidates_ready"
+            and research_run_id in slot["research_state"]["research_run_ids"]
+        )
+    }
+    focused_slots = declared_focused_slots.intersection(
+        canonical_run_slot_ids
+    )
+    if declared_focused_slots and not focused_slots:
+        raise ValidationError(
+            f"research run {research_run_id} names scheduled slot(s) "
+            f"{sorted(declared_focused_slots)} but is absent from their "
+            "canonical research_state.research_run_ids"
+        )
+    if (
+        run["mode"] != "scheduled_needs"
+        or run["run_status"] == "failed"
+        or not focused_slots
+    ):
+        raise ValidationError(
+            f"research run {research_run_id} must be a completed focused "
+            f"scheduled_needs run naming a slot scheduled to {concept_id}"
+        )
+
+    evidence = validate_jsonl_file(
+        "research-evidence", run_dir / "evidence.jsonl"
+    )
+    metrics_path = run_dir / "metric-snapshots.jsonl"
+    metrics = (
+        validate_jsonl_file("metric-snapshot", metrics_path)
+        if metrics_path.exists()
+        else []
+    )
+    metrics_by_evidence = {}
+    for metric in metrics:
+        if metric["research_run_id"] != research_run_id:
+            raise ValidationError(
+                f"metric snapshot {metric['metric_snapshot_id']} does not "
+                f"belong to research run {research_run_id}"
+            )
+        metrics_by_evidence.setdefault(metric["evidence_id"], []).append(
+            metric["metric_snapshot_id"]
+        )
+    derived_refs = []
+    for item in evidence:
+        if item["research_run_id"] != research_run_id:
+            raise ValidationError(
+                f"evidence {item['evidence_id']} does not belong to research "
+                f"run {research_run_id}"
+            )
+        check_creator_scope(
+            item, scope, f"research evidence {item['evidence_id']}"
+        )
+        ref = {
+            "research_run_id": research_run_id,
+            "evidence_id": item["evidence_id"],
+        }
+        metric_ids = metrics_by_evidence.get(item["evidence_id"], [])
+        if metric_ids:
+            ref["metric_snapshot_ids"] = metric_ids
+        derived_refs.append(ref)
+    if not derived_refs:
+        raise ValidationError(
+            f"research run {research_run_id} has no evidence to attach to "
+            f"campaign concept {concept_id}"
+        )
+
+    refreshed = dict(concept)
+    refreshed["evidence_refs"] = [dict(ref) for ref in concept["evidence_refs"]]
+    existing_by_key = {
+        (ref["research_run_id"], ref["evidence_id"]): ref
+        for ref in refreshed["evidence_refs"]
+    }
+    for ref in derived_refs:
+        key = (ref["research_run_id"], ref["evidence_id"])
+        if key in existing_by_key:
+            if existing_by_key[key] != ref:
+                raise ValidationError(
+                    f"concept {concept_id} already carries a different ref "
+                    f"for evidence {ref['evidence_id']}"
+                )
+            continue
+        refreshed["evidence_refs"].append(ref)
+    finding_ids = list(refreshed.get("source_finding_ids", []))
+    for finding_id in run["outputs"]["finding_ids"]:
+        if finding_id not in finding_ids:
+            finding_ids.append(finding_id)
+    if finding_ids:
+        refreshed["source_finding_ids"] = finding_ids
+    if now is None:
+        today = datetime.date.today()
+    elif isinstance(now, datetime.datetime):
+        today = now.date()
+    else:
+        today = now
+    refreshed["updated_on"] = today.isoformat()
+    validate_record("campaign-concept", refreshed)
+    write_json_atomic(concept_path, refreshed)
+    return {
+        "campaign_concept_id": concept_id,
+        "concept_path": concept_path,
+        "research_run_id": research_run_id,
+        "focused_slot_ids": sorted(focused_slots),
+        "evidence_refs_added": [
+            ref for ref in derived_refs
+            if ref not in concept["evidence_refs"]
+        ],
+    }
+
+
 def find_concept_approval(workspace_dir, approval_id):
     """Locate one concept approval across campaigns/*/approvals/."""
     matches = sorted(
@@ -387,6 +612,9 @@ def find_concept_approval(workspace_dir, approval_id):
     )
     if not matches:
         return None
+    _ensure_contained_workspace_file(
+        matches[0], workspace_dir, f"concept approval {approval_id}"
+    )
     return load_json(matches[0])
 
 
@@ -397,6 +625,9 @@ def find_campaign_concept(workspace_dir, concept_id):
     )
     if not matches:
         return None
+    _ensure_contained_workspace_file(
+        matches[0], workspace_dir, f"campaign concept {concept_id}"
+    )
     return load_json(matches[0])
 
 
@@ -406,6 +637,11 @@ def collect_campaign_concepts(workspace_dir):
     for concept_path in sorted(
         Path(workspace_dir).glob("campaigns/*/concepts/*.json")
     ):
+        _ensure_contained_workspace_file(
+            concept_path,
+            workspace_dir,
+            f"campaign concept file {concept_path.name}",
+        )
         concept = load_json(concept_path)
         concepts[concept["campaign_concept_id"]] = concept
     return concepts
@@ -605,6 +841,11 @@ def validate_research(workspace_path):
             run_manifest = run_dir / "research-run.json"
             if not run_manifest.exists():
                 raise ValidationError(f"Research run folder has no research-run.json: {run_dir}")
+            _ensure_contained_workspace_file(
+                run_manifest,
+                workspace_dir,
+                f"research run {run_dir.name}",
+            )
             validate_file("research-run", run_manifest)
             run_record = load_json(run_manifest)
             if run_record["research_run_id"] != run_dir.name:
@@ -1107,11 +1348,14 @@ def validate_approval_gate(
             f"format ({sorted(approval['approved_formats'])}); record the "
             "approval intent on the concept instead until the format lands"
         )
-    if approval["evidence_refs"] != concept["evidence_refs"]:
+    concept_evidence = concept["evidence_refs"]
+    approval_evidence = approval["evidence_refs"]
+    historical_snapshot = concept_evidence[:len(approval_evidence)]
+    if approval_evidence != historical_snapshot:
         raise ValidationError(
             f"Concept approval {approval_id} evidence does not match concept "
-            f"{concept_id} evidence verbatim; approvals copy the concept's "
-            "research package, never a rewritten one"
+            f"{concept_id}'s ordered historical snapshot; approvals never "
+            "delete, reorder, duplicate, rewrite, or inject research refs"
         )
     check_approval_concept_links(approval, concept)
     if projects_by_id is None:
