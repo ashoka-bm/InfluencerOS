@@ -249,8 +249,8 @@ The advisory bounded sub-agent Review inside the Quarterly Planning Cycle that j
 **Concept Review (Accepted Target; Not Yet Shipped)**:
 The advisory bounded sub-agent Review inside the Weekly Planning Cycle that judges the promotion packages before the human Concept Approvals promote the week's Projects (ADR 0046). Advisory only — distinct from Concept Approval, the human Gate that blocks.
 
-**Avatar Image (Accepted Target; Not Yet Shipped)**:
-The one platform-facing identity image every creator must have, regardless of Representation Model. Setup generates it automatically when the user has not provided one; the intake interview decides what it depicts (a persona face or a non-face mark) for text-first creators. For synthetic and avatar-led creators it doubles as the visual-continuity calibration reference for the setup image pass. The human accepts or rejects it at Visual Continuity Plan approval; regeneration follows normal exact approval.
+**Avatar Image (ADR 0045)**:
+The one platform-facing identity image every creator must have, regardless of Representation Model. Setup generates it automatically when the user has not provided one; the intake interview decides what it depicts (a persona face or a non-face mark) for text-first creators. For synthetic and avatar-led creators it doubles as the visual-continuity calibration reference for the setup image pass. The human accepts or rejects it at Visual Continuity Plan approval; a rejected image regenerates only on a fresh exact-user, reference-scoped approval. The Plan's standing pass explicitly excludes the Avatar Image (ADR 0045).
 _Avoid_: anchor image, profile picture
 
 **Research Findings**:

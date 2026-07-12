@@ -57,6 +57,12 @@ Skill context can be covered by an individual skill row or by the workflow row t
 
 Current workflow coverage:
 
+Creator setup coverage includes ADR 0045's one bounded Avatar Image carve-out;
+the creator's board, designated Reference Asset, and prompt remain the source
+context for that system-derived call. The later Visual Continuity Plan pass
+excludes that asset; rejected-avatar regeneration loads a fresh exact-user
+reference approval instead.
+
 | Skill | Context coverage |
 | --- | --- |
 | `influencer-os` | Social research, idea generation, idea promotion, template application, production planning, generation planning, output packaging, publication registration, analytics ingestion, performance summary, learning distillation |

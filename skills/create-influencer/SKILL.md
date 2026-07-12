@@ -194,12 +194,17 @@ Priority question order:
 8. content cadence or first-use goals when they affect setup readiness.
 
 Every creator requires a social-profile avatar asset, including text-only and
-long-form creators. Ask whether it should use a person, avatar, symbol, monogram,
-product, or brand mark. For human-backed visual creators, strongly recommend a
-user-provided person reference image because it improves identity continuity.
-When no face is appropriate, stage a non-figurative brand-avatar prompt instead.
-Generation is covered by the approved Visual Continuity Plan's one-pass setup
-authorization; changes or regeneration require exact provider-call approval.
+long-form creators. At intake, explicitly decide: **should this platform-facing
+Avatar Image depict a persona face, or a non-face mark?** For a non-face mark,
+also decide whether it is a symbol, monogram, product, or brand mark. For
+human-backed visual creators, strongly recommend a user-provided person reference
+image because it improves identity continuity. When no face is appropriate, stage
+a non-figurative brand-avatar prompt instead. Creator Setup auto-generates the
+one initial Avatar Image on a bounded `system_avatar_setup` record with no human
+pre-approval; the human accepts or rejects it at Visual Continuity Plan approval.
+The Visual Continuity Plan's one-pass authorization explicitly excludes the
+designated Avatar Image and covers only the remaining setup reference assets.
+Changes or regeneration require fresh exact provider-call approval (ADR 0045).
 
 ## Platform And Asset Mapping
 
@@ -238,34 +243,64 @@ Run these internal phases in order:
 5. **Voice samples**: use `create-voice-samples` to create `brand_context/voice-samples.md` as the concrete example file.
 6. **Operational summary**: use `create-creator-profile` to create `creator-profile.json` from the accepted foundation.
 7. **Runtime context**: use `create-runtime-context` to create the tiny always-loaded `context/SOUL.md`, `context/USER.md`, and `context/MEMORY.md`.
-8. **Visual continuity planning and approval**: delegate the complete candidate
-   analysis, presentation, Visual Continuity Plan approval, asset promotion,
-   and prompt-staging contract to `create-reference-library`. Do not duplicate
-   or weaken that owning skill's selection rules here.
-9. **Reference planning, prompt staging, and resolution**: after that approval
-   boundary, continue through `create-reference-library` and its canonical
-   templates. Import or generate only an exact approved batch, or retain
-   `planned`/`prompted` assets for prompt-ready setup.
-10. **Personal brand board**: for every creator, use `personal-brand-board` only after the profile-avatar Reference Asset ID and any location/object asset IDs are stable. Create the exact token spec at `references/brand/personal-brand-board.json`; bind `avatar_asset_id` to a prompt-staged or available `brand` or `character` asset; bind any production spaces to `location` assets and signature props to `object` assets by `reference_asset_id`; render through the shared template with `rebuild-brand-board`; and present the HTML for a distinct approval. Text-only and long-form creators may have zero production spaces, but they still require the avatar, palette, typography, templates, and approved board. Prompt-ready assets render labeled placeholders, while available media renders the referenced image. A batch visual-reference approval does not approve this board.
-11. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
+8. **Visual continuity planning and avatar staging**: delegate candidate
+   analysis to `create-reference-library`, then draft the Visual Continuity
+   Plan without approving it. Before that approval, stage only the universal
+   `character` or `brand` Avatar Image Reference Asset and its prompt; do not
+   promote or draft prompts for `object` or `location` candidates. This keeps
+   the Avatar Image path compatible with `create-reference-library`'s
+   VCP-before-promotion rule.
+9. **Personal brand board**: for every creator, use `personal-brand-board` once
+   the profile-avatar Reference Asset ID is stable. Create the exact token spec at
+   `references/brand/personal-brand-board.json`;
+   bind `avatar_asset_id` to a prompt-staged or available `brand` or `character`
+   asset; leave production spaces and signature props empty until their VCP
+   candidates are approved and promoted, then bind them by `reference_asset_id`
+   and rebuild the board. Text-only and long-form creators may have zero
+   production spaces, but they still require the avatar, palette, typography,
+   templates, and approved board.
+10. **Avatar Image auto-generation**: once the board binds its designated
+    prompt-staged avatar asset, run the one bounded setup call via
+    `derive-avatar-approval` and `dispatch-avatar-generation`. It creates one
+    `approval_basis: system_avatar_setup` batch record (`max_calls: 1`) with no
+    human pre-approval. Do not use this path for any other asset.
+11. **Setup Review**: have the advisory Setup Review judge the drafted text
+    foundation and rendered Avatar Image together; apply any fixes before the
+    human continuity decision.
+12. **Visual Continuity Plan approval**: present the Avatar Image and complete
+    Visual Continuity Plan to the human. The human accepts or rejects the avatar
+    here; an approved plan authorizes the remaining setup-reference pass only.
+13. **Remaining reference resolution**: after that approval boundary, continue
+    through `create-reference-library` and its canonical templates: promote the
+    accepted object/location candidates, stage their prompts, add their board
+    bindings, and import or generate only the VCP-authorized remaining batch.
+    The designated Avatar Image is excluded; if rejected, record a fresh exact
+    reference approval before regenerating it.
+14. **Onboarding records**: write `channels.json`, `readiness-gates.json`,
     and `content-strategy.json` so selected channels, media permissions,
     strategy mix, conversion paths, and related-post chains are machine-readable.
-12. **Conversion assets**: when the strategy references a conversion mechanism,
+15. **Generation gate**: the Avatar Image is the sole creator-setup carve-out:
+    it has already run on the system-derived single-use record above. An approved
+    Visual Continuity Plan separately authorizes one initial pass over exactly its
+    remaining listed creator-setup reference assets with no second confirmation.
+    Stop for every scope change, avatar regeneration, production-content asset,
+    video, voice, render, upload, provider/model change, or added asset and request
+    exact call/batch approval.
+16. **Conversion assets**: when the strategy references a conversion mechanism,
     use `create-lead-magnet` only when `asset_type` is `lead_magnet` — Part A (record +
     drafted body) during strategy, since `strategy_ready` validation blocks on
     missing conversion-asset records; Part B (theme, render, approval) after
     strategy acceptance and before calendar slots promote the asset. For any
     other conversion-asset type, halt and surface the unsupported conversion-asset type;
     do not misclassify it as a lead magnet or invent a deliverable workflow.
-13. **State reconciliation and readiness check**: run the §Setup State
+17. **State reconciliation and readiness check**: run the §Setup State
     Reconciliation pass, then run `python3 -m influencer_os validate workspace
     <workspace-path>` — at readiness statuses it fails with the full stage,
     medium-based blocker list, and stale setup-prose contradictions; mirror open
     blockers into `progress/setup-checklist.md`.
-14. **Milestone acceptance**: ask for approval before advancing each milestone:
+18. **Milestone acceptance**: ask for approval before advancing each milestone:
     `profile_ready`, `foundation_ready`, `strategy_ready`, and
     `production_ready`.
-15. **Generation gate**: an approved Visual Continuity Plan authorizes one initial generation pass over exactly its listed creator-setup reference assets with no second confirmation. Record or derive the bounded approval package before dispatch. Stop for every scope change, regeneration, production-content asset, video, voice, render, upload, provider/model change, or asset added after plan approval and request exact call/batch approval.
 
 ## Medium-Based Blockers
 
@@ -328,9 +363,10 @@ spoken generation; it never waives the permission requirement.
 
 Drafting files, reference requirements, prompts, shot lists, and generation
 plans is allowed. An approved Visual Continuity Plan grants standing approval
-for one initial generation pass over its listed creator-setup reference assets,
-with no second confirmation. A scope change, regeneration, production content,
-video, voice, audio, render, upload, or provider/model change still requires
+for one initial generation pass over its listed remaining creator-setup
+reference assets, never the designated Avatar Image, with no second
+confirmation. A scope change, avatar regeneration, production content, video,
+voice, audio, render, upload, or provider/model change still requires a fresh
 exact call/batch approval.
 
 After any approved provider generation, update `progress/setup-checklist.md`,
@@ -389,6 +425,10 @@ last.*
 - 2026-07-10: Reduced creator-setup image-generation friction per ADR 0043:
   approving the Visual Continuity Plan now authorizes one initial bounded pass
   over its listed setup references; scope changes and regeneration remain gated.
+- 2026-07-12: ADR 0045 supersedes ADR 0043: Creator Setup auto-generates the
+  one designated Avatar Image first on a bounded `system_avatar_setup` record
+  with no human pre-approval; the human accepts or rejects it at Visual
+  Continuity Plan approval, which still authorizes only the remaining reference pass.
 
 ## Self-Update
 

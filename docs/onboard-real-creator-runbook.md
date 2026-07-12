@@ -151,8 +151,9 @@ fail by design, and a warning you cannot explain is a finding.
 - No publishing, scheduling, or platform posting — output packages are
   registered, publication is recorded manually after the fact
   (`register-published-post`).
-- No automated concept approval. Creator-setup reference images may use the
-  approved Visual Continuity Plan's one-pass authorization (ADR 0043); other
-  provider calls require exact approval.
+- No automated concept approval. Creator Setup first auto-generates its one
+  designated Avatar Image on the bounded system-derived ADR 0045 record; the
+  approved Visual Continuity Plan then authorizes one pass over its remaining
+  setup references. Other provider calls require exact approval.
 - No scheduled/unattended research (deferred; ADR 0025).
 - No creator media, generated works, or `.env` contents committed to git.

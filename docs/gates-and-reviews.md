@@ -4,7 +4,7 @@ The canonical control contract for InfluencerOS (ADR 0024, Creative Direction sl
 
 ## Control Vocabulary
 
-- **Gate** — human, blocking. A gate stops the pipeline until a person decides. V1 has exactly two: the Concept Approval Gate (`approve-concept`) and the Provider Boundary (exact approval for provider-backed generation calls, with the ADR 0045 creator-setup carve-out: the one bounded Avatar Image call runs under a system-derived single-use approval record).
+- **Gate** — human, blocking. A gate stops the pipeline until a person decides. V1 has exactly two: the Concept Approval Gate (`approve-concept`) and the Provider Boundary (exact approval for provider-backed generation calls, with the ADR 0045 creator-setup carve-out: only the one reference-scoped Avatar Image call runs under a system-derived single-use approval record; rejected-avatar regeneration returns to fresh exact-user approval).
 - **Review** — advisory, emits a Review Record. A judged read of an artifact with findings keyed to the Content Beat Spine. Never blocks.
 - **Pass** — advisory editorial rewrite, emits no record. Returns rewritten text plus a change trace; the author decides what to keep. Never blocks, never issues a verdict.
 - **Warning** — non-blocking signal (`ProjectWarning` records and validator warning strings). Surfaces a concern; changes nothing.
@@ -16,7 +16,7 @@ The canonical control contract for InfluencerOS (ADR 0024, Creative Direction sl
 3. Plan drafting (template → production plan).
 4. Hook/Payoff Review after a plan is drafted — **Review (advisory)**, all six plan types.
 5. Clear-Writing Pass and Human-Voice Pass on drafted text — **Passes (advisory)**.
-6. Provider Boundary before any generation call — **human gate (blocking)**, excepting the one bounded system-derived Avatar Image call at creator setup (ADR 0045).
+6. Provider Boundary before any generation call — **human gate (blocking)**, excepting the one bounded system-derived Avatar Image call at creator setup (ADR 0045). A Visual Continuity Plan's standing pass covers only its remaining listed reference assets and excludes the designated Avatar Image.
 7. Provider-safety `QualityReview` between generation and packaging — the one **blocking** review layer (ADR 0023 Decision 5, built in Phase 3 slice 5): `register-output-package` and `validate project` refuse a packaged media asset that flows from `generation/` without a passing QualityReview covering it — generated and imported alike; text roles are exempt. Owned by `review-generated-assets`; records live at `projects/<slug>/generation/quality-reviews/`.
 
 ## Two Layers, One Rule
