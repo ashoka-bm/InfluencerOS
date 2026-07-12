@@ -80,8 +80,12 @@ A durable thematic territory the creator intends to own across many campaigns. A
 _Avoid_: funnel stage, campaign objective
 
 **Campaign**:
-A stable identity for a coordinated stream of work with one typed primary objective and, for sales, one primary paid offer. Its lifecycle is `draft`, `active`, `paused`, `completed`, or `archived`; it may run indefinitely, while a material objective or primary-offer change creates a separate Campaign. Immutable Campaign Revisions and Waves are accepted but deferred.
+A stable identity for a coordinated stream of work with one typed primary objective and, for sales, one primary paid offer. Its lifecycle is `draft`, `active`, `paused`, `completed`, or `archived`; it may run indefinitely through extended Duration Targets, while a material objective or primary-offer change creates a separate Campaign. Immutable Campaign Revisions and Waves are accepted but deferred.
 _Avoid_: temporary content batch, objective-changing phase
+
+**Campaign Duration Target (Accepted Target; Not Yet Shipped)**:
+The target end date every Campaign declares at creation — unbounded in either direction, shorter or far longer than a Quarter. It is a measurement hypothesis, never an auto-stop: running past it surfaces a Warning and a retro question, and the Quarterly Planning Cycle extends, shortens, or completes against it. A retarget is not a material identity change and never creates a new Campaign.
+_Avoid_: campaign deadline, fixed campaign length
 
 **Campaign Revision (Accepted Target; Deferred)**:
 An immutable sequential version of one Campaign's approved measurable target, primary and supporting Audience Segments, primary and supporting Content Pillars, and effective policy scope. Exactly one Revision is current, while every Campaign Wave and Concept Approval retains the Revision that governed it.
