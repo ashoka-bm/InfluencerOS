@@ -117,7 +117,7 @@ A researched direction with evidence and potential creator fit that has not yet 
 _Avoid_: Campaign Concept with no campaign
 
 **Concept Approval**:
-An immutable human-approved snapshot of a Campaign Concept that authorizes an exact set of named Projects under maximum Offer Integration and CTA Intensity. An unchanged Concept may receive multiple Approvals as production scope expands; later Approvals never rewrite or revoke prior authorization. A future Campaign Wave or Campaign Revision may be attached without changing this base contract.
+An immutable human-approved snapshot of a Campaign Concept that authorizes an exact set of named Projects under maximum Offer Integration and CTA Intensity. Its Evidence refs are the exact ordered historical prefix captured from the append-only Concept Evidence list, and each created Project retains that snapshot's ordered Evidence IDs as a durable witness; deletion, reordering, duplication, rewriting, or injection invalidates the Approval. An unchanged Concept may receive multiple Approvals as production scope expands; later Approvals never rewrite or revoke prior authorization. A future Campaign Wave or Campaign Revision may be attached without changing this base contract.
 _Avoid_: editable concept state
 
 **Commercial Function**:
@@ -197,8 +197,8 @@ The specific feeling, identity signal, or brand meaning that a candidate object 
 **Medium-Based Blocker**:
 A Creator Setup blocker that applies only when a content medium requires it. Text-first creators need identity, soul, and brand context; image and video creators also need visual references; audio/video creators need a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken generation requires an approved/imported voice reference.
 
-**Planning Cycle (Quarterly shipped; Weekly Not Yet Shipped)**:
-A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in one human final approval. The two cycles are the Quarterly Planning Cycle (shipped) and the Weekly Planning Cycle (slice 6). A Planning Cycle contains Reviews; it is not itself a Review.
+**Planning Cycle**:
+A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in human final approval. Both cycles are shipped: the Quarterly Planning Cycle and the Weekly Planning Cycle. A Planning Cycle contains Reviews; it is not itself a Review.
 _Avoid_: quarterly review, weekly review (as ceremony names)
 
 **Quarter**:
@@ -207,8 +207,8 @@ A creator-relative planning horizon of thirteen weeks, anchored at the creator's
 **Quarterly Planning Cycle**:
 The once-per-Quarter Planning Cycle: a retrospective over the closing Quarter's performance and learnings, per-Campaign research, next-Quarter Campaign Concepts and schedule shape, and any amendment proposals for the locked setup and strategy foundations. Human-initiated, never clock-scheduled; an expired Quarter surfaces as a Warning. Conducted by the shipped `quarterly-planning-cycle` skill, which produces one approved Quarter Plan through `scaffold quarter-plan`, executes its approved lifecycle, Duration Target, schedule, and Revision changes, then performs a ready check.
 
-**Weekly Planning Cycle (Accepted Target; Not Yet Shipped)**:
-The once-per-week Planning Cycle that finalizes the coming week's slots: focused research on the week's scheduled Campaign Concepts, candidate Content Opportunities per Anchor Slot, an advisory Review, and the Concept Approvals that promote the week's Projects.
+**Weekly Planning Cycle**:
+The once-per-week Planning Cycle that finalizes the coming week's slots. Conducted by the shipped `weekly-planning-cycle` skill: focused `scheduled_needs` research on scheduled Campaign Concepts and Anchor Slots, 2-3 candidate Content Opportunities per Anchor Slot, one advisory Concept Review per Anchor Slot, human topic selection, constructor-owned research refresh while the slot is still `candidates_ready` when a scheduled Concept is selected directly, ADR 0031 assignment when a new Opportunity is selected, human Concept Approvals, and a ready check. It reuses the shipped slot gate and creates no new promotion path or record type.
 
 **Anchor Slot**:
 A calendar slot carrying an anchor content unit — one that needs its own focused research and human topic selection rather than inheriting another slot's. Derivative slots point to one Anchor Slot and inherit its selected subject evidence while still needing native format adaptation.
@@ -225,7 +225,7 @@ The standing Campaign that owns news-driven timely content. Approved once with t
 _Avoid_: news campaign, standing reactive campaign
 
 **Monitor Note (Accepted Target; Not Yet Shipped)**:
-A watchlist annotation flagging an expected imminent development worth waiting for — a release, announcement, or event. Weekly Planning Cycle research maintains Monitor Notes; a triggered note is the signal to fill a Reactive Slot.
+A watchlist annotation flagging an expected imminent development worth waiting for — a release, announcement, or event. The shipped Weekly Planning Cycle maintains imminent-development watch notes in research narrative as conductor prose only; there is no Monitor Note record type. Triggered-note consumption remains unbuilt because its Reactive Slot consumer is deferred.
 
 **Foundation Revision**:
 An immutable sequential version of the locked creator setup foundation (profile, identity, soul, brand, references). Exactly one Revision is current; a Revision is proposed and approved only through a Quarterly Planning Cycle, and readiness milestones never regress when one lands.
@@ -247,8 +247,8 @@ The advisory bounded sub-agent Review inside the Strategy block that judges the 
 **Quarterly Review**:
 The advisory bounded sub-agent Review inside the Quarterly Planning Cycle that judges the draft Quarter Plan content (ADR 0046). Shipped as the `review-quarter-plan` skill (review_role `quarterly`). It is a Review inside the cycle, never a name for the ceremony itself: the ceremony is the Quarterly Planning Cycle.
 
-**Concept Review (Accepted Target; Not Yet Shipped)**:
-The advisory bounded sub-agent Review inside the Weekly Planning Cycle that judges the promotion packages before the human Concept Approvals promote the week's Projects (ADR 0046). Advisory only — distinct from Concept Approval, the human Gate that blocks.
+**Concept Review**:
+The advisory bounded sub-agent Review inside the Weekly Planning Cycle that judges one Anchor Slot's explicit 2-3-candidate packet before human topic selection or assignment (ADR 0046). Shipped as the `review-concept-promotion` skill (review_role `concept`) and written through `scaffold review-record`; it carries no `research_demand_loop`. The named Anchor Slot's `research_state.candidate_content_opportunity_ids` is the canonical packet boundary, and the seed artifact refs must match it exactly, so candidates from another Anchor Slot are never discovered or counted merely because a multi-slot run supports both. Its constructor validates the mutable `candidates_ready` packet fail closed. Once written, it is a point-in-time audit record: later slot selection and Opportunity assignment do not invalidate it. Advisory only — distinct from Concept Approval, the human Gate that blocks.
 
 **Avatar Image (ADR 0045)**:
 The one platform-facing identity image every creator must have, regardless of Representation Model. Setup generates it automatically when the user has not provided one; the intake interview decides what it depicts (a persona face or a non-face mark) for text-first creators. For synthetic and avatar-led creators it doubles as the visual-continuity calibration reference for the setup image pass. The human accepts or rejects it at Visual Continuity Plan approval; a rejected image regenerates only on a fresh exact-user, reference-scoped approval. The Plan's standing pass explicitly excludes the Avatar Image (ADR 0045).
@@ -374,7 +374,7 @@ readiness or plan decisions, not additional Gates.
 An advisory expert judgment of a drafted artifact that produces a Review Record and may recommend approve, revise, or block. In v1 a Review never halts the pipeline on its own; its recommendation is surfaced to the human, who decides. Reviews are distinct from Gates, which block, and from Passes, which rewrite.
 
 **Review Record**:
-The record a Review produces (lean v1 shape, `schemas/review-record.schema.json`). It is project-anchored for creative reviews or workspace-anchored by Creator Profile for ladder reviews, and names the artifact refs under review, reviewing role, scope-appropriate findings, reviewer execution, and an advisory status of approve, revise, or block. Only a human may waive a blocking finding. Matched/drifted tracking is deferred until the Creator-Fit Critique ships.
+The record a Review produces (lean v1 shape, `schemas/review-record.schema.json`). It is project-anchored for creative reviews or workspace-anchored by Creator Profile for ladder reviews, and names the artifact refs under review, reviewing role, scope-appropriate findings, reviewer execution, and an advisory status of approve, revise, or block. Review Records are point-in-time audit records: mutable packet preconditions are enforced when a constructor writes them, while at-rest validation checks only durable schema, filename-to-record-id identity, owning-workspace Creator identity, scope, internal consistency, symlink-safe containment, and referential integrity. Only a human may waive a blocking finding. Matched/drifted tracking is deferred until the Creator-Fit Critique ships.
 
 **Pass**:
 A bounded editorial rewrite of an artifact, such as a Clear Writing Pass or a Human Voice Pass, that returns improved text and a change trace. A Pass emits no Review Record, makes no judgment, and never blocks.

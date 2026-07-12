@@ -92,6 +92,50 @@ follows the same contract.
     the human gate; speed comes from the Reactive Campaign,
     pre-chosen templates, and the reserved slot.
 
+## Open question settled (slice 6)
+
+**Settlement (implementation):** The Weekly Planning Cycle introduces no new
+promotion path. Candidate Content Opportunities per Anchor Slot are ordinary
+ADR 0031 Content Opportunities promoted through the shipped assignment model:
+the human-selected Opportunity is assigned to an owning Campaign Concept via
+`scaffold campaign-concept`, then `approve-concept` stages and commits the
+Concept Approval. Alternatively, an Anchor Slot owned by one of the week's
+scheduled Campaign Concepts may select that Concept directly. The shipped
+`approve-concept` slot gate is the reconciliation seam: it accepts either the
+approved Concept id or the approved Concept's `source_content_opportunity_id`,
+backed by the exact completed `scheduled_needs` run. The ADR 0031 invariant
+"no Concept Approval without an owning Campaign Concept" is preserved.
+
+Concept Review ships as `review-concept-promotion` with workspace review areas
+and fail-closed packet and queue-provenance validation. It writes one existing
+Review Record per Anchor Slot through `scaffold review-record`, covering all 2-3
+candidates while the schedule is still `candidates_ready`, before human topic
+selection or assignment. The constructor enforces those mutable packet
+preconditions; the persisted record is a point-in-time audit whose at-rest
+validation does not depend on later slot or queue status. Its findings may carry Research Demand
+markers, but the record carries no `research_demand_loop` lineage object:
+weekly planning has no multi-round loop, the terminal ConceptApproval record is
+unchanged, and this slice introduces no record type. Monitor Note maintenance
+is research-narrative conductor prose only; Reactive Slot, Reactive Campaign,
+triggered-note consumption, and fast-path approval remain deferred.
+
+- **Settlement (implementation — Concept Review wiring):** `concept` is a
+  built workspace-scoped Review role whose required source skill is
+  `review-concept-promotion`; it remains advisory.
+- **Settlement (implementation — area and packet contract):** Concept Review
+  reuses workspace areas (`evidence`, `strategy`, `audience`, `general`), and
+  its skill requires resolved Creator Profile, schedule, all candidate
+  Opportunity queue entries for one named Anchor Slot, Research Findings, and
+  Evidence refs without inventing a weekly packet artifact or record type.
+- **Settlement (implementation — coming week):** the staleness Warning window
+  is `[today, today + 6 days]` inclusive and applies only to open/reserved slots
+  still `unresearched` or `candidates_ready`.
+- **Settlement (implementation — conductor dependencies):** the Stage 4
+  conductor depends exactly on `create-research-findings`,
+  `manage-opportunity-queue`, `review-concept-promotion`, and `approve-concept`;
+  Campaign Concept assignment remains the `scaffold campaign-concept`
+  constructor rather than a skill dependency.
+
 ## Consequences
 
 - The two-layer control rule (advisory creative, blocking provider-safety) and

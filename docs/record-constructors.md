@@ -120,7 +120,7 @@ earlier approvals stay active as the provenance lock for their projects.
 | `project_ids_created` | derived | From the embedded project seeds (ids allocated at stage time, so the approval lists its exact project set up front) |
 | `campaign_concept_id` | copied | The `--concept` argument |
 | `intended_payoff`, `intended_emotion`, `core_message` | copied | Verbatim from the concept (ADR 0024); a concept missing the intent pair blocks staging — fix the concept first |
-| `evidence_refs` | copied | Concept's structured refs, verbatim shape (the gate re-verifies the copy stayed verbatim) |
+| `evidence_refs` | copied | Concept's current structured refs, verbatim at staging. Later constructor-owned research refreshes may add refs to the Concept; an earlier immutable Approval remains a valid snapshot subset and may never carry rewritten or unrelated refs. |
 | `approved_by` | stamped | `user`, at commit |
 | `approved_on` | stamped | Commit date (stage uses the staging date provisionally so drafts validate) |
 
@@ -133,6 +133,15 @@ validate → rebuild board and index.
 Stage hashes cover: the concept file and the claimed slots'
 `research_state`. Any change between stage and commit fails the commit
 closed.
+
+For a Weekly Planning Cycle that directly re-confirms a pre-existing scheduled
+Concept, `refresh-concept-research` with its required `--concept`, `--run`, and
+`--creator-workspace` arguments is the deterministic update path. It accepts only a
+non-failed focused `scheduled_needs` run naming a slot scheduled to that
+Concept and listed in that slot's canonical `research_state.research_run_ids`,
+derives Evidence and Finding refs from the canonical run ledgers, and
+updates the Concept before the slot is marked selected. It does not create a
+new record type and callers never author the added refs by hand.
 
 Present-from-draft: the skill presents the approval package from the staged
 records, so the human approves exactly the bytes that commit will write.
@@ -437,6 +446,59 @@ Canonical seed:
   "amended_areas": ["content_strategy", "schedule_shape"],
   "rationale": "Shift the mix toward the formats that retained attention.",
   "notes": "No readiness milestone regresses."
+}
+```
+
+## 10. Concept Review Record (`scaffold review-record`)
+
+Upstream input: one Anchor Slot's complete pre-selection packet. The
+constructor is intentionally limited to the shipped `concept` review role. It
+checks the live mutable packet once, before writing, then persists the existing
+Review Record type as a point-in-time audit. Later Phase D/E changes do not
+reapply creation preconditions.
+
+| Field | Class | Rule |
+| --- | --- | --- |
+| `anchor_slot_id` | authored, creation-only | Names exactly one current `candidates_ready` Anchor Slot; not persisted in the lean Review Record schema |
+| `artifact_refs` | authored | Creator Profile, schedule, Findings, all 2-3 canonical shortlisted candidate entries for the Anchor Slot, and their Evidence; every path must resolve inside the workspace without symlink escape |
+| `findings`, `approval_status`, `reviewer_execution` | authored | Advisory judgment; source skill must be `review-concept-promotion` |
+| `human_waiver` | authored | Optional; existing blocking-finding rule applies |
+| `review_record_id` | derived | `review_<creator>_concept_<seq>`; seed may pin |
+| `creator_profile_id` | derived | From the workspace manifest |
+| `review_role` | derived | Constant `concept` |
+| `created_at` | derived | Constructor timestamp |
+
+Creation validates the named slot only. Other `candidates_ready` slots cannot
+change its candidate count, shortlisted-status, or Evidence-coverage outcome.
+At rest, standalone and workspace validation retain schema, scope, internal
+consistency, persistent artifact resolution, and symlink-safe containment but
+do not compare the audit with current schedule or queue status.
+
+Canonical seed:
+
+```json
+{
+  "anchor_slot_id": "slot_luna_2026_07_09_midweek",
+  "artifact_refs": [
+    "creator-profile.json",
+    "content-schedule.json",
+    "research/findings.md",
+    "research/content-opportunity-queue/entries/content_opportunity_luna_fit_002.json",
+    "research/content-opportunity-queue/entries/content_opportunity_luna_fit_003.json",
+    "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl"
+  ],
+  "findings": [
+    {
+      "area": "evidence",
+      "severity": "none",
+      "note": "The Anchor Slot candidate packet is evidence-backed."
+    }
+  ],
+  "approval_status": "approve",
+  "reviewer_execution": {
+    "execution_mode": "bounded_sub_agent",
+    "source_skill": "review-concept-promotion"
+  }
 }
 ```
 

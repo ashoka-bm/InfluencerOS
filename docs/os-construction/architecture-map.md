@@ -246,6 +246,17 @@ skills/quarterly-planning-cycle/SKILL.md  (Stage 3 conductor; ADR 0044 Decision 
   Phase G  Ready check         -> validate workspace and confirm every approved change was applied exactly once
 ```
 
+```text
+skills/weekly-planning-cycle/SKILL.md  (Stage 4 conductor; ADR 0044 Decision 9)   [BUILT — slice 6]
+  Phase A  Focused scheduled-needs research -> Skill(create-research-findings) (coming-week Anchor Slots -> candidates_ready)
+  Phase B  Draft 2-3 candidates per Anchor Slot -> Skill(manage-opportunity-queue) -> scaffold content-opportunity
+  Phase C  Advisory Concept Review -> Skill(review-concept-promotion) (one constructor-built point-in-time review per Anchor Slot while candidates_ready; never blocks)
+  Phase D  Human topic selection -> slot selected_content_opportunity_id OR selected_campaign_concept_id
+  Phase E  Assignment -> scaffold campaign-concept for a selected new opportunity; direct scheduled-Concept selection needs none
+  Phase F  Human Concept Approvals -> Skill(approve-concept) (stage -> present -> commit; existing Gate and slot reconciliation)
+  Phase G  Ready check -> validate workspace; approved slots filled and coming-week staleness Warning cleared
+```
+
 ## Self-Improvement Loop Call Graph (ADR 0016)
 
 ```text
