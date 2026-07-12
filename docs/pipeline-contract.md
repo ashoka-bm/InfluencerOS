@@ -249,10 +249,12 @@ goal, but it must not silently promote an idea into the creation funnel.
 
 The agent may recommend a social template for the chosen idea. If the user does not care which template is used, the agent may apply its recommended template and record the rationale. If multiple reasonable structures would change the post meaning, format, or production burden, ask before locking the Applied Social Template.
 
-Provider-backed generation requires explicit human authorization. An approved
-Visual Continuity Plan authorizes one initial bounded pass over its listed
-creator-setup reference assets (ADR 0043); all other calls require exact
-call/batch approval.
+Provider-backed generation requires explicit human authorization, with two
+creator-setup carve-outs: setup auto-generates the one bounded Avatar Image
+call under a system-derived single-use approval record (ADR 0045), and an
+approved Visual Continuity Plan authorizes one initial bounded pass over its
+listed remaining creator-setup reference assets (ADR 0043, carried forward by
+ADR 0045). All other calls require exact call/batch approval.
 
 A Project's locked Concept Approval is a **historical snapshot**: `validate
 project` checks that the promotion exists, belongs to the same creator, and
