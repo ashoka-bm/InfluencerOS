@@ -17,6 +17,8 @@ from influencer_os.readiness import require_production_ready
 from influencer_os.validation import (
     ValidationError,
     load_json,
+    review_has_new_research_demand,
+    validate_research_demand_loops,
     validate_record,
 )
 
@@ -37,6 +39,7 @@ QUARTER_SEED_REQUIRED = (
 QUARTER_SEED_OPTIONAL = (
     "governing_foundation_revision_id",
     "governing_strategy_revision_id",
+    "terminal_review_record_id",
     "notes",
 )
 
@@ -125,11 +128,177 @@ def _check_revision_refs(plan, revision_ids):
                 f"quarter plan {plan_id} proposal type "
                 f"{proposal['revision_type']!r} disagrees with {revision_id!r}"
             )
-        if revision_id not in revision_ids:
+        # A proposal authorizes a downstream Revision; that Revision points
+        # back to this approved Quarter Plan when Phase F executes. Requiring
+        # the downstream record here would invert the provenance direction
+        # and make construction circular.
+
+
+def _validated_campaign_records(workspace_dir, scope):
+    records = {}
+    campaigns_dir = Path(workspace_dir) / "campaigns"
+    for path in sorted(campaigns_dir.glob("*/campaign.json")):
+        record = load_json(path)
+        validate_record("campaign", record)
+        check_creator_scope(record, scope, path)
+        campaign_id = record["campaign_id"]
+        if path.parent.name != campaign_id:
             raise ValidationError(
-                f"quarter plan {plan_id} proposes Revision {revision_id!r}, "
-                "which resolves to no Revision on disk"
+                f"{path}: directory does not match campaign_id {campaign_id!r}"
             )
+        records[campaign_id] = record
+    return records
+
+
+def _validated_concept_records(workspace_dir, scope, campaigns):
+    records = {}
+    concepts_glob = Path(workspace_dir) / "campaigns"
+    for path in sorted(concepts_glob.glob("*/concepts/*.json")):
+        record = load_json(path)
+        validate_record("campaign-concept", record)
+        check_creator_scope(record, scope, path)
+        concept_id = record["campaign_concept_id"]
+        if path.stem != concept_id:
+            raise ValidationError(
+                f"{path}: filename does not match campaign_concept_id {concept_id!r}"
+            )
+        owning_campaign_id = path.parent.parent.name
+        if record["campaign_id"] != owning_campaign_id or owning_campaign_id not in campaigns:
+            raise ValidationError(
+                f"{path}: Campaign Concept does not resolve to its owning Campaign"
+            )
+        records[concept_id] = record
+    return records
+
+
+def _validated_performance_summary_records(workspace_dir, scope):
+    """Schema-validated, creator-scoped PerformanceSummaries on disk."""
+    records = {}
+    projects_dir = Path(workspace_dir) / "projects"
+    if not projects_dir.exists():
+        return records
+    for path in sorted(projects_dir.glob("*/performance-summary.json")):
+        record = load_json(path)
+        validate_record("performance-summary", record)
+        check_creator_scope(record, scope, path)
+        records[record["performance_summary_id"]] = record
+    return records
+
+
+def _check_reference_closure(plan, concepts, campaigns, summaries):
+    """Close the Campaign/Concept/PerformanceSummary references 5a deferred.
+
+    A Quarter Plan's Campaign Concept set, Campaign lifecycle decisions,
+    Campaign Duration Target changes, and retrospective PerformanceSummary
+    ids must each resolve to a real record at rest (settlement A). The
+    retrospective's free-text `lesson_refs` are provenance pointers into
+    memory/learnings.md and are not resolved here (settlement B).
+    """
+    plan_id = plan["quarter_plan_id"]
+    for entry in plan["campaign_concept_set"]:
+        concept_id = entry["campaign_concept_id"]
+        concept = concepts.get(concept_id)
+        if concept is None:
+            raise ValidationError(
+                f"quarter plan {plan_id} names campaign_concept_id "
+                f"{concept_id!r}, which resolves to no Campaign Concept on disk"
+            )
+        if entry["disposition"] == "re_confirmed" and concept["status"] != "active":
+            raise ValidationError(
+                f"quarter plan {plan_id} marks Campaign Concept {concept_id!r} "
+                f"re_confirmed, but its status is {concept['status']!r}; only "
+                "active Concepts may be re_confirmed"
+            )
+    for entry in plan["campaign_lifecycle_decisions"]:
+        campaign_id = entry["campaign_id"]
+        if campaign_id not in campaigns:
+            raise ValidationError(
+                f"quarter plan {plan_id} names campaign_id {campaign_id!r} in a "
+                "lifecycle decision, which resolves to no Campaign on disk"
+            )
+    for entry in plan["campaign_duration_target_changes"]:
+        campaign_id = entry["campaign_id"]
+        if campaign_id not in campaigns:
+            raise ValidationError(
+                f"quarter plan {plan_id} names campaign_id {campaign_id!r} in a "
+                "duration-target change, which resolves to no Campaign on disk"
+            )
+    for summary_id in plan["retrospective"]["performance_summary_ids"]:
+        if summary_id not in summaries:
+            raise ValidationError(
+                f"quarter plan {plan_id} names performance_summary_id "
+                f"{summary_id!r}, which resolves to no PerformanceSummary on disk"
+            )
+
+
+def _check_terminal_review_ref(workspace_dir, plan):
+    """Resolve and close the mandatory terminal Quarterly Review loop."""
+    review_id = plan["terminal_review_record_id"]
+    plan_id = plan["quarter_plan_id"]
+    review_path = Path(workspace_dir) / "reviews" / f"{review_id}.json"
+    if not review_path.is_file():
+        raise ValidationError(
+            f"quarter plan {plan_id} names terminal_review_record_id "
+            f"{review_id!r}, which resolves to no review under reviews/"
+        )
+    review = load_json(review_path)
+    validate_record("review-record", review)
+    if review["review_record_id"] != review_path.stem:
+        raise ValidationError(
+            f"{review_path}: filename does not match review_record_id "
+            f"{review['review_record_id']!r}"
+        )
+    check_creator_scope(review, load_workspace_scope(workspace_dir), review_path)
+    if review.get("review_role") != "quarterly":
+        raise ValidationError(
+            f"quarter plan {plan_id} terminal_review_record_id {review_id!r} "
+            "must reference a 'quarterly' review"
+        )
+    for ref in review["artifact_refs"]:
+        relative_ref = Path(ref)
+        artifact_path = Path(workspace_dir) / relative_ref
+        if relative_ref.is_absolute() or ".." in relative_ref.parts:
+            raise ValidationError(
+                f"Quarterly Review {review_id} artifact ref must stay inside "
+                f"the Creator Workspace: {ref!r}"
+            )
+        if not artifact_path.is_file() or artifact_path.is_symlink():
+            raise ValidationError(
+                f"Quarterly Review {review_id} artifact ref does not resolve "
+                f"to a regular workspace file: {ref!r}"
+            )
+    required_packet_refs = {
+        f"quarter-plans/packets/{plan_id}/draft-quarter-plan.json",
+        f"quarter-plans/packets/{plan_id}/campaign-concept-set.json",
+    }
+    missing_packet_refs = required_packet_refs - set(review["artifact_refs"])
+    if missing_packet_refs:
+        raise ValidationError(
+            f"quarter plan {plan_id} terminal Quarterly Review {review_id!r} "
+            f"does not reference its reviewed plan packet: {sorted(missing_packet_refs)}"
+        )
+
+    reviews_by_id = {}
+    for path in sorted((Path(workspace_dir) / "reviews").glob("*.json")):
+        candidate = load_json(path)
+        validate_record("review-record", candidate)
+        candidate_id = candidate["review_record_id"]
+        if candidate_id != path.stem:
+            raise ValidationError(
+                f"{path}: filename does not match review_record_id {candidate_id!r}"
+            )
+        check_creator_scope(candidate, load_workspace_scope(workspace_dir), path)
+        reviews_by_id[candidate_id] = candidate
+    validate_research_demand_loops(reviews_by_id)
+    loop = review["research_demand_loop"]
+    if (
+        loop["extra_research_round"] < 2
+        and review_has_new_research_demand(review)
+    ):
+        raise ValidationError(
+            f"quarter plan {plan_id} terminal Quarterly Review issues new "
+            "Research Demands before the two-extra-round cap; continue the loop"
+        )
 
 
 def scaffold_quarter_plan(seed, creator_workspace, now=None):
@@ -174,8 +343,14 @@ def scaffold_quarter_plan(seed, creator_workspace, now=None):
         if optional_field in seed:
             plan[optional_field] = seed[optional_field]
     validate_record("quarter-plan", plan)
-    check_creator_scope(plan, load_workspace_scope(workspace_dir), quarter_plan_id)
+    scope = load_workspace_scope(workspace_dir)
+    check_creator_scope(plan, scope, quarter_plan_id)
     _check_revision_refs(plan, _revision_ids(workspace_dir))
+    campaigns = _validated_campaign_records(workspace_dir, scope)
+    concepts = _validated_concept_records(workspace_dir, scope, campaigns)
+    summaries = _validated_performance_summary_records(workspace_dir, scope)
+    _check_reference_closure(plan, concepts, campaigns, summaries)
+    _check_terminal_review_ref(workspace_dir, plan)
     path = workspace_dir / QUARTER_PLANS_DIR / f"{quarter_plan_id}.json"
     if path.exists():
         raise ValidationError(f"quarter plan already exists: {path}")
@@ -339,10 +514,16 @@ def validate_cadence_records(workspace_dir):
         _validate_revision_family(workspace_dir, scope, family, plan_ids, checked)
 
     revision_ids = _revision_ids(workspace_dir)
+    campaigns = _validated_campaign_records(workspace_dir, scope)
+    concepts = _validated_concept_records(workspace_dir, scope, campaigns)
+    summaries = _validated_performance_summary_records(workspace_dir, scope)
     for plan in plans:
         _check_revision_refs(plan, revision_ids)
-        # Slice 5a intentionally defers Campaign/Concept reference closure in
-        # concept sets and lifecycle decisions to the cycle workflow in 5b.
+        # Slice 5b closes the Campaign/Concept/PerformanceSummary reference
+        # closure 5a deferred to the cycle workflow: the Quarter Plan's
+        # provenance is a workspace invariant at rest (settlement A).
+        _check_reference_closure(plan, concepts, campaigns, summaries)
+        _check_terminal_review_ref(workspace_dir, plan)
 
     warnings = []
     if anchor is not None:

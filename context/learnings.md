@@ -91,3 +91,6 @@ Creator performance learnings belong in Creator Workspaces, not here.
 
 ### manage-opportunity-queue
 - 2026-07-10: Assignment is one transaction inside the campaign-concept constructor: the opportunity flip is never hand-edited, and only open statuses (new/reviewed/shortlisted/needs_more_research) can be assigned.
+
+### quarterly-planning-cycle
+- 2026-07-12: Construct the approved Quarter Plan before proposed Revisions, then execute every approved lifecycle, Duration Target, schedule, and Revision change before the ready check.

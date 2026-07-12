@@ -354,13 +354,14 @@ Quarter anchor and fails closed when that approved milestone date is absent.
 
 | Field | Class | Rule |
 | --- | --- | --- |
-| `retrospective` | authored | Findings, PerformanceSummary ids, and durable lesson refs; each array may be empty |
-| `campaign_concept_set` | authored | New or re-confirmed Campaign Concepts |
-| `campaign_lifecycle_decisions` | authored | Pause, complete, archive, or continue decisions |
-| `campaign_duration_target_changes` | authored | Campaign retargets for the Quarter |
+| `retrospective` | authored | Findings, PerformanceSummary ids, and durable lesson refs; each array may be empty. `performance_summary_ids` must resolve to `projects/*/performance-summary.json` at rest; `lesson_refs` are free-text provenance pointers, not resolved (settlement B) |
+| `campaign_concept_set` | authored | New or re-confirmed Campaign Concepts; each `campaign_concept_id` must resolve to a Campaign Concept on disk (settlement A) |
+| `campaign_lifecycle_decisions` | authored | Pause, complete, archive, or continue decisions; each `campaign_id` must resolve to a Campaign on disk (settlement A) |
+| `campaign_duration_target_changes` | authored | Campaign retargets for the Quarter; each `campaign_id` must resolve to a Campaign on disk (settlement A) |
 | `schedule_shape` | authored | The next Quarter's planning shape |
-| `revision_proposals` | authored | Foundation/Strategy Revision ids that must resolve on disk |
-| `governing_foundation_revision_id`, `governing_strategy_revision_id`, `notes` | authored | Optional; governing ids must resolve |
+| `revision_proposals` | authored | Foundation/Strategy Revision ids reserved in the approved plan; proposed Revisions are constructed afterward and point back through `quarter_plan_id` |
+| `governing_foundation_revision_id`, `governing_strategy_revision_id`, `notes` | authored | Optional; governing Revision ids must resolve |
+| `terminal_review_record_id` | authored | Required; resolves to the `reviews/<id>.json` Quarterly Review of this plan's complete draft packet and closes its bounded Research Demand loop |
 | `quarter_plan_id`, `quarter_number` | derived | Next workspace sequence and highest Quarter number plus one |
 | `quarter_start_date`, `quarter_end_date`, `production_ready_anchor_date` | derived | Thirteen-week rolling window from the recorded production-ready date |
 | `creator_profile_id`, `creator_slug`, `created_on` | derived | Workspace scope and constructor date |
@@ -383,6 +384,7 @@ Canonical seed:
     "reactive_capacity": "one optional slot"
   },
   "revision_proposals": [],
+  "terminal_review_record_id": "review_luna_quarterly_001",
   "approval": {
     "approved_by": "user",
     "approved_on": "2026-07-12"

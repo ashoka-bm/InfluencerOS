@@ -21,6 +21,7 @@ from influencer_os.validation import (
     ValidationError,
     load_json,
     validate_file,
+    validate_research_demand_loops,
     validate_record,
 )
 
@@ -902,7 +903,7 @@ def validate_creator_workspace(workspace_path):
     review_warnings, reviews_by_id = _validate_workspace_review_records(
         workspace_dir, manifest, reference_library
     )
-    _validate_strategy_review_loops(reviews_by_id)
+    validate_research_demand_loops(reviews_by_id)
     _validate_ladder_review_approval_refs(
         workspace_dir,
         reference_library,

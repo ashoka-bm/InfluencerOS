@@ -18,6 +18,7 @@
     "campaign_duration_target_changes",
     "schedule_shape",
     "revision_proposals",
+    "terminal_review_record_id",
     "approval",
     "created_on"
   ],
@@ -99,6 +100,7 @@
     },
     "governing_foundation_revision_id": { "type": ["string", "null"], "pattern": "^foundation_revision_[a-zA-Z0-9_-]+$" },
     "governing_strategy_revision_id": { "type": ["string", "null"], "pattern": "^strategy_revision_[a-zA-Z0-9_-]+$" },
+    "terminal_review_record_id": { "type": "string", "pattern": "^review_[a-zA-Z0-9_-]+$" },
     "created_on": { "type": "string", "format": "date" },
     "notes": { "type": "string", "minLength": 1 }
   }

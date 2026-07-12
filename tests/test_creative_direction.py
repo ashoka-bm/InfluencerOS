@@ -55,6 +55,14 @@ STRATEGY_REVIEW_PACKET = [
     "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
 ]
 
+QUARTERLY_REVIEW_PACKET = [
+    "creator-profile.json",
+    "quarter-plans/packets/quarter_plan_luna_fit_001/draft-quarter-plan.json",
+    "quarter-plans/packets/quarter_plan_luna_fit_001/campaign-concept-set.json",
+    "research/findings.md",
+    "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+]
+
 
 def copy_example_record(example_name, destination):
     destination.write_text((ROOT / "examples" / example_name).read_text())
@@ -728,17 +736,58 @@ class ReviewRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValidationError, "source_skill"):
                     validate_record("review-record", review)
 
-    def test_quarterly_and_concept_roles_fail_closed(self):
-        for role in ("quarterly", "concept"):
-            review = load_example("review-record")
-            review.pop("project_id")
-            review.pop("concept_approval_id", None)
-            review["review_role"] = role
-            review["artifact_refs"] = ["creator-profile.json"]
-            review["findings"] = [review["findings"][0]]
-            review["findings"][0]["area"] = "strategy"
-            with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
-                validate_record("review-record", review)
+    def test_concept_role_fails_closed(self):
+        # Concept Review is still approved-but-unbuilt (slice 6); Quarterly
+        # Review shipped in slice 5b and now validates.
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review["review_role"] = "concept"
+        review["artifact_refs"] = ["creator-profile.json"]
+        review["findings"] = [review["findings"][0]]
+        review["findings"][0]["area"] = "strategy"
+        with self.assertRaisesRegex(ValidationError, "approved but unbuilt"):
+            validate_record("review-record", review)
+
+    def test_quarterly_role_validates(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review["review_role"] = "quarterly"
+        review["artifact_refs"] = QUARTERLY_REVIEW_PACKET
+        review["findings"] = [review["findings"][0]]
+        review["findings"][0]["area"] = "strategy"
+        review["reviewer_execution"]["source_skill"] = "review-quarter-plan"
+        review["research_demand_loop"] = {
+            "extra_research_round": 0,
+            "prior_review_record_id": None,
+        }
+        validate_record("review-record", review)
+
+    def test_quarterly_review_requires_loop_lineage_and_complete_plan_packet(self):
+        review = load_example("review-record")
+        review.pop("project_id")
+        review.pop("concept_approval_id", None)
+        review["review_role"] = "quarterly"
+        review["artifact_refs"] = QUARTERLY_REVIEW_PACKET
+        review["findings"] = [review["findings"][0]]
+        review["findings"][0]["area"] = "strategy"
+        review["reviewer_execution"]["source_skill"] = "review-quarter-plan"
+
+        with self.assertRaisesRegex(ValidationError, "research_demand_loop"):
+            validate_record("review-record", review)
+
+        review["research_demand_loop"] = {
+            "extra_research_round": 0,
+            "prior_review_record_id": None,
+        }
+        for missing_ref in QUARTERLY_REVIEW_PACKET:
+            with self.subTest(missing_ref=missing_ref):
+                review["artifact_refs"] = [
+                    ref for ref in QUARTERLY_REVIEW_PACKET if ref != missing_ref
+                ]
+                with self.assertRaises(ValidationError):
+                    validate_record("review-record", review)
 
     def test_project_scoped_role_requires_project_id(self):
         review = load_example("review-record")

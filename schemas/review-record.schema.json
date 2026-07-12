@@ -206,7 +206,51 @@
     },
     {
       "properties": {
-        "review_role": { "enum": ["quarterly", "concept"] }
+        "review_role": { "const": "quarterly" },
+        "artifact_refs": {
+          "allOf": [
+            { "contains": { "const": "creator-profile.json" } },
+            { "contains": { "pattern": "^quarter-plans/packets/quarter_plan_[a-zA-Z0-9_-]+/draft-quarter-plan\\.json$" } },
+            { "contains": { "pattern": "^quarter-plans/packets/quarter_plan_[a-zA-Z0-9_-]+/campaign-concept-set\\.json$" } },
+            { "contains": { "const": "research/findings.md" } },
+            { "contains": { "pattern": "^research/runs/research_run_[a-zA-Z0-9_-]+/evidence\\.jsonl$" } }
+          ]
+        }
+      },
+      "required": ["research_demand_loop"],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "research_demand_loop": {
+                  "properties": {
+                    "extra_research_round": { "const": 0 },
+                    "prior_review_record_id": { "const": null }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "research_demand_loop": {
+                  "properties": {
+                    "extra_research_round": { "enum": [1, 2] },
+                    "prior_review_record_id": {
+                      "type": "string",
+                      "pattern": "^review_[a-zA-Z0-9_-]+$"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "properties": {
+        "review_role": { "const": "concept" }
       }
     }
   ]

@@ -128,3 +128,28 @@ Quarter Plan carries the schedule shape each cycle.
   without a mutable pointer file. Each Quarter Plan stamps its governing
   Foundation and Strategy Revision ids, preserving the governing versions
   for prior Quarters.
+
+## Settlement (implementation, slice 5b — cycle skills)
+
+- **Referential closure (settlement A).** The Campaign/Concept/PerformanceSummary
+  references a Quarter Plan carries are closed at rest in
+  `influencer_os.cadence.validate_cadence_records`, not by skill honor-system.
+  Resolution loads and schema-validates each canonical record, checks creator
+  scope and path/id agreement, and then resolves Campaign Concepts, lifecycle
+  decisions, Duration Target changes, and retrospective PerformanceSummaries
+  against those validated records. The constructor runs the same closure before
+  writing, so a rejected seed leaves no Quarter Plan behind. This makes the
+  plan's provenance a workspace invariant, consistent with the product
+  traceability invariant.
+- **`lesson_refs` (settlement B).** `retrospective.lesson_refs` are free-text
+  provenance pointers into `memory/learnings.md` and are NOT resolved by
+  validation: distilled lessons are unkeyed text lines with no stable per-lesson
+  id, so resolving them would couple cadence validation to memory-file parsing.
+  Validation stops at `performance_summary_ids`, which are real record ids.
+- **Terminal Quarterly Review link (settlement C).** Required
+  `terminal_review_record_id` on every Quarter Plan durably names the Quarterly
+  Review that gated the plan's single human approval. Before writing and at
+  rest, validation resolves the schema-valid, creator-scoped Review under
+  `reviews/<id>.json`, requires `review_role == "quarterly"`, requires the
+  complete packet for this exact Quarter Plan, and closes its capped Research
+  Demand lineage. An unrelated round-zero Review cannot close the plan.

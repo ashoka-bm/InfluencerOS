@@ -42,6 +42,7 @@ QUARTER_SEED = {
         "reactive_capacity": "one optional slot",
     },
     "revision_proposals": [],
+    "terminal_review_record_id": "review_luna_quarterly_001",
     "approval": {"approved_by": "user", "approved_on": "2026-07-12"},
     "notes": "Keep the first Quarter deliberately light.",
 }
@@ -129,6 +130,7 @@ class CadenceRecordContractTests(unittest.TestCase):
         )
         place_brand_board_space_files(workspace)
         rebuild_brand_board(workspace)
+        self.write_quarterly_review_fixture(workspace)
         return workspace
 
     def test_new_examples_validate_without_schema_orphans(self):
@@ -264,6 +266,13 @@ class CadenceRecordContractTests(unittest.TestCase):
 
             governed_seed = dict(QUARTER_SEED)
             governed_seed["governing_foundation_revision_id"] = revision["id"]
+            governed_seed["terminal_review_record_id"] = (
+                self.write_quarterly_review_fixture(
+                    workspace,
+                    review_id="review_luna_quarterly_002",
+                    packet_plan_id="quarter_plan_luna_fit_002",
+                )
+            )
             scaffold_quarter_plan(governed_seed, workspace)
             validate_creator_workspace(workspace)
 
@@ -273,6 +282,376 @@ class CadenceRecordContractTests(unittest.TestCase):
             )
             with self.assertRaises(ValidationError):
                 scaffold_quarter_plan(unknown_seed, workspace)
+
+    def test_approved_plan_precedes_and_authorizes_proposed_revisions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            seed = dict(QUARTER_SEED)
+            seed["revision_proposals"] = [
+                {
+                    "revision_type": "foundation",
+                    "revision_id": "foundation_revision_luna_fit_001",
+                }
+            ]
+
+            plan = scaffold_quarter_plan(seed, workspace)
+            revision = scaffold_foundation_revision(FOUNDATION_SEED, workspace)
+
+            self.assertEqual(plan["id"], "quarter_plan_luna_fit_001")
+            self.assertEqual(
+                revision["id"], "foundation_revision_luna_fit_001"
+            )
+            validate_creator_workspace(workspace)
+
+    def drop_performance_summary(self, workspace):
+        """Copy the committed PerformanceSummary example into the fresh
+        workspace's project, aligned to that project/creator."""
+        project_dir = workspace / "projects" / "tiny-reset-after-laptop-day"
+        summary = json.loads(
+            (ROOT / "examples" / "performance-summary.example.json").read_text()
+        )
+        summary["project_id"] = "project_luna_tiny_reset_001"
+        summary["creator_profile_id"] = "creator_luna_fit"
+        write_json(project_dir / "performance-summary.json", summary)
+        return summary["performance_summary_id"]
+
+    def write_quarterly_review_fixture(
+        self,
+        workspace,
+        *,
+        role="quarterly",
+        review_id=None,
+        extra_round=0,
+        prior_review_record_id=None,
+        research_demand=None,
+        demand_note="The draft Quarter Plan needs one more evidence check.",
+        packet_plan_id="quarter_plan_luna_fit_001",
+    ):
+        """Write a workspace-root reviews/ Quarterly Review record, anchored
+        to the Creator Profile with minimal valid findings."""
+        review = json.loads(
+            (ROOT / "examples" / "review-record.example.json").read_text()
+        )
+        review.pop("project_id", None)
+        review.pop("concept_approval_id", None)
+        review_id = review_id or f"review_luna_{role}_001"
+        packet_dir = (
+            workspace / "quarter-plans" / "packets" / packet_plan_id
+        )
+        packet_dir.mkdir(parents=True, exist_ok=True)
+        write_json(packet_dir / "draft-quarter-plan.json", {"draft": True})
+        write_json(packet_dir / "campaign-concept-set.json", {"concepts": []})
+        finding = {
+            "area": "strategy",
+            "severity": "none",
+            "note": demand_note,
+        }
+        if research_demand is not None:
+            finding["research_demand"] = research_demand
+        artifact_refs = [
+            "creator-profile.json",
+            f"quarter-plans/packets/{packet_plan_id}/draft-quarter-plan.json",
+            f"quarter-plans/packets/{packet_plan_id}/campaign-concept-set.json",
+            "research/findings.md",
+            "research/runs/research_run_luna_fit_2026_07_03_001/evidence.jsonl",
+        ]
+        if prior_review_record_id is not None:
+            artifact_refs.append(f"reviews/{prior_review_record_id}.json")
+        review.update(
+            review_record_id=review_id,
+            review_role=role,
+            artifact_refs=artifact_refs,
+            findings=[finding],
+            research_demand_loop={
+                "extra_research_round": extra_round,
+                "prior_review_record_id": prior_review_record_id,
+            },
+        )
+        review["reviewer_execution"]["source_skill"] = "review-quarter-plan"
+        reviews_dir = workspace / "reviews"
+        reviews_dir.mkdir(exist_ok=True)
+        write_json(reviews_dir / f"{review_id}.json", review)
+        return review_id
+
+    def test_approved_quarter_plan_requires_terminal_quarterly_review(self):
+        plan = json.loads(
+            (ROOT / "examples" / "quarter-plan.example.json").read_text()
+        )
+        plan.pop("terminal_review_record_id", None)
+        with self.assertRaisesRegex(ValidationError, "terminal_review_record_id"):
+            from influencer_os.validation import validate_record
+
+            validate_record("quarter-plan", plan)
+
+    def resolving_quarter_seed(self, summary_id):
+        seed = dict(QUARTER_SEED)
+        seed["retrospective"] = {
+            "findings": ["Constraint-visible packaging kept outperforming."],
+            "performance_summary_ids": [summary_id],
+            "lesson_refs": ["memory/learnings.md#visible-constraint-hook"],
+        }
+        seed["campaign_concept_set"] = [
+            {
+                "campaign_concept_id": "campaign_concept_luna_fit_001",
+                "disposition": "re_confirmed",
+            }
+        ]
+        seed["campaign_lifecycle_decisions"] = [
+            {"campaign_id": "campaign_luna_fit_001", "decision": "continue"}
+        ]
+        seed["campaign_duration_target_changes"] = [
+            {
+                "campaign_id": "campaign_luna_fit_001",
+                "target_end_date": "2027-07-01",
+            }
+        ]
+        return seed
+
+    def test_resolving_quarter_plan_references_validate_at_rest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            scaffold_quarter_plan(
+                self.resolving_quarter_seed(summary_id), workspace
+            )
+            result = validate_creator_workspace(workspace)
+            self.assertEqual(result["creator_profile_id"], "creator_luna_fit")
+
+    def test_reconfirmed_concept_must_be_active_and_rejection_writes_no_plan(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            concept_path = (
+                workspace
+                / "campaigns"
+                / "campaign_luna_fit_001"
+                / "concepts"
+                / "campaign_concept_luna_fit_001.json"
+            )
+            concept = read_json(concept_path)
+            concept["status"] = "draft"
+            write_json(concept_path, concept)
+
+            with self.assertRaisesRegex(ValidationError, "re_confirmed.*active"):
+                scaffold_quarter_plan(
+                    self.resolving_quarter_seed(summary_id), workspace
+                )
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+    def test_dangling_reference_kinds_fail_closed_naming_plan_and_id(self):
+        dangling = {
+            "campaign_concept_set": (
+                [{"campaign_concept_id": "campaign_concept_bogus_999",
+                  "disposition": "new"}],
+                "campaign_concept_bogus_999",
+            ),
+            "campaign_lifecycle_decisions": (
+                [{"campaign_id": "campaign_bogus_999", "decision": "pause"}],
+                "campaign_bogus_999",
+            ),
+            "campaign_duration_target_changes": (
+                [{"campaign_id": "campaign_bogus_999",
+                  "target_end_date": "2027-07-01"}],
+                "campaign_bogus_999",
+            ),
+            "performance_summary_ids": (
+                ["performance_summary_bogus_999"],
+                "performance_summary_bogus_999",
+            ),
+        }
+        for field, (value, dangling_id) in dangling.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    summary_id = self.drop_performance_summary(workspace)
+                    seed = self.resolving_quarter_seed(summary_id)
+                    if field == "performance_summary_ids":
+                        seed["retrospective"] = dict(seed["retrospective"])
+                        seed["retrospective"]["performance_summary_ids"] = value
+                    else:
+                        seed[field] = value
+                    with self.assertRaises(ValidationError) as ctx:
+                        scaffold_quarter_plan(seed, workspace)
+                    message = str(ctx.exception)
+                    self.assertIn("quarter_plan_luna_fit_001", message)
+                    self.assertIn(dangling_id, message)
+                    self.assertEqual(
+                        list((workspace / "quarter-plans").glob("*.json")), []
+                    )
+
+    def test_free_text_lesson_refs_do_not_trigger_closure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["retrospective"]["lesson_refs"] = [
+                "an unkeyed distilled lesson line with no record id"
+            ]
+            scaffold_quarter_plan(seed, workspace)
+            validate_creator_workspace(workspace)
+
+    def test_malformed_or_wrong_scope_placeholders_cannot_close_references(self):
+        cases = ("campaign", "concept", "performance_summary")
+        for record_kind in cases:
+            with self.subTest(record_kind=record_kind):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = self.fresh_workspace(temp_dir)
+                    summary_id = self.drop_performance_summary(workspace)
+                    seed = self.resolving_quarter_seed(summary_id)
+                    if record_kind == "campaign":
+                        placeholder_id = "campaign_placeholder_001"
+                        (workspace / "campaigns" / placeholder_id).mkdir()
+                        seed["campaign_lifecycle_decisions"] = [
+                            {"campaign_id": placeholder_id, "decision": "pause"}
+                        ]
+                    elif record_kind == "concept":
+                        placeholder_id = "campaign_concept_placeholder_001"
+                        path = (
+                            workspace
+                            / "campaigns"
+                            / "campaign_luna_fit_001"
+                            / "concepts"
+                            / f"{placeholder_id}.json"
+                        )
+                        write_json(path, {"campaign_concept_id": placeholder_id})
+                        seed["campaign_concept_set"] = [
+                            {
+                                "campaign_concept_id": placeholder_id,
+                                "disposition": "new",
+                            }
+                        ]
+                    else:
+                        summary_path = (
+                            workspace
+                            / "projects"
+                            / "tiny-reset-after-laptop-day"
+                            / "performance-summary.json"
+                        )
+                        summary = read_json(summary_path)
+                        summary["creator_profile_id"] = "creator_wrong_scope"
+                        write_json(summary_path, summary)
+
+                    with self.assertRaises(ValidationError):
+                        scaffold_quarter_plan(seed, workspace)
+                    self.assertEqual(
+                        list((workspace / "quarter-plans").glob("*.json")), []
+                    )
+
+    def test_terminal_quarterly_review_link_resolves_and_pins_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            review_id = self.write_quarterly_review_fixture(workspace)
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = review_id
+            scaffold_quarter_plan(seed, workspace)
+            self.assertEqual(
+                validate_creator_workspace(workspace)["creator_profile_id"],
+                "creator_luna_fit",
+            )
+
+    def test_terminal_review_link_fails_when_missing_or_wrong_role(self):
+        # Missing review id.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = "review_luna_quarterly_404"
+            with self.assertRaises(ValidationError):
+                scaffold_quarter_plan(seed, workspace)
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+        # A valid Quarterly Review of a different plan packet cannot close this plan.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            review_id = self.write_quarterly_review_fixture(
+                workspace, packet_plan_id="quarter_plan_luna_fit_999"
+            )
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = review_id
+            with self.assertRaisesRegex(ValidationError, "reviewed plan packet"):
+                scaffold_quarter_plan(seed, workspace)
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+        # Present review but the wrong role.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            review_id = self.write_quarterly_review_fixture(
+                workspace, role="concept"
+            )
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = review_id
+            with self.assertRaises(ValidationError):
+                scaffold_quarter_plan(seed, workspace)
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+    def test_terminal_quarterly_review_enforces_bounded_demand_lineage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            self.write_quarterly_review_fixture(
+                workspace, research_demand="new"
+            )
+            with self.assertRaisesRegex(ValidationError, "continue.*loop"):
+                scaffold_quarter_plan(
+                    self.resolving_quarter_seed(summary_id), workspace
+                )
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            first = self.write_quarterly_review_fixture(
+                workspace,
+                review_id="review_luna_quarterly_round_0",
+                research_demand="new",
+                demand_note="Need a source for the Campaign direction.",
+            )
+            terminal = self.write_quarterly_review_fixture(
+                workspace,
+                review_id="review_luna_quarterly_round_1",
+                extra_round=1,
+                prior_review_record_id=first,
+                research_demand="carried_forward",
+                demand_note="A different, unissued demand.",
+            )
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = terminal
+            with self.assertRaisesRegex(ValidationError, "carried_forward"):
+                scaffold_quarter_plan(seed, workspace)
+            self.assertEqual(list((workspace / "quarter-plans").glob("*.json")), [])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.fresh_workspace(temp_dir)
+            summary_id = self.drop_performance_summary(workspace)
+            note = "Need a source for the Campaign direction."
+            first = self.write_quarterly_review_fixture(
+                workspace,
+                review_id="review_luna_quarterly_round_0",
+                research_demand="new",
+                demand_note=note,
+            )
+            second = self.write_quarterly_review_fixture(
+                workspace,
+                review_id="review_luna_quarterly_round_1",
+                extra_round=1,
+                prior_review_record_id=first,
+                research_demand="new",
+                demand_note=note,
+            )
+            terminal = self.write_quarterly_review_fixture(
+                workspace,
+                review_id="review_luna_quarterly_round_2",
+                extra_round=2,
+                prior_review_record_id=second,
+                research_demand="carried_forward",
+                demand_note=note,
+            )
+            seed = self.resolving_quarter_seed(summary_id)
+            seed["terminal_review_record_id"] = terminal
+            scaffold_quarter_plan(seed, workspace)
 
     def test_canonical_documented_seeds_scaffold_and_workspace_validates(self):
         with tempfile.TemporaryDirectory() as temp_dir:

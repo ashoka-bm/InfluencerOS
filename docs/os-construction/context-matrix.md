@@ -44,6 +44,7 @@ InfluencerOS has two context scopes:
 | Analytics ingestion | summary | never | never | never | never | never | never | writes | never |
 | Performance summary | summary | never | never | never | never | never | never | writes | lazy |
 | Learning distillation | full | lazy | lazy | summary | lazy | lazy | summary | full | writes |
+| Quarterly planning | full | summary | summary | full | lazy | summary | full | full | full |
 | Production reflection | summary | never | never | never | never | never | never | lazy | never |
 | Creative review | summary | lazy | lazy | summary | lazy | never | lazy | writes | never |
 | Editorial pass | summary | summary | summary | full | full | never | never | full | never |
@@ -83,6 +84,8 @@ reference approval instead.
 | `review-hook-payoff` | Creative review |
 | `review-creator-setup` | Creative review |
 | `review-strategy` | Creative review |
+| `review-quarter-plan` | Creative review |
+| `quarterly-planning-cycle` | Quarterly planning |
 | `clear-writing-pass` | Editorial pass |
 | `human-voice-pass` | Editorial pass |
 | `request-generation-approval` | Generation approval |

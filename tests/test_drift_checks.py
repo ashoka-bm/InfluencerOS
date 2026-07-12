@@ -612,6 +612,38 @@ class StrategyBlockCadenceDriftTests(unittest.TestCase):
         self.assertNotIn("land in slice 3", review_strategy)
 
 
+class QuarterlyPlanningCycleDriftTests(unittest.TestCase):
+    """ADR 0044's full block order and ADR 0047's Revision direction."""
+
+    def test_quarterly_cycle_constructs_plan_before_revisions_and_ready_check(self):
+        skill = read_repo_text("skills/quarterly-planning-cycle/SKILL.md")
+
+        draft_phase = skill.index("### Phase C")
+        review_phase = skill.index("### Phase D")
+        approval_phase = skill.index("### Phase E")
+        execute_phase = skill.index("### Phase F")
+        ready_phase = skill.index("### Phase G")
+        self.assertLess(
+            draft_phase,
+            review_phase,
+        )
+        self.assertLess(review_phase, approval_phase)
+        self.assertLess(approval_phase, execute_phase)
+        self.assertLess(execute_phase, ready_phase)
+
+        draft_body = skill[draft_phase:review_phase]
+        execute_body = skill[execute_phase:ready_phase]
+        self.assertNotIn("scaffold foundation-revision", draft_body)
+        self.assertNotIn("scaffold strategy-revision", draft_body)
+        approval_body = skill[approval_phase:execute_phase]
+        self.assertIn("scaffold quarter-plan", approval_body)
+        self.assertIn("scaffold foundation-revision", execute_body)
+        self.assertIn("scaffold strategy-revision", execute_body)
+        self.assertIn("Campaign lifecycle", execute_body)
+        self.assertIn("Duration Target", execute_body)
+        self.assertIn("schedule", execute_body)
+
+
 class ResearchEnumDriftTests(unittest.TestCase):
     def iter_enums_by_names(self, node, kinds, path=""):
         """Yield (location, kind, enum-or-None) for every pinned-name
@@ -770,7 +802,7 @@ class ResearchEnumDriftTests(unittest.TestCase):
         )
 
 class ConductorCallGraphDriftTests(unittest.TestCase):
-    CONDUCTORS = ("influencer-os", "create-influencer")
+    CONDUCTORS = ("influencer-os", "create-influencer", "quarterly-planning-cycle")
     MAP_SECTION = "Creation-Flow Call Graph (skill → skill)"
 
     def test_creator_setup_generates_avatar_before_vcp_approval(self):

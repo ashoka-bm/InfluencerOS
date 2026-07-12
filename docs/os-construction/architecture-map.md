@@ -233,6 +233,19 @@ skills/create-influencer/SKILL.md  (setup conductor; 22 phases)   [BUILT — all
   Phases 1,14,15,17,18 intake, onboarding records, generation gate, readiness, internal scaffold acceptance (inline)
 ```
 
+```text
+skills/quarterly-planning-cycle/SKILL.md  (Stage 3 conductor; ADR 0044 Decision 8 / ADR 0047)   [BUILT — slice 5b]
+  Phase A  Retrospective       -> Skill(distill-creator-learning) (optional refresh; reads
+             projects/*/performance-summary.json + memory/learnings.md into the Quarter Plan seed)
+  Phase B  Per-Campaign research -> Skill(create-research-findings)
+  Phase C  Draft plan content  -> scaffold campaign-concept; declare Revision proposal ids (do not construct Revisions yet)
+  Phase D  Research Demand loop -> Skill(review-quarter-plan) (advisory ReviewRecord; at most two extra rounds; never blocks)
+  Phase E  One human final approval -> scaffold quarter-plan (approval.approved_by: user; terminal_review_record_id stamped)
+  Phase F  Execute approved plan -> apply Campaign lifecycle / Duration Target / schedule changes;
+             scaffold foundation-revision / strategy-revision against the approved Quarter Plan
+  Phase G  Ready check         -> validate workspace and confirm every approved change was applied exactly once
+```
+
 ## Self-Improvement Loop Call Graph (ADR 0016)
 
 ```text

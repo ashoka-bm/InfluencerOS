@@ -120,3 +120,31 @@ terminal review reference: Visual Continuity Plan `selection_review` records
 the Setup Review id, while the production readiness milestone records the
 Strategy Review id. Workspace validation resolves both references under the
 workspace review root and checks their roles.
+
+**Settlement (implementation, slice 5b — Quarterly Review):** The third ladder
+review shipped as the `review-quarter-plan` skill.
+
+- **Skill name (settlement D).** The skill is `review-quarter-plan` with
+  `review_role: quarterly` and `source_skill: review-quarter-plan`, naming the
+  artifact judged (the draft Quarter Plan), consistent with
+  `review-creator-setup`'s artifact-first framing. `quarterly` moves into
+  `BUILT_REVIEW_ROLES`; a record claiming that role now validates rather than
+  failing as approved-but-unbuilt.
+- **Area vocabulary (settlement E).** The Quarterly Review reuses the existing
+  workspace review area enum (`strategy`, `evidence`, `schedule`, `positioning`,
+  `audience`, `general`); no schema enum change. Those values cover the
+  retrospective (`general`/`evidence`), per-Campaign research
+  (`evidence`/`strategy`), and the next-Quarter Concept set (`strategy`). A
+  follow-up ADR can add `campaign`/`retrospective` areas if reviewers find this
+  coarse.
+- **Conductor dependency set (settlement F).** The `quarterly-planning-cycle`
+  conductor depends only on `[review-quarter-plan, create-research-findings,
+  distill-creator-learning]`. Campaign Concepts and Revisions are
+  constructor-built (`scaffold_campaign_concept` / `scaffold_*_revision`), not
+  skills, and Concept Approvals / opportunity-queue promotion belong to the
+  Weekly cycle (slice 6), so they are excluded.
+- **Quarterly loop closure.** Quarterly Reviews require the complete draft plan,
+  Campaign Concept set, Research Findings/Evidence, and Creator Profile packet,
+  plus the same computable `research_demand_loop` lineage as Strategy Reviews.
+  Every approved Quarter Plan requires the terminal Quarterly Review id; the
+  constructor resolves that exact packet and capped lineage before writing.

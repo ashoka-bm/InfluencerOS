@@ -177,11 +177,12 @@ def prediction_holds(measured_value, comparator, threshold):
 # decided vocabulary, but a record claiming an unbuilt review ran fails closed.
 PROJECT_SCOPED_REVIEW_ROLES = {"hook_payoff", "creator_fit", "fact_check"}
 WORKSPACE_SCOPED_REVIEW_ROLES = {"setup", "strategy", "quarterly", "concept"}
-BUILT_REVIEW_ROLES = {"hook_payoff", "setup", "strategy"}
+BUILT_REVIEW_ROLES = {"hook_payoff", "setup", "strategy", "quarterly"}
 REVIEW_ROLE_SOURCE_SKILLS = {
     "hook_payoff": "review-hook-payoff",
     "setup": "review-creator-setup",
     "strategy": "review-strategy",
+    "quarterly": "review-quarter-plan",
 }
 
 CONTENT_BEAT_SPINE_AREAS = {"hook", "retain", "payoff", "cta", "general"}
@@ -195,6 +196,84 @@ WORKSPACE_REVIEW_AREAS = {
     "visual_identity",
     "general",
 }
+
+
+def review_has_new_research_demand(review):
+    return any(
+        finding.get("research_demand") == "new"
+        for finding in review.get("findings", [])
+        if isinstance(finding, dict)
+    )
+
+
+def validate_research_demand_loops(reviews_by_id):
+    """Validate computable Strategy/Quarterly Review lineage (ADR 0046)."""
+    for review in reviews_by_id.values():
+        role = review.get("review_role")
+        if role not in {"strategy", "quarterly"}:
+            continue
+        label = "Strategy" if role == "strategy" else "Quarterly"
+        review_id = review["review_record_id"]
+        loop = review["research_demand_loop"]
+        extra_round = loop["extra_research_round"]
+        prior_review_id = loop["prior_review_record_id"]
+        if extra_round == 0:
+            if prior_review_id is not None:
+                raise ValidationError(
+                    f"{label} Review {review_id} round 0 must not name a prior review"
+                )
+            carried = any(
+                finding.get("research_demand") == "carried_forward"
+                for finding in review["findings"]
+            )
+            if carried:
+                raise ValidationError(
+                    f"{label} Review {review_id} round 0 cannot carry forward a "
+                    "Demand without a prior review"
+                )
+            continue
+
+        prior_review = reviews_by_id.get(prior_review_id)
+        if prior_review is None:
+            raise ValidationError(
+                f"{label} Review {review_id} prior_review_record_id "
+                f"{prior_review_id!r} does not resolve under workspace reviews/"
+            )
+        if prior_review.get("review_role") != role:
+            raise ValidationError(
+                f"{label} Review {review_id} prior_review_record_id "
+                f"{prior_review_id!r} must reference a {role} review"
+            )
+        prior_loop = prior_review["research_demand_loop"]
+        if prior_loop["extra_research_round"] != extra_round - 1:
+            raise ValidationError(
+                f"{label} Review {review_id} round {extra_round} must follow "
+                f"round {extra_round - 1}"
+            )
+        if f"reviews/{prior_review_id}.json" not in review["artifact_refs"]:
+            raise ValidationError(
+                f"{label} Review {review_id} must include its prior {label} "
+                "Review Record in artifact_refs"
+            )
+        if not review_has_new_research_demand(prior_review):
+            raise ValidationError(
+                f"{label} Review {review_id} may run only after prior review "
+                f"{prior_review_id} issues new Research Demands"
+            )
+        prior_demands = {
+            finding["note"]
+            for finding in prior_review["findings"]
+            if finding.get("research_demand") in {"new", "carried_forward"}
+        }
+        for finding in review["findings"]:
+            if (
+                finding.get("research_demand") == "carried_forward"
+                and finding["note"] not in prior_demands
+            ):
+                raise ValidationError(
+                    f"{label} Review {review_id} marks a Demand carried_forward "
+                    f"that is not unresolved in its prior {label} Review"
+                )
 
 # Access methods for the ADR 0022 key-gated research-acquisition connectors.
 # Standing-approved by API-key presence: they MAY be `use_now` (when the adapter
@@ -1242,15 +1321,16 @@ def validate_review_record_semantics(record):
                 f"review record {review_id}: workspace-scoped review {review_role!r} "
                 "must not carry concept_approval_id"
             )
-    if review_role == "strategy" and "research_demand_loop" not in record:
+    loop_roles = {"strategy", "quarterly"}
+    if review_role in loop_roles and "research_demand_loop" not in record:
         raise ValidationError(
-            f"review record {review_id}: strategy reviews require "
+            f"review record {review_id}: {review_role} reviews require "
             "research_demand_loop"
         )
-    if review_role != "strategy" and "research_demand_loop" in record:
+    if review_role not in loop_roles and "research_demand_loop" in record:
         raise ValidationError(
-            f"review record {review_id}: research_demand_loop is only "
-            "allowed on strategy reviews"
+            f"review record {review_id}: research_demand_loop is only allowed "
+            "on strategy and quarterly reviews"
         )
     allowed_areas = (
         CONTENT_BEAT_SPINE_AREAS

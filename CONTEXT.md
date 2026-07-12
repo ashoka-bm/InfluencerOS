@@ -197,15 +197,15 @@ The specific feeling, identity signal, or brand meaning that a candidate object 
 **Medium-Based Blocker**:
 A Creator Setup blocker that applies only when a content medium requires it. Text-first creators need identity, soul, and brand context; image and video creators also need visual references; audio/video creators need a staged ElevenLabs Voice Design prompt package before `foundation_ready`; spoken generation requires an approved/imported voice reference.
 
-**Planning Cycle (Accepted Target; Not Yet Shipped)**:
-A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in one human final approval. The two cycles are the Quarterly Planning Cycle and the Weekly Planning Cycle. A Planning Cycle contains Reviews; it is not itself a Review.
+**Planning Cycle (Quarterly shipped; Weekly Not Yet Shipped)**:
+A recurring human-initiated ceremony that runs research, advisory Reviews, and record updates, and ends in one human final approval. The two cycles are the Quarterly Planning Cycle (shipped) and the Weekly Planning Cycle (slice 6). A Planning Cycle contains Reviews; it is not itself a Review.
 _Avoid_: quarterly review, weekly review (as ceremony names)
 
 **Quarter**:
 A creator-relative planning horizon of thirteen weeks, anchored at the creator's `production_ready` date and rolling thereafter. Quarters are per-creator, not calendar-aligned.
 
-**Quarterly Planning Cycle (Accepted Target; Not Yet Shipped)**:
-The once-per-Quarter Planning Cycle: a retrospective over the closing Quarter's performance and learnings, per-Campaign research, next-Quarter Campaign Concepts and schedule shape, and any amendment proposals for the locked setup and strategy foundations. Human-initiated, never clock-scheduled; an expired Quarter surfaces as a Warning.
+**Quarterly Planning Cycle**:
+The once-per-Quarter Planning Cycle: a retrospective over the closing Quarter's performance and learnings, per-Campaign research, next-Quarter Campaign Concepts and schedule shape, and any amendment proposals for the locked setup and strategy foundations. Human-initiated, never clock-scheduled; an expired Quarter surfaces as a Warning. Conducted by the shipped `quarterly-planning-cycle` skill, which produces one approved Quarter Plan through `scaffold quarter-plan`, executes its approved lifecycle, Duration Target, schedule, and Revision changes, then performs a ready check.
 
 **Weekly Planning Cycle (Accepted Target; Not Yet Shipped)**:
 The once-per-week Planning Cycle that finalizes the coming week's slots: focused research on the week's scheduled Campaign Concepts, candidate Content Opportunities per Anchor Slot, an advisory Review, and the Concept Approvals that promote the week's Projects.
@@ -215,7 +215,7 @@ A calendar slot carrying an anchor content unit — one that needs its own focus
 _Avoid_: derivative slot (as a synonym)
 
 **Quarter Plan**:
-The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, Campaign Duration Target changes, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
+The record a Quarterly Planning Cycle produces: the retrospective findings over the closing Quarter, the next Quarter's Campaign Concept set (new and re-confirmed), Campaign lifecycle decisions, Campaign Duration Target changes, the schedule shape, and any Foundation or Strategy Revision proposals. One human approval covers the whole plan, and every approved plan names the terminal Quarterly Review that judged its complete draft packet. Proposed Revisions are constructed after that plan so they can point back to it. The Quarterly Planning Cycle is the default home for Campaign pause/complete/archive decisions; an ad hoc human change mid-Quarter is recorded by the next Quarter Plan.
 
 **Reactive Slot (Accepted Target; Not Yet Shipped)**:
 A reserved open calendar slot for timely, news-driven content, allocated by the Content Strategy and filled through a fast-path Concept Approval when a watched development breaks. The human gate is not skipped; speed comes from the Reactive Campaign, pre-chosen templates, and the reserved slot.
@@ -244,8 +244,8 @@ The advisory bounded sub-agent Review inside Creator Setup that judges the text 
 **Strategy Review**:
 The advisory bounded sub-agent Review inside the Strategy block that judges the drafted creator strategy after the broad research validating it, before the human final approval that grants `production_ready` (ADR 0046).
 
-**Quarterly Review (Accepted Target; Not Yet Shipped)**:
-The advisory bounded sub-agent Review inside the Quarterly Planning Cycle that judges the draft Quarter Plan content (ADR 0046). It is a Review inside the cycle, never a name for the ceremony itself: the ceremony is the Quarterly Planning Cycle.
+**Quarterly Review**:
+The advisory bounded sub-agent Review inside the Quarterly Planning Cycle that judges the draft Quarter Plan content (ADR 0046). Shipped as the `review-quarter-plan` skill (review_role `quarterly`). It is a Review inside the cycle, never a name for the ceremony itself: the ceremony is the Quarterly Planning Cycle.
 
 **Concept Review (Accepted Target; Not Yet Shipped)**:
 The advisory bounded sub-agent Review inside the Weekly Planning Cycle that judges the promotion packages before the human Concept Approvals promote the week's Projects (ADR 0046). Advisory only — distinct from Concept Approval, the human Gate that blocks.
