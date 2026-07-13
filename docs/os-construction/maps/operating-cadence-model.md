@@ -33,8 +33,9 @@ review (8 units, zero confirmed drift findings).
 
 - Scene name: `InfluencerOS Operating Cadence (ADR 0044-0047)`
 - Scene ID: `bpe2Sec3O5`
+  (`https://app.excalidraw.com/s/3g0OtZhQ70R/bpe2Sec3O5`)
 - Collection: `Main` (workspace `3g0OtZhQ70R`)
-- No share link recorded: scene link sharing is off; open via the workspace.
+- Workspace URL only; no public read-only link exists (link sharing is off).
 
 ## Local Screenshot
 
